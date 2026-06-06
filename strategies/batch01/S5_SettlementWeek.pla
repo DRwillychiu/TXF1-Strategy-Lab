@@ -1,0 +1,84 @@
+{STRATEGY_GEN_SettlementWeek}
+{Category E: Settlement Week Calendar Effect}
+{Direction: Short before settlement, Long after settlement}
+{Timeframe: TXF1 Daily}
+
+inputs:
+    DaysBefore(2),
+    DaysAfter(1),
+    StopPts(80),
+    TargetPts(100),
+    HoldDays(3),
+    UseCloseFilter(true),
+    MAFilterLen(5);
+
+variables:
+    v_DOM(0),
+    v_DOW(0),
+    v_IsSettleDay(false),
+    v_DaysFromSettle(0),
+    v_EntryBar(0),
+    v_Prev_MP(0),
+    v_i(0),
+    v_Month(0);
+
+v_DOW = DayOfWeek(Date);
+v_DOM = DayOfMonth(Date);
+v_Month = Month(Date);
+
+{ Third Wednesday: DOM 15-21 and Wednesday (DOW=3) }
+v_IsSettleDay = (v_DOW = 3) and (v_DOM >= 15) and (v_DOM <= 21);
+
+{ Count trading days since last settlement day }
+v_DaysFromSettle = 0;
+for v_i = 1 to 10 begin
+    if DayOfWeek(Date[v_i]) = 3 and
+       DayOfMonth(Date[v_i]) >= 15 and
+       DayOfMonth(Date[v_i]) <= 21 and
+       Month(Date[v_i]) = v_Month then begin
+        v_DaysFromSettle = v_i;
+        v_i = 11;
+    end;
+end;
+
+{ Pre-settlement short: Monday or Tuesday of settlement week }
+condition1 = (v_DOM >= 13) and (v_DOM <= 21) and
+             (v_DOW >= 1) and (v_DOW <= 2) and
+             DaysBefore >= (3 - v_DOW);
+
+{ Post-settlement long }
+condition2 = v_DaysFromSettle >= 1 and v_DaysFromSettle <= DaysAfter;
+
+{ Entry: short before settlement }
+if v_Prev_MP >= 0 and condition1 then begin
+    if UseCloseFilter = false or (UseCloseFilter and Close < Open) then begin
+        sell short ("SE_SW_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+{ Entry: long after settlement }
+if v_Prev_MP <= 0 and condition2 then begin
+    if UseCloseFilter = false or (UseCloseFilter and Close > Average(Close, MAFilterLen)) then begin
+        buy ("LE_SW_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+{ Exit: long position }
+if MarketPosition = 1 then begin
+    sell ("LX_SW_SL") next bar at EntryPrice - StopPts stop;
+    sell ("LX_SW_TP") next bar at EntryPrice + TargetPts limit;
+    if BarNumber - v_EntryBar >= HoldDays then
+        sell ("LX_SW_Time") next bar at market;
+end;
+
+{ Exit: short position }
+if MarketPosition = -1 then begin
+    buy to cover ("SX_SW_SL") next bar at EntryPrice + StopPts stop;
+    buy to cover ("SX_SW_TP") next bar at EntryPrice - TargetPts limit;
+    if BarNumber - v_EntryBar >= HoldDays then
+        buy to cover ("SX_SW_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

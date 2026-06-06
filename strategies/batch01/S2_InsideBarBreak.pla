@@ -1,0 +1,80 @@
+{STRATEGY_GEN_InsideBarBreak}
+{Category B: Daily Inside Bar Breakout}
+{Direction: Bidirectional (Long when MA up, Short when MA down)}
+{Timeframe: Data1=TXF1 30-min, Data2=TXF1 Daily}
+
+inputs:
+    BreakOffset(5),
+    StopPct(50),
+    TargetMult(1.5),
+    MinMotherRange(50),
+    MaxMotherRange(400),
+    MALen(20),
+    MaxBarsHeld(30),
+    MinStopPts(40);
+
+variables:
+    v_IsInsideBar(false),
+    v_MotherHigh(0),
+    v_MotherLow(0),
+    v_MotherRange(0),
+    v_StopDist(0),
+    v_TargetDist(0),
+    v_MA_Up(false),
+    v_MA_Down(false),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+{ Detect Inside Bar on daily chart (Data2) }
+{ Use [1] index for closed bar reference }
+v_IsInsideBar = (High of Data2[1] < High of Data2[2]) and
+                (Low of Data2[1] > Low of Data2[2]);
+
+{ Mother bar = the bar before the inside bar }
+v_MotherHigh = High of Data2[2];
+v_MotherLow = Low of Data2[2];
+v_MotherRange = v_MotherHigh - v_MotherLow;
+
+{ MA direction filter on daily }
+v_MA_Up = Close of Data2[1] > Average(Close of Data2, MALen)[1];
+v_MA_Down = Close of Data2[1] < Average(Close of Data2, MALen)[1];
+
+{ Dynamic stop and target based on mother bar range }
+v_StopDist = MaxList(v_MotherRange * StopPct / 100, MinStopPts);
+v_TargetDist = v_MotherRange * TargetMult;
+
+{ Entry: breakout of inside bar range }
+if v_IsInsideBar and
+   v_MotherRange >= MinMotherRange and
+   v_MotherRange <= MaxMotherRange then begin
+
+    if v_Prev_MP <= 0 and v_MA_Up and
+       Close > High of Data2[1] + BreakOffset then begin
+        buy ("LE_IB_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+
+    if v_Prev_MP >= 0 and v_MA_Down and
+       Close < Low of Data2[1] - BreakOffset then begin
+        sell short ("SE_IB_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+{ Exit: long position }
+if MarketPosition = 1 then begin
+    sell ("LX_IB_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("LX_IB_TP") next bar at EntryPrice + v_TargetDist limit;
+    if BarNumber - v_EntryBar >= MaxBarsHeld then
+        sell ("LX_IB_Time") next bar at market;
+end;
+
+{ Exit: short position }
+if MarketPosition = -1 then begin
+    buy to cover ("SX_IB_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("SX_IB_TP") next bar at EntryPrice - v_TargetDist limit;
+    if BarNumber - v_EntryBar >= MaxBarsHeld then
+        buy to cover ("SX_IB_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

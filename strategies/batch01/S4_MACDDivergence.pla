@@ -1,0 +1,97 @@
+{STRATEGY_GEN_MACDDivergence}
+{Category D: MACD Divergence Reversal (Counter-Trend)}
+{Direction: Bidirectional (Bullish div = Long, Bearish div = Short)}
+{Timeframe: TXF1 60-min}
+
+inputs:
+    FastLen(12),
+    SlowLen(26),
+    SignalLen(9),
+    PriceLookback(50),
+    SwingLen(10),
+    HistLookback(30),
+    RSILen(14),
+    RSIOversold(35),
+    RSIOverbought(65),
+    StopBuffer(15),
+    TargetPts(100),
+    MaxBars(20);
+
+variables:
+    v_MACD(0),
+    v_Signal(0),
+    v_Hist(0),
+    v_PriceNewLow(false),
+    v_PriceNewHigh(false),
+    v_HistPrevLow(0),
+    v_HistCurrLow(0),
+    v_HistPrevHigh(0),
+    v_HistCurrHigh(0),
+    v_BullDiv(false),
+    v_BearDiv(false),
+    v_RSI(0),
+    v_SwingLow(0),
+    v_SwingHigh(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+{ MACD calculation }
+v_MACD = MACD(Close, FastLen, SlowLen);
+v_Signal = XAverage(v_MACD, SignalLen);
+v_Hist = v_MACD - v_Signal;
+v_RSI = RSI(Close, RSILen);
+
+{ Price extremes }
+v_PriceNewLow = Low = Lowest(Low, PriceLookback);
+v_PriceNewHigh = High = Highest(High, PriceLookback);
+
+{ Swing extremes for stop placement }
+v_SwingLow = Lowest(Low, SwingLen);
+v_SwingHigh = Highest(High, SwingLen);
+
+{ Histogram divergence detection }
+v_HistCurrLow = Lowest(v_Hist, SwingLen);
+v_HistPrevLow = Lowest(v_Hist, HistLookback)[SwingLen];
+v_HistCurrHigh = Highest(v_Hist, SwingLen);
+v_HistPrevHigh = Highest(v_Hist, HistLookback)[SwingLen];
+
+{ Bullish divergence: price new low + hist higher low + hist crosses above 0 + RSI oversold }
+v_BullDiv = v_PriceNewLow and
+            v_HistCurrLow > v_HistPrevLow and
+            v_Hist > 0 and v_Hist[1] <= 0 and
+            v_RSI < RSIOversold;
+
+{ Bearish divergence: price new high + hist lower high + hist crosses below 0 + RSI overbought }
+v_BearDiv = v_PriceNewHigh and
+            v_HistCurrHigh < v_HistPrevHigh and
+            v_Hist < 0 and v_Hist[1] >= 0 and
+            v_RSI > RSIOverbought;
+
+{ Entry }
+if v_Prev_MP <= 0 and v_BullDiv then begin
+    buy ("LE_MD_Long") next bar at market;
+    v_EntryBar = BarNumber;
+end;
+
+if v_Prev_MP >= 0 and v_BearDiv then begin
+    sell short ("SE_MD_Short") next bar at market;
+    v_EntryBar = BarNumber;
+end;
+
+{ Exit: long position }
+if MarketPosition = 1 then begin
+    sell ("LX_MD_SL") next bar at v_SwingLow - StopBuffer stop;
+    sell ("LX_MD_TP") next bar at EntryPrice + TargetPts limit;
+    if BarNumber - v_EntryBar >= MaxBars then
+        sell ("LX_MD_Time") next bar at market;
+end;
+
+{ Exit: short position }
+if MarketPosition = -1 then begin
+    buy to cover ("SX_MD_SL") next bar at v_SwingHigh + StopBuffer stop;
+    buy to cover ("SX_MD_TP") next bar at EntryPrice - TargetPts limit;
+    if BarNumber - v_EntryBar >= MaxBars then
+        buy to cover ("SX_MD_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

@@ -1,0 +1,91 @@
+{STRATEGY_GEN_VolSqueeze}
+{Category C: Bollinger BandWidth Squeeze Breakout}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: TXF1 60-min}
+
+inputs:
+    BBLen(20),
+    BBStd(2.0),
+    BWLookback(120),
+    BWPctile(20),
+    ATRLen(14),
+    StopATRMult(1.5),
+    TargetATRMult(3.0),
+    MaxBars(40),
+    UseMidExit(true);
+
+variables:
+    v_UpperBand(0),
+    v_LowerBand(0),
+    v_MidBand(0),
+    v_BandWidth(0),
+    v_BWRank(0),
+    v_BWCount(0),
+    v_ATR(0),
+    v_StopDist(0),
+    v_TargetDist(0),
+    v_Squeeze(false),
+    v_EntryBar(0),
+    v_Prev_MP(0),
+    v_i(0);
+
+{ Calculate Bollinger Bands }
+v_MidBand = Average(Close, BBLen);
+v_UpperBand = v_MidBand + BBStd * StandardDev(Close, BBLen, 1);
+v_LowerBand = v_MidBand - BBStd * StandardDev(Close, BBLen, 1);
+
+{ BandWidth as percentage }
+if v_MidBand > 0 then
+    v_BandWidth = (v_UpperBand - v_LowerBand) / v_MidBand * 100
+else
+    v_BandWidth = 0;
+
+{ Percentile rank of current BandWidth vs lookback }
+v_BWCount = 0;
+for v_i = 1 to BWLookback begin
+    if v_BandWidth[v_i] < v_BandWidth then
+        v_BWCount = v_BWCount + 1;
+end;
+v_BWRank = v_BWCount / BWLookback * 100;
+
+{ Squeeze = BandWidth in lowest percentile }
+v_Squeeze = (v_BWRank <= BWPctile);
+
+{ ATR-based stop and target distances }
+v_ATR = AvgTrueRange(ATRLen);
+v_StopDist = v_ATR * StopATRMult;
+v_TargetDist = v_ATR * TargetATRMult;
+
+{ Entry: squeeze + band breakout }
+if v_Squeeze then begin
+    if v_Prev_MP <= 0 and Close > v_UpperBand then begin
+        buy ("LE_VS_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+    if v_Prev_MP >= 0 and Close < v_LowerBand then begin
+        sell short ("SE_VS_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+{ Exit: long position }
+if MarketPosition = 1 then begin
+    sell ("LX_VS_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("LX_VS_TP") next bar at EntryPrice + v_TargetDist limit;
+    if UseMidExit and BarNumber - v_EntryBar >= 3 and Close < v_MidBand then
+        sell ("LX_VS_Mid") next bar at market;
+    if BarNumber - v_EntryBar >= MaxBars then
+        sell ("LX_VS_Time") next bar at market;
+end;
+
+{ Exit: short position }
+if MarketPosition = -1 then begin
+    buy to cover ("SX_VS_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("SX_VS_TP") next bar at EntryPrice - v_TargetDist limit;
+    if UseMidExit and BarNumber - v_EntryBar >= 3 and Close > v_MidBand then
+        buy to cover ("SX_VS_Mid") next bar at market;
+    if BarNumber - v_EntryBar >= MaxBars then
+        buy to cover ("SX_VS_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

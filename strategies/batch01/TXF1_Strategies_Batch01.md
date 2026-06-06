@@ -111,24 +111,24 @@ end;
 
 if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
     if v_Prev_MP <= 0 then
-        buy ("NM_Long") next bar at v_NightHigh + EntryOffset stop;
+        buy ("LE_NM_Long") next bar at v_NightHigh + EntryOffset stop;
     if v_Prev_MP >= 0 then
-        sell short ("NM_Short") next bar at v_NightLow - EntryOffset stop;
+        sell short ("SE_NM_Short") next bar at v_NightLow - EntryOffset stop;
 end;
 
 SetStopLoss(StopLossPts * 200);
 SetProfitTarget(TakeProfitPts * 200);
 
 if MarketPosition = 1 and MaxContractProfit / 200 >= TrailActivate then
-    sell ("NM_Trail_X") next bar at EntryPrice + TrailActivate - TrailOffset stop;
+    sell ("LX_NM_Trail") next bar at EntryPrice + TrailActivate - TrailOffset stop;
 if MarketPosition = -1 and MaxContractProfit / 200 >= TrailActivate then
-    buy to cover ("NM_Trail_X") next bar at EntryPrice - TrailActivate + TrailOffset stop;
+    buy to cover ("SX_NM_Trail") next bar at EntryPrice - TrailActivate + TrailOffset stop;
 
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then
-        sell ("NM_TimeExit") next bar at market;
+        sell ("LX_NM_Time") next bar at market;
     if MarketPosition = -1 then
-        buy to cover ("NM_TimeExit") next bar at market;
+        buy to cover ("SX_NM_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;
@@ -143,6 +143,19 @@ v_Prev_MP = MarketPosition;
 - `EntryOffset`（5-20）：假突破過濾
 - `StopLossPts`（40-100）：停損寬度
 - **殺手問題**：夜盤流動性不足 → 滑價遠超假設；夜盤經常假突破後快速回撤。
+
+### 8. Walk-Forward 最佳參數（2026-06-07 優化結果）
+```
+LookbackBars = 6      (原4, WF一致收斂)
+EntryOffset = 6        (原10, 高原寬69%)
+StopLossPts = 80       (原60, 高原寬50%)
+TakeProfitPts = 160    (原120, 高原寬60%)
+TrailActivate = 50     (維持, 日線代理無法驗證)
+TrailOffset = 30       (維持)
+```
+- WFE = 87.5% (8窗口中7個OOS獲利)
+- MC 95% MDD = 119,000 NTD (超標@300k, PASS@500k)
+- 破產機率 = 0.71%
 
 ---
 
@@ -227,29 +240,29 @@ if v_IsInsideBar and
 
     if v_Prev_MP <= 0 and v_MA_Up and
        Close > High of Data2[1] + BreakOffset then begin
-        buy ("IB_Long") next bar at market;
+        buy ("LE_IB_Long") next bar at market;
         v_EntryBar = BarNumber;
     end;
 
     if v_Prev_MP >= 0 and v_MA_Down and
        Close < Low of Data2[1] - BreakOffset then begin
-        sell short ("IB_Short") next bar at market;
+        sell short ("SE_IB_Short") next bar at market;
         v_EntryBar = BarNumber;
     end;
 end;
 
 if MarketPosition = 1 then begin
-    sell ("IB_SL") next bar at EntryPrice - v_StopDist stop;
-    sell ("IB_TP") next bar at EntryPrice + v_TargetDist limit;
+    sell ("LX_IB_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("LX_IB_TP") next bar at EntryPrice + v_TargetDist limit;
     if BarNumber - v_EntryBar >= MaxBarsHeld then
-        sell ("IB_Time") next bar at market;
+        sell ("LX_IB_Time") next bar at market;
 end;
 
 if MarketPosition = -1 then begin
-    buy to cover ("IB_SL") next bar at EntryPrice + v_StopDist stop;
-    buy to cover ("IB_TP") next bar at EntryPrice - v_TargetDist limit;
+    buy to cover ("SX_IB_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("SX_IB_TP") next bar at EntryPrice - v_TargetDist limit;
     if BarNumber - v_EntryBar >= MaxBarsHeld then
-        buy to cover ("IB_Time") next bar at market;
+        buy to cover ("SX_IB_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;
@@ -360,31 +373,31 @@ v_TargetDist = v_ATR * TargetATRMult;
 
 if v_Squeeze then begin
     if v_Prev_MP <= 0 and Close > v_UpperBand then begin
-        buy ("VS_Long") next bar at market;
+        buy ("LE_VS_Long") next bar at market;
         v_EntryBar = BarNumber;
     end;
     if v_Prev_MP >= 0 and Close < v_LowerBand then begin
-        sell short ("VS_Short") next bar at market;
+        sell short ("SE_VS_Short") next bar at market;
         v_EntryBar = BarNumber;
     end;
 end;
 
 if MarketPosition = 1 then begin
-    sell ("VS_SL") next bar at EntryPrice - v_StopDist stop;
-    sell ("VS_TP") next bar at EntryPrice + v_TargetDist limit;
+    sell ("LX_VS_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("LX_VS_TP") next bar at EntryPrice + v_TargetDist limit;
     if UseMidExit and BarNumber - v_EntryBar >= 3 and Close < v_MidBand then
-        sell ("VS_Mid") next bar at market;
+        sell ("LX_VS_Mid") next bar at market;
     if BarNumber - v_EntryBar >= MaxBars then
-        sell ("VS_Time") next bar at market;
+        sell ("LX_VS_Time") next bar at market;
 end;
 
 if MarketPosition = -1 then begin
-    buy to cover ("VS_SL") next bar at EntryPrice + v_StopDist stop;
-    buy to cover ("VS_TP") next bar at EntryPrice - v_TargetDist limit;
+    buy to cover ("SX_VS_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("SX_VS_TP") next bar at EntryPrice - v_TargetDist limit;
     if UseMidExit and BarNumber - v_EntryBar >= 3 and Close > v_MidBand then
-        buy to cover ("VS_Mid") next bar at market;
+        buy to cover ("SX_VS_Mid") next bar at market;
     if BarNumber - v_EntryBar >= MaxBars then
-        buy to cover ("VS_Time") next bar at market;
+        buy to cover ("SX_VS_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;
@@ -505,27 +518,27 @@ v_BearDiv = v_PriceNewHigh and
             v_RSI > RSIOverbought;
 
 if v_Prev_MP <= 0 and v_BullDiv then begin
-    buy ("MD_Long") next bar at market;
+    buy ("LE_MD_Long") next bar at market;
     v_EntryBar = BarNumber;
 end;
 
 if v_Prev_MP >= 0 and v_BearDiv then begin
-    sell short ("MD_Short") next bar at market;
+    sell short ("SE_MD_Short") next bar at market;
     v_EntryBar = BarNumber;
 end;
 
 if MarketPosition = 1 then begin
-    sell ("MD_SL") next bar at v_SwingLow - StopBuffer stop;
-    sell ("MD_TP") next bar at EntryPrice + TargetPts limit;
+    sell ("LX_MD_SL") next bar at v_SwingLow - StopBuffer stop;
+    sell ("LX_MD_TP") next bar at EntryPrice + TargetPts limit;
     if BarNumber - v_EntryBar >= MaxBars then
-        sell ("MD_Time") next bar at market;
+        sell ("LX_MD_Time") next bar at market;
 end;
 
 if MarketPosition = -1 then begin
-    buy to cover ("MD_SL") next bar at v_SwingHigh + StopBuffer stop;
-    buy to cover ("MD_TP") next bar at EntryPrice - TargetPts limit;
+    buy to cover ("SX_MD_SL") next bar at v_SwingHigh + StopBuffer stop;
+    buy to cover ("SX_MD_TP") next bar at EntryPrice - TargetPts limit;
     if BarNumber - v_EntryBar >= MaxBars then
-        buy to cover ("MD_Time") next bar at market;
+        buy to cover ("SX_MD_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;
@@ -633,30 +646,30 @@ condition2 = v_DaysFromSettle >= 1 and v_DaysFromSettle <= DaysAfter;
 
 if v_Prev_MP >= 0 and condition1 then begin
     if UseCloseFilter = false or (UseCloseFilter and Close < Open) then begin
-        sell short ("SW_Short") next bar at market;
+        sell short ("SE_SW_Short") next bar at market;
         v_EntryBar = BarNumber;
     end;
 end;
 
 if v_Prev_MP <= 0 and condition2 then begin
     if UseCloseFilter = false or (UseCloseFilter and Close > Average(Close, MAFilterLen)) then begin
-        buy ("SW_Long") next bar at market;
+        buy ("LE_SW_Long") next bar at market;
         v_EntryBar = BarNumber;
     end;
 end;
 
 if MarketPosition = 1 then begin
-    sell ("SW_SL") next bar at EntryPrice - StopPts stop;
-    sell ("SW_TP") next bar at EntryPrice + TargetPts limit;
+    sell ("LX_SW_SL") next bar at EntryPrice - StopPts stop;
+    sell ("LX_SW_TP") next bar at EntryPrice + TargetPts limit;
     if BarNumber - v_EntryBar >= HoldDays then
-        sell ("SW_Time") next bar at market;
+        sell ("LX_SW_Time") next bar at market;
 end;
 
 if MarketPosition = -1 then begin
-    buy to cover ("SW_SL") next bar at EntryPrice + StopPts stop;
-    buy to cover ("SW_TP") next bar at EntryPrice - TargetPts limit;
+    buy to cover ("SX_SW_SL") next bar at EntryPrice + StopPts stop;
+    buy to cover ("SX_SW_TP") next bar at EntryPrice - TargetPts limit;
     if BarNumber - v_EntryBar >= HoldDays then
-        buy to cover ("SW_Time") next bar at market;
+        buy to cover ("SX_SW_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;

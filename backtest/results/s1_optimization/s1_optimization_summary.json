@@ -1,0 +1,191 @@
+{
+  "strategy": "S1_NightMomentum",
+  "data_range": "2020-01-02 ~ 2026-06-05",
+  "phase1_plateau": {
+    "LookbackBars": {
+      "width_pct": 44.4,
+      "plateau": true,
+      "best": 3178285,
+      "best_value": 10
+    },
+    "EntryOffset": {
+      "width_pct": 69.2,
+      "plateau": true,
+      "best": 2047001,
+      "best_value": 0
+    },
+    "StopLossPts": {
+      "width_pct": 50.0,
+      "plateau": true,
+      "best": 2599520,
+      "best_value": 120
+    },
+    "TakeProfitPts": {
+      "width_pct": 60.0,
+      "plateau": true,
+      "best": 2501710,
+      "best_value": 200
+    },
+    "TrailActivate": {
+      "width_pct": 100.0,
+      "plateau": true,
+      "best": 1759021,
+      "best_value": 0
+    }
+  },
+  "phase2_walkforward": {
+    "wfe": 87.5,
+    "avg_oos_pf": 14.25,
+    "windows": [
+      {
+        "window": 1,
+        "is_period": "2020-01~2022-01",
+        "oos_period": "2022-01~2022-07",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 70,
+          "target_pts": 160
+        },
+        "is_profit": 989009,
+        "is_pf": 3.16,
+        "is_trades": 115,
+        "oos_profit": 599704,
+        "oos_pf": 11.0,
+        "oos_trades": 29
+      },
+      {
+        "window": 2,
+        "is_period": "2020-07~2022-07",
+        "oos_period": "2022-07~2023-01",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 1249951,
+        "is_pf": 3.49,
+        "is_trades": 121,
+        "oos_profit": 357259,
+        "oos_pf": 4.48,
+        "oos_trades": 30
+      },
+      {
+        "window": 3,
+        "is_period": "2021-01~2023-01",
+        "oos_period": "2023-01~2023-07",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 1325369,
+        "is_pf": 3.56,
+        "is_trades": 121,
+        "oos_profit": 268278,
+        "oos_pf": 82.25,
+        "oos_trades": 20
+      },
+      {
+        "window": 4,
+        "is_period": "2021-07~2023-07",
+        "oos_period": "2023-07~2024-01",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 1313292,
+        "is_pf": 4.04,
+        "is_trades": 117,
+        "oos_profit": 210824,
+        "oos_pf": 2.77,
+        "oos_trades": 24
+      },
+      {
+        "window": 5,
+        "is_period": "2022-01~2024-01",
+        "oos_period": "2024-01~2024-07",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 1511304,
+        "is_pf": 5.0,
+        "is_trades": 115,
+        "oos_profit": 185193,
+        "oos_pf": 2.55,
+        "oos_trades": 22
+      },
+      {
+        "window": 6,
+        "is_period": "2022-07~2024-07",
+        "oos_period": "2024-07~2025-01",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 1146042,
+        "is_pf": 3.77,
+        "is_trades": 110,
+        "oos_profit": -9662,
+        "oos_pf": 0.95,
+        "oos_trades": 20
+      },
+      {
+        "window": 7,
+        "is_period": "2023-01~2025-01",
+        "oos_period": "2025-01~2025-07",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 772600,
+        "is_pf": 2.5,
+        "is_trades": 99,
+        "oos_profit": 431041,
+        "oos_pf": 7.34,
+        "oos_trades": 23
+      },
+      {
+        "window": 8,
+        "is_period": "2023-07~2025-07",
+        "oos_period": "2025-07~2026-01",
+        "best_params": {
+          "lookback": 6,
+          "entry_offset": 6,
+          "stop_pts": 80,
+          "target_pts": 160
+        },
+        "is_profit": 952363,
+        "is_pf": 2.69,
+        "is_trades": 101,
+        "oos_profit": 142130,
+        "oos_pf": 2.67,
+        "oos_trades": 14
+      }
+    ]
+  },
+  "phase3_montecarlo": {
+    "iterations": 10000,
+    "original_trades": 229,
+    "original_net": 1759021,
+    "mdd_mean": 72089,
+    "mdd_median": 68000,
+    "mdd_95": 104934,
+    "mdd_99": 129706,
+    "ruin_pct": 0.19,
+    "mdd_threshold": 90000,
+    "mdd_95_pass": "False",
+    "ruin_pass": true
+  }
+}

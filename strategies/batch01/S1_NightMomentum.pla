@@ -1,0 +1,78 @@
+{STRATEGY_GEN_NightMomentum}
+{Category A: Night Session Opening Range Breakout}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: 15-min on TXF1}
+{WF-optimized params as of 2026-06-07}
+
+inputs:
+    LookbackBars(6),
+    EntryOffset(6),
+    MinRange(30),
+    MaxRange(200),
+    StopLossPts(80),
+    TakeProfitPts(160),
+    TrailActivate(50),
+    TrailOffset(30),
+    NightOpen(1500),
+    ExitTime(0430);
+
+variables:
+    v_NightHigh(0),
+    v_NightLow(999999),
+    v_RangeWidth(0),
+    v_NightBarCount(0),
+    v_RangeReady(false),
+    v_IsNightSession(false),
+    v_Prev_MP(0);
+
+{ Detect night session }
+v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
+
+{ Reset at night session open }
+if Time >= NightOpen and Time[1] < NightOpen then begin
+    v_NightHigh = 0;
+    v_NightLow = 999999;
+    v_NightBarCount = 0;
+    v_RangeReady = false;
+end;
+
+{ Build opening range from first N bars }
+if v_IsNightSession and v_RangeReady = false then begin
+    v_NightBarCount = v_NightBarCount + 1;
+    if High > v_NightHigh then v_NightHigh = High;
+    if Low < v_NightLow then v_NightLow = Low;
+    if v_NightBarCount >= LookbackBars then begin
+        v_RangeWidth = v_NightHigh - v_NightLow;
+        if v_RangeWidth >= MinRange and v_RangeWidth <= MaxRange then
+            v_RangeReady = true;
+    end;
+end;
+
+{ Entry: breakout of opening range }
+if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
+    if v_Prev_MP <= 0 then
+        buy ("LE_NM_Long") next bar at v_NightHigh + EntryOffset stop;
+    if v_Prev_MP >= 0 then
+        sell short ("SE_NM_Short") next bar at v_NightLow - EntryOffset stop;
+end;
+
+{ Exit: fixed stop-loss and take-profit }
+SetStopLoss(StopLossPts * 200);
+SetProfitTarget(TakeProfitPts * 200);
+
+{ Exit: trailing stop }
+if MarketPosition = 1 and MaxContractProfit / 200 >= TrailActivate then
+    sell ("LX_NM_Trail") next bar at EntryPrice + TrailActivate - TrailOffset stop;
+if MarketPosition = -1 and MaxContractProfit / 200 >= TrailActivate then
+    buy to cover ("SX_NM_Trail") next bar at EntryPrice - TrailActivate + TrailOffset stop;
+
+{ Exit: time-based forced close before day session }
+if Time >= ExitTime and Time < NightOpen then begin
+    if MarketPosition = 1 then
+        sell ("LX_NM_Time") next bar at market;
+    if MarketPosition = -1 then
+        buy to cover ("SX_NM_Time") next bar at market;
+end;
+
+{ Track previous bar position for re-entry logic }
+v_Prev_MP = MarketPosition;
