@@ -1,0 +1,72 @@
+{STRATEGY_GEN_InsideBarBreak - Inside Bar 日線突破策略}
+{B類：日線 Inside Bar 隔日突破}
+{操作方向：★雙向（做多+做空，MA方向過濾）}
+{操作週期：30M + 日線(Data2) | 賺什麼錢：壓縮後方向選擇的爆發行情}
+
+inputs:
+    BreakOffset(5),
+    StopPct(50),
+    TargetMult(1.5),
+    MinMotherRange(50),
+    MaxMotherRange(400),
+    MALen(20),
+    MaxBarsHeld(30),
+    MinStopPts(40);
+
+variables:
+    v_IsInsideBar(false),
+    v_MotherHigh(0),
+    v_MotherLow(0),
+    v_MotherRange(0),
+    v_StopDist(0),
+    v_TargetDist(0),
+    v_MA_Up(false),
+    v_MA_Down(false),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+v_IsInsideBar = (High of Data2[1] < High of Data2[2]) and
+                (Low of Data2[1] > Low of Data2[2]);
+
+v_MotherHigh = High of Data2[2];
+v_MotherLow = Low of Data2[2];
+v_MotherRange = v_MotherHigh - v_MotherLow;
+
+v_MA_Up = Close of Data2[1] > Average(Close of Data2, MALen)[1];
+v_MA_Down = Close of Data2[1] < Average(Close of Data2, MALen)[1];
+
+v_StopDist = MaxList(v_MotherRange * StopPct / 100, MinStopPts);
+v_TargetDist = v_MotherRange * TargetMult;
+
+if v_IsInsideBar and
+   v_MotherRange >= MinMotherRange and
+   v_MotherRange <= MaxMotherRange then begin
+
+    if v_Prev_MP <= 0 and v_MA_Up and
+       Close > High of Data2[1] + BreakOffset then begin
+        buy ("IB_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+
+    if v_Prev_MP >= 0 and v_MA_Down and
+       Close < Low of Data2[1] - BreakOffset then begin
+        sell short ("IB_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+if MarketPosition = 1 then begin
+    sell ("IB_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("IB_TP") next bar at EntryPrice + v_TargetDist limit;
+    if BarNumber - v_EntryBar >= MaxBarsHeld then
+        sell ("IB_Time") next bar at market;
+end;
+
+if MarketPosition = -1 then begin
+    buy to cover ("IB_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("IB_TP") next bar at EntryPrice - v_TargetDist limit;
+    if BarNumber - v_EntryBar >= MaxBarsHeld then
+        buy to cover ("IB_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

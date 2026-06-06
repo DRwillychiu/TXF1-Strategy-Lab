@@ -1,0 +1,89 @@
+{STRATEGY_GEN_MACDDivergence - MACD 背離反轉策略}
+{D類：MACD 背離做反轉}
+{操作方向：★雙向（做多+做空，逆勢反轉）}
+{操作週期：60M | 賺什麼錢：趨勢末端的均值回歸}
+
+inputs:
+    FastLen(12),
+    SlowLen(26),
+    SignalLen(9),
+    PriceLookback(50),
+    SwingLen(10),
+    HistLookback(30),
+    RSILen(14),
+    RSIOversold(35),
+    RSIOverbought(65),
+    StopBuffer(15),
+    TargetPts(100),
+    MaxBars(20);
+
+variables:
+    v_MACD(0),
+    v_Signal(0),
+    v_Hist(0),
+    v_PriceNewLow(false),
+    v_PriceNewHigh(false),
+    v_HistPrevLow(0),
+    v_HistCurrLow(0),
+    v_HistPrevHigh(0),
+    v_HistCurrHigh(0),
+    v_BullDiv(false),
+    v_BearDiv(false),
+    v_RSI(0),
+    v_SwingLow(0),
+    v_SwingHigh(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+v_MACD = MACD(Close, FastLen, SlowLen);
+v_Signal = XAverage(v_MACD, SignalLen);
+v_Hist = v_MACD - v_Signal;
+v_RSI = RSI(Close, RSILen);
+
+v_PriceNewLow = Low = Lowest(Low, PriceLookback);
+v_PriceNewHigh = High = Highest(High, PriceLookback);
+
+v_SwingLow = Lowest(Low, SwingLen);
+v_SwingHigh = Highest(High, SwingLen);
+
+v_HistCurrLow = Lowest(v_Hist, SwingLen);
+v_HistPrevLow = Lowest(v_Hist, HistLookback)[SwingLen];
+
+v_HistCurrHigh = Highest(v_Hist, SwingLen);
+v_HistPrevHigh = Highest(v_Hist, HistLookback)[SwingLen];
+
+v_BullDiv = v_PriceNewLow and
+            v_HistCurrLow > v_HistPrevLow and
+            v_Hist > 0 and v_Hist[1] <= 0 and
+            v_RSI < RSIOversold;
+
+v_BearDiv = v_PriceNewHigh and
+            v_HistCurrHigh < v_HistPrevHigh and
+            v_Hist < 0 and v_Hist[1] >= 0 and
+            v_RSI > RSIOverbought;
+
+if v_Prev_MP <= 0 and v_BullDiv then begin
+    buy ("MD_Long") next bar at market;
+    v_EntryBar = BarNumber;
+end;
+
+if v_Prev_MP >= 0 and v_BearDiv then begin
+    sell short ("MD_Short") next bar at market;
+    v_EntryBar = BarNumber;
+end;
+
+if MarketPosition = 1 then begin
+    sell ("MD_SL") next bar at v_SwingLow - StopBuffer stop;
+    sell ("MD_TP") next bar at EntryPrice + TargetPts limit;
+    if BarNumber - v_EntryBar >= MaxBars then
+        sell ("MD_Time") next bar at market;
+end;
+
+if MarketPosition = -1 then begin
+    buy to cover ("MD_SL") next bar at v_SwingHigh + StopBuffer stop;
+    buy to cover ("MD_TP") next bar at EntryPrice - TargetPts limit;
+    if BarNumber - v_EntryBar >= MaxBars then
+        buy to cover ("MD_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

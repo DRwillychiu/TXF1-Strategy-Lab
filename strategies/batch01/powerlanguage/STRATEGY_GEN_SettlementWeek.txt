@@ -1,0 +1,76 @@
+{STRATEGY_GEN_SettlementWeek - 結算週效應策略}
+{E類：結算日前後的統計偏差}
+{操作方向：★結算前做空 / 結算後做多}
+{操作週期：日線 | 賺什麼錢：結算日前後的結構性方向偏差}
+
+inputs:
+    DaysBefore(2),
+    DaysAfter(1),
+    StopPts(80),
+    TargetPts(100),
+    HoldDays(3),
+    UseCloseFilter(true),
+    MAFilterLen(5);
+
+variables:
+    v_DOM(0),
+    v_DOW(0),
+    v_IsSettleDay(false),
+    v_DaysFromSettle(0),
+    v_EntryBar(0),
+    v_Prev_MP(0),
+    v_i(0),
+    v_Month(0);
+
+v_DOW = DayOfWeek(Date);
+v_DOM = DayOfMonth(Date);
+v_Month = Month(Date);
+
+v_IsSettleDay = (v_DOW = 3) and (v_DOM >= 15) and (v_DOM <= 21);
+
+v_DaysFromSettle = 0;
+for v_i = 1 to 10 begin
+    if DayOfWeek(Date[v_i]) = 3 and
+       DayOfMonth(Date[v_i]) >= 15 and
+       DayOfMonth(Date[v_i]) <= 21 and
+       Month(Date[v_i]) = v_Month then begin
+        v_DaysFromSettle = v_i;
+        v_i = 11;
+    end;
+end;
+
+condition1 = (v_DOM >= 13) and (v_DOM <= 21) and
+             (v_DOW >= 1) and (v_DOW <= 2) and
+             DaysBefore >= (3 - v_DOW);
+
+condition2 = v_DaysFromSettle >= 1 and v_DaysFromSettle <= DaysAfter;
+
+if v_Prev_MP >= 0 and condition1 then begin
+    if UseCloseFilter = false or (UseCloseFilter and Close < Open) then begin
+        sell short ("SW_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+if v_Prev_MP <= 0 and condition2 then begin
+    if UseCloseFilter = false or (UseCloseFilter and Close > Average(Close, MAFilterLen)) then begin
+        buy ("SW_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+if MarketPosition = 1 then begin
+    sell ("SW_SL") next bar at EntryPrice - StopPts stop;
+    sell ("SW_TP") next bar at EntryPrice + TargetPts limit;
+    if BarNumber - v_EntryBar >= HoldDays then
+        sell ("SW_Time") next bar at market;
+end;
+
+if MarketPosition = -1 then begin
+    buy to cover ("SW_SL") next bar at EntryPrice + StopPts stop;
+    buy to cover ("SW_TP") next bar at EntryPrice - TargetPts limit;
+    if BarNumber - v_EntryBar >= HoldDays then
+        buy to cover ("SW_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

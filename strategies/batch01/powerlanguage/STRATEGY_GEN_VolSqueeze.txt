@@ -1,0 +1,83 @@
+{STRATEGY_GEN_VolSqueeze - 波動率收縮爆發策略}
+{C類：Bollinger BandWidth 收縮後突破}
+{操作方向：★雙向（做多+做空）}
+{操作週期：60M | 賺什麼錢：波動率壓縮轉擴張的方向突破}
+
+inputs:
+    BBLen(20),
+    BBStd(2.0),
+    BWLookback(120),
+    BWPctile(20),
+    ATRLen(14),
+    StopATRMult(1.5),
+    TargetATRMult(3.0),
+    MaxBars(40),
+    UseMidExit(true);
+
+variables:
+    v_UpperBand(0),
+    v_LowerBand(0),
+    v_MidBand(0),
+    v_BandWidth(0),
+    v_BWRank(0),
+    v_BWCount(0),
+    v_ATR(0),
+    v_StopDist(0),
+    v_TargetDist(0),
+    v_Squeeze(false),
+    v_EntryBar(0),
+    v_Prev_MP(0),
+    v_i(0);
+
+v_MidBand = Average(Close, BBLen);
+v_UpperBand = v_MidBand + BBStd * StandardDev(Close, BBLen, 1);
+v_LowerBand = v_MidBand - BBStd * StandardDev(Close, BBLen, 1);
+
+if v_MidBand > 0 then
+    v_BandWidth = (v_UpperBand - v_LowerBand) / v_MidBand * 100
+else
+    v_BandWidth = 0;
+
+v_BWCount = 0;
+for v_i = 1 to BWLookback begin
+    if v_BandWidth[v_i] < v_BandWidth then
+        v_BWCount = v_BWCount + 1;
+end;
+v_BWRank = v_BWCount / BWLookback * 100;
+
+v_Squeeze = (v_BWRank <= BWPctile);
+
+v_ATR = AvgTrueRange(ATRLen);
+v_StopDist = v_ATR * StopATRMult;
+v_TargetDist = v_ATR * TargetATRMult;
+
+if v_Squeeze then begin
+    if v_Prev_MP <= 0 and Close > v_UpperBand then begin
+        buy ("VS_Long") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+    if v_Prev_MP >= 0 and Close < v_LowerBand then begin
+        sell short ("VS_Short") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+if MarketPosition = 1 then begin
+    sell ("VS_SL") next bar at EntryPrice - v_StopDist stop;
+    sell ("VS_TP") next bar at EntryPrice + v_TargetDist limit;
+    if UseMidExit and BarNumber - v_EntryBar >= 3 and Close < v_MidBand then
+        sell ("VS_Mid") next bar at market;
+    if BarNumber - v_EntryBar >= MaxBars then
+        sell ("VS_Time") next bar at market;
+end;
+
+if MarketPosition = -1 then begin
+    buy to cover ("VS_SL") next bar at EntryPrice + v_StopDist stop;
+    buy to cover ("VS_TP") next bar at EntryPrice - v_TargetDist limit;
+    if UseMidExit and BarNumber - v_EntryBar >= 3 and Close > v_MidBand then
+        buy to cover ("VS_Mid") next bar at market;
+    if BarNumber - v_EntryBar >= MaxBars then
+        buy to cover ("VS_Time") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;

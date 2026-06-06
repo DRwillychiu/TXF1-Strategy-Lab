@@ -1,0 +1,69 @@
+{STRATEGY_GEN_NightMomentum - 夜盤動量追蹤策略}
+{A類：夜盤開盤區間突破}
+{操作方向：★雙向（做多+做空）}
+{操作週期：15M | 賺什麼錢：夜盤前段定方向後的慣性延續}
+
+inputs:
+    LookbackBars(4),
+    EntryOffset(10),
+    MinRange(30),
+    MaxRange(200),
+    StopLossPts(60),
+    TakeProfitPts(120),
+    TrailActivate(50),
+    TrailOffset(30),
+    NightOpen(1500),
+    ExitTime(0430);
+
+variables:
+    v_NightHigh(0),
+    v_NightLow(999999),
+    v_RangeWidth(0),
+    v_NightBarCount(0),
+    v_RangeReady(false),
+    v_IsNightSession(false),
+    v_Prev_MP(0);
+
+v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
+
+if Time >= NightOpen and Time[1] < NightOpen then begin
+    v_NightHigh = 0;
+    v_NightLow = 999999;
+    v_NightBarCount = 0;
+    v_RangeReady = false;
+end;
+
+if v_IsNightSession and v_RangeReady = false then begin
+    v_NightBarCount = v_NightBarCount + 1;
+    if High > v_NightHigh then v_NightHigh = High;
+    if Low < v_NightLow then v_NightLow = Low;
+    if v_NightBarCount >= LookbackBars then begin
+        v_RangeWidth = v_NightHigh - v_NightLow;
+        if v_RangeWidth >= MinRange and v_RangeWidth <= MaxRange then
+            v_RangeReady = true;
+    end;
+end;
+
+if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
+    if v_Prev_MP <= 0 then
+        buy ("NM_Long") next bar at v_NightHigh + EntryOffset stop;
+    if v_Prev_MP >= 0 then
+        sell short ("NM_Short") next bar at v_NightLow - EntryOffset stop;
+end;
+
+SetStopLoss(StopLossPts * 200);
+SetProfitTarget(TakeProfitPts * 200);
+
+if MarketPosition = 1 and MaxContractProfit / 200 >= TrailActivate then
+    sell ("NM_Trail_X") next bar at EntryPrice + TrailActivate - TrailOffset stop;
+if MarketPosition = -1 and MaxContractProfit / 200 >= TrailActivate then
+    buy to cover ("NM_Trail_X") next bar at EntryPrice - TrailActivate + TrailOffset stop;
+
+if Time >= ExitTime and Time < NightOpen then begin
+    if MarketPosition = 1 then
+        sell ("NM_TimeExit") next bar at market;
+    if MarketPosition = -1 then
+        buy to cover ("NM_TimeExit") next bar at market;
+end;
+
+v_Prev_MP = MarketPosition;
