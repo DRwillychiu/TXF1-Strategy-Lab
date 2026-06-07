@@ -1,31 +1,41 @@
-{STRATEGY_GEN_NightMomentum - 夜盤動量追蹤策略}
-{A類：夜盤開盤區間突破}
-{操作方向：★雙向（做多+做空）}
-{操作週期：15M | 賺什麼錢：夜盤前段定方向後的慣性延續}
+{STRATEGY_GEN_NightMomentum}
+{v2.0: ATR-Based Volatility Adaptive - No Fixed Points}
+{Category A: Night Session Opening Range Breakout}
+{Direction: Long Only (Short removed: MC12 Short PF=0.93)}
+{Timeframe: 15-min on TXF1}
+{v_EntryATR freeze: ATR captured at entry, held constant during trade}
 
 inputs:
-    LookbackBars(4),
-    EntryOffset(10),
-    MinRange(30),
-    MaxRange(200),
-    StopLossPts(60),
-    TakeProfitPts(120),
-    TrailActivate(50),
-    TrailOffset(30),
+    LookbackBars(6),
+    ATRLen(14),
+    EntryATRMult(0.1),
+    RangeMinATR(0.5),
+    RangeMaxATR(3.5),
+    StopATRMult(1.5),
+    TargetATRMult(3.0),
+    TrailActATR(1.0),
+    TrailOffATR(0.5),
     NightOpen(1500),
-    ExitTime(0430);
+    ExitTime(0500);
 
 variables:
     v_NightHigh(0),
     v_NightLow(999999),
-    v_RangeWidth(0),
     v_NightBarCount(0),
     v_RangeReady(false),
     v_IsNightSession(false),
+    v_ATR(0),
+    v_EntryATR(0),
+    v_RangeWidth(0),
     v_Prev_MP(0);
 
+{ ATR calculation }
+v_ATR = AvgTrueRange(ATRLen);
+
+{ Detect night session }
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 
+{ Reset at night session open }
 if Time >= NightOpen and Time[1] < NightOpen then begin
     v_NightHigh = 0;
     v_NightLow = 999999;
@@ -33,37 +43,49 @@ if Time >= NightOpen and Time[1] < NightOpen then begin
     v_RangeReady = false;
 end;
 
+{ Build opening range from first N bars }
 if v_IsNightSession and v_RangeReady = false then begin
     v_NightBarCount = v_NightBarCount + 1;
     if High > v_NightHigh then v_NightHigh = High;
     if Low < v_NightLow then v_NightLow = Low;
     if v_NightBarCount >= LookbackBars then begin
         v_RangeWidth = v_NightHigh - v_NightLow;
-        if v_RangeWidth >= MinRange and v_RangeWidth <= MaxRange then
+        if v_ATR > 0 and
+           v_RangeWidth >= v_ATR * RangeMinATR and
+           v_RangeWidth <= v_ATR * RangeMaxATR then
             v_RangeReady = true;
     end;
 end;
 
+{ Entry: Long breakout of opening range high }
 if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
-    if v_Prev_MP <= 0 then
-        buy ("NM_Long") next bar at v_NightHigh + EntryOffset stop;
-    if v_Prev_MP >= 0 then
-        sell short ("NM_Short") next bar at v_NightLow - EntryOffset stop;
+    if v_Prev_MP <= 0 and v_ATR > 0 then
+        buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
 
-SetStopLoss(StopLossPts * 200);
-SetProfitTarget(TakeProfitPts * 200);
+{ Freeze ATR at entry time - prevents stop drift during trade }
+if MarketPosition = 1 and v_Prev_MP <= 0 then
+    v_EntryATR = v_ATR;
 
-if MarketPosition = 1 and MaxContractProfit / 200 >= TrailActivate then
-    sell ("NM_Trail_X") next bar at EntryPrice + TrailActivate - TrailOffset stop;
-if MarketPosition = -1 and MaxContractProfit / 200 >= TrailActivate then
-    buy to cover ("NM_Trail_X") next bar at EntryPrice - TrailActivate + TrailOffset stop;
+{ Exit: ATR-based stop loss }
+if MarketPosition = 1 and v_EntryATR > 0 then
+    sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
 
+{ Exit: ATR-based take profit }
+if MarketPosition = 1 and v_EntryATR > 0 then
+    sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
+
+{ Exit: ATR-based trailing stop (activates after profit >= TrailActATR * ATR) }
+if MarketPosition = 1 and v_EntryATR > 0 then begin
+    if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
+        sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
+end;
+
+{ Exit: time-based forced close }
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then
-        sell ("NM_TimeExit") next bar at market;
-    if MarketPosition = -1 then
-        buy to cover ("NM_TimeExit") next bar at market;
+        sell ("LX_NM_Time") next bar at market;
 end;
 
+{ Track previous bar position }
 v_Prev_MP = MarketPosition;
