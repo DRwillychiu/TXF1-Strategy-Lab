@@ -1,6 +1,6 @@
 # 策略優化進度追蹤表
 
-> 最後更新：2026-06-07 (Batch02 added)
+> 最後更新：2026-06-07 (B02 restructured to four-file spec)
 > 規則：每隻策略經過完整 4 Phase 優化流程後，依據「績效門檻」判定 Pass/Fail
 
 ---

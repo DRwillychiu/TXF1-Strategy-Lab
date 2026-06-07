@@ -1,0 +1,72 @@
+{STRATEGY_GEN_BearBounceSell}
+{Category: Bear Trend Bounce Fade}
+{Direction: Short Only (sell bounce in bear trend)}
+{Timeframe: 15-min on TXF1, Data2 = Daily}
+{RSI overbought + consecutive up bars + ATR deviation in bear trend = short entry}
+
+inputs:
+    RSILen(6),
+    RSIOverbought(85),
+    ConsecUpBars(3),
+    DevATRMult(2.5),
+    ATRLen(14),
+    MA_Len(20),
+    StopATRMult(2.0),
+    TargetATRMult(3.0),
+    SessionStart(0845),
+    SessionEnd(1330);
+
+variables:
+    v_RSI(0),
+    v_ATR(0),
+    v_Deviation(0),
+    v_ConsecUp(0),
+    v_TrendFilter(False),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Data1 (15M) indicator calculations ---- }
+v_RSI = RSI(Close, RSILen);
+v_ATR = AvgTrueRange(ATRLen);
+
+{ Count consecutive up bars }
+v_ConsecUp = 0;
+If Close > Close[1] Then v_ConsecUp = v_ConsecUp + 1;
+If Close[1] > Close[2] Then v_ConsecUp = v_ConsecUp + 1;
+If Close[2] > Close[3] Then v_ConsecUp = v_ConsecUp + 1;
+
+{ Upward deviation from MA in ATR units }
+If v_ATR > 0 Then
+    v_Deviation = (Close - Average(Close, MA_Len)) / v_ATR;
+
+{ ---- Data2 (Daily) trend filter: close below MA20 = bear ---- }
+v_TrendFilter = Close of Data2 < Average(Close of Data2, MA_Len)[1] of Data2;
+
+{ ---- Short Entry: extreme overbought in bear trend ---- }
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_RSI > RSIOverbought And
+   v_ConsecUp >= ConsecUpBars And
+   v_Deviation >= DevATRMult And
+   v_TrendFilter Then Begin
+    SellShort ("SE_BB_Short") Next Bar at Market;
+End;
+
+{ ---- Short Exit management ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+
+    BuyToCover ("SX_BB_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_BB_TP") Next Bar at v_TargetPrice Limit;
+
+    If Time >= 1340 Then
+        BuyToCover ("SX_BB_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

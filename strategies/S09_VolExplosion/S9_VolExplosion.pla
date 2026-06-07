@@ -1,0 +1,91 @@
+{STRATEGY_GEN_VolExplosion}
+{Category: Volatility Regime Breakout}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: 5-min on TXF1}
+{ATR ratio spike above baseline signals vol explosion, trade momentum direction}
+
+inputs:
+    ATRLen(14),
+    BaselineLen(50),
+    ATRRatio(2.5),
+    MomBars(3),
+    StopATRMult(1.5),
+    TargetATRMult(2.5),
+    ExitBars(15),
+    SessionStart(0845),
+    SessionEnd(1330);
+
+variables:
+    v_ATR(0),
+    v_BaseATR(0),
+    v_Ratio(0),
+    v_Mom(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_ATR = AvgTrueRange(ATRLen);
+v_BaseATR = AvgTrueRange(BaselineLen);
+
+{ ATR ratio: short-term vol vs long-term baseline }
+If v_BaseATR > 0 Then
+    v_Ratio = v_ATR / v_BaseATR;
+
+{ Momentum direction over N bars }
+v_Mom = Close - Close[MomBars];
+
+{ ---- Entry: ATR ratio explosion + momentum direction ---- }
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_Ratio >= ATRRatio Then Begin
+
+    { Long if momentum is up }
+    If v_Mom > 0 Then Begin
+        Buy ("LE_VE_Long") Next Bar at Market;
+        v_EntryBar = CurrentBar;
+    End;
+
+    { Short if momentum is down }
+    If v_Mom < 0 Then Begin
+        SellShort ("SE_VE_Short") Next Bar at Market;
+        v_EntryBar = CurrentBar;
+    End;
+End;
+
+{ ---- Long Exit management ---- }
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
+
+    Sell ("LX_VE_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_VE_TP") Next Bar at v_TargetPrice Limit;
+
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        Sell ("LX_VE_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        Sell ("LX_VE_EOD") Next Bar at Market;
+End;
+
+{ ---- Short Exit management ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+
+    BuyToCover ("SX_VE_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_VE_TP") Next Bar at v_TargetPrice Limit;
+
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        BuyToCover ("SX_VE_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        BuyToCover ("SX_VE_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

@@ -1,0 +1,72 @@
+{STRATEGY_GEN_FlashCrashMomentum}
+{Category: Flash Crash Momentum Capture}
+{Direction: Short Only (crash acceleration sell)}
+{Timeframe: 5-min on TXF1}
+{Price acceleration + volume spike detects flash crash, rides momentum down}
+
+inputs:
+    AccelBars(5),
+    AccelThresh(3.0),
+    VolSpikeRatio(2.0),
+    ATRLen(14),
+    StopATRMult(2.0),
+    TargetATRMult(3.0),
+    ExitBars(10),
+    SessionStart(0845),
+    SessionEnd(1330);
+
+variables:
+    v_ATR(0),
+    v_Accel(0),
+    v_VolRatio(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking (MC12 bug workaround) ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_ATR = AvgTrueRange(ATRLen);
+
+{ Price acceleration: how many ATRs price dropped in N bars }
+If v_ATR > 0 Then
+    v_Accel = (Close[AccelBars] - Close) / v_ATR;
+
+{ Volume spike ratio vs 20-bar average }
+If Average(Volume, 20) > 0 Then
+    v_VolRatio = Volume / Average(Volume, 20);
+
+{ ---- Short Entry: price accelerating down + volume explosion ---- }
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_Accel >= AccelThresh And
+   v_VolRatio >= VolSpikeRatio And
+   Close < Close[1] Then Begin
+    SellShort ("SE_FC_Short") Next Bar at Market;
+    v_EntryBar = CurrentBar;
+End;
+
+{ ---- Short Exit management ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+
+    { Stop loss }
+    BuyToCover ("SX_FC_SL") Next Bar at v_StopPrice Stop;
+
+    { Take profit }
+    BuyToCover ("SX_FC_TP") Next Bar at v_TargetPrice Limit;
+
+    { Time exit: max bars in position }
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        BuyToCover ("SX_FC_Time") Next Bar at Market;
+
+    { End of day forced exit }
+    If Time >= 1340 Then
+        BuyToCover ("SX_FC_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

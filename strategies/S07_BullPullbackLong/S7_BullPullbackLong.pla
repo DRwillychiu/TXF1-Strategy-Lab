@@ -1,0 +1,73 @@
+{STRATEGY_GEN_BullPullbackLong}
+{Category: Bull Trend Pullback Mean Reversion}
+{Direction: Long Only (buy dip in bull trend)}
+{Timeframe: 15-min on TXF1, Data2 = Daily}
+{RSI oversold + consecutive down bars + ATR deviation in bull trend = long entry}
+
+inputs:
+    RSILen(6),
+    RSIOversold(15),
+    ConsecDownBars(3),
+    DevATRMult(2.5),
+    ATRLen(14),
+    MA_Len(20),
+    StopATRMult(2.0),
+    TargetATRMult(3.0),
+    SessionStart(0845),
+    SessionEnd(1330);
+
+variables:
+    v_RSI(0),
+    v_ATR(0),
+    v_Deviation(0),
+    v_ConsecDown(0),
+    v_TrendFilter(False),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Data1 (15M) indicator calculations ---- }
+v_RSI = RSI(Close, RSILen);
+v_ATR = AvgTrueRange(ATRLen);
+
+{ Count consecutive down bars }
+v_ConsecDown = 0;
+If Close < Close[1] Then v_ConsecDown = v_ConsecDown + 1;
+If Close[1] < Close[2] Then v_ConsecDown = v_ConsecDown + 1;
+If Close[2] < Close[3] Then v_ConsecDown = v_ConsecDown + 1;
+
+{ Deviation from MA in ATR units }
+If v_ATR > 0 Then
+    v_Deviation = (Average(Close, MA_Len) - Close) / v_ATR;
+
+{ ---- Data2 (Daily) trend filter: close above MA20 = bull ---- }
+v_TrendFilter = Close of Data2 > Average(Close of Data2, MA_Len)[1] of Data2;
+
+{ ---- Long Entry: extreme oversold in bull trend ---- }
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_RSI < RSIOversold And
+   v_ConsecDown >= ConsecDownBars And
+   v_Deviation >= DevATRMult And
+   v_TrendFilter Then Begin
+    Buy ("LE_BP_Long") Next Bar at Market;
+End;
+
+{ ---- Long Exit management ---- }
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
+
+    Sell ("LX_BP_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_BP_TP") Next Bar at v_TargetPrice Limit;
+
+    { End of day forced exit }
+    If Time >= 1340 Then
+        Sell ("LX_BP_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

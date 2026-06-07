@@ -1,20 +1,20 @@
 {STRATEGY_GEN_AdaptiveBreakout}
-{Batch02 - S10 | 位階自適應突破}
-{操作週期: 30分鐘 | 方向: ★雙向}
-{賺什麼錢: N根K棒高低點突破，停損隨指數位階自動調整}
-{指數位階論: MinList(ATR*mult, Close*pct%) 雙重保護}
+{Category: Index-Level Adaptive Channel Breakout}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: 30-min on TXF1}
+{N-bar HH/LL breakout with MinList(ATR*mult, Close*pct%) adaptive stop}
 
-Inputs:
-    BreakoutBars(20),       {突破回溯N根K棒}
-    ATRLen(14),             {ATR計算週期}
-    StopATRMult(2.0),       {停損ATR倍數}
-    StopPctCap(0.015),      {停損百分比上限(1.5%)}
-    TargetATRMult(3.0),     {停利ATR倍數}
-    MinVolRatio(1.0),       {最低成交量倍率}
+inputs:
+    BreakoutBars(20),
+    ATRLen(14),
+    StopATRMult(2.0),
+    StopPctCap(0.015),
+    TargetATRMult(3.0),
+    MinVolRatio(1.0),
     SessionStart(0845),
     SessionEnd(1330);
 
-Variables:
+variables:
     v_ATR(0),
     v_HH(0),
     v_LL(0),
@@ -26,58 +26,63 @@ Variables:
     v_VolOK(False),
     v_Prev_MP(0);
 
+{ ---- Previous bar position tracking ---- }
 v_Prev_MP = MarketPosition[1];
 
+{ ---- Indicator calculations ---- }
 v_ATR = AvgTrueRange(ATRLen);
 v_HH = Highest(High, BreakoutBars);
 v_LL = Lowest(Low, BreakoutBars);
 
-{自適應停損: ATR停損 與 百分比停損 取小值}
+{ Adaptive stop: smaller of ATR-based and percentage-based }
 v_StopATR = v_ATR * StopATRMult;
 v_StopPct = Close * StopPctCap;
 v_AdaptiveStop = MinList(v_StopATR, v_StopPct);
 
-{成交量過濾}
+{ Volume filter }
 v_VolOK = True;
 If Average(Volume, 20) > 0 Then
     v_VolOK = Volume >= Average(Volume, 20) * MinVolRatio;
 
-{做多突破}
+{ ---- Long Entry: breakout above N-bar high ---- }
 If v_Prev_MP = 0 And
    Time >= SessionStart And Time <= SessionEnd And
    Close > v_HH[1] And
    v_VolOK Then Begin
-    Buy ("AB_Long") Next Bar at Market;
+    Buy ("LE_AB_Long") Next Bar at Market;
 End;
 
-{做空突破}
+{ ---- Short Entry: breakout below N-bar low ---- }
 If v_Prev_MP = 0 And
    Time >= SessionStart And Time <= SessionEnd And
    Close < v_LL[1] And
    v_VolOK Then Begin
-    SellShort ("AB_Short") Next Bar at Market;
+    SellShort ("SE_AB_Short") Next Bar at Market;
 End;
 
-{做多出場}
+{ ---- Long Exit management ---- }
 If MarketPosition = 1 Then Begin
     v_StopPrice = EntryPrice - v_AdaptiveStop;
     v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
-    
-    Sell ("AB_LStop") Next Bar at v_StopPrice Stop;
-    Sell ("AB_LTarget") Next Bar at v_TargetPrice Limit;
-    
+
+    Sell ("LX_AB_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_AB_TP") Next Bar at v_TargetPrice Limit;
+
     If Time >= 1340 Then
-        Sell ("AB_LEOD") Next Bar at Market;
+        Sell ("LX_AB_EOD") Next Bar at Market;
 End;
 
-{做空出場}
+{ ---- Short Exit management ---- }
 If MarketPosition = -1 Then Begin
     v_StopPrice = EntryPrice + v_AdaptiveStop;
     v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
-    
-    BuyToCover ("AB_SStop") Next Bar at v_StopPrice Stop;
-    BuyToCover ("AB_STarget") Next Bar at v_TargetPrice Limit;
-    
+
+    BuyToCover ("SX_AB_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_AB_TP") Next Bar at v_TargetPrice Limit;
+
     If Time >= 1340 Then
-        BuyToCover ("AB_SEOD") Next Bar at Market;
+        BuyToCover ("SX_AB_EOD") Next Bar at Market;
 End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;
