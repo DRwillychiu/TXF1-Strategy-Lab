@@ -1,9 +1,10 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.0: ATR-Based Volatility Adaptive - No Fixed Points}
+{v2.1: ATR-Based + Volatility Expansion Filter}
 {Category A: Night Session Opening Range Breakout}
 {Direction: Long Only (Short removed: MC12 Short PF=0.93)}
 {Timeframe: 15-min on TXF1}
 {v_EntryATR freeze: ATR captured at entry, held constant during trade}
+{v2.1 NEW: Only enter when fast ATR / slow ATR >= threshold (vol expanding)}
 
 inputs:
     LookbackBars(6),
@@ -16,7 +17,9 @@ inputs:
     TrailActATR(1.0),
     TrailOffATR(0.5),
     NightOpen(1500),
-    ExitTime(0500);
+    ExitTime(0500),
+    VolSlowLen(60),
+    VolRatioMin(0.80);
 
 variables:
     v_NightHigh(0),
@@ -27,10 +30,21 @@ variables:
     v_ATR(0),
     v_EntryATR(0),
     v_RangeWidth(0),
-    v_Prev_MP(0);
+    v_Prev_MP(0),
+    v_SlowATR(0),
+    v_VolRatio(0),
+    v_VolPass(false);
 
 { ATR calculation }
 v_ATR = AvgTrueRange(ATRLen);
+
+{ Volatility expansion filter: compare fast ATR vs slow ATR }
+v_SlowATR = AvgTrueRange(VolSlowLen);
+if v_SlowATR > 0 then
+    v_VolRatio = v_ATR / v_SlowATR
+else
+    v_VolRatio = 1;
+v_VolPass = (v_VolRatio >= VolRatioMin);
 
 { Detect night session }
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
@@ -57,8 +71,8 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ Entry: Long breakout of opening range high }
-if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
+{ Entry: Long breakout — ONLY when volatility is expanding }
+if v_RangeReady and v_IsNightSession and Time < ExitTime and v_VolPass then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;

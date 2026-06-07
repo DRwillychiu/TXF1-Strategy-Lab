@@ -2,8 +2,8 @@
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
 > 最後更新：2026-06-07
-> 版本：v2.0 ATR-Based（全面移除固定點數）
-> 參數來源：MC12 GA 最佳化 → MC12 15M WFA ⚠️ 不通過（有效WFE=33.3%）
+> 版本：v2.1 ATR-Based + 波動率擴張過濾器
+> 參數來源：MC12 GA 最佳化 → v2.0 WFA 不通過 → v2.1 加入 VolFilter 待重新 WFA
 
 ---
 
@@ -13,6 +13,7 @@
 - **週期**：15 分鐘
 - **核心邏輯**：夜盤開盤前 N 根 K 棒形成「開盤區間」，突破高點做多
 - **v2.0 重點**：所有進出場判斷改用 ATR 倍數，適應各種指數位階
+- **v2.1 重點**：加入波動率擴張過濾器（fast ATR / slow ATR），低波動環境不進場
 
 ---
 
@@ -49,6 +50,8 @@
 | `TrailOffATR` | 0.5 | 0.5 | 追蹤停損回撤容忍（ATR 倍數） |
 | `NightOpen` | 1500 | 1500 | 夜盤開盤時間（固定） |
 | `ExitTime` | 0500 | 500 | 強制平倉時間（GA: 05:00） |
+| `VolSlowLen` | 60 | — | v2.1 新增：慢速 ATR 週期（波動率基準線） |
+| `VolRatioMin` | 0.80 | — | v2.1 新增：快/慢 ATR 比值門檻（低於此值不進場） |
 
 ---
 
@@ -61,13 +64,28 @@ v_ATR = AvgTrueRange(ATRLen);
 - MC12 內建函數，計算最近 ATRLen 根 K 棒的平均真實波幅
 - 每根 bar 都更新，但進場後用 v_EntryATR 凍結
 
-### 2. 偵測夜盤時段
+### 2. 波動率擴張過濾器（v2.1 新增）
+```
+v_SlowATR = AvgTrueRange(VolSlowLen);
+if v_SlowATR > 0 then
+    v_VolRatio = v_ATR / v_SlowATR
+else
+    v_VolRatio = 1;
+v_VolPass = (v_VolRatio >= VolRatioMin);
+```
+- ★ v2.1 核心改動：快速 ATR（短週期）÷ 慢速 ATR（長週期）= 波動率擴張比率
+- `v_VolRatio > 1.0`：近期波動率高於基準 → 擴張中 → 適合突破
+- `v_VolRatio < 1.0`：近期波動率低於基準 → 收縮中 → 突破容易假訊號
+- 只有 `v_VolRatio >= VolRatioMin` 時才允許進場
+- **為什麼加這個？** v2.0 WFA 顯示 2021~2024 連虧 4 窗口，分析後判斷是低波動環境下突破策略失效。此過濾器讓策略在低波動期「不開機」，避免無效交易
+
+### 3. 偵測夜盤時段
 ```
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 ```
 - 15:00 以後 **或** 05:00 以前 → 判定為夜盤
 
-### 3. 夜盤開盤重置
+### 4. 夜盤開盤重置
 ```
 if Time >= NightOpen and Time[1] < NightOpen then begin
     v_NightHigh = 0; v_NightLow = 999999;
@@ -76,7 +94,7 @@ end;
 ```
 - 當時間跨過 15:00 → 重置所有變數，準備計算新的開盤區間
 
-### 4. 建構開盤區間（ATR 化過濾）
+### 5. 建構開盤區間（ATR 化過濾）
 ```
 if v_NightBarCount >= LookbackBars then begin
     v_RangeWidth = v_NightHigh - v_NightLow;
@@ -90,14 +108,18 @@ end;
 - **v2.0 改動**：區間過濾用 ATR 倍數（不再是固定 30/200 點）
 - ATR=60 時：最窄 0.2*60=12pt，最寬 4.0*60=240pt
 
-### 5. 進場：區間突破（Long Only）
+### 6. 進場：區間突破（Long Only + Vol Filter）
 ```
-buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
+if v_RangeReady and v_IsNightSession and Time < ExitTime and v_VolPass then begin
+    if v_Prev_MP <= 0 and v_ATR > 0 then
+        buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
+end;
 ```
 - **v2.0 改動**：偏移量用 ATR 倍數（不再是固定 6 點）
+- **v2.1 改動**：進場條件加入 `and v_VolPass`，低波動時不進場
 - 僅做多，已移除 sell short
 
-### 6. ATR 凍結機制
+### 7. ATR 凍結機制
 ```
 if MarketPosition = 1 and v_Prev_MP <= 0 then
     v_EntryATR = v_ATR;
@@ -105,21 +127,21 @@ if MarketPosition = 1 and v_Prev_MP <= 0 then
 - ★ 進場瞬間凍結 ATR → 持倉期間停損/停利不會因 ATR 變動而飄移
 - 避免高波動時 ATR 突然擴大導致停損被拉遠
 
-### 7. 出場：ATR 停損
+### 8. 出場：ATR 停損
 ```
 sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
 ```
 - **v2.0 改動**：取代 SetStopLoss()，用手動 stop 單 + 有標籤
 - GA 最佳：2.75 倍 ATR 停損
 
-### 8. 出場：ATR 停利
+### 9. 出場：ATR 停利
 ```
 sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
 ```
 - **v2.0 改動**：取代 SetProfitTarget()，用手動 limit 單 + 有標籤
 - GA 最佳：3.0 倍 ATR 停利
 
-### 9. 出場：ATR 追蹤停損
+### 10. 出場：ATR 追蹤停損
 ```
 if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
     sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
@@ -127,7 +149,7 @@ if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
 - 獲利達 TrailActATR 倍 ATR 後，在 (TrailActATR - TrailOffATR) 倍 ATR 處設停損
 - GA 最佳：獲利達 2.5 倍 ATR 後，鎖定 2.0 倍 ATR 利潤（2.5-0.5=2.0）
 
-### 10. 出場：時間平倉
+### 11. 出場：時間平倉
 ```
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then sell ("LX_NM_Time") next bar at market;
@@ -215,8 +237,10 @@ NightOpen=1500, ExitTime=500
 | 9 | TrailOffATR | 0.1 | 1.5 | 0.1 | 15 | 0.5 | 追蹤停損回撤（ATR倍數） |
 | — | NightOpen | 1500 | — | — | **固定** | 1500 | 夜盤開盤時間 |
 | 10 | ExitTime | 400 | 530 | 30 | 5 | 500 | 強制平倉時間 |
+| 11 | VolSlowLen | 40 | 200 | 20 | 9 | — | v2.1：慢速 ATR 週期（波動率基準線） |
+| 12 | VolRatioMin | 0.60 | 1.40 | 0.10 | 9 | — | v2.1：快/慢 ATR 最低比值 |
 
-**全暴力掃描組合數**：11 x 17 x 11 x 10 x 7 x 11 x 9 x 11 x 15 x 5 = **~11,760,383,250**（~117.6 億，暴力不可行）
+**全暴力掃描組合數**：11 x 17 x 11 x 10 x 7 x 11 x 9 x 11 x 15 x 5 x 9 x 9 = **~952.2 billion**（~9,522 億，暴力不可行，必須 GA）
 
 ### 四、GA 設定（每個 WFA 窗口）
 
@@ -287,3 +311,4 @@ NightOpen=1500, ExitTime=500
 | v1.1 | 2026-06-07 | MC12 分析移除空單（Short PF=0.93），改純做多 |
 | v2.0 | 2026-06-07 | ★ 全面 ATR 化：6 個固定點數參數改 ATR 倍數，加 v_EntryATR 凍結機制 |
 | v2.0 | 2026-06-07 | MC12 15M WFA 完成：⚠️ 不通過（有效 WFE=33.3%，MDD 爆表，中期連虧） |
+| v2.1 | 2026-06-07 | 加入波動率擴張過濾器（VolSlowLen + VolRatioMin），低波動不進場，待重新 GA + WFA |
