@@ -4,21 +4,22 @@
 {Direction: Long Only (Short removed: MC12 Short PF=0.93)}
 {Timeframe: 15-min on TXF1}
 {v_EntryATR freeze: ATR captured at entry, held constant during trade}
-{v2.1 NEW: Only enter when fast ATR / slow ATR >= threshold (vol expanding)}
+{v2.1: Only enter when fast ATR / slow ATR >= threshold (vol expanding)}
+{Parameters: MC12 v2.1 GA optimized (2020/01~2026/06, 1M capital)}
 
 inputs:
-    LookbackBars(6),
-    ATRLen(14),
-    EntryATRMult(0.1),
-    RangeMinATR(0.5),
-    RangeMaxATR(3.5),
-    StopATRMult(1.5),
-    TargetATRMult(3.0),
-    TrailActATR(1.0),
-    TrailOffATR(0.5),
+    LookbackBars(11),
+    ATRLen(11),
+    EntryATRMult(0.2),
+    RangeMinATR(0.9),
+    RangeMaxATR(4.5),
+    StopATRMult(2.75),
+    TargetATRMult(2.0),
+    TrailActATR(2.75),
+    TrailOffATR(0.7),
     NightOpen(1500),
     ExitTime(0500),
-    VolSlowLen(60),
+    VolSlowLen(70),
     VolRatioMin(0.80);
 
 variables:

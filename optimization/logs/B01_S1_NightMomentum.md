@@ -46,10 +46,30 @@ NightOpen=1500, ExitTime=500
 | 交易次數 | 482 | 807 | +67.4% |
 | 年報酬率 | — | 31.1% | — |
 
-v2.1 GA 最佳參數（待補 VolSlowLen / VolRatioMin）：
+v2.1 GA 最佳參數（MC12 確認，初始資金 1,000,000 NTD）：
 ```
-（待 MC12 確認）
+LookbackBars=11, ATRLen=11, EntryATRMult=0.2,
+RangeMinATR=0.9, RangeMaxATR=4.5,
+StopATRMult=2.75, TargetATRMult=2.0,
+TrailActATR=2.75, TrailOffATR=0.7,
+NightOpen=1500, ExitTime=500,
+VolSlowLen=70, VolRatioMin=0.80
 ```
+
+v2.0 → v2.1 參數差異：
+| 參數 | v2.0 | v2.1 | 解讀 |
+|------|------|------|------|
+| LookbackBars | 10 | 11 | 多觀察 1 根 bar |
+| ATRLen | 13 | 11 | ATR 反應更快 |
+| EntryATRMult | 0.3 | 0.2 | 突破偏移更小，更積極進場 |
+| RangeMinATR | 0.2 | **0.9** | ★ 大幅提高：要求開盤區間更寬 |
+| RangeMaxATR | 4.0 | 4.5 | 略放寬上限 |
+| StopATRMult | 2.75 | 2.75 | 不變 |
+| TargetATRMult | 3.0 | **2.0** | ★ 停利提前，鎖定小波段 |
+| TrailActATR | 2.5 | 2.75 | 追蹤停損更晚啟動 |
+| TrailOffATR | 0.5 | 0.7 | 追蹤回撤容忍更大 |
+| VolSlowLen | — | 70 | ~17.5 小時（約 1.25 交易日） |
+| VolRatioMin | — | 0.80 | 近期 ATR ≥ 基準 80% 才進場 |
 
 ---
 

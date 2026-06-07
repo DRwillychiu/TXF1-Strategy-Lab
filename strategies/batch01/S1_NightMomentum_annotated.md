@@ -39,19 +39,19 @@
 
 | 參數 | 預設值 | GA 最佳 | 說明 |
 |------|--------|--------|------|
-| `LookbackBars` | 6 | 10 | 夜盤開盤後幾根 K 棒形成區間 |
-| `ATRLen` | 14 | 13 | ATR 計算週期（根數） |
-| `EntryATRMult` | 0.1 | 0.3 | 突破偏移 = ATR * 此值（過濾假突破） |
-| `RangeMinATR` | 0.5 | 0.2 | 區間寬度最低門檻（ATR 倍數） |
-| `RangeMaxATR` | 3.5 | 4.0 | 區間寬度最高門檻（ATR 倍數） |
-| `StopATRMult` | 1.5 | 2.75 | 停損 = EntryPrice - v_EntryATR * 此值 |
-| `TargetATRMult` | 3.0 | 3.0 | 停利 = EntryPrice + v_EntryATR * 此值 |
-| `TrailActATR` | 1.0 | 2.5 | 獲利達 v_EntryATR * 此值 後啟動追蹤停損 |
-| `TrailOffATR` | 0.5 | 0.5 | 追蹤停損回撤容忍（ATR 倍數） |
-| `NightOpen` | 1500 | 1500 | 夜盤開盤時間（固定） |
-| `ExitTime` | 0500 | 500 | 強制平倉時間（GA: 05:00） |
-| `VolSlowLen` | 60 | — | v2.1 新增：慢速 ATR 週期（波動率基準線） |
-| `VolRatioMin` | 0.80 | — | v2.1 新增：快/慢 ATR 比值門檻（低於此值不進場） |
+| `LookbackBars` | 6 | **11** | 夜盤開盤後幾根 K 棒形成區間 |
+| `ATRLen` | 14 | **11** | ATR 計算週期（根數） |
+| `EntryATRMult` | 0.1 | **0.2** | 突破偏移 = ATR * 此值（過濾假突破） |
+| `RangeMinATR` | 0.5 | **0.9** | 區間寬度最低門檻（ATR 倍數）★ v2.1 大幅提高 |
+| `RangeMaxATR` | 3.5 | **4.5** | 區間寬度最高門檻（ATR 倍數） |
+| `StopATRMult` | 1.5 | **2.75** | 停損 = EntryPrice - v_EntryATR * 此值 |
+| `TargetATRMult` | 3.0 | **2.0** | 停利 = EntryPrice + v_EntryATR * 此值 ★ 提前鎖利 |
+| `TrailActATR` | 1.0 | **2.75** | 獲利達 v_EntryATR * 此值 後啟動追蹤停損 |
+| `TrailOffATR` | 0.5 | **0.7** | 追蹤停損回撤容忍（ATR 倍數） |
+| `NightOpen` | 1500 | **1500** | 夜盤開盤時間（固定） |
+| `ExitTime` | 0500 | **500** | 強制平倉時間 |
+| `VolSlowLen` | 60 | **70** | v2.1：慢速 ATR 週期（~17.5 小時基準線） |
+| `VolRatioMin` | 0.80 | **0.80** | v2.1：快/慢 ATR 比值門檻 |
 
 ---
 
