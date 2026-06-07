@@ -1,0 +1,477 @@
+{ ============================================================
+  ADAPTIVE FARMER - TREND BEARISH STRATEGY
+  Signal Name : Trendbearish_V1
+  MC Load Name: Trendbearish_V1
+  Version     : 5.1 + TS_Label_Unified
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 9.0 PowerLanguage x64
+  Timeframe   : 60-Minute (Day + Night Sessions)
+
+  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+    Net Profit    : 1,400,200 TWD
+    Profit Factor : 2.595
+    Win Rate      : 37.35%
+    MDD           : -269,400 (-15.98%)
+    Total Trades  : 83
+    Backtest      : 2020/02/07 - 2026/06/06
+  ============================================================ }
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  ============================================================ }
+
+Inputs:
+   { Weekly trend filter - one quarter = 13 weeks }
+   WkSMA_Len            ( 13   ),
+
+   { Entry: Donchian channel }
+   DC_Len               ( 30   ),
+
+   { Entry: ZLEMA - fixed by formula, do not optimize }
+   ZLEMA_Len            ( 20   ),
+   ZLEMA_Lag            ( 9    ),
+
+   { ATR period - shared by all modules }
+   ATR_Len              ( 21   ),
+
+   { C0 breakout confirmation: Close < DC_Lower - ATR * filter }
+   C0_ATR_Filter        ( 0.45 ),
+
+   { Initial SL buffer: SL_Trig = DC_Lower + ATR * ratio }
+   SL_ATR_Ratio         ( 1.1  ),
+
+   { TSL activation }
+   Accel_M              ( 0.5  ),
+   NLow_N               ( 15   ),
+   MinBars              ( 3    ),
+
+   { TSL tracking }
+   TSL_K                ( 9    ),
+   TSL_M                ( 1.0  ),
+
+   { Structure reversal take profit }
+   TP_N                 ( 30   ),
+
+   { Trailing take profit }
+   TTP_MinAtr           ( 4.0  ),
+   TTP_RebPct           ( 1.5  ),
+
+   { Stop profit: activate when profit >= stopProfitPoints_Shrt }
+   { Allow drawback up to profitReturnPrcnt_Shrt % of peak profit }
+   stopProfitPoints_Shrt  ( 250 ),
+   profitReturnPrcnt_Shrt ( 55  );
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+Variables:
+   { Session }
+   IsDay                ( False ),
+   IsNight              ( False ),
+
+   { Weekly filter }
+   WkBarCount           ( 0     ),
+   WkSMASum             ( 0     ),
+   IsNewWeek            ( False ),
+   FilterOK             ( False ),
+
+   { Indicators }
+   CompPrice            ( 0     ),
+   ZLEMA_Val            ( 0     ),
+   EMA20_Val            ( 0     ),
+   DC_Lower             ( 0     ),
+   ATR_Val              ( 0     ),
+
+   { Entry flags }
+   C0                   ( False ),
+   C_A                  ( False ),
+   C_B                  ( False ),
+
+   { Initial stop loss }
+   SL_Line              ( 0     ),
+   SL_Trig              ( 0     ),
+   SL_Locked            ( False ),
+
+   { TSL activation }
+   Accel                ( False ),
+   NLow                 ( False ),
+   C1_Bar               ( False ),
+   TSL_Armed            ( False ),
+
+   { TSL tracking }
+   New_TSL              ( 0     ),
+   TSL_Line             ( 0     ),
+   Active_TSL           ( 0     ),
+   Active_SL            ( 0     ),
+
+   { Trailing take profit }
+   LowestClose          ( 0     ),
+   WaveProfit           ( 0     ),
+   MinProfitPts         ( 0     ),
+   TTP_Line             ( 0     ),
+   TTP_Gate             ( False ),
+   TTP_Fire             ( False ),
+
+   { Stop profit }
+   posbleProfit_Short   ( 0     ),
+   stopProfitPrice      ( 0     ),
+
+   { Loop counter and exit control }
+   LoopIdx              ( 0     ),
+   ExitFired            ( 0     );
+
+
+{ ============================================================
+  SECTION 3 - ARRAY
+  WkCloses stores last WkSMA_Len completed weekly closes.
+  Size 21 covers indices 0 to 20. Only indices 1 to 20 used.
+  WkSMA_Len = 13, so indices 1 to 13 are actively used.
+  ============================================================ }
+
+Array: WkCloses[ 21 ] ( 0 );
+
+
+{ ============================================================
+  SECTION 4 - SESSION DETECTION
+  IsDay   : bar open time 08:45 to 12:45 (Time 845 to 1245)
+  IsNight : all other bars (15:00 to 04:00)
+  ============================================================ }
+
+If ( Time >= 845 ) And ( Time <= 1245 ) Then
+   IsDay = True
+Else
+   IsDay = False;
+
+If IsDay = True Then
+   IsNight = False
+Else
+   IsNight = True;
+
+
+{ ============================================================
+  SECTION 5 - WEEKLY TREND FILTER
+
+  FilterOK = True when prior completed weekly close is
+  strictly below the 13-week (one quarter) SMA.
+
+  Definition: weekly period = Friday 15:00 open to
+  Friday 13:45 close. IsNewWeek fires when the prior bar
+  is the Friday 12:45 bar (last completed day session bar).
+
+  WkSMA_Len = 13 represents one full calendar quarter.
+  FilterOK = True means the market has been below its
+  quarterly average, confirming a bearish environment.
+  ============================================================ }
+
+If ( Time[1] = 1245 ) And
+   ( DayOfWeek( Date[1] ) = 5 ) Then
+   IsNewWeek = True
+Else
+   IsNewWeek = False;
+
+If IsNewWeek = True Then Begin
+
+   { STEP 1 - Shift array rightward }
+   LoopIdx = WkSMA_Len;
+   While LoopIdx > 1 Begin
+      WkCloses[ LoopIdx ] = WkCloses[ LoopIdx - 1 ];
+      LoopIdx = LoopIdx - 1;
+   End;
+
+   { STEP 2 - Insert just-completed week close at index 1 }
+   WkCloses[1] = Close[1];
+
+   { STEP 3 - Increment stored week count }
+   If WkBarCount < WkSMA_Len Then
+      WkBarCount = WkBarCount + 1;
+
+   { STEP 4 - Recompute rolling SMA sum }
+   WkSMASum = 0;
+   LoopIdx  = 1;
+   While LoopIdx <= WkBarCount Begin
+      WkSMASum = WkSMASum + WkCloses[ LoopIdx ];
+      LoopIdx  = LoopIdx + 1;
+   End;
+
+   { STEP 5 - Update FilterOK with warm-up guard }
+   If WkBarCount >= WkSMA_Len Then Begin
+      If WkCloses[1] < ( WkSMASum / WkSMA_Len ) Then
+         FilterOK = True
+      Else
+         FilterOK = False;
+   End Else
+      FilterOK = False;
+
+End;
+
+
+{ ============================================================
+  SECTION 6 - INDICATOR CALCULATIONS
+  ============================================================ }
+
+ATR_Val   = AvgTrueRange( ATR_Len );
+DC_Lower  = Lowest( Low[1], DC_Len );
+CompPrice = ( 2.0 * Close ) - Close[ ZLEMA_Lag ];
+ZLEMA_Val = XAverage( CompPrice, ZLEMA_Len );
+EMA20_Val = XAverage( Close, ZLEMA_Len );
+
+
+{ ============================================================
+  SECTION 7 - ENTRY CONDITIONS
+  ============================================================ }
+
+If Close < ( DC_Lower - ( ATR_Val * C0_ATR_Filter ) ) Then
+   C0 = True
+Else
+   C0 = False;
+
+If ZLEMA_Val < ZLEMA_Val[1] Then
+   C_A = True
+Else
+   C_A = False;
+
+If ZLEMA_Val < EMA20_Val Then
+   C_B = True
+Else
+   C_B = False;
+
+If FilterOK = True And
+   C0       = True And
+   C_A      = True And
+   C_B      = True And
+   ( MarketPosition = 0 ) Then
+   SellShort( "TS_Entry" ) Next Bar at Market;
+
+
+{ ============================================================
+  SECTION 8 - INITIAL STOP LOSS
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( BarsSinceEntry = 0 ) And
+      ( SL_Locked = False ) Then Begin
+      SL_Line = DC_Lower;
+      SL_Trig = SL_Line + ( ATR_Val * SL_ATR_Ratio );
+      SL_Locked = True;
+   End;
+
+End Else Begin
+   SL_Line   = 0;
+   SL_Trig   = 0;
+   SL_Locked = False;
+End;
+
+
+{ ============================================================
+  SECTION 9 - TSL ACTIVATION
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( ( Open - Close ) > ( ATR_Val * Accel_M ) ) And
+      ( Close < Open ) Then
+      Accel = True
+   Else
+      Accel = False;
+
+   If Close < Lowest( Close[1], NLow_N ) Then
+      NLow = True
+   Else
+      NLow = False;
+
+   If Accel = True And NLow = True Then
+      C1_Bar = True
+   Else
+      C1_Bar = False;
+
+   If ( TSL_Armed = False ) And
+      ( C1_Bar    = True  ) And
+      ( C1_Bar[1] = True  ) And
+      ( BarsSinceEntry >= MinBars ) Then
+      TSL_Armed = True;
+
+End Else Begin
+   Accel     = False;
+   NLow      = False;
+   C1_Bar    = False;
+   TSL_Armed = False;
+End;
+
+
+{ ============================================================
+  SECTION 10 - TSL TRACKING
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If TSL_Armed = True Then Begin
+
+      New_TSL = Lowest( Close[1], TSL_K ) +
+                ( ATR_Val * TSL_M );
+
+      If TSL_Line = 0 Then
+         TSL_Line = New_TSL
+      Else
+         TSL_Line = MinList( TSL_Line, New_TSL );
+
+      Active_TSL = TSL_Line + ( ATR_Val * SL_ATR_Ratio );
+
+      If TSL_Line < SL_Trig Then
+         Active_SL = Active_TSL
+      Else
+         Active_SL = SL_Trig;
+
+   End Else Begin
+      New_TSL    = 0;
+      TSL_Line   = 0;
+      Active_TSL = 0;
+      Active_SL  = SL_Trig;
+   End;
+
+End Else Begin
+   New_TSL    = 0;
+   TSL_Line   = 0;
+   Active_TSL = 0;
+   Active_SL  = 0;
+End;
+
+
+{ ============================================================
+  SECTION 11 - TRAILING TAKE PROFIT (TTP)
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If BarsSinceEntry = 0 Then
+      LowestClose = Close
+   Else
+      LowestClose = MinList( LowestClose, Close );
+
+   WaveProfit   = EntryPrice - LowestClose;
+   MinProfitPts = ATR_Val * TTP_MinAtr;
+   TTP_Line     = LowestClose * ( 1.0 + TTP_RebPct / 100.0 );
+
+   If WaveProfit >= MinProfitPts Then
+      TTP_Gate = True
+   Else
+      TTP_Gate = False;
+
+   If TTP_Gate = True And
+      Close > TTP_Line Then
+      TTP_Fire = True
+   Else
+      TTP_Fire = False;
+
+End Else Begin
+   LowestClose  = 0;
+   WaveProfit   = 0;
+   MinProfitPts = 0;
+   TTP_Line     = 0;
+   TTP_Gate     = False;
+   TTP_Fire     = False;
+End;
+
+
+{ ============================================================
+  SECTION 12 - STOP PROFIT MODULE
+  ============================================================ }
+
+If MarketPosition = 0 Then Begin
+   posbleProfit_Short = 0;
+   stopProfitPrice    = 0;
+End;
+
+If MarketPosition = -1 Then Begin
+   If ( EntryPrice - Close ) >= stopProfitPoints_Shrt Then Begin
+      If ( EntryPrice - Close ) > posbleProfit_Short Then
+         posbleProfit_Short = EntryPrice - Close;
+      stopProfitPrice = EntryPrice -
+         ( posbleProfit_Short * ( 1.0 - profitReturnPrcnt_Shrt / 100.0 ) );
+   End;
+End;
+
+
+{ ============================================================
+  SECTION 13 - EXIT CONDITIONS
+
+  LABEL REFERENCE:
+    TS_Entry       : short entry signal
+    TS_WeeklyExit  : weekly filter forced exit (trend reversal)
+    TS_StructureTP : structure reversal take profit
+    TS_TTP         : trailing take profit
+    TS_StopProfit  : stop profit protection module
+    TS_TSL_D       : trailing stop loss day session
+    TS_TSL_N       : trailing stop loss night session
+    TS_InitSL_D    : initial stop loss day session
+    TS_InitSL_N    : initial stop loss night session
+
+  PRIORITY ORDER:
+    1. TS_WeeklyExit   (Next Bar at Market)
+    2. TS_StructureTP  (Next Bar at Market)
+    3. TS_TTP          (Next Bar at Market)
+    4. TS_StopProfit   (Next Bar at Stop)
+    5. TS_InitSL_D / TS_TSL_D  (Next Bar at Stop, day)
+    6. TS_InitSL_N / TS_TSL_N  (Next Bar at Market, night)
+  ============================================================ }
+
+ExitFired = 0;
+
+If MarketPosition = -1 Then Begin
+
+   { Priority 1 - Weekly filter forced exit }
+   If ( ExitFired = 0 ) And
+      ( DayOfWeek( Date ) = 5 ) And
+      ( Time = 1245 ) And
+      ( WkBarCount >= WkSMA_Len ) And
+      ( Close > ( WkSMASum / WkSMA_Len ) ) Then Begin
+      BuyToCover( "TS_WeeklyExit" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 2 - Structure reversal take profit }
+   If ( ExitFired = 0 ) And
+      ( Close > Highest( Close[1], TP_N ) ) Then Begin
+      BuyToCover( "TS_StructureTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 3 - Trailing take profit }
+   If ( ExitFired = 0 ) And
+      ( TTP_Fire = True ) Then Begin
+      BuyToCover( "TS_TTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 4 - Stop profit }
+   If ( ExitFired = 0 ) And
+      ( stopProfitPrice > 0 ) Then Begin
+      BuyToCover( "TS_StopProfit" ) Next Bar at stopProfitPrice Stop;
+      ExitFired = 1;
+   End;
+
+   { Priority 5 - Day session stop order }
+   If ( ExitFired = 0 ) And
+      ( IsDay = True ) And
+      ( Active_SL > 0 ) Then Begin
+      If TSL_Armed = True Then
+         BuyToCover( "TS_TSL_D" ) Next Bar at Active_SL Stop
+      Else
+         BuyToCover( "TS_InitSL_D" ) Next Bar at Active_SL Stop;
+   End;
+
+   { Priority 6 - Night session close confirmed exit }
+   If ( ExitFired = 0 ) And
+      ( IsNight = True ) And
+      ( Active_SL > 0 ) And
+      ( Close > Active_SL ) Then Begin
+      If TSL_Armed = True Then
+         BuyToCover( "TS_TSL_N" ) Next Bar at Market
+      Else
+         BuyToCover( "TS_InitSL_N" ) Next Bar at Market;
+   End;
+
+End;
