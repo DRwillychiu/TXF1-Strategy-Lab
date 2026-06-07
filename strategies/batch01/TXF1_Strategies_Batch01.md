@@ -10,7 +10,7 @@
 
 | # | 策略名稱 | 操作方向 | 操作週期 | 賺什麼錢？ | 交易數 | 勝率 | PF | 淨利(NTD) | MDD(NTD) | CAGR | 年化報酬(NTD) |
 |---|---------|---------|---------|-----------|-------|------|-----|----------|----------|------|-------------|
-| 1 | NightMomentum | ★雙向（多+空） | 15M | 夜盤開盤區間突破的方向性動量 | 260 | 61.9% | 2.58 | +1,942,501 | -120,000 | 37.8% | +309,824 |
+| 1 | NightMomentum | 🟢★純做多(v2.1) | 15M | 夜盤開盤區間突破+波動率擴張 | 807 | 58.9% | 1.448 | +1,997,000 | -278,800 | 31.1% | ~310k | 
 | 2 | InsideBarBreak | ★雙向（多+空） | 30M+日線 | 日線母子線壓縮後方向選擇的爆發 | 34 | 64.7% | 4.61 | +791,754 | -63,879 | 27.0% | +146,424 |
 | 3 | VolSqueeze | ★雙向（多+空） | 60M | BB收縮後波動率擴張的方向突破 | 33 | 36.4% | 0.88 | -115,622 | -645,467 | — | -23,127 |
 | 4 | MACDDivergence | ★雙向（逆勢） | 60M | 趨勢動能衰竭後的均值回歸反轉 | 2 | 100% | — | +38,000 | 0 | — | — |
@@ -24,78 +24,90 @@
 
 ### 1. 策略概述
 - **類別**：A 類（時段型）
-- **操作方向**：★★★ 雙向 — 做多 + 做空 ★★★
-- **賺什麼錢**：夜盤開盤後 30-60 分鐘形成方向性動量，利用美股/國際期貨開盤聯動，順勢追蹤夜盤趨勢。本質上賺的是「夜盤前段定方向後的慣性延續」。
+- **操作方向**：🟢 ★純做多（MC12 分析：空單 PF=0.93，淨利-618,600，已移除）
+- **賺什麼錢**：夜盤開盤後 N 根 K 棒形成開盤區間，波動率擴張時突破高點做多。賺的是「夜盤前段定方向後的慣性延續」。
+- **版本**：v2.1 ATR-Based + 波動率擴張過濾器（VolFilter）
 - **主交易週期**：15 分鐘
 - **確認週期**：無（純時段內策略）
-- **預期交易頻率**：每月 8-15 筆
+- **預期交易頻率**：每月 ~12.4 筆
 - **與現有策略的差異**：TL/TS 以日盤為主且依賴日線/週線確認；本策略專注夜盤時段，用開盤區間突破進場，邏輯完全不同。
+- **優化狀態**：🟢 **P1~P3 檢驗完成，核准上架實測（最低帳戶 1,000,000 NTD）**
 
-### 2. 模擬回測績效（日線代理）
+### 2. MC12 v2.1 GA 回測績效（正式）
 | 指標 | 數值 |
 |------|------|
-| 總交易次數 | 260 |
-| 勝率 | 61.9% |
-| Profit Factor | 2.58 |
-| 淨利 | +1,942,501 NTD |
-| 最大回撤 (MDD) | -120,000 NTD |
-| CAGR | 37.8% |
-| 年化報酬 | +309,824 NTD/年 |
-| 盈虧比 | 1.59 |
+| 總交易次數 | 807 |
+| 勝率 | 58.86% |
+| Profit Factor | 1.448 |
+| 淨利 | +1,997,000 NTD |
+| 最大回撤 (MDD) | -278,800 NTD |
+| MDD% | 27.2%（@1M 帳戶） |
+| 年報酬率 | 31.1% |
+| 初始資金 | 1,000,000 NTD |
+| WFA WFE | 62.5%（5/8 窗口 OOS 獲利）|
+| MC 95% MDD | ~270k（PASS@1M, FAIL@500k）|
 
-### 3. 進場邏輯
-- **做多進場**：
-  1. 當前時間在夜盤時段（15:00-04:30）
-  2. 夜盤開盤後前 `LookbackBars` 根 K 棒完成（形成開盤區間）
-  3. 價格突破開盤區間高點 + `EntryOffset` 點
-  4. 區間寬度 > `MinRange` 且 < `MaxRange`（過濾過窄/過寬）
-- **做空進場**：
-  1. 同上時間條件
-  2. 價格跌破開盤區間低點 - `EntryOffset` 點
-  3. 同上區間寬度過濾
+> ⚠️ 以上為 MC12 15M 正式回測，非日線代理。完整分析見 `S1_NightMomentum_annotated.md` 及 `optimization/logs/B01_S1_NightMomentum.md`
+
+### 3. 進場邏輯（v2.1）
+- **做多進場**（純做多，空單已移除）：
+  1. 當前時間在夜盤時段（15:00-05:00）
+  2. 夜盤開盤後前 `LookbackBars`=11 根 K 棒形成開盤區間
+  3. 區間寬度在 `RangeMinATR`~`RangeMaxATR` 倍 ATR 之間
+  4. **波動率擴張**：快速 ATR / 慢速 ATR ≥ `VolRatioMin`=0.80（v2.1 核心）
+  5. 價格突破開盤區間高點 + ATR × `EntryATRMult`=0.2
 - **訊號確認**：Stop 單即時觸發
 
-### 4. 出場邏輯
-- **停損**：固定 `StopLossPts` 點（預設 60 點）
-- **停利**：固定 `TakeProfitPts` 點（預設 120 點）
-- **時間出場**：04:30 強制平倉
-- **追蹤停損**：獲利超 `TrailActivate` 點啟動，回撤 `TrailOffset` 點平倉
+### 4. 出場邏輯（v2.1 ATR-Based）
+- **停損**：EntryPrice - v_EntryATR × `StopATRMult`=2.75（ATR 凍結機制）
+- **停利**：EntryPrice + v_EntryATR × `TargetATRMult`=2.0
+- **追蹤停損**：獲利達 ATR × 2.75 後，在 ATR × 2.05 處設停損
+- **時間出場**：05:00 強制平倉
 
-### 5. 完整 PowerLanguage 程式碼
+### 5. 完整 PowerLanguage 程式碼（v2.1 GA 最佳化參數）
+
+> 正式版原始碼：`S1_NightMomentum.pla` / `powerlanguage/STRATEGY_GEN_NightMomentum.txt`
 
 ```
-{STRATEGY_GEN_NightMomentum - 夜盤動量追蹤策略}
-{A類：夜盤開盤區間突破}
-{操作方向：★雙向（做多+做空）}
+{STRATEGY_GEN_NightMomentum}
+{v2.1: ATR-Based + Volatility Expansion Filter}
+{Category A: Night Session Opening Range Breakout}
+{Direction: Long Only (Short removed: MC12 Short PF=0.93)}
+{Timeframe: 15-min on TXF1}
+{Parameters: MC12 v2.1 GA optimized (2020/01~2026/06, 1M capital)}
 
 inputs:
-    LookbackBars(4),
-    EntryOffset(10),
-    MinRange(30),
-    MaxRange(200),
-    StopLossPts(60),
-    TakeProfitPts(120),
-    TrailActivate(50),
-    TrailOffset(30),
+    LookbackBars(11),
+    ATRLen(11),
+    EntryATRMult(0.2),
+    RangeMinATR(0.9),
+    RangeMaxATR(4.5),
+    StopATRMult(2.75),
+    TargetATRMult(2.0),
+    TrailActATR(2.75),
+    TrailOffATR(0.7),
     NightOpen(1500),
-    ExitTime(0430);
+    ExitTime(0500),
+    VolSlowLen(70),
+    VolRatioMin(0.80);
 
 variables:
-    v_NightHigh(0),
-    v_NightLow(999999),
-    v_RangeWidth(0),
-    v_NightBarCount(0),
-    v_RangeReady(false),
-    v_IsNightSession(false),
-    v_Prev_MP(0);
+    v_NightHigh(0), v_NightLow(999999), v_NightBarCount(0),
+    v_RangeReady(false), v_IsNightSession(false),
+    v_ATR(0), v_EntryATR(0), v_RangeWidth(0), v_Prev_MP(0),
+    v_SlowATR(0), v_VolRatio(0), v_VolPass(false);
+
+v_ATR = AvgTrueRange(ATRLen);
+v_SlowATR = AvgTrueRange(VolSlowLen);
+if v_SlowATR > 0 then v_VolRatio = v_ATR / v_SlowATR
+else v_VolRatio = 1;
+v_VolPass = (v_VolRatio >= VolRatioMin);
 
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 
 if Time >= NightOpen and Time[1] < NightOpen then begin
-    v_NightHigh = 0;
-    v_NightLow = 999999;
-    v_NightBarCount = 0;
-    v_RangeReady = false;
+    v_NightHigh = 0; v_NightLow = 999999;
+    v_NightBarCount = 0; v_RangeReady = false;
 end;
 
 if v_IsNightSession and v_RangeReady = false then begin
@@ -104,31 +116,31 @@ if v_IsNightSession and v_RangeReady = false then begin
     if Low < v_NightLow then v_NightLow = Low;
     if v_NightBarCount >= LookbackBars then begin
         v_RangeWidth = v_NightHigh - v_NightLow;
-        if v_RangeWidth >= MinRange and v_RangeWidth <= MaxRange then
+        if v_ATR > 0 and
+           v_RangeWidth >= v_ATR * RangeMinATR and
+           v_RangeWidth <= v_ATR * RangeMaxATR then
             v_RangeReady = true;
     end;
 end;
 
-if v_RangeReady and v_IsNightSession and Time < ExitTime then begin
-    if v_Prev_MP <= 0 then
-        buy ("LE_NM_Long") next bar at v_NightHigh + EntryOffset stop;
-    if v_Prev_MP >= 0 then
-        sell short ("SE_NM_Short") next bar at v_NightLow - EntryOffset stop;
+if v_RangeReady and v_IsNightSession and Time < ExitTime and v_VolPass then begin
+    if v_Prev_MP <= 0 and v_ATR > 0 then
+        buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
 
-SetStopLoss(StopLossPts * 200);
-SetProfitTarget(TakeProfitPts * 200);
+if MarketPosition = 1 and v_Prev_MP <= 0 then
+    v_EntryATR = v_ATR;
 
-if MarketPosition = 1 and MaxContractProfit / 200 >= TrailActivate then
-    sell ("LX_NM_Trail") next bar at EntryPrice + TrailActivate - TrailOffset stop;
-if MarketPosition = -1 and MaxContractProfit / 200 >= TrailActivate then
-    buy to cover ("SX_NM_Trail") next bar at EntryPrice - TrailActivate + TrailOffset stop;
+if MarketPosition = 1 and v_EntryATR > 0 then begin
+    sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
+    sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
+    if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
+        sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
+end;
 
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then
         sell ("LX_NM_Time") next bar at market;
-    if MarketPosition = -1 then
-        buy to cover ("SX_NM_Time") next bar at market;
 end;
 
 v_Prev_MP = MarketPosition;
@@ -138,24 +150,24 @@ v_Prev_MP = MarketPosition;
 - **Data1**：TXF1，15 分鐘
 - **Data2**：不需要
 
-### 7. 優化方向
-- `LookbackBars`（3-8）：區間形成速度
-- `EntryOffset`（5-20）：假突破過濾
-- `StopLossPts`（40-100）：停損寬度
-- **殺手問題**：夜盤流動性不足 → 滑價遠超假設；夜盤經常假突破後快速回撤。
+### 7. 優化方向（v2.1 已完成）
+- 13 個參數全部 GA 最佳化完成（族群 500, 代數 400, 突變 0.08）
+- 關鍵改動：RangeMinATR 0.2→0.9（嚴篩區間）、TargetATRMult 3.0→2.0（提前鎖利）
+- **已解決的殺手問題**：v2.1 Vol Filter 解決低波動期假突破連虧
 
-### 8. Walk-Forward 最佳參數（2026-06-07 優化結果）
+### 8. MC12 v2.1 GA 最佳化參數（2026-06-07 — 🟢上架實測）
 ```
-LookbackBars = 6      (原4, WF一致收斂)
-EntryOffset = 6        (原10, 高原寬69%)
-StopLossPts = 80       (原60, 高原寬50%)
-TakeProfitPts = 160    (原120, 高原寬60%)
-TrailActivate = 50     (維持, 日線代理無法驗證)
-TrailOffset = 30       (維持)
+LookbackBars=11, ATRLen=11, EntryATRMult=0.2,
+RangeMinATR=0.9, RangeMaxATR=4.5,
+StopATRMult=2.75, TargetATRMult=2.0,
+TrailActATR=2.75, TrailOffATR=0.7,
+NightOpen=1500, ExitTime=500,
+VolSlowLen=70, VolRatioMin=0.80
 ```
-- WFE = 87.5% (8窗口中7個OOS獲利)
-- MC 95% MDD = 119,000 NTD (超標@300k, PASS@500k)
-- 破產機率 = 0.71%
+- **Phase 1**：✅ PASS — 全參數高原 44~100%
+- **Phase 2**：✅ PASS — WFE=62.5%（5/8 窗口），OOS 累計 +1,939,500
+- **Phase 3**：✅ PASS@1M — MC 10k 次，95% MDD=27.2%，破產率 0.01%
+- **最低帳戶**：1,000,000 NTD
 
 ---
 

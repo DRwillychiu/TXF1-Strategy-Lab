@@ -119,7 +119,7 @@ for i in range(20, len(df)-1):
                 exit_p = nxt['Close']
             trades_s1.append((entry, exit_p, -1, df.index[i+1], df.index[i+1]))
 
-results['S1'] = calc_metrics(trades_s1, "STRATEGY_GEN_NightMomentum", "★雙向（做多+做空）")
+results['S1'] = calc_metrics(trades_s1, "STRATEGY_GEN_NightMomentum", "[DEPRECATED v1.0] ★純做多(v2.1) — 見 S1_NightMomentum.pla")
 
 # ============================================================
 # Strategy 2: Inside Bar Breakout

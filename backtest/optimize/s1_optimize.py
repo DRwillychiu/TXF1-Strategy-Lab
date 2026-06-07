@@ -1,9 +1,14 @@
 """
-S1 NightMomentum — full 4-phase optimization pipeline.
+[DEPRECATED] S1 NightMomentum — v1.0 日線代理優化 pipeline.
+⚠️ 此腳本為 v1.0 固定點數版本的日線代理回測，已被 MC12 15M v2.1 ATR 版本取代。
+正式版策略參數與程式碼見：
+  - strategies/batch01/S1_NightMomentum.pla (v2.1 GA optimized)
+  - optimization/logs/B01_S1_NightMomentum.md (完整優化紀錄)
+
 Phase 1: Parameter sensitivity (plateau detection)
 Phase 2: Walk-Forward optimization
 Phase 3: Monte Carlo stress test
-All on daily TAIEX proxy (^TWII).
+All on daily TAIEX proxy (^TWII) — 僅供參考，非正式驗證。
 """
 import os, sys, json
 sys.stdout.reconfigure(encoding='utf-8')

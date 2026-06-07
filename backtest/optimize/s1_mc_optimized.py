@@ -1,4 +1,7 @@
-"""Re-run Monte Carlo with Walk-Forward optimized parameters."""
+"""[DEPRECATED] Re-run Monte Carlo with v1.0 Walk-Forward optimized parameters.
+⚠️ 此腳本為 v1.0 固定點數日線代理版本，已被 MC12 15M v2.1 ATR 版本取代。
+正式 Phase 3 結果見 optimization/logs/B01_S1_NightMomentum.md
+"""
 import sys, os
 sys.stdout.reconfigure(encoding='utf-8')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

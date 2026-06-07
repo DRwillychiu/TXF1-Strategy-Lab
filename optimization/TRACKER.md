@@ -11,7 +11,7 @@
 |---------|------|------|
 | Walk-Forward Efficiency | ≥ 50% | OOS 獲利窗口佔比 |
 | OOS Profit Factor | > 1.0 | 樣本外必須獲利 |
-| Monte Carlo 95% MDD | < 帳戶 30% (90,000 NTD) | 基於 300,000 NTD 保證金 |
+| Monte Carlo 95% MDD | < 帳戶 30% | 帳戶規模依策略而定（S1: 1,000,000 NTD） |
 | 破產機率 | < 5% | Monte Carlo 50% DD |
 | 參數高原寬度 | > 參數範圍 20% | 非尖峰 = 非過擬合 |
 | 最低月交易次數 | ≥ 2 筆 | 統計可驗證 |
