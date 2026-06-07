@@ -3,7 +3,7 @@
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
 > 最後更新：2026-06-07
 > 版本：v2.1 ATR-Based + 波動率擴張過濾器
-> 參數來源：MC12 GA 最佳化 → v2.0 WFA 不通過 → v2.1 加入 VolFilter 待重新 WFA
+> 參數來源：MC12 v2.1 GA 最佳化（已寫入 .pla）→ P1~P3 全通過 → ✅ PASS@1M，可上架實測
 
 ---
 
@@ -139,7 +139,7 @@ sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
 sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
 ```
 - **v2.0 改動**：取代 SetProfitTarget()，用手動 limit 單 + 有標籤
-- GA 最佳：3.0 倍 ATR 停利
+- GA 最佳：2.0 倍 ATR 停利（v2.1 提前鎖利）
 
 ### 10. 出場：ATR 追蹤停損
 ```
@@ -147,7 +147,7 @@ if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
     sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
 ```
 - 獲利達 TrailActATR 倍 ATR 後，在 (TrailActATR - TrailOffATR) 倍 ATR 處設停損
-- GA 最佳：獲利達 2.5 倍 ATR 後，鎖定 2.0 倍 ATR 利潤（2.5-0.5=2.0）
+- GA 最佳：獲利達 2.75 倍 ATR 後，鎖定 2.05 倍 ATR 利潤（2.75-0.7=2.05）
 
 ### 11. 出場：時間平倉
 ```
@@ -207,7 +207,7 @@ NightOpen=1500, ExitTime=500
 | **合約乘數** | 200 NTD/點 |
 | **滑價** | 單邊 500 NTD（來回 1,000 NTD） |
 | **口數** | 1 口固定 |
-| **初始資金** | 500,000 NTD |
+| **初始資金** | 1,000,000 NTD |
 
 ### 二、WFA 窗口設定
 
@@ -226,19 +226,19 @@ NightOpen=1500, ExitTime=500
 
 | # | 參數 | Start | End | Step | 組合數 | GA最佳 | 說明 |
 |---|------|-------|-----|------|--------|--------|------|
-| 1 | LookbackBars | 2 | 12 | 1 | 11 | 10 | 開盤區間觀察根數 |
-| 2 | ATRLen | 5 | 21 | 1 | 17 | 13 | ATR 計算週期 |
-| 3 | EntryATRMult | 0.00 | 0.50 | 0.05 | 11 | 0.30 | 突破偏移（ATR倍數） |
-| 4 | RangeMinATR | 0.1 | 1.0 | 0.1 | 10 | 0.2 | 區間最窄門檻（ATR倍數） |
-| 5 | RangeMaxATR | 2.0 | 5.0 | 0.5 | 7 | 4.0 | 區間最寬門檻（ATR倍數） |
-| 6 | StopATRMult | 0.50 | 3.00 | 0.25 | 11 | 2.75 | 停損（ATR倍數） |
-| 7 | TargetATRMult | 1.0 | 5.0 | 0.5 | 9 | 3.0 | 停利（ATR倍數） |
-| 8 | TrailActATR | 0.50 | 3.00 | 0.25 | 11 | 2.50 | 追蹤停損啟動（ATR倍數） |
-| 9 | TrailOffATR | 0.1 | 1.5 | 0.1 | 15 | 0.5 | 追蹤停損回撤（ATR倍數） |
-| — | NightOpen | 1500 | — | — | **固定** | 1500 | 夜盤開盤時間 |
-| 10 | ExitTime | 400 | 530 | 30 | 5 | 500 | 強制平倉時間 |
-| 11 | VolSlowLen | 40 | 200 | 20 | 9 | — | v2.1：慢速 ATR 週期（波動率基準線） |
-| 12 | VolRatioMin | 0.60 | 1.40 | 0.10 | 9 | — | v2.1：快/慢 ATR 最低比值 |
+| 1 | LookbackBars | 2 | 12 | 1 | 11 | **11** | 開盤區間觀察根數 |
+| 2 | ATRLen | 5 | 21 | 1 | 17 | **11** | ATR 計算週期 |
+| 3 | EntryATRMult | 0.00 | 0.50 | 0.05 | 11 | **0.20** | 突破偏移（ATR倍數） |
+| 4 | RangeMinATR | 0.1 | 1.0 | 0.1 | 10 | **0.9** | 區間最窄門檻（ATR倍數）★ |
+| 5 | RangeMaxATR | 2.0 | 5.0 | 0.5 | 7 | **4.5** | 區間最寬門檻（ATR倍數） |
+| 6 | StopATRMult | 0.50 | 3.00 | 0.25 | 11 | **2.75** | 停損（ATR倍數） |
+| 7 | TargetATRMult | 1.0 | 5.0 | 0.5 | 9 | **2.0** | 停利（ATR倍數）★ 提前鎖利 |
+| 8 | TrailActATR | 0.50 | 3.00 | 0.25 | 11 | **2.75** | 追蹤停損啟動（ATR倍數） |
+| 9 | TrailOffATR | 0.1 | 1.5 | 0.1 | 15 | **0.7** | 追蹤停損回撤（ATR倍數） |
+| — | NightOpen | 1500 | — | — | **固定** | **1500** | 夜盤開盤時間 |
+| 10 | ExitTime | 400 | 530 | 30 | 5 | **500** | 強制平倉時間 |
+| 11 | VolSlowLen | 40 | 200 | 20 | 9 | **70** | v2.1：慢速 ATR 週期（~17.5hr） |
+| 12 | VolRatioMin | 0.60 | 1.40 | 0.10 | 9 | **0.80** | v2.1：快/慢 ATR 最低比值 |
 
 **全暴力掃描組合數**：11 x 17 x 11 x 10 x 7 x 11 x 9 x 11 x 15 x 5 x 9 x 9 = **~952.2 billion**（~9,522 億，暴力不可行，必須 GA）
 
@@ -328,4 +328,6 @@ WFE 50%(名義)/33.3%(有效) | OOS 累計 +510,600
 | v1.1 | 2026-06-07 | MC12 分析移除空單（Short PF=0.93），改純做多 |
 | v2.0 | 2026-06-07 | ★ 全面 ATR 化：6 個固定點數參數改 ATR 倍數，加 v_EntryATR 凍結機制 |
 | v2.0 | 2026-06-07 | MC12 15M WFA 完成：⚠️ 不通過（有效 WFE=33.3%，MDD 爆表，中期連虧） |
-| v2.1 | 2026-06-07 | 加入波動率擴張過濾器（VolSlowLen + VolRatioMin），低波動不進場，待重新 GA + WFA |
+| v2.1 | 2026-06-07 | 加入波動率擴張過濾器（VolSlowLen + VolRatioMin），低波動不進場 |
+| v2.1 | 2026-06-07 | GA+WFA+MC 全通過：WFE=62.5%, OOS+1.94M, MC PASS@1M, 寫入 GA 最佳參數 |
+| v2.1 | 2026-06-07 | ✅ **P1~P3 檢驗完成，核准上架實測**（最低帳戶 1,000,000 NTD） |
