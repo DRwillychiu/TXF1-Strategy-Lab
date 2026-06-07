@@ -1,0 +1,319 @@
+{ ============================================================
+  ADAPTIVE FARMER - TREND LONG STRATEGY
+  Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
+  MC Load Name: WILLY_ATR_LONG_60M
+  Version     : V2.3 + D3_Weekly_Filter + TL_Label_Unified
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 9.0 PowerLanguage x64
+  Timeframe   : Data1 = 60M / Data2 = Daily / Data3 = Weekly
+
+  CHANGELOG (Label Unification):
+    All entry/exit labels unified with TL_ prefix.
+    LONG          -> TL_Entry
+    STOP_LOSS_Gap -> TL_SL_Gap
+    STOP_LOSS     -> TL_SL
+    TAKE_PROFIT   -> TL_TP
+    HOLIDAY_EXIT  -> TL_Holiday
+    TYPHOON_KILL  -> TL_Kill
+    No logic changes. No parameter changes.
+
+  STRATEGY LOGIC:
+    P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
+    P3 Stop   : MaxList(ATR x SL_Mult, Daily_ATR x Cap_Mult) from entry
+    P4 Trail  : MA55 - TrailOffset (trailing stop, let trend run)
+    P5 Holiday: Array-based holiday exit at Holiday_Exit_Time
+    P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
+
+  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+    Net Profit    : 3,216,200 TWD
+    Profit Factor : 1.584
+    Win Rate      : 29.42%
+    MDD           : -551,000 (-23.15%)
+    Total Trades  : 469
+    Backtest      : 2019/12/16 - 2026/06/06
+  ============================================================ }
+
+[IntrabarOrderGeneration = false]
+
+Inputs:
+    { P2: Attack Engine (Data1) }
+    Length60(61),
+    Entry_Multiplier(2.0),
+
+    { P3: Defense Engine (Strict Stop-Loss) }
+    SL_Multiplier(1.5),
+    Daily_Cap_Multiplier(0.5),
+
+    { P4: Trailing Engine (Legacy MA55) }
+    Length20(55),
+    TrailOffset(50),
+
+    ATR_Length(20),
+
+    { P5: Holiday Shield Module }
+    Manual_Kill_Switch(False),
+    Holiday_Exit_Time(1330),
+
+    { P6: Data3 (Weekly) Filter Settings }
+    Weekly_MA_Fast(20),
+    Weekly_MA_Slow(60);
+
+Variables:
+    maBase(0),
+    maTrail(0),
+    Breakout_Level(0),
+    Current_ATR(0),
+    Daily_ATR(0),
+    Cond_Breakout(False),
+    MP(0),
+    Entry_P(0),
+    Exit_Price_ATR(0),
+    Exit_Price_Cap(0),
+    Exit_Price_SL(0),
+    Exit_Price_Trail(0),
+    Final_Exit_Price(0),
+
+    { P5 Module Variables }
+    Init_Done(False),
+    Is_Holiday_Eve(False),
+    idx(0),
+
+    { MDD Visual Tracking Variables }
+    MyEquity(0),
+    Current_Year_Log(0),
+    Year_Start_Equity(0),
+    Year_High_Equity(0),
+    Year_DD(0),
+    Year_Max_DD(0),
+    Year_Net_Profit(0),
+    txtID(0),
+    strMsg(""),
+
+    { P6: Weekly Filter Variables }
+    v_Weekly_MA_Fast(0),
+    v_Weekly_MA_Slow(0),
+    v_Weekly_Filter(false);
+
+Array:
+    Holiday_List[60](0);
+
+{ ==========================================
+  0. P5: Holiday Registry Initialization (2019-2026)
+  ========================================== }
+
+if Init_Done = False then begin
+
+    { --- 2019 --- }
+    Holiday_List[1]  = 1190912;
+    Holiday_List[2]  = 1191009;
+    Holiday_List[3]  = 1191231;
+
+    { --- 2020 --- }
+    Holiday_List[4]  = 1200120;
+    Holiday_List[5]  = 1200227;
+    Holiday_List[6]  = 1200401;
+    Holiday_List[7]  = 1200624;
+    Holiday_List[8]  = 1200930;
+    Holiday_List[9]  = 1201008;
+    Holiday_List[10] = 1201231;
+
+    { --- 2021 --- }
+    Holiday_List[11] = 1210205;
+    Holiday_List[12] = 1210226;
+    Holiday_List[13] = 1210401;
+    Holiday_List[14] = 1210611;
+    Holiday_List[15] = 1210917;
+    Holiday_List[16] = 1211008;
+    Holiday_List[17] = 1211230;
+
+    { --- 2022 --- }
+    Holiday_List[18] = 1220126;
+    Holiday_List[19] = 1220225;
+    Holiday_List[20] = 1220401;
+    Holiday_List[21] = 1220602;
+    Holiday_List[22] = 1220908;
+    Holiday_List[23] = 1221007;
+    Holiday_List[24] = 1221230;
+
+    { --- 2023 --- }
+    Holiday_List[25] = 1230117;
+    Holiday_List[26] = 1230224;
+    Holiday_List[27] = 1230331;
+    Holiday_List[28] = 1230621;
+    Holiday_List[29] = 1230928;
+    Holiday_List[30] = 1231006;
+    Holiday_List[31] = 1231229;
+
+    { --- 2024 --- }
+    Holiday_List[32] = 1240205;
+    Holiday_List[33] = 1240227;
+    Holiday_List[34] = 1240403;
+    Holiday_List[35] = 1240607;
+    Holiday_List[36] = 1240916;
+    Holiday_List[37] = 1241009;
+    Holiday_List[38] = 1241231;
+
+    { --- 2025 --- }
+    Holiday_List[39] = 1250122;
+    Holiday_List[40] = 1250227;
+    Holiday_List[41] = 1250402;
+    Holiday_List[42] = 1250530;
+    Holiday_List[43] = 1251003;
+    Holiday_List[44] = 1251231;
+
+    { --- 2026 (To April) --- }
+    Holiday_List[45] = 1260210;
+    Holiday_List[46] = 1260227;
+    Holiday_List[47] = 1260401;
+
+    Init_Done = True;
+
+end;
+
+{ ==========================================
+  1. Core Indicators Calculation
+  ========================================== }
+
+maBase  = Average(Close, Length60);
+maTrail = Average(Close, Length20);
+
+Current_ATR = AvgTrueRange(ATR_Length) of Data1;
+Daily_ATR   = AvgTrueRange(ATR_Length) of Data2;
+
+Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
+
+{ ==========================================
+  P6: Weekly Filter Logic (Data3 - Weekly)
+  OR logic: either MA condition allows long entries.
+  Trend strategies need early entry at trend inception.
+  AND logic would miss the early bull phase.
+  ========================================== }
+
+v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
+v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+
+if (Close of Data3 > v_Weekly_MA_Fast) or
+   (Close of Data3 > v_Weekly_MA_Slow) then
+    v_Weekly_Filter = true
+else
+    v_Weekly_Filter = false;
+
+{ ==========================================
+  2. Entry Logic
+  ========================================== }
+
+Cond_Breakout = (Close Crosses Over Breakout_Level);
+MP = MarketPosition;
+
+if MP = 0 then begin
+    if Cond_Breakout and (v_Weekly_Filter = true) then begin
+        Buy ("TL_Entry") next bar at Market;
+    end;
+end;
+
+{ ==========================================
+  3. Exit Management (P3 and P4 Integrated)
+  ========================================== }
+
+if MP > 0 then begin
+
+    Entry_P = EntryPrice;
+
+    { P3: Double-Layered Strict Initial Stop }
+    Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
+    Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
+    Exit_Price_SL  = MaxList(Exit_Price_ATR, Exit_Price_Cap);
+
+    { P4: Legacy MA55 Trailing Stop }
+    Exit_Price_Trail = maTrail - TrailOffset;
+    Final_Exit_Price = MaxList(Exit_Price_Trail, Exit_Price_SL);
+
+    { Execution with unified TL_ labels }
+    if Close < Final_Exit_Price then begin
+        Sell ("TL_SL_Gap") next bar at Market;
+    end else begin
+        if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then
+            Sell ("TL_SL") next bar at Final_Exit_Price Stop
+        else
+            Sell ("TL_TP") next bar at Final_Exit_Price Stop;
+    end;
+
+end;
+
+{ ==========================================
+  4. P5: Holiday Risk Management Shield
+  CPU optimized: scan array only at required times.
+  ========================================== }
+
+if MP > 0 then begin
+
+    Is_Holiday_Eve = False;
+
+    if Time >= Holiday_Exit_Time then begin
+        for idx = 1 to 60 begin
+            if Date = Holiday_List[idx] then
+                Is_Holiday_Eve = True;
+        end;
+
+        if Is_Holiday_Eve = True then begin
+            Sell ("TL_Holiday") next bar at Market;
+        end;
+    end;
+
+    if Manual_Kill_Switch = True then begin
+        Sell ("TL_Kill") next bar at Market;
+    end;
+
+end;
+
+{ ==========================================
+  5. Annual MDD Visualizer Module
+  No label changes needed in this section.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Current_Year_Log  = Year(Date);
+    Year_Start_Equity = InitialCapital;
+    Year_High_Equity  = InitialCapital;
+    Year_Max_DD       = 0;
+end;
+
+MyEquity = InitialCapital + NetProfit + OpenPositionProfit;
+
+if Year(Date) <> Current_Year_Log or LastBarOnChart then begin
+
+    if LastBarOnChart and Year(Date) = Current_Year_Log then
+        Year_Net_Profit = MyEquity - Year_Start_Equity
+    else
+        Year_Net_Profit = MyEquity[1] - Year_Start_Equity;
+
+    if Current_Year_Log >= 2024 then begin
+        strMsg = "Year: " + NumToStr(Current_Year_Log, 0) + NewLine +
+                 "MDD: $" + NumToStr(Year_Max_DD, 0);
+        if LastBarOnChart then
+            txtID = Text_New(Date,    Time,    High    + 200, strMsg)
+        else
+            txtID = Text_New(Date[1], Time[1], High[1] + 200, strMsg);
+        Text_SetStyle(txtID,     2, 1);
+        Text_SetColor(txtID,     Green);
+        Text_SetSize(txtID,      12);
+        Text_SetAttribute(txtID, 1, true);
+    end;
+
+    Current_Year_Log = Year(Date);
+
+    if LastBarOnChart = False then begin
+        Year_Start_Equity = MyEquity[1];
+        Year_High_Equity  = MyEquity[1];
+        Year_Max_DD       = 0;
+    end;
+
+end;
+
+if Year(Date) = Current_Year_Log then begin
+    if MyEquity > Year_High_Equity then
+        Year_High_Equity = MyEquity;
+    Year_DD = Year_High_Equity - MyEquity;
+    if Year_DD > Year_Max_DD then
+        Year_Max_DD = Year_DD;
+end;
