@@ -1,0 +1,61 @@
+{STRATEGY_GEN_FlashCrashMomentum}
+{Batch02 - S6 | 閃崩動量做空}
+{操作週期: 5分鐘 | 方向: ★做空為主}
+{賺什麼錢: 捕捉指數急速崩跌的動量延伸利潤}
+{指數位階論: 高位階下同%跌幅=更大點數利潤，需5M捕捉}
+
+Inputs:
+    AccelBars(5),           {價格加速度計算回溯期}
+    AccelThresh(3.0),       {加速度門檻(ATR倍數)}
+    VolSpikeRatio(2.0),     {成交量爆發倍率}
+    ATRLen(14),             {ATR計算週期}
+    StopATRMult(2.0),       {停損ATR倍數}
+    TargetATRMult(3.0),     {停利ATR倍數}
+    ExitBars(10),           {最大持倉K棒數}
+    SessionStart(0845),     {交易時段開始}
+    SessionEnd(1330);       {交易時段結束(提前收盤避險)}
+
+Variables:
+    v_ATR(0),
+    v_Accel(0),
+    v_VolRatio(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+v_Prev_MP = MarketPosition[1];
+
+v_ATR = AvgTrueRange(ATRLen);
+If v_ATR > 0 Then
+    v_Accel = (Close[AccelBars] - Close) / v_ATR;
+
+If Average(Volume, 20) > 0 Then
+    v_VolRatio = Volume / Average(Volume, 20);
+
+{進場條件: 價格加速下跌 + 成交量爆發}
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_Accel >= AccelThresh And
+   v_VolRatio >= VolSpikeRatio And
+   Close < Close[1] Then Begin
+    SellShort ("FCM_Short") Next Bar at Market;
+    v_EntryBar = CurrentBar;
+End;
+
+{出場管理}
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+    
+    BuyToCover ("FCM_Stop") Next Bar at v_StopPrice Stop;
+    BuyToCover ("FCM_Target") Next Bar at v_TargetPrice Limit;
+    
+    {時間出場}
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        BuyToCover ("FCM_TimeExit") Next Bar at Market;
+    
+    {收盤前強制平倉}
+    If Time >= 1340 Then
+        BuyToCover ("FCM_EOD") Next Bar at Market;
+End;

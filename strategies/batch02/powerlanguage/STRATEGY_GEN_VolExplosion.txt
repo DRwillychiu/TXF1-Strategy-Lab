@@ -1,0 +1,80 @@
+{STRATEGY_GEN_VolExplosion}
+{Batch02 - S9 | 波動率爆發順勢}
+{操作週期: 5分鐘 | 方向: ★雙向}
+{賺什麼錢: 波動率從壓縮突然爆發的順勢延伸}
+{指數位階論: 高位階波動率爆發點數更大，ATR自適應}
+
+Inputs:
+    ATRLen(14),             {ATR計算週期}
+    BaselineLen(50),        {基線ATR計算週期}
+    ATRRatio(2.5),          {ATR爆發倍率門檻}
+    MomBars(3),             {動量方向判定回溯}
+    StopATRMult(1.5),       {停損ATR倍數}
+    TargetATRMult(2.5),     {停利ATR倍數}
+    ExitBars(15),           {最大持倉K棒數}
+    SessionStart(0845),
+    SessionEnd(1330);
+
+Variables:
+    v_ATR(0),
+    v_BaseATR(0),
+    v_Ratio(0),
+    v_Mom(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_EntryBar(0),
+    v_Prev_MP(0);
+
+v_Prev_MP = MarketPosition[1];
+
+v_ATR = AvgTrueRange(ATRLen);
+v_BaseATR = AvgTrueRange(BaselineLen);
+
+If v_BaseATR > 0 Then
+    v_Ratio = v_ATR / v_BaseATR;
+
+v_Mom = Close - Close[MomBars];
+
+{進場: ATR比率爆發 + 動量方向}
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_Ratio >= ATRRatio Then Begin
+   
+    If v_Mom > 0 Then Begin
+        Buy ("VE_Long") Next Bar at Market;
+        v_EntryBar = CurrentBar;
+    End;
+    
+    If v_Mom < 0 Then Begin
+        SellShort ("VE_Short") Next Bar at Market;
+        v_EntryBar = CurrentBar;
+    End;
+End;
+
+{做多出場}
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
+    
+    Sell ("VE_LStop") Next Bar at v_StopPrice Stop;
+    Sell ("VE_LTarget") Next Bar at v_TargetPrice Limit;
+    
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        Sell ("VE_LTime") Next Bar at Market;
+    If Time >= 1340 Then
+        Sell ("VE_LEOD") Next Bar at Market;
+End;
+
+{做空出場}
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+    
+    BuyToCover ("VE_SStop") Next Bar at v_StopPrice Stop;
+    BuyToCover ("VE_STarget") Next Bar at v_TargetPrice Limit;
+    
+    If CurrentBar - v_EntryBar >= ExitBars Then
+        BuyToCover ("VE_STime") Next Bar at Market;
+    If Time >= 1340 Then
+        BuyToCover ("VE_SEOD") Next Bar at Market;
+End;

@@ -1,6 +1,6 @@
 # 策略優化進度追蹤表
 
-> 最後更新：2026-06-07
+> 最後更新：2026-06-07 (Batch02 added)
 > 規則：每隻策略經過完整 4 Phase 優化流程後，依據「績效門檻」判定 Pass/Fail
 
 ---
@@ -28,6 +28,11 @@
 | B01 | S3 | VolSqueeze | ★雙向 | 60M | -115,622 | 0.88 | -645,467 | 0.5 | 🔴 未開始 | 0/4 | — | 🥉 低 |
 | B01 | S4 | MACDDivergence | ★雙向逆勢 | 60M | +38,000 | — | 0 | 0.03 | 🔴 未開始 | 0/4 | — | 🥉 低 |
 | B01 | S5 | SettlementWeek | ★空/多 | 日線 | -367,000 | 0.60 | -451,000 | 1.2 | 🔴 未開始 | 0/4 | — | ⚠️ 高風險 |
+| B02 | S6 | FlashCrashMomentum | ★做空 | 5M | -1,674,550 | 0.73 | -2,211,835 | 2.5 | 🔴 未開始 | 0/4 | — | 🥈 中(需5M) |
+| B02 | S7 | BullPullbackLong | ★做多 | 15M+D | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | 🥉 低(需15M) |
+| B02 | S8 | BearBounceSell | ★做空 | 15M+D | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | 🥉 低(需15M) |
+| B02 | S9 | VolExplosion | ★雙向 | 5M | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | ⚠️ 需5M |
+| B02 | S10 | AdaptiveBreakout | ★雙向 | 30M | +5,533,942 | 1.66 | -943,544 | 4.0 | 🔴 未開始 | 0/4 | — | 🥇 高 |
 
 ### 狀態圖例
 - 🔴 未開始
@@ -37,11 +42,19 @@
 - ⏸️ 暫停（附原因）
 
 ### 優先級建議
+**Batch01:**
 1. **S1 NightMomentum** → 基線最佳（PF 2.58, 淨利 +194 萬），月交易 3.6 筆，最值得優化
 2. **S2 InsideBarBreak** → PF 4.61 極高但交易太少（月均 0.5），需在 30M 上確認頻率
 3. **S3 VolSqueeze** → 日線虧損，需 60M 重測。如 60M 仍虧 → 直接 FAIL
 4. **S4 MACDDivergence** → 日線僅 2 筆，需 60M 驗證。逆勢策略風險高
 5. **S5 SettlementWeek** → 日線虧損且 PF 0.60，高機率 FAIL
+
+**Batch02（指數位階論）:**
+6. **S10 AdaptiveBreakout** 🥇 → 日線即強（PF 1.66, +553 萬），位階自適應停損創新，最先優化
+7. **S6 FlashCrashMomentum** 🥈 → 閃崩捕捉核心，日線虧損但 5M 預期有效
+8. **S7 BullPullbackLong** 🥉 → 多頭回檔抄底，需 15M 驗證，可能需放寬門檻
+9. **S8 BearBounceSell** 🥉 → S7 鏡像，需 15M 驗證
+10. **S9 VolExplosion** ⚠️ → 波動率爆發概念好，ATRRatio 門檻可能過嚴
 
 ---
 
@@ -55,6 +68,11 @@
 | S3 | BWPctile | 10-30 | — | StopATRMult | 1.0-2.5 | — | BBLen | 15-30 | — | — |
 | S4 | RSIOversold | 25-45 | — | TargetPts | 60-150 | — | PriceLookback | 30-80 | — | — |
 | S5 | DaysBefore | 1-3 | — | HoldDays | 2-5 | — | StopPts | 60-150 | — | — |
+| S6 | AccelBars | 3-10 | — | AccelThresh | 2.0-5.0 | — | VolSpikeRatio | 1.5-3.0 | — | — |
+| S7 | RSIOversold | 10-25 | — | ConsecDownBars | 2-5 | — | DevATRMult | 1.5-3.5 | — | — |
+| S8 | RSIOverbought | 75-90 | — | ConsecUpBars | 2-5 | — | DevATRMult | 1.5-3.5 | — | — |
+| S9 | ATRRatio | 1.5-3.5 | — | MomBars | 2-5 | — | StopATRMult | 1.0-2.5 | — | — |
+| S10 | BreakoutBars | 10-40 | — | StopATRMult | 1.0-3.0 | — | StopPctCap | 0.008-0.025 | — | — |
 
 ### Phase 2: Walk-Forward 優化
 | 策略 | IS 月數 | OOS 月數 | 窗口數 | WFE% | OOS PF | OOS 淨利 | P2 結論 |
@@ -64,6 +82,11 @@
 | S3 | 24 | 6 | — | — | — | — | — |
 | S4 | 24 | 6 | — | — | — | — | — |
 | S5 | 24 | 6 | — | — | — | — | — |
+| S6 | 12 | 3 | — | — | — | — | — |
+| S7 | 24 | 6 | — | — | — | — | — |
+| S8 | 24 | 6 | — | — | — | — | — |
+| S9 | 12 | 3 | — | — | — | — | — |
+| S10 | 24 | 6 | — | — | — | — | — |
 
 ### Phase 3: Monte Carlo 壓力測試
 | 策略 | 迭代數 | MDD Mean | MDD 95% | MDD 99% | 破產率 | P3 結論 |
@@ -73,6 +96,11 @@
 | S3 | 10,000 | — | — | — | — | — |
 | S4 | 10,000 | — | — | — | — | — |
 | S5 | 10,000 | — | — | — | — | — |
+| S6 | 10,000 | — | — | — | — | — |
+| S7 | 10,000 | — | — | — | — | — |
+| S8 | 10,000 | — | — | — | — | — |
+| S9 | 10,000 | — | — | — | — | — |
+| S10 | 10,000 | — | — | — | — | — |
 
 ### Phase 4: 策略組合分析
 | 組合 | 策略成員 | 組合 PF | 組合 MDD | Sharpe | 相關性 | P4 結論 |
@@ -90,6 +118,11 @@
 | S3 VolSqueeze | — | — | — | — | — | — | 日線虧損 |
 | S4 MACDDivergence | — | — | — | — | — | — | 樣本不足 |
 | S5 SettlementWeek | — | — | — | — | — | — | 高風險 |
+| S6 FlashCrashMomentum | — | — | — | — | — | — | 需5M數據 |
+| S7 BullPullbackLong | — | — | — | — | — | — | 需15M數據 |
+| S8 BearBounceSell | — | — | — | — | — | — | 需15M數據 |
+| S9 VolExplosion | — | — | — | — | — | — | 需5M數據 |
+| S10 AdaptiveBreakout | — | — | — | — | — | — | 日線PF=1.66✅ |
 
 ---
 
@@ -108,3 +141,5 @@
 | 2026-06-07 | 建立系統 | ALL | Batch01 生成 + 日線代理回測 + 追蹤系統初始化 |
 | 2026-06-07 | 基線分析 | ALL | 填入回測數據，設定優先級：S1 > S2 > S3/S4 > S5 |
 | 2026-06-07 | P1~P3 | S1 | 完成三階段優化。P1全過、P2 WFE=87.5%、P3 MDD超標@300k |
+| 2026-06-07 | 建立系統 | B02 ALL | Batch02 生成：指數位階論主題 5 策略（S6-S10） |
+| 2026-06-07 | 代理回測 | S6-S10 | S10 日線PF=1.66強，S6虧損需5M，S7/S8/S9需分鐘數據 |

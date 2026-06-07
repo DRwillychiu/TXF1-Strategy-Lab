@@ -1,0 +1,83 @@
+{STRATEGY_GEN_AdaptiveBreakout}
+{Batch02 - S10 | 位階自適應突破}
+{操作週期: 30分鐘 | 方向: ★雙向}
+{賺什麼錢: N根K棒高低點突破，停損隨指數位階自動調整}
+{指數位階論: MinList(ATR*mult, Close*pct%) 雙重保護}
+
+Inputs:
+    BreakoutBars(20),       {突破回溯N根K棒}
+    ATRLen(14),             {ATR計算週期}
+    StopATRMult(2.0),       {停損ATR倍數}
+    StopPctCap(0.015),      {停損百分比上限(1.5%)}
+    TargetATRMult(3.0),     {停利ATR倍數}
+    MinVolRatio(1.0),       {最低成交量倍率}
+    SessionStart(0845),
+    SessionEnd(1330);
+
+Variables:
+    v_ATR(0),
+    v_HH(0),
+    v_LL(0),
+    v_StopATR(0),
+    v_StopPct(0),
+    v_AdaptiveStop(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_VolOK(False),
+    v_Prev_MP(0);
+
+v_Prev_MP = MarketPosition[1];
+
+v_ATR = AvgTrueRange(ATRLen);
+v_HH = Highest(High, BreakoutBars);
+v_LL = Lowest(Low, BreakoutBars);
+
+{自適應停損: ATR停損 與 百分比停損 取小值}
+v_StopATR = v_ATR * StopATRMult;
+v_StopPct = Close * StopPctCap;
+v_AdaptiveStop = MinList(v_StopATR, v_StopPct);
+
+{成交量過濾}
+v_VolOK = True;
+If Average(Volume, 20) > 0 Then
+    v_VolOK = Volume >= Average(Volume, 20) * MinVolRatio;
+
+{做多突破}
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   Close > v_HH[1] And
+   v_VolOK Then Begin
+    Buy ("AB_Long") Next Bar at Market;
+End;
+
+{做空突破}
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   Close < v_LL[1] And
+   v_VolOK Then Begin
+    SellShort ("AB_Short") Next Bar at Market;
+End;
+
+{做多出場}
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - v_AdaptiveStop;
+    v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
+    
+    Sell ("AB_LStop") Next Bar at v_StopPrice Stop;
+    Sell ("AB_LTarget") Next Bar at v_TargetPrice Limit;
+    
+    If Time >= 1340 Then
+        Sell ("AB_LEOD") Next Bar at Market;
+End;
+
+{做空出場}
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + v_AdaptiveStop;
+    v_TargetPrice = EntryPrice - v_ATR * TargetATRMult;
+    
+    BuyToCover ("AB_SStop") Next Bar at v_StopPrice Stop;
+    BuyToCover ("AB_STarget") Next Bar at v_TargetPrice Limit;
+    
+    If Time >= 1340 Then
+        BuyToCover ("AB_SEOD") Next Bar at Market;
+End;

@@ -1,0 +1,68 @@
+{STRATEGY_GEN_BullPullbackLong}
+{Batch02 - S7 | 多頭回檔做多}
+{操作週期: 15分鐘 + 日線(Data2) | 方向: ★純做多}
+{賺什麼錢: 多頭趨勢中的急跌回檔抄底反彈}
+{指數位階論: 高位階多頭回檔幅度加大，ATR自適應捕捉}
+
+Inputs:
+    RSILen(6),              {RSI計算週期}
+    RSIOversold(15),        {RSI超賣門檻}
+    ConsecDownBars(3),      {連續下跌K棒數}
+    DevATRMult(2.5),        {偏離ATR倍數門檻}
+    ATRLen(14),             {ATR計算週期}
+    MA_Len(20),             {Data2趨勢均線}
+    StopATRMult(2.0),       {停損ATR倍數}
+    TargetATRMult(3.0),     {停利ATR倍數}
+    SessionStart(0845),
+    SessionEnd(1330);
+
+Variables:
+    v_RSI(0),
+    v_ATR(0),
+    v_Deviation(0),
+    v_ConsecDown(0),
+    v_TrendFilter(False),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_Prev_MP(0);
+
+v_Prev_MP = MarketPosition[1];
+
+{Data1: 15M 計算}
+v_RSI = RSI(Close, RSILen);
+v_ATR = AvgTrueRange(ATRLen);
+
+{連續下跌計算}
+v_ConsecDown = 0;
+If Close < Close[1] Then v_ConsecDown = v_ConsecDown + 1;
+If Close[1] < Close[2] Then v_ConsecDown = v_ConsecDown + 1;
+If Close[2] < Close[3] Then v_ConsecDown = v_ConsecDown + 1;
+
+{偏離度: 收盤偏離20MA的ATR倍數}
+If v_ATR > 0 Then
+    v_Deviation = (Average(Close, MA_Len) - Close) / v_ATR;
+
+{Data2(日線)趨勢過濾: 收盤在MA20之上=多頭}
+v_TrendFilter = Close of Data2 > Average(Close of Data2, MA_Len)[1] of Data2;
+
+{進場: RSI極度超賣 + 連續下跌 + 偏離過大 + 日線多頭}
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_RSI < RSIOversold And
+   v_ConsecDown >= ConsecDownBars And
+   v_Deviation >= DevATRMult And
+   v_TrendFilter Then Begin
+    Buy ("BPL_Long") Next Bar at Market;
+End;
+
+{出場管理}
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - v_ATR * StopATRMult;
+    v_TargetPrice = EntryPrice + v_ATR * TargetATRMult;
+    
+    Sell ("BPL_Stop") Next Bar at v_StopPrice Stop;
+    Sell ("BPL_Target") Next Bar at v_TargetPrice Limit;
+    
+    If Time >= 1340 Then
+        Sell ("BPL_EOD") Next Bar at Market;
+End;
