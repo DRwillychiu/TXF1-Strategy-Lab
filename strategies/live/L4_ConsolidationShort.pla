@@ -1,0 +1,218 @@
+{================================================================================
+ Script Name : _Live_Adaptive_Farmer_v14.0_SpringOnly
+ MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
+ Description : Consolidation Short - S_Spring (False Breakout) ONLY
+ Version     : v14.0 + CS_Labels
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+   Net Profit    : 569,200 TWD
+   Profit Factor : 1.602
+   Win Rate      : 42.05%
+   MDD           : -334,600 (-23.39%)
+   Total Trades  : 88
+   Backtest      : 2020/02/19 - 2026/06/06
+================================================================================}
+
+[IntrabarOrderGeneration = false]
+
+inputs:
+    { --- 0. Master Environment Filter (Data3 - Daily) --- }
+    Daily_FastMA_Len(20),
+    Daily_SlowMA_Len(60),
+
+    { --- 1. Commander Logic Parameters (Data2 - 60M) --- }
+    Lookback_Bars(15),
+    Range_Shrink_Rate(0.7),
+    Weekly_MA_Len(48),
+
+    { --- 2. Risk & Volatility Parameters (Data1 - 15M) --- }
+    ATR_Length(60),
+    ATR_Stop_Mult(2),
+
+    { --- 3. Tactical Entry Parameters (S_Spring only) --- }
+    i_Buffer_ATR_Mult(0.4),
+    Time_Limit_Bars(6),
+
+    { --- 4. Advanced Management --- }
+    Cooldown_Bars(8),
+    Time_Stop_Bars(60),
+    Trail_ATR_Mult(1.0);
+
+variables:
+    { Phase 0: Macro filter }
+    v_Daily_FastMA(0),
+    v_Daily_SlowMA(0),
+    v_Macro_Block(false),
+
+    { Phase 1: Box definition }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+    v_Weekly_MA(0),
+    v_Trend_Dir(0),
+
+    { Phase 2: Execution variables }
+    v_Current_ATR(0),
+    v_Trigger_Price(0),
+    v_Stop_Level(0),
+    v_In_Trap_Zone(false),
+    v_Trap_Counter(0),
+
+    { Phase 3: Advanced Management Variables }
+    v_Locked_Top(0),
+    v_Locked_Btm(0),
+    v_BarsSinceExit(999),
+    v_Lowest_Low(999999),
+    v_Trail_Active(false);
+
+{ ==========================================
+  Phase 0: Master Environment Filter (Data3 - Daily)
+  Condition A: Close > SlowMA AND SlowMA sloping up (strong bull)
+  Condition B: FastMA > SlowMA (golden cross, bull alignment)
+  Either condition true = block all short entries
+  ========================================== }
+
+v_Daily_FastMA = Average(Close, Daily_FastMA_Len) of Data3;
+v_Daily_SlowMA = Average(Close, Daily_SlowMA_Len) of Data3;
+
+if ((Close of Data3 > v_Daily_SlowMA) and
+    (v_Daily_SlowMA >= v_Daily_SlowMA[1]))
+   or (v_Daily_FastMA > v_Daily_SlowMA) then begin
+    v_Macro_Block = true;
+end else begin
+    v_Macro_Block = false;
+end;
+
+{ ==========================================
+  Phase 1: Macro Commander Logic (Data2 - 60M)
+  ========================================== }
+
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+
+v_Weekly_MA = Average(Close, Weekly_MA_Len) of Data2;
+
+if Close of Data2 < v_Weekly_MA then
+    v_Trend_Dir = -1
+else
+    v_Trend_Dir = 1;
+
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and
+       (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+if v_is_in_consolidation then begin
+    if (Close of Data2 > v_Box_Top) or
+       (Close of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ==========================================
+  Phase 2: Tactical Execution Engine (Data1 - 15M)
+  ========================================== }
+
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+{ Cooldown Counter Management }
+if MarketPosition <> 0 then
+    v_BarsSinceExit = 0
+else if MarketPosition = 0 and MarketPosition[1] <> 0 then
+    v_BarsSinceExit = 1
+else if MarketPosition = 0 then
+    v_BarsSinceExit = v_BarsSinceExit + 1;
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    { Sub-Phase A: False Breakout (Trap) Detection }
+    if High > v_Box_Top then begin
+        v_In_Trap_Zone = true;
+        v_Trap_Counter = 0;
+    end;
+
+    { Time decay: trap zone expires after Time_Limit_Bars }
+    if v_In_Trap_Zone then begin
+        v_Trap_Counter = v_Trap_Counter + 1;
+        if v_Trap_Counter > Time_Limit_Bars then
+            v_In_Trap_Zone = false;
+    end;
+
+    { Sub-Phase B: CS_Entry Execution }
+    v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
+
+    if MarketPosition    =  0             and
+       v_BarsSinceExit  >= Cooldown_Bars  and
+       v_Trend_Dir       = -1             and
+       v_Macro_Block     = false          and
+       v_In_Trap_Zone    = true           and
+       Close             < v_Trigger_Price then begin
+
+        SellShort ("CS_Entry") next bar at Market;
+        v_In_Trap_Zone = false;
+
+    end;
+
+end;
+
+{ ==========================================
+  Phase 3: Exit Logic and State Lock Defense
+  ========================================== }
+
+{ Snapshot box and reset tracking when flat }
+if MarketPosition = 0 then begin
+    if v_is_in_consolidation then begin
+        v_Locked_Top = v_Box_Top;
+        v_Locked_Btm = v_Box_Btm;
+    end;
+    v_Lowest_Low   = 999999;
+    v_Trail_Active = false;
+end;
+
+if MarketPosition = -1 then begin
+
+    { 1. Record Maximum Favorable Excursion }
+    if Low < v_Lowest_Low then
+        v_Lowest_Low = Low;
+
+    { 2. Trailing Stop Activation }
+    if v_Lowest_Low <= v_Locked_Btm then
+        v_Trail_Active = true;
+
+    { 3. Stop Loss Calculation (Ratchet mechanism) }
+    if v_Trail_Active then begin
+        v_Stop_Level = MinList(v_Stop_Level[1],
+            v_Lowest_Low + (Trail_ATR_Mult * v_Current_ATR));
+    end else begin
+        v_Stop_Level = v_Locked_Top + (ATR_Stop_Mult * v_Current_ATR);
+        if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
+            v_Locked_Top = v_Box_Top;
+    end;
+
+    { 4. Execute stop order }
+    BuyToCover ("CS_SL") next bar at v_Stop_Level Stop;
+
+    { Time stop }
+    if v_Trail_Active = false and
+       BarsSinceEntry >= Time_Stop_Bars then
+        BuyToCover ("CS_TimeExit") next bar at Market;
+
+end;
+
+{ Disaster control: adverse upward break of locked box top }
+if v_is_in_consolidation = false and MarketPosition = -1 then begin
+    if Close of Data2 > v_Locked_Top then
+        BuyToCover ("CS_BreakExit") next bar at Market;
+end;
