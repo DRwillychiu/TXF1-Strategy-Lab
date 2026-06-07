@@ -1,0 +1,92 @@
+{STRATEGY_GEN_BBReversion}
+{Category: Bollinger Band Extreme Mean Reversion}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: 60-min on TXF1}
+{BB extreme touch + RSI confirmation + SMA60 trend filter = revert to midline}
+
+inputs:
+    BBLen(20),
+    BBMult(2.0),
+    RSILen(14),
+    RSI_OB(70),
+    RSI_OS(30),
+    SMATrendLen(60),
+    TrendLookback(5),
+    StopATRMult(1.5),
+    ATRLen(14),
+    MaxBars(5);
+
+variables:
+    v_BBMid(0),
+    v_BBUpper(0),
+    v_BBLower(0),
+    v_RSI(0),
+    v_SMATrend(0),
+    v_SMATrendPrev(0),
+    v_ATR(0),
+    v_StopPrice(0),
+    v_BarsSinceEntry(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_BBMid = BollingerBand(Close, BBLen, 0);
+v_BBUpper = BollingerBand(Close, BBLen, BBMult);
+v_BBLower = BollingerBand(Close, BBLen, -BBMult);
+v_RSI = RSI(Close, RSILen);
+v_SMATrend = Average(Close, SMATrendLen);
+v_SMATrendPrev = Average(Close, SMATrendLen)[TrendLookback];
+v_ATR = AvgTrueRange(ATRLen);
+
+{ ---- Long Entry: below lower band + oversold + uptrend ---- }
+If v_Prev_MP = 0 And
+   Close[1] < v_BBLower[1] And
+   v_RSI[1] < RSI_OS And
+   v_SMATrend > v_SMATrendPrev Then Begin
+    Buy ("LE_BR_Long") Next Bar at Market;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Short Entry: above upper band + overbought + downtrend ---- }
+If v_Prev_MP = 0 And
+   Close[1] > v_BBUpper[1] And
+   v_RSI[1] > RSI_OB And
+   v_SMATrend < v_SMATrendPrev Then Begin
+    SellShort ("SE_BR_Short") Next Bar at Market;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Long Exit: stop + midline target + time ---- }
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - StopATRMult * v_ATR;
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    Sell ("LX_BR_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_BR_TP") Next Bar at v_BBMid Limit;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        Sell ("LX_BR_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        Sell ("LX_BR_EOD") Next Bar at Market;
+End;
+
+{ ---- Short Exit: stop + midline target + time ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + StopATRMult * v_ATR;
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    BuyToCover ("SX_BR_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_BR_TP") Next Bar at v_BBMid Limit;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        BuyToCover ("SX_BR_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        BuyToCover ("SX_BR_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

@@ -1,0 +1,80 @@
+{STRATEGY_GEN_VolCollapseShort}
+{Category: Volatility Collapse Bearish Explosion}
+{Direction: Short Only (low vol breakdown)}
+{Timeframe: 30-min on TXF1}
+{ATR at 20th percentile of 60-bar lookback + bearish bias + breakdown = short}
+
+inputs:
+    ATRLen(14),
+    PctileLookback(60),
+    PctileThresh(20),
+    SMA_Len(20),
+    LowestLen(10),
+    BreakATRMult(0.3),
+    StopATRMult(2.0),
+    TargetATRMult(2.5),
+    MaxBars(7);
+
+variables:
+    v_ATR(0),
+    v_SMA(0),
+    v_LowestL(0),
+    v_MACD(0),
+    v_Signal(0),
+    v_Hist(0),
+    v_ATRRank(0),
+    v_Count(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_BarsSinceEntry(0),
+    v_Prev_MP(0),
+    v_i(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_ATR = AvgTrueRange(ATRLen);
+v_SMA = Average(Close, SMA_Len);
+v_LowestL = Lowest(Low, LowestLen);
+v_MACD = MACD(Close, 12, 26);
+v_Signal = XAverage(v_MACD, 9);
+v_Hist = v_MACD - v_Signal;
+
+{ ATR percentile rank over lookback period }
+v_Count = 0;
+For v_i = 1 To PctileLookback Begin
+    If v_ATR <= v_ATR[v_i] Then
+        v_Count = v_Count + 1;
+End;
+If PctileLookback > 0 Then
+    v_ATRRank = v_Count / PctileLookback * 100;
+
+{ ---- Short Entry: ATR extremely low + bearish + breakdown ---- }
+If v_Prev_MP = 0 And
+   v_ATRRank <= PctileThresh And
+   Close[1] < v_SMA[1] And
+   Close < v_LowestL[1] - BreakATRMult * v_ATR And
+   v_Hist[1] < 0 Then Begin
+    SellShort ("SE_VC_Short") Next Bar at Market;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Short Exit management ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + StopATRMult * v_ATR;
+    v_TargetPrice = EntryPrice - TargetATRMult * v_ATR;
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    BuyToCover ("SX_VC_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_VC_TP") Next Bar at v_TargetPrice Limit;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        BuyToCover ("SX_VC_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        BuyToCover ("SX_VC_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

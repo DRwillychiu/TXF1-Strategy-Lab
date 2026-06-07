@@ -1,0 +1,99 @@
+{STRATEGY_GEN_TripleTFTrend}
+{Category: Triple Timeframe Trend Alignment Pullback}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: 15-min on TXF1}
+{SMA5>SMA20>SMA60 alignment + RSI mid-zone + pullback to SMA5 + breakout}
+
+inputs:
+    SMAFast(5),
+    SMAMid(20),
+    SMASlow(60),
+    RSILen(14),
+    RSIBullLo(40),
+    RSIBullHi(70),
+    RSIBearLo(30),
+    RSIBearHi(60),
+    PullbackPct(0.5),
+    StopATRMult(2.0),
+    TrailATRMult(2.5),
+    TrailAfterBars(2),
+    MaxBars(10),
+    ATRLen(14);
+
+variables:
+    v_SMAF(0),
+    v_SMAM(0),
+    v_SMAS(0),
+    v_RSI(0),
+    v_ATR(0),
+    v_TrailStop(0),
+    v_BarsSinceEntry(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_SMAF = Average(Close, SMAFast);
+v_SMAM = Average(Close, SMAMid);
+v_SMAS = Average(Close, SMASlow);
+v_RSI = RSI(Close, RSILen);
+v_ATR = AvgTrueRange(ATRLen);
+
+{ ---- Long Entry: triple alignment + RSI mid + pullback + breakout ---- }
+If v_Prev_MP = 0 And
+   v_SMAF[1] > v_SMAM[1] And v_SMAM[1] > v_SMAS[1] And
+   v_RSI[1] > RSIBullLo And v_RSI[1] < RSIBullHi And
+   Low[1] <= v_SMAF[1] * (1 + PullbackPct / 100) And
+   Close > High[1] Then Begin
+    Buy ("LE_TT_Long") Next Bar at Market;
+    v_TrailStop = EntryPrice - StopATRMult * v_ATR;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Short Entry: triple alignment + RSI mid + bounce + breakdown ---- }
+If v_Prev_MP = 0 And
+   v_SMAF[1] < v_SMAM[1] And v_SMAM[1] < v_SMAS[1] And
+   v_RSI[1] > RSIBearLo And v_RSI[1] < RSIBearHi And
+   High[1] >= v_SMAF[1] * (1 - PullbackPct / 100) And
+   Close < Low[1] Then Begin
+    SellShort ("SE_TT_Short") Next Bar at Market;
+    v_TrailStop = EntryPrice + StopATRMult * v_ATR;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Long Exit with trailing stop ---- }
+If MarketPosition = 1 Then Begin
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    { Activate trailing stop after N bars }
+    If v_BarsSinceEntry > TrailAfterBars Then
+        v_TrailStop = MaxList(v_TrailStop, Close - TrailATRMult * v_ATR);
+
+    Sell ("LX_TT_Trail") Next Bar at v_TrailStop Stop;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        Sell ("LX_TT_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        Sell ("LX_TT_EOD") Next Bar at Market;
+End;
+
+{ ---- Short Exit with trailing stop ---- }
+If MarketPosition = -1 Then Begin
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    If v_BarsSinceEntry > TrailAfterBars Then
+        v_TrailStop = MinList(v_TrailStop, Close + TrailATRMult * v_ATR);
+
+    BuyToCover ("SX_TT_Trail") Next Bar at v_TrailStop Stop;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        BuyToCover ("SX_TT_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        BuyToCover ("SX_TT_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

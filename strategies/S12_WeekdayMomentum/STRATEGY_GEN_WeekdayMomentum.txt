@@ -1,0 +1,77 @@
+{STRATEGY_GEN_WeekdayMomentum}
+{Category: Weekday Statistical Momentum Continuation}
+{Direction: Bidirectional (Long + Short)}
+{Timeframe: Daily on TXF1}
+{Mon+Tue consecutive momentum above threshold continues into Wed}
+
+inputs:
+    MinDayReturnPct(0.3),
+    SMA_Len(20),
+    ATRLen(14),
+    StopATRMult(1.5),
+    TargetATRMult(2.0);
+
+variables:
+    v_MonReturn(0),
+    v_TueReturn(0),
+    v_SMA(0),
+    v_ATR(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_SMA = Average(Close, SMA_Len);
+v_ATR = AvgTrueRange(ATRLen);
+
+{ Calculate Mon/Tue returns on Wednesday }
+If DayOfWeek(Date) = 3 Then Begin
+    If Open[2] > 0 Then v_MonReturn = (Close[2] - Open[2]) / Open[2] * 100;
+    If Open[1] > 0 Then v_TueReturn = (Close[1] - Open[1]) / Open[1] * 100;
+End;
+
+{ ---- Long Entry: Mon+Tue both up + bullish trend ---- }
+If v_Prev_MP = 0 And DayOfWeek(Date) = 3 And
+   v_MonReturn > MinDayReturnPct And
+   v_TueReturn > MinDayReturnPct And
+   Close[1] > v_SMA[1] Then Begin
+    Buy ("LE_WM_Long") Next Bar at Market;
+End;
+
+{ ---- Short Entry: Mon+Tue both down + bearish trend ---- }
+If v_Prev_MP = 0 And DayOfWeek(Date) = 3 And
+   v_MonReturn < -MinDayReturnPct And
+   v_TueReturn < -MinDayReturnPct And
+   Close[1] < v_SMA[1] Then Begin
+    SellShort ("SE_WM_Short") Next Bar at Market;
+End;
+
+{ ---- Long Exit ---- }
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - StopATRMult * v_ATR;
+    v_TargetPrice = EntryPrice + TargetATRMult * v_ATR;
+
+    Sell ("LX_WM_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_WM_TP") Next Bar at v_TargetPrice Limit;
+
+    If Time >= 1325 Then
+        Sell ("LX_WM_EOD") Next Bar at Market;
+End;
+
+{ ---- Short Exit ---- }
+If MarketPosition = -1 Then Begin
+    v_StopPrice = EntryPrice + StopATRMult * v_ATR;
+    v_TargetPrice = EntryPrice - TargetATRMult * v_ATR;
+
+    BuyToCover ("SX_WM_SL") Next Bar at v_StopPrice Stop;
+    BuyToCover ("SX_WM_TP") Next Bar at v_TargetPrice Limit;
+
+    If Time >= 1325 Then
+        BuyToCover ("SX_WM_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;

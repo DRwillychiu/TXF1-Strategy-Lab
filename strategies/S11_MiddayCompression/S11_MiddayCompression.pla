@@ -1,0 +1,67 @@
+{STRATEGY_GEN_MiddayCompression}
+{Category: Midday ATR Compression Breakout}
+{Direction: Long Only (compression breakout bias up)}
+{Timeframe: 45-min on TXF1}
+{ATR compression below 75% baseline + narrow range bar + midday breakout above prior high}
+
+inputs:
+    ATR_Fast(5),
+    ATR_Slow(14),
+    ATR_Ratio(0.75),
+    SMA_Len(20),
+    RangeThreshPct(1.2),
+    StopATRMult(1.8),
+    TargetATRMult(3.0),
+    MaxBars(5),
+    SessionStart(1200),
+    SessionEnd(1330);
+
+variables:
+    v_ATRFast(0),
+    v_ATRSlow(0),
+    v_SMA(0),
+    v_RangePct(0),
+    v_StopPrice(0),
+    v_TargetPrice(0),
+    v_BarsSinceEntry(0),
+    v_Prev_MP(0);
+
+{ ---- Previous bar position tracking ---- }
+v_Prev_MP = MarketPosition[1];
+
+{ ---- Indicator calculations ---- }
+v_ATRFast = AvgTrueRange(ATR_Fast);
+v_ATRSlow = AvgTrueRange(ATR_Slow);
+v_SMA = Average(Close, SMA_Len);
+If Close > 0 Then
+    v_RangePct = (High - Low) / Close * 100;
+
+{ ---- Long Entry: ATR compressed + narrow range + midday breakout ---- }
+If v_Prev_MP = 0 And
+   Time >= SessionStart And Time <= SessionEnd And
+   v_ATRFast < v_ATRSlow * ATR_Ratio And
+   Close[1] > v_SMA[1] And
+   v_RangePct[1] < RangeThreshPct And
+   Close > High[1] Then Begin
+    Buy ("LE_MC_Long") Next Bar at Market;
+    v_BarsSinceEntry = 0;
+End;
+
+{ ---- Long Exit management ---- }
+If MarketPosition = 1 Then Begin
+    v_StopPrice = EntryPrice - StopATRMult * v_ATRSlow;
+    v_TargetPrice = EntryPrice + TargetATRMult * v_ATRSlow;
+    v_BarsSinceEntry = v_BarsSinceEntry + 1;
+
+    Sell ("LX_MC_SL") Next Bar at v_StopPrice Stop;
+    Sell ("LX_MC_TP") Next Bar at v_TargetPrice Limit;
+
+    If v_BarsSinceEntry >= MaxBars Then
+        Sell ("LX_MC_Time") Next Bar at Market;
+
+    If Time >= 1340 Then
+        Sell ("LX_MC_EOD") Next Bar at Market;
+End;
+
+{ ---- Track position state ---- }
+v_Prev_MP = MarketPosition;
