@@ -1,0 +1,158 @@
+{================================================================================
+ Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
+ MC Load Name: STRATEGY_WILLY_LONG_C
+ Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
+ Version     : v13 + D3Filter + CL_Labels
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+   Net Profit    : 697,200 TWD
+   Profit Factor : 1.187
+   Win Rate      : 50.35%
+   MDD           : -368,800 (-30.24%)
+   Total Trades  : 431
+   Backtest      : 2020/01/07 - 2026/06/06
+================================================================================}
+
+inputs:
+    { --- Data2 (60M) Settings --- }
+    Lookback_Bars(16),
+    Range_Shrink_Rate(0.1),
+    MA_Len(12),             { Originally Weekly_MA_Len, renamed to avoid confusion, Data2=60M }
+
+    { --- Risk Management (15M) --- }
+    ATR_Length(9),
+    ATR_Stop_Mult(3.0),
+
+    { --- Data3 (Daily) Filter Settings --- }
+    Daily_MA_Fast(20),      { Daily Fast Moving Average }
+    Daily_MA_Slow(60);      { Daily Slow Moving Average }
+
+variables:
+    { --- Data2 Variables (60M) --- }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+
+    { --- Data2 Filter Variables --- }
+    v_60M_MA(0),
+    v_Trend_Dir(0),
+
+    { --- Data3 Filter Variables (Daily) --- }
+    v_Daily_MA_Fast(0),     { Daily 20MA }
+    v_Daily_MA_Slow(0),     { Daily 60MA }
+    v_Daily_Filter(false),  { true = Long allowed; false = Long prohibited }
+
+    { --- Data1 Variables (15M) --- }
+    v_Current_ATR(0),
+    v_Mid_Line(0),
+    v_ATR_Buffer(0),
+
+    { --- Order Management --- }
+    v_Stop_Level(0);
+
+{ ==========================================
+  1. Commander Logic (Data2 - 60M)
+  ========================================== }
+
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+
+{ 60M Trend Filter }
+v_60M_MA = Average(Close, MA_Len) of Data2;
+
+if Close of Data2 > v_60M_MA then
+    v_Trend_Dir = 1
+else
+    v_Trend_Dir = -1;
+
+{ Box Definition }
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+{ Kill Switch }
+if v_is_in_consolidation then begin
+    if (Close of Data2 > v_Box_Top) or (Close of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ==========================================
+  2. Data3 Filter Logic (Daily - Environmental Filter)
+  OR logic: either MA condition allows long entries
+  ========================================== }
+
+v_Daily_MA_Fast = Average(Close, Daily_MA_Fast) of Data3;
+v_Daily_MA_Slow = Average(Close, Daily_MA_Slow) of Data3;
+
+if (Close of Data3 > v_Daily_MA_Fast) or
+   (Close of Data3 > v_Daily_MA_Slow) then
+    v_Daily_Filter = true
+else
+    v_Daily_Filter = false;
+
+{ ==========================================
+  3. Execution Logic (Data1 - 15M Ladder)
+  ========================================== }
+
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    v_Mid_Line   = (v_Box_Top + v_Box_Btm) / 2;
+    v_ATR_Buffer = ATR_Stop_Mult * v_Current_ATR;
+
+    { --- Entry Logic --- }
+    if MarketPosition = 0 then begin
+
+        if (v_Trend_Dir = 1) and (v_Daily_Filter = true) then begin
+
+            { Bottom Re-Entry: false breakdown at Box_Btm }
+            if (Close < v_Box_Btm) and
+               (Close > v_Box_Btm - v_ATR_Buffer) then
+                Buy ("CL_Entry_Bot") next bar at v_Box_Btm Stop;
+
+            { Mid Re-Entry: false breakdown at Mid_Line }
+            if (Close < v_Mid_Line) and
+               (Close > v_Mid_Line - v_ATR_Buffer) then
+                Buy ("CL_Entry_Mid") next bar at v_Mid_Line Stop;
+
+        end;
+    end;
+
+    { --- Exit Logic --- }
+    if MarketPosition = 1 then begin
+
+        if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
+            { CL_Entry_Bot position: target Mid_Line }
+            Sell ("CL_TP_Bot") next bar at v_Mid_Line Limit;
+            v_Stop_Level = v_Box_Btm - v_ATR_Buffer;
+        end else begin
+            { CL_Entry_Mid position: target Box_Top }
+            Sell ("CL_TP_Mid") next bar at v_Box_Top Limit;
+            v_Stop_Level = v_Mid_Line - v_ATR_Buffer;
+        end;
+
+        Sell ("CL_SL") next bar at v_Stop_Level Stop;
+
+    end;
+
+end else begin
+    { ==========================================
+      4. Disaster Control
+      ========================================== }
+    if MarketPosition = 1 then
+        Sell ("CL_BreakExit") next bar at Market;
+end;
