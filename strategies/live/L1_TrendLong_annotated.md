@@ -2,7 +2,7 @@
 
 > MC 載入名稱：WILLY_ATR_LONG_60M
 > 訊號名稱：Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
-> 版本：V2.5 + FrozenSL + HolidayFlat_v3（2026-06-12，repo 已更新，**MC9 待部署——必須空手時部署，見下方部署須知**）
+> 版本：V2.6 + StopProfit + FrozenSL + HolidayFlat_v3（2026-06-12，repo 已更新，**MC9 待部署——必須空手時部署，見下方部署須知**）
 > 平台：MultiCharts 9.0 PowerLanguage x64
 > 狀態：🟢 已上架實盤運行（運行中為 V2.3 舊版假日模組）
 > 口數：1 口
@@ -112,7 +112,25 @@
 > 初始停損是進場那一刻決定的生死線，不應隨行情變動。
 > 修正模式比照 L2 的 SL_Locked / S1 的 v_EntryATR 凍結。
 
-### ⚠️ V2.5 部署須知（與 V2.4 不同！）
+### 獲利回檔保護（P7 StopProfit，V2.6 — 移植自 L2 SECTION 12）
+```
+啟動：收盤價獲利 ≥ 250 點（stopProfitPoints_Long）
+峰值：posbleProfit_Long = max(Close - 進場價)，只升不降
+鎖定地板 = 進場價 + 峰值 × 45%（容忍回吐 55%）
+一旦武裝，永不解除（獲利回落跌破 250 點，地板停在原位不撤）
+
+Final_Exit = Max( MA55-50 追蹤, 凍結初始停損, SP 地板 )
+→ 三個地板全部只升不降，有效停損單向上移
+→ 武裝後地板必然高於進場價 → 跑出 250 點的單不可能再贏轉虧（保本內建）
+```
+> 與 L2 的差異僅架構：L2 用出場優先級鏈（獨立 Stop 單），L1 併入單一停損地板
+> （Max 取最嚴者），效果相同。L2 的 TTP（1.5% 反彈出場）不移植——MA55 追蹤
+> 已扮演該角色。
+> 數據依據（469 筆 MFE 審計）：83 筆曾 +100 點仍虧損（-152 萬）；MFE≥250 點
+> 回吐中位 50%、P90 112%；Top 10 終點回吐最大僅 28% → 55% 容忍不傷肥尾。
+> 樂觀界改善 +193 萬；路徑級觸發成本須 MC9 A/B 定案。
+
+### ⚠️ V2.5/V2.6 部署須知（與 V2.4 不同！）
 ```
 P3 凍結會改寫「歷史上每筆交易」的停損與出場點
 → MC9 重算後的歷史軌跡與舊版不同
@@ -160,6 +178,7 @@ Final_Exit = Max(追蹤停損, 初始停損)
 | TL_SL_Gap | Close < Final_Exit（跳空跌破，市價出場） |
 | TL_SL | Final_Exit = 初始停損（停損單觸發） |
 | TL_TP | Final_Exit = 追蹤停損（利潤保護觸發） |
+| TL_SP | 獲利回檔保護觸發（峰值回吐 55%，鎖住 45%）（V2.6） |
 | TL_Holiday | 休市前夕夜盤尾段 ≥ 03:45 強制歸零（v3） |
 | TL_RegistryEnd | 超出假日登錄驗證視界（Registry_Valid_Until）的 fail-safe 平倉 |
 | TL_Kill | 手動緊急出場（颱風等臨時停市） |
@@ -177,6 +196,8 @@ Final_Exit = Max(追蹤停損, 初始停損)
 | Length20 | 55 | P4 追蹤 | 追蹤停損 MA 長度 |
 | TrailOffset | 50 | P4 追蹤 | 追蹤停損偏移（點） |
 | ATR_Length | 20 | 共用 | ATR 計算長度 |
+| stopProfitPoints_Long | 250 | P7 回檔保護 | 啟動門檻（收盤獲利點數），同 L2 |
+| profitReturnPrcnt_Long | 55 | P7 回檔保護 | 容忍回吐峰值獲利的 %，同 L2 |
 | Holiday_Flat_Time | 345 | P5 v3 | 休市前夕尾段強制歸零觸發時間（03:45） |
 | Registry_Valid_Until | 1270101 | P5 v3 | 假日登錄驗證視界；超過即 fail-safe 空手。每年 Q4 依期交所新行事曆重建後上調 |
 | Weekly_MA_Fast | 20 | P6 週線 | 週線快速 MA |
