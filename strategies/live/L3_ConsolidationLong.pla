@@ -12,8 +12,10 @@
    v13.1  (2026-06-12) Holiday Flat Rule v3 + safety rails:
           - Iron Rule: flat before the 05:00 close of the last
             night session preceding every market closure.
-            Audit: 0 historical violations (median hold 5.8h was
-            luck, not protection - max hold reached 131h).
+            Registry rescan: 2 historical violations, BOTH losses
+            (2023 Tomb Sweeping -23,600; 2024 Mid-Autumn tail
+            entry at 04:30 -34,200) - L3 is the only strategy
+            whose holiday luck was negative.
           - Holiday_Tail registry (63 TAIFEX-verified dates,
             same registry as L1/L2). Tail bars (00:00-05:00):
             entries blocked; forced market exit from
@@ -21,7 +23,8 @@
             04:15, retries 04:30/04:45, flat before 05:00).
           - Registry_Valid_Until fail-safe + 30-day warning +
             Manual_Kill_Switch (CL_Kill).
-          - History impact ~zero (no holiday-crossing trades).
+          - History impact: rewrites the 2 crossing losers into
+            pre-gap exits and blocks the tail entry (improves).
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
