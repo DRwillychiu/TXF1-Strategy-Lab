@@ -115,6 +115,10 @@ Final_Exit = Max(追蹤停損, 初始停損)
    → 05:00 收盤前保證歸零
 ④ 部位可持有到前夕夜盤尾段（讓利潤奔跑到最後一刻），不提前犧牲行情
 ⑤ 颱風臨時停市無法預編碼 → Manual_Kill_Switch + 連假前人工檢查
+⑥ Fail-safe 視界保護：Date > Registry_Valid_Until（目前 1270101）
+   → 超出已驗證的假日登錄範圍 = 未來假日不可知
+   → 自動封鎖進場 + 平掉持倉（TL_RegistryEnd）+ 圖表紅字警告（到期前 30 天）
+   → 忘記維護的後果從「沉默留倉風險」變成「策略自動空手 + 滿屏警告」
 ```
 > 舊版（前夕 13:30 平倉）的三個問題已修正：午夜尾段無保護、不擋進場、
 > 2026 批次日期錯誤。歷史上四次抱倉跨假（含 2026-05-01 凌晨進場抱過勞動節）
@@ -127,6 +131,7 @@ Final_Exit = Max(追蹤停損, 初始停損)
 | TL_SL | Final_Exit = 初始停損（停損單觸發） |
 | TL_TP | Final_Exit = 追蹤停損（利潤保護觸發） |
 | TL_Holiday | 休市前夕夜盤尾段 ≥ 03:45 強制歸零（v3） |
+| TL_RegistryEnd | 超出假日登錄驗證視界（Registry_Valid_Until）的 fail-safe 平倉 |
 | TL_Kill | 手動緊急出場（颱風等臨時停市） |
 
 ---
@@ -143,6 +148,7 @@ Final_Exit = Max(追蹤停損, 初始停損)
 | TrailOffset | 50 | P4 追蹤 | 追蹤停損偏移（點） |
 | ATR_Length | 20 | 共用 | ATR 計算長度 |
 | Holiday_Flat_Time | 345 | P5 v3 | 休市前夕尾段強制歸零觸發時間（03:45） |
+| Registry_Valid_Until | 1270101 | P5 v3 | 假日登錄驗證視界；超過即 fail-safe 空手。每年 Q4 依期交所新行事曆重建後上調 |
 | Weekly_MA_Fast | 20 | P6 週線 | 週線快速 MA |
 | Weekly_MA_Slow | 60 | P6 週線 | 週線慢速 MA |
 

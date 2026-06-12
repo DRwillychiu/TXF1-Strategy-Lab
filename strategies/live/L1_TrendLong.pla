@@ -25,6 +25,12 @@
             115-yr calendar; H2 2026 + 2027/1/1 added.
           - Header performance figures reflect the OLD module;
             re-backtest pending after deployment.
+          - Fail-safe horizon guard: Registry_Valid_Until input.
+            Beyond the last verified registry date the strategy
+            blocks entries and flattens (TL_RegistryEnd) - future
+            holidays beyond the published TAIFEX calendar are
+            unknowable, so walking off the verified map must fail
+            safe, not fail silent. 30-day red warning on chart.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
@@ -62,7 +68,11 @@ Inputs:
 
     { P5 v3: Pre-Holiday Flat Rule }
     Manual_Kill_Switch(False),
-    Holiday_Flat_Time(345),    { 03:45 trigger -> fill 03:45, retry 04:30, flat before 05:00 close }
+    Holiday_Flat_Time(345),        { 03:45 trigger -> fill 03:45, retry 04:30, flat before 05:00 close }
+    Registry_Valid_Until(1270101), { last date covered by the verified holiday registry;
+                                     beyond it the strategy fails safe: no entries, flatten all.
+                                     Bump this when rebuilding the registry from the next
+                                     TAIFEX annual calendar (Q4 each year). }
 
     { P6: Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
@@ -86,6 +96,8 @@ Variables:
     { P5 v3 Module Variables }
     Init_Done(False),
     v_Holiday_Block(False),
+    v_Registry_Expired(False),
+    Registry_Warn_ID(-1),
     idx(0),
 
     { MDD Visual Tracking Variables }
@@ -258,6 +270,33 @@ if Time <= 500 then begin
     end;
 end;
 
+{ Fail-safe: beyond the verified registry horizon the future
+  holiday schedule is UNKNOWN (next TAIFEX annual calendar not
+  yet published / not yet loaded). Never trade unverified dates:
+  block all entries and flatten any position. }
+
+v_Registry_Expired = False;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
+end;
+
+{ Live-chart warning: registry horizon within ~30 days }
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "P5 HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
 { ==========================================
   2. Entry Logic (gated by Holiday Tail)
   ========================================== }
@@ -316,7 +355,10 @@ end;
 
 if MP > 0 then begin
 
-    if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+    if v_Registry_Expired then begin
+        Sell ("TL_RegistryEnd") next bar at Market;
+    end
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
         Sell ("TL_Holiday") next bar at Market;
     end;
 
