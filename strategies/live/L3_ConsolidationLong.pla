@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.2 + FrozenSL/BE (A/B candidate) + HolidayFlat_v3
+ Version     : v13.2B (PRODUCTION = Variant B: Freeze ON, BE OFF) + HolidayFlat_v3
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -49,10 +49,23 @@
               A baseline v13.1 : Freeze_SL_On=false, BE=0
               B freeze only    : Freeze_SL_On=true,  BE=0
               C BE only        : Freeze_SL_On=false, BE=50
-              D candidate      : Freeze_SL_On=true,  BE=50 (defaults)
-          - Acceptance (review doc sec 7): net/MDD up; MFE>=50
-            winner-turned-loser damage cut >= 50 pct; 2025 net
-            decay <= 15 pct. Deploy only when flat.
+              D freeze + BE    : Freeze_SL_On=true,  BE=50
+          - A/B RESULTS (2026-06-13, user backtests):
+              D REJECTED: net -78 pct, win rate 50.3 -> 34.7 pct.
+                100 CL_BE exits at 0 pct win - pulling back to
+                entry after +50 pts is NORMAL box oscillation,
+                BE amputated ~96 eventual target hits. The L1
+                StopProfit lesson does NOT transfer to range
+                strategies.
+              B = PRODUCTION (user ruling): net +12 pct
+                (697,200 -> 778,000), MDD -21 pct (-291,800),
+                net/MDD 1.89 -> 2.67, single-year concentration
+                82 -> 38 pct, 2021-2024 flat years -115,200 ->
+                +99,000. Frozen targets turn upward box breaks
+                into profitable exits (CL_BreakExit 19/-173,000
+                -> 72/+691,800). Cost: 2025 trend year -396,400
+                (redistribution; trend years belong to L1/L5).
+          - Defaults now = variant B. Deploy only when flat.
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
@@ -82,10 +95,11 @@ inputs:
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
     Manual_Kill_Switch(false),
 
-    { --- v13.2 A/B switches --- }
-    Freeze_SL_On(true),            { true = lock leg/stop/target at entry; false = v13.1 dynamic }
-    BE_Trigger_Pts(50),            { close-based profit (pts) arming the breakeven floor; 0 = off }
-    BE_Offset_Pts(5);              { breakeven floor = EntryPrice + this (covers RT slippage) }
+    { --- v13.2 A/B switches (defaults = PRODUCTION variant B) --- }
+    Freeze_SL_On(true),            { PRODUCTION: lock leg/stop/target at entry; false = old v13 dynamic }
+    BE_Trigger_Pts(0),             { PRODUCTION: 0 = BE off. REJECTED at 50 for range strategies
+                                     (variant D: 100 zero-win CL_BE exits, amputated ~96 target hits) }
+    BE_Offset_Pts(5);              { breakeven floor offset; inert while BE_Trigger_Pts = 0 }
 
 variables:
     { --- Data2 Variables (60M) --- }
