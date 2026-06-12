@@ -2,10 +2,22 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：v13 + D3Filter + CL_Labels
+> 版本：v13.1 + HolidayFlat_v3（2026-06-12，repo 已更新，**MC9 待部署——空手時部署**）
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行
+> 狀態：🟢 已上架實盤運行（運行中為 v13，無假日保護）
 > 口數：1 口
+> 深度審查：`L3_ConsolidationLong_review.md`（2026-06-12，431 筆解析；⚠️ 體質決策菜單待用戶裁示）
+
+## v13.1 假日鐵律模組（2026-06-12）
+
+| 項目 | 內容 |
+|------|------|
+| 強制歸零 | 尾段日 Time ≥ **04:15** 市價出場（15 分格線：04:15 成交、04:30/04:45 兩次重試、05:00 收盤前必歸零） |
+| 進場封鎖 | 尾段日（00:00-05:00）兩腿 Stop 單全部不掛 |
+| 視界 fail-safe | `Registry_Valid_Until = 1270101`，超過即封鎖+平倉（CL_RegistryEnd）+30 天圖表紅字 |
+| 緊急開關 | `Manual_Kill_Switch` → CL_Kill（颱風臨時停市） |
+| 新出場標籤 | CL_Holiday / CL_RegistryEnd / CL_Kill |
+| 歷史影響 | 0 筆跨假持倉 → 重算後歷史軌跡幾乎不變 |
 
 ---
 

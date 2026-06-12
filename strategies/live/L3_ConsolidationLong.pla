@@ -2,10 +2,26 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13 + D3Filter + CL_Labels
+ Version     : v13.1 + HolidayFlat_v3 (Iron Rule)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ CHANGELOG:
+   v13    + D3Filter + CL_Labels (no logic changes)
+   v13.1  (2026-06-12) Holiday Flat Rule v3 + safety rails:
+          - Iron Rule: flat before the 05:00 close of the last
+            night session preceding every market closure.
+            Audit: 0 historical violations (median hold 5.8h was
+            luck, not protection - max hold reached 131h).
+          - Holiday_Tail registry (63 TAIFEX-verified dates,
+            same registry as L1/L2). Tail bars (00:00-05:00):
+            entries blocked; forced market exit from
+            Holiday_Flat_Time (15M grid: 04:15 trigger -> fill
+            04:15, retries 04:30/04:45, flat before 05:00).
+          - Registry_Valid_Until fail-safe + 30-day warning +
+            Manual_Kill_Switch (CL_Kill).
+          - History impact ~zero (no holiday-crossing trades).
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
@@ -28,7 +44,12 @@ inputs:
 
     { --- Data3 (Daily) Filter Settings --- }
     Daily_MA_Fast(20),      { Daily Fast Moving Average }
-    Daily_MA_Slow(60);      { Daily Slow Moving Average }
+    Daily_MA_Slow(60),      { Daily Slow Moving Average }
+
+    { --- Holiday Flat Rule v3 (Iron Rule 2026-06-12) --- }
+    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false);
 
 variables:
     { --- Data2 Variables (60M) --- }
@@ -55,7 +76,91 @@ variables:
     v_ATR_Buffer(0),
 
     { --- Order Management --- }
-    v_Stop_Level(0);
+    v_Stop_Level(0),
+
+    { --- Holiday Flat Rule v3 --- }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0);
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  0. Holiday Tail Registry (TAIFEX-verified, shared with L1/L2)
+  Holiday_Tail = last trading day + 1 calendar day (the date
+  stamped on the 00:00-05:00 tail bars of the final night
+  session before each closure). * = reconstructed rows.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
 
 { ==========================================
   1. Commander Logic (Data2 - 60M)
@@ -114,10 +219,12 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
     v_Mid_Line   = (v_Box_Top + v_Box_Btm) / 2;
     v_ATR_Buffer = ATR_Stop_Mult * v_Current_ATR;
 
-    { --- Entry Logic --- }
+    { --- Entry Logic (gated by Holiday Tail) --- }
     if MarketPosition = 0 then begin
 
-        if (v_Trend_Dir = 1) and (v_Daily_Filter = true) then begin
+        if (v_Trend_Dir = 1) and
+           (v_Daily_Filter = true) and
+           (v_Holiday_Block = false) then begin
 
             { Bottom Re-Entry: false breakdown at Box_Btm }
             if (Close < v_Box_Btm) and
@@ -155,4 +262,21 @@ end else begin
       ========================================== }
     if MarketPosition = 1 then
         Sell ("CL_BreakExit") next bar at Market;
+end;
+
+{ ==========================================
+  5. Holiday Iron Rule / Fail-safe / Manual Kill
+  Runs regardless of consolidation state.
+  ========================================== }
+
+if MarketPosition = 1 then begin
+
+    if v_Registry_Expired then
+        Sell ("CL_RegistryEnd") next bar at Market
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then
+        Sell ("CL_Holiday") next bar at Market;
+
+    if Manual_Kill_Switch then
+        Sell ("CL_Kill") next bar at Market;
+
 end;
