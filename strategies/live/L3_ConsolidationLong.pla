@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.1 + HolidayFlat_v3 (Iron Rule)
+ Version     : v13.2 + FrozenSL/BE (A/B candidate) + HolidayFlat_v3
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -25,6 +25,34 @@
             Manual_Kill_Switch (CL_Kill).
           - History impact: rewrites the 2 crossing losers into
             pre-gap exits and blocks the tail entry (improves).
+   v13.2  (2026-06-13) Frozen SL + BE layer, INPUT-SWITCHED for
+          the MC9 A/B matrix (user-directed):
+          - Diagnosis: v13.1 stop had TRIPLE drift - (1) ATR(9)
+            buffer recomputed every 15M bar, (2) stop anchor
+            (Box_Btm/Mid) rewritten by the rolling 16-bar 60M
+            window mid-trade, (3) leg classification re-evaluated
+            every bar so target AND stop could flip sides.
+            Evidence: CL_SL designed for ~60-120 pts but worst
+            fill was -567 pts (-113,400). And zero breakeven:
+            48 trades reached +50 pts yet closed negative
+            (-1,162,800 = 1.7x lifetime net).
+          - Freeze_SL_On(true): locks leg classification, stop
+            price and target price ONCE on the entry bar close
+            (entry-time box snapshot). Box Kill Switch
+            (CL_BreakExit on the CURRENT box) stays dynamic.
+            Set false to replicate v13.1 exactly (baseline A).
+          - BE_Trigger_Pts(50): close-based profit >= 50 pts arms
+            a breakeven floor at Entry + BE_Offset_Pts(5). Floor
+            is Max-ed with the working stop; CL_BE label when it
+            is the binding level. Set 0 to disable.
+          - A/B MATRIX (change inputs only, same code):
+              A baseline v13.1 : Freeze_SL_On=false, BE=0
+              B freeze only    : Freeze_SL_On=true,  BE=0
+              C BE only        : Freeze_SL_On=false, BE=50
+              D candidate      : Freeze_SL_On=true,  BE=50 (defaults)
+          - Acceptance (review doc sec 7): net/MDD up; MFE>=50
+            winner-turned-loser damage cut >= 50 pct; 2025 net
+            decay <= 15 pct. Deploy only when flat.
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
@@ -52,7 +80,12 @@ inputs:
     { --- Holiday Flat Rule v3 (Iron Rule 2026-06-12) --- }
     Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
-    Manual_Kill_Switch(false);
+    Manual_Kill_Switch(false),
+
+    { --- v13.2 A/B switches --- }
+    Freeze_SL_On(true),            { true = lock leg/stop/target at entry; false = v13.1 dynamic }
+    BE_Trigger_Pts(50),            { close-based profit (pts) arming the breakeven floor; 0 = off }
+    BE_Offset_Pts(5);              { breakeven floor = EntryPrice + this (covers RT slippage) }
 
 variables:
     { --- Data2 Variables (60M) --- }
@@ -85,7 +118,18 @@ variables:
     v_Holiday_Block(false),
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
-    hidx(0);
+    hidx(0),
+
+    { --- v13.2 Frozen SL / BE --- }
+    v_SL_Locked(false),
+    v_Frozen_SL(0),
+    v_Frozen_Target(0),
+    v_Leg_IsBot(false),
+    v_Work_SL(0),
+    v_Work_Target(0),
+    v_Work_IsBot(false),
+    v_BE_Armed(false),
+    v_BE_IsFloor(false);
 
 arrays:
     Holiday_Tail[80](0);
@@ -242,20 +286,70 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         end;
     end;
 
-    { --- Exit Logic --- }
+    { --- Exit Logic (v13.2 variant-switched engine) --- }
     if MarketPosition = 1 then begin
 
-        if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
-            { CL_Entry_Bot position: target Mid_Line }
-            Sell ("CL_TP_Bot") next bar at v_Mid_Line Limit;
-            v_Stop_Level = v_Box_Btm - v_ATR_Buffer;
+        if Freeze_SL_On = true then begin
+
+            { v13.2: lock leg / stop / target ONCE on the entry
+              bar close (entry-time box snapshot). Cures the
+              triple drift: floating ATR buffer, floating anchor,
+              flipping leg classification. }
+            if v_SL_Locked = false then begin
+                if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
+                    v_Leg_IsBot     = true;
+                    v_Frozen_SL     = v_Box_Btm - v_ATR_Buffer;
+                    v_Frozen_Target = v_Mid_Line;
+                end else begin
+                    v_Leg_IsBot     = false;
+                    v_Frozen_SL     = v_Mid_Line - v_ATR_Buffer;
+                    v_Frozen_Target = v_Box_Top;
+                end;
+                v_SL_Locked = true;
+            end;
+
+            v_Work_IsBot  = v_Leg_IsBot;
+            v_Work_SL     = v_Frozen_SL;
+            v_Work_Target = v_Frozen_Target;
+
         end else begin
-            { CL_Entry_Mid position: target Box_Top }
-            Sell ("CL_TP_Mid") next bar at v_Box_Top Limit;
-            v_Stop_Level = v_Mid_Line - v_ATR_Buffer;
+
+            { Baseline A: exact v13.1 dynamic behavior }
+            if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
+                v_Work_IsBot  = true;
+                v_Work_SL     = v_Box_Btm - v_ATR_Buffer;
+                v_Work_Target = v_Mid_Line;
+            end else begin
+                v_Work_IsBot  = false;
+                v_Work_SL     = v_Mid_Line - v_ATR_Buffer;
+                v_Work_Target = v_Box_Top;
+            end;
+
         end;
 
-        Sell ("CL_SL") next bar at v_Stop_Level Stop;
+        { BE layer: close-based arming, floor = Entry + offset,
+          Max-ed with the working stop, never disarms until flat }
+        v_BE_IsFloor = false;
+        if BE_Trigger_Pts > 0 then begin
+            if (Close - EntryPrice) >= BE_Trigger_Pts then
+                v_BE_Armed = true;
+            if v_BE_Armed and
+               (EntryPrice + BE_Offset_Pts > v_Work_SL) then begin
+                v_Work_SL    = EntryPrice + BE_Offset_Pts;
+                v_BE_IsFloor = true;
+            end;
+        end;
+
+        { Orders }
+        if v_Work_IsBot then
+            Sell ("CL_TP_Bot") next bar at v_Work_Target Limit
+        else
+            Sell ("CL_TP_Mid") next bar at v_Work_Target Limit;
+
+        if v_BE_IsFloor then
+            Sell ("CL_BE") next bar at v_Work_SL Stop
+        else
+            Sell ("CL_SL") next bar at v_Work_SL Stop;
 
     end;
 
@@ -282,4 +376,17 @@ if MarketPosition = 1 then begin
     if Manual_Kill_Switch then
         Sell ("CL_Kill") next bar at Market;
 
+end;
+
+{ ==========================================
+  6. v13.2 State Reset (flat)
+  ========================================== }
+
+if MarketPosition = 0 then begin
+    v_SL_Locked     = false;
+    v_Frozen_SL     = 0;
+    v_Frozen_Target = 0;
+    v_Leg_IsBot     = false;
+    v_BE_Armed      = false;
+    v_BE_IsFloor    = false;
 end;

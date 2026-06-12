@@ -2,11 +2,21 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：v13.1 + HolidayFlat_v3（2026-06-12，repo 已更新，**MC9 待部署——空手時部署**）
+> 版本：v13.2 + FrozenSL/BE（A/B 候選）+ HolidayFlat_v3（repo 已更新，**MC9 待 A/B + 空手部署**）
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行（運行中為 v13，無假日保護）
+> 狀態：🟢 已上架實盤運行（運行中為 v13，無假日保護、停損三重漂移、無保本）
 > 口數：1 口
-> 深度審查：`L3_ConsolidationLong_review.md`（2026-06-12，431 筆解析；⚠️ 體質決策菜單待用戶裁示）
+> 深度審查：`L3_ConsolidationLong_review.md`（431 筆解析；**第七節 = v13.2 A/B 試驗計畫**，2026-06-13 啟動）
+
+## v13.2 凍結 + 保本（A/B 候選，2026-06-13）
+
+| 開關 | 預設 | 內容 |
+|------|------|------|
+| Freeze_SL_On | true | 進場當根鎖定「腿分類 + 停損價 + 目標價」（治三重漂移：ATR 緩衝每根重算、箱體錨點滾動、腿分類翻轉）。false = 復刻 v13 行為 |
+| BE_Trigger_Pts | 50 | 收盤獲利 ≥ 50 點 → 武裝保本地板 = 進場 + 5 點（蓋掉滑價），與工作停損取 Max，武裝後不解除。0 = 關閉 |
+| BE_Offset_Pts | 5 | 保本地板偏移 |
+
+新出場標籤：**CL_BE**（保本地板成為約束停損時）。A/B 矩陣與驗收門檻見審查報告第七節。
 
 ## v13.1 假日鐵律模組（2026-06-12）
 
