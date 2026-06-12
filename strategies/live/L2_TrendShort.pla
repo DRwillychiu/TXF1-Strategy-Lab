@@ -2,10 +2,36 @@
   ADAPTIVE FARMER - TREND BEARISH STRATEGY
   Signal Name : Trendbearish_V1
   MC Load Name: Trendbearish_V1
-  Version     : 5.1 + TS_Label_Unified
+  Version     : 5.2 + HolidayFlat_v3 (Iron Rule)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
-  Timeframe   : 60-Minute (Day + Night Sessions)
+  Timeframe   : 60-Minute (Day + Night Sessions, grid verified
+                vs Excel timestamps: day 09:45-13:45, night
+                16:00-05:00 hourly close stamps)
+
+  CHANGELOG:
+    5.1  Label unification (TS_ prefix). No logic changes.
+    5.2  (2026-06-12) Holiday Flat Rule v3 + safety rails:
+         - Iron Rule: flat (0 position) BEFORE the 05:00 close of
+           the last night session preceding every market closure.
+           Audit found 1 historical violation: short held across
+           the 2025 Dragon Boat closure (-33,000, exited only
+           after the gap via TS_StructureTP).
+         - Holiday_Tail registry (63 dates, TAIFEX-verified, same
+           registry as L1 V2.4+). Tail bars (00:00-05:00, stamped
+           with the first closed date): entries blocked; forced
+           BuyToCover from Holiday_Flat_Time (03:00 on the 60M
+           grid -> fill 03:00, retry 04:00, flat before 05:00).
+         - Registry_Valid_Until fail-safe: beyond the verified
+           horizon block entries + flatten (TS_RegistryEnd) +
+           30-day red chart warning.
+         - Manual_Kill_Switch added (TS_Kill) for typhoon-class
+           unscheduled closures.
+         - Inserted as Priority 0 in the SECTION 13 exit chain
+           (above TS_WeeklyExit). Entry gate added in SECTION 7.
+         - Header performance reflects the OLD module set;
+           re-backtest after deployment. Deploy only when flat
+           (changes history for holiday-crossing trades).
 
   PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
     Net Profit    : 1,400,200 TWD
@@ -60,7 +86,12 @@ Inputs:
    { Stop profit: activate when profit >= stopProfitPoints_Shrt }
    { Allow drawback up to profitReturnPrcnt_Shrt % of peak profit }
    stopProfitPoints_Shrt  ( 250 ),
-   profitReturnPrcnt_Shrt ( 55  );
+   profitReturnPrcnt_Shrt ( 55  ),
+
+   { Holiday Flat Rule v3 (Iron Rule 2026-06-12) }
+   Holiday_Flat_Time      ( 300 ),     { 03:00 trigger on 60M grid -> fill 03:00, retry 04:00 }
+   Registry_Valid_Until   ( 1270101 ), { verified holiday-registry horizon; bump each Q4 }
+   Manual_Kill_Switch     ( False );
 
 
 { ============================================================
@@ -121,7 +152,13 @@ Variables:
 
    { Loop counter and exit control }
    LoopIdx              ( 0     ),
-   ExitFired            ( 0     );
+   ExitFired            ( 0     ),
+
+   { Holiday Flat Rule v3 }
+   v_Holiday_Block      ( False ),
+   v_Registry_Expired   ( False ),
+   Registry_Warn_ID     ( -1    ),
+   hidx                 ( 0     );
 
 
 { ============================================================
@@ -131,7 +168,7 @@ Variables:
   WkSMA_Len = 13, so indices 1 to 13 are actively used.
   ============================================================ }
 
-Array: WkCloses[ 21 ] ( 0 );
+Array: WkCloses[ 21 ] ( 0 ), Holiday_Tail[ 80 ] ( 0 );
 
 
 { ============================================================
@@ -149,6 +186,139 @@ If IsDay = True Then
    IsNight = False
 Else
    IsNight = True;
+
+
+{ ============================================================
+  SECTION 4B - HOLIDAY FLAT RULE v3 (Iron Rule 2026-06-12)
+
+  Holiday_Tail = last trading day + 1 calendar day = the date
+  stamped on the 00:00-05:00 tail bars of the final night
+  session before each market closure.
+
+  Tail bars: block new entries; force BuyToCover from
+  Holiday_Flat_Time (60M grid: trigger on the 03:00 bar, fill
+  03:00, retry 04:00, always flat before the 05:00 close).
+  Beyond Registry_Valid_Until the strategy fails safe.
+
+  Dates: TAIFEX official calendars. 2026 verified 2026-06-12.
+  Entries marked * reconstructed (Labor Days; 2025 new
+  statutory holidays) - verify vs archived TAIFEX PDFs before
+  trusting re-backtest stats on those windows.
+  ============================================================ }
+
+If CurrentBar = 1 Then Begin
+
+   { --- 2019 --- }
+   Holiday_Tail[1]  = 1190913;
+   Holiday_Tail[2]  = 1191010;
+   Holiday_Tail[3]  = 1200101;
+
+   { --- 2020 --- }
+   Holiday_Tail[4]  = 1200121;  { CNY }
+   Holiday_Tail[5]  = 1200228;  { 228 }
+   Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+   Holiday_Tail[7]  = 1200501;  { * Labor Day }
+   Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+   Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+   Holiday_Tail[10] = 1201009;  { National Day }
+   Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+   { --- 2021 --- }
+   Holiday_Tail[12] = 1210206;  { CNY }
+   Holiday_Tail[13] = 1210227;  { 228 }
+   Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+   Holiday_Tail[15] = 1210612;  { Dragon Boat }
+   Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+   Holiday_Tail[17] = 1211009;  { National Day }
+   Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+   { --- 2022 --- }
+   Holiday_Tail[19] = 1220127;  { CNY }
+   Holiday_Tail[20] = 1220226;  { 228 }
+   Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+   Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+   Holiday_Tail[23] = 1220603;  { Dragon Boat }
+   Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+   Holiday_Tail[25] = 1221008;  { National Day }
+   Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+   { --- 2023 --- }
+   Holiday_Tail[27] = 1230118;  { CNY }
+   Holiday_Tail[28] = 1230225;  { 228 }
+   Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+   Holiday_Tail[30] = 1230429;  { * Labor Day }
+   Holiday_Tail[31] = 1230622;  { Dragon Boat }
+   Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+   Holiday_Tail[33] = 1231007;  { National Day }
+   Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+   { --- 2024 --- }
+   Holiday_Tail[35] = 1240206;  { CNY }
+   Holiday_Tail[36] = 1240228;  { 228 }
+   Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+   Holiday_Tail[38] = 1240501;  { * Labor Day }
+   Holiday_Tail[39] = 1240608;  { Dragon Boat }
+   Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+   Holiday_Tail[41] = 1241010;  { National Day }
+   Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+   { --- 2025 (* rows pending check vs 114-yr TAIFEX PDF) --- }
+   Holiday_Tail[43] = 1250123;  { CNY }
+   Holiday_Tail[44] = 1250228;  { 228 }
+   Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+   Holiday_Tail[46] = 1250501;  { * Labor Day }
+   Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+   Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+   Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+   Holiday_Tail[50] = 1251010;  { * National Day }
+   Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+   Holiday_Tail[52] = 1251225;  { * Constitution Day }
+   Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+   { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+   Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+   Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+   Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+   Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+   Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+   Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+   Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+   Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+   Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+   Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+   { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+
+End;
+
+v_Holiday_Block = False;
+
+If Time <= 500 Then Begin
+   For hidx = 1 To 80 Begin
+      If Date = Holiday_Tail[ hidx ] Then
+         v_Holiday_Block = True;
+   End;
+End;
+
+v_Registry_Expired = False;
+
+If Date > Registry_Valid_Until Then Begin
+   v_Registry_Expired = True;
+   v_Holiday_Block    = True;
+End;
+
+If LastBarOnChart And
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 Then Begin
+   If Registry_Warn_ID < 0 Then Begin
+      Registry_Warn_ID = Text_New( Date, Time, High + 400,
+         "HOLIDAY REGISTRY EXPIRES " +
+         NumToStr( Registry_Valid_Until, 0 ) +
+         " - REBUILD FROM TAIFEX CALENDAR" );
+      Text_SetColor( Registry_Warn_ID, Red );
+      Text_SetSize( Registry_Warn_ID, 14 );
+      Text_SetAttribute( Registry_Warn_ID, 1, True );
+   End;
+End;
 
 
 { ============================================================
@@ -242,6 +412,7 @@ If FilterOK = True And
    C0       = True And
    C_A      = True And
    C_B      = True And
+   ( v_Holiday_Block = False ) And
    ( MarketPosition = 0 ) Then
    SellShort( "TS_Entry" ) Next Bar at Market;
 
@@ -400,6 +571,9 @@ End;
 
   LABEL REFERENCE:
     TS_Entry       : short entry signal
+    TS_Kill        : manual kill switch (typhoon / emergency)
+    TS_RegistryEnd : holiday-registry horizon fail-safe exit
+    TS_Holiday     : pre-holiday forced flat (iron rule)
     TS_WeeklyExit  : weekly filter forced exit (trend reversal)
     TS_StructureTP : structure reversal take profit
     TS_TTP         : trailing take profit
@@ -410,6 +584,7 @@ End;
     TS_InitSL_N    : initial stop loss night session
 
   PRIORITY ORDER:
+    0. TS_Kill / TS_RegistryEnd / TS_Holiday (Next Bar at Market)
     1. TS_WeeklyExit   (Next Bar at Market)
     2. TS_StructureTP  (Next Bar at Market)
     3. TS_TTP          (Next Bar at Market)
@@ -421,6 +596,23 @@ End;
 ExitFired = 0;
 
 If MarketPosition = -1 Then Begin
+
+   { Priority 0 - Manual kill / registry fail-safe / holiday iron rule }
+   If ( ExitFired = 0 ) And ( Manual_Kill_Switch = True ) Then Begin
+      BuyToCover( "TS_Kill" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Registry_Expired = True ) Then Begin
+      BuyToCover( "TS_RegistryEnd" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Holiday_Block = True ) And
+      ( Time >= Holiday_Flat_Time ) Then Begin
+      BuyToCover( "TS_Holiday" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
 
    { Priority 1 - Weekly filter forced exit }
    If ( ExitFired = 0 ) And

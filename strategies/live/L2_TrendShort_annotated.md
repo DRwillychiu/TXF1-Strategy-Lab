@@ -1,10 +1,11 @@
 # L2 趨勢空 — Trendbearish_V1
 
 > MC 載入名稱：Trendbearish_V1
-> 版本：V5.1 + TS_Label_Unified
+> 版本：V5.2 + HolidayFlat_v3（2026-06-12，repo 已更新，**MC9 待部署——空手時部署**；2026 全年零交易，大概率正空手可立即部署）
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行
+> 狀態：🟢 已上架實盤運行（運行中為 V5.1，無假日保護）
 > 口數：1 口
+> 深度審查：`L2_TrendShort_review.md`（2026-06-12，含 83 筆逐筆解析）
 
 ---
 
@@ -78,6 +79,9 @@
 ### 出場優先順序
 | 優先級 | 標籤 | 條件 | 方式 |
 |--------|------|------|------|
+| **0a** | TS_Kill | Manual_Kill_Switch = True（颱風等臨時停市） | Market |
+| **0b** | TS_RegistryEnd | 超出假日登錄驗證視界（V5.2 fail-safe） | Market |
+| **0c** | TS_Holiday | 休市前夕夜盤尾段 Time ≥ 03:00 強制歸零（V5.2 鐵律） | Market |
 | 1 | TS_WeeklyExit | 週五 12:45，收盤 > 13 週 SMA | Market |
 | 2 | TS_StructureTP | 收盤 > 30 期最高收盤（結構反轉） | Market |
 | 3 | TS_TTP | 追蹤停利：獲利 ≥ ATR×4.0 後，反彈 1.5% 觸發 | Market |
@@ -127,6 +131,9 @@ SL_Trig = SL_Line + ATR(21) × 1.1
 | TTP_RebPct | 1.5 | 追蹤停利 | 反彈觸發百分比 |
 | stopProfitPoints_Shrt | 250 | 保本停利 | 啟動門檻（點） |
 | profitReturnPrcnt_Shrt | 55 | 保本停利 | 允許回吐百分比 |
+| Holiday_Flat_Time | 300 | 假日鐵律(V5.2) | 尾段強制歸零觸發（60M 格線：03:00 成交、04:00 重試、05:00 前必歸零） |
+| Registry_Valid_Until | 1270101 | 假日鐵律(V5.2) | 假日登錄驗證視界，每年 Q4 依期交所新行事曆上調 |
+| Manual_Kill_Switch | False | 緊急開關(V5.2) | 颱風等臨時停市人工通道 |
 
 ---
 
