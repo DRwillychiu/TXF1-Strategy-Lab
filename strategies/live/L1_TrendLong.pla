@@ -2,26 +2,36 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.3 + D3_Weekly_Filter + TL_Label_Unified
+  Version     : V2.4 + HolidayFlat_v3 (Iron Rule)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
-  Timeframe   : Data1 = 60M / Data2 = Daily / Data3 = Weekly
+  Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
+                (NOTE: strategy name says 60M but Excel report
+                 confirms compression = 45 Minutes. Name kept for
+                 live continuity; actual chart is 45M.)
 
-  CHANGELOG (Label Unification):
-    All entry/exit labels unified with TL_ prefix.
-    LONG          -> TL_Entry
-    STOP_LOSS_Gap -> TL_SL_Gap
-    STOP_LOSS     -> TL_SL
-    TAKE_PROFIT   -> TL_TP
-    HOLIDAY_EXIT  -> TL_Holiday
-    TYPHOON_KILL  -> TL_Kill
-    No logic changes. No parameter changes.
+  CHANGELOG:
+    V2.3  Label unification (TL_ prefix). No logic changes.
+    V2.4  (2026-06-12) P5 Holiday module rebuilt as HolidayFlat_v3:
+          - Iron Rule: flat (0 position) BEFORE the 05:00 close of
+            the last night session preceding every market closure.
+          - Old design (eve date >= 13:30) replaced: it missed the
+            post-midnight tail (00:00-05:00 bars stamped with the
+            next calendar date) and never blocked entries.
+          - Array semantics changed: Holiday_Tail = last trading
+            day + 1 calendar day (the tail-bar date stamp).
+          - Date errors fixed: Labor Day added for every year;
+            all three 2026 entries corrected vs official TAIFEX
+            115-yr calendar; H2 2026 + 2027/1/1 added.
+          - Header performance figures reflect the OLD module;
+            re-backtest pending after deployment.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
     P3 Stop   : MaxList(ATR x SL_Mult, Daily_ATR x Cap_Mult) from entry
     P4 Trail  : MA55 - TrailOffset (trailing stop, let trend run)
-    P5 Holiday: Array-based holiday exit at Holiday_Exit_Time
+    P5 v3     : Pre-holiday flat rule (block entries on tail bars,
+                forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
 
   PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
@@ -50,9 +60,9 @@ Inputs:
 
     ATR_Length(20),
 
-    { P5: Holiday Shield Module }
+    { P5 v3: Pre-Holiday Flat Rule }
     Manual_Kill_Switch(False),
-    Holiday_Exit_Time(1330),
+    Holiday_Flat_Time(345),    { 03:45 trigger -> fill 03:45, retry 04:30, flat before 05:00 close }
 
     { P6: Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
@@ -73,9 +83,9 @@ Variables:
     Exit_Price_Trail(0),
     Final_Exit_Price(0),
 
-    { P5 Module Variables }
+    { P5 v3 Module Variables }
     Init_Done(False),
-    Is_Holiday_Eve(False),
+    v_Holiday_Block(False),
     idx(0),
 
     { MDD Visual Tracking Variables }
@@ -95,76 +105,109 @@ Variables:
     v_Weekly_Filter(false);
 
 Array:
-    Holiday_List[60](0);
+    Holiday_Tail[80](0);
 
 { ==========================================
-  0. P5: Holiday Registry Initialization (2019-2026)
+  0. P5 v3: Holiday Tail Registry (2019-2026)
+
+  Holiday_Tail = the calendar date stamped on the 00:00-05:00
+  tail bars of the LAST night session before each market
+  closure. Always = last trading day + 1 calendar day
+  (robust to closure length; Saturday tails are valid).
+
+  Iron Rule: position must be 0 before that session's 05:00
+  close. Tail bars block entries and force a market exit.
+
+  Sources: TAIFEX official annual market calendars.
+  - 2026 verified against the official 115-yr PDF (2026-06-12).
+  - Entries marked * were MISSING from the old eve-based list
+    (Labor Day every year; 2025 new statutory holidays) and are
+    reconstructed; verify vs archived TAIFEX PDFs before
+    trusting re-backtest stats on those windows.
   ========================================== }
 
 if Init_Done = False then begin
 
     { --- 2019 --- }
-    Holiday_List[1]  = 1190912;
-    Holiday_List[2]  = 1191009;
-    Holiday_List[3]  = 1191231;
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;  { 2020 New Year }
 
     { --- 2020 --- }
-    Holiday_List[4]  = 1200120;
-    Holiday_List[5]  = 1200227;
-    Holiday_List[6]  = 1200401;
-    Holiday_List[7]  = 1200624;
-    Holiday_List[8]  = 1200930;
-    Holiday_List[9]  = 1201008;
-    Holiday_List[10] = 1201231;
+    Holiday_Tail[4]  = 1200121;  { CNY }
+    Holiday_Tail[5]  = 1200228;  { 228 }
+    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+    Holiday_Tail[7]  = 1200501;  { * Labor Day }
+    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+    Holiday_Tail[10] = 1201009;  { National Day }
+    Holiday_Tail[11] = 1210101;  { 2021 New Year }
 
     { --- 2021 --- }
-    Holiday_List[11] = 1210205;
-    Holiday_List[12] = 1210226;
-    Holiday_List[13] = 1210401;
-    Holiday_List[14] = 1210611;
-    Holiday_List[15] = 1210917;
-    Holiday_List[16] = 1211008;
-    Holiday_List[17] = 1211230;
+    Holiday_Tail[12] = 1210206;  { CNY }
+    Holiday_Tail[13] = 1210227;  { 228 }
+    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+    Holiday_Tail[17] = 1211009;  { National Day }
+    Holiday_Tail[18] = 1211231;  { 2022 New Year }
 
     { --- 2022 --- }
-    Holiday_List[18] = 1220126;
-    Holiday_List[19] = 1220225;
-    Holiday_List[20] = 1220401;
-    Holiday_List[21] = 1220602;
-    Holiday_List[22] = 1220908;
-    Holiday_List[23] = 1221007;
-    Holiday_List[24] = 1221230;
+    Holiday_Tail[19] = 1220127;  { CNY }
+    Holiday_Tail[20] = 1220226;  { 228 }
+    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+    Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+    Holiday_Tail[25] = 1221008;  { National Day }
+    Holiday_Tail[26] = 1221231;  { 2023 New Year }
 
     { --- 2023 --- }
-    Holiday_List[25] = 1230117;
-    Holiday_List[26] = 1230224;
-    Holiday_List[27] = 1230331;
-    Holiday_List[28] = 1230621;
-    Holiday_List[29] = 1230928;
-    Holiday_List[30] = 1231006;
-    Holiday_List[31] = 1231229;
+    Holiday_Tail[27] = 1230118;  { CNY }
+    Holiday_Tail[28] = 1230225;  { 228 }
+    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+    Holiday_Tail[30] = 1230429;  { * Labor Day }
+    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+    Holiday_Tail[33] = 1231007;  { National Day }
+    Holiday_Tail[34] = 1231230;  { 2024 New Year }
 
     { --- 2024 --- }
-    Holiday_List[32] = 1240205;
-    Holiday_List[33] = 1240227;
-    Holiday_List[34] = 1240403;
-    Holiday_List[35] = 1240607;
-    Holiday_List[36] = 1240916;
-    Holiday_List[37] = 1241009;
-    Holiday_List[38] = 1241231;
+    Holiday_Tail[35] = 1240206;  { CNY }
+    Holiday_Tail[36] = 1240228;  { 228 }
+    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+    Holiday_Tail[38] = 1240501;  { * Labor Day }
+    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+    Holiday_Tail[41] = 1241010;  { National Day }
+    Holiday_Tail[42] = 1250101;  { 2025 New Year }
 
-    { --- 2025 --- }
-    Holiday_List[39] = 1250122;
-    Holiday_List[40] = 1250227;
-    Holiday_List[41] = 1250402;
-    Holiday_List[42] = 1250530;
-    Holiday_List[43] = 1251003;
-    Holiday_List[44] = 1251231;
+    { --- 2025 (* rows pending check vs 114-yr TAIFEX PDF) --- }
+    Holiday_Tail[43] = 1250123;  { CNY }
+    Holiday_Tail[44] = 1250228;  { 228 }
+    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+    Holiday_Tail[46] = 1250501;  { * Labor Day }
+    Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up; old list had 1250530 as eve = the holiday itself, could never fire) }
+    Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+    Holiday_Tail[50] = 1251010;  { * National Day }
+    Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+    Holiday_Tail[52] = 1251225;  { * Constitution Day }
+    Holiday_Tail[53] = 1260101;  { 2026 New Year }
 
-    { --- 2026 (To April) --- }
-    Holiday_List[45] = 1260210;
-    Holiday_List[46] = 1260227;
-    Holiday_List[47] = 1260401;
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11; 2/12-2/13 closed }
+    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+    Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 (Saturday tail) }
+    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
 
     Init_Done = True;
 
@@ -199,14 +242,33 @@ else
     v_Weekly_Filter = false;
 
 { ==========================================
-  2. Entry Logic
+  1b. P5 v3: Holiday Tail Detection
+  Tail bars only exist in the 00:00-05:00 window
+  (Time <= 0500 guard keeps the scan cheap).
+  Computed BEFORE entry logic so the gate uses
+  the current bar's state, not the prior bar's.
+  ========================================== }
+
+v_Holiday_Block = False;
+
+if Time <= 500 then begin
+    for idx = 1 to 80 begin
+        if Date = Holiday_Tail[idx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+{ ==========================================
+  2. Entry Logic (gated by Holiday Tail)
   ========================================== }
 
 Cond_Breakout = (Close Crosses Over Breakout_Level);
 MP = MarketPosition;
 
 if MP = 0 then begin
-    if Cond_Breakout and (v_Weekly_Filter = true) then begin
+    if Cond_Breakout and
+       (v_Weekly_Filter = true) and
+       (v_Holiday_Block = false) then begin
         Buy ("TL_Entry") next bar at Market;
     end;
 end;
@@ -241,23 +303,21 @@ if MP > 0 then begin
 end;
 
 { ==========================================
-  4. P5: Holiday Risk Management Shield
-  CPU optimized: scan array only at required times.
+  4. P5 v3: Pre-Holiday Forced Flat (Iron Rule)
+  On tail bars, force a market exit from
+  Holiday_Flat_Time (03:45) onward:
+    45M grid -> trigger on the 03:45 bar, fill at
+    03:45; retry on the 04:30 bar, fill at 04:30.
+    Always flat before the 05:00 session close.
+  Typhoon / unscheduled closures cannot be
+  pre-coded: use Manual_Kill_Switch + the
+  pre-holiday manual check (SOP sec 3-1).
   ========================================== }
 
 if MP > 0 then begin
 
-    Is_Holiday_Eve = False;
-
-    if Time >= Holiday_Exit_Time then begin
-        for idx = 1 to 60 begin
-            if Date = Holiday_List[idx] then
-                Is_Holiday_Eve = True;
-        end;
-
-        if Is_Holiday_Eve = True then begin
-            Sell ("TL_Holiday") next bar at Market;
-        end;
+    if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+        Sell ("TL_Holiday") next bar at Market;
     end;
 
     if Manual_Kill_Switch = True then begin
