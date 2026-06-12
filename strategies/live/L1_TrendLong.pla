@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.4 + HolidayFlat_v3 (Iron Rule)
+  Version     : V2.5 + FrozenSL + HolidayFlat_v3 (Iron Rule)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -31,6 +31,19 @@
             holidays beyond the published TAIFEX calendar are
             unknowable, so walking off the verified map must fail
             safe, not fail silent. 30-day red warning on chart.
+    V2.5  (2026-06-12) P3 initial stop FROZEN at entry:
+          - Old code recomputed the stop EVERY BAR from current
+            45M ATR and Daily ATR, so the floor drifted with
+            volatility during the trade (user observed the live
+            stop shifting between reloads). Now computed once on
+            the entry bar close and locked (v_SL_Locked pattern,
+            same as L2 SL_Locked / S1 v_EntryATR).
+          - MA55 trail (P4) still updates by design; the frozen
+            initial stop is the floor it can never drop below.
+          - No new inputs. No entry-logic change.
+          - DEPLOYMENT: changes historical exits -> recalculated
+            chart may disagree with a live open position. Deploy
+            ONLY WHEN FLAT (see annotated doc deployment note).
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
@@ -92,6 +105,8 @@ Variables:
     Exit_Price_SL(0),
     Exit_Price_Trail(0),
     Final_Exit_Price(0),
+    v_SL_Locked(False),
+    v_Frozen_SL(0),
 
     { P5 v3 Module Variables }
     Init_Done(False),
@@ -320,12 +335,21 @@ if MP > 0 then begin
 
     Entry_P = EntryPrice;
 
-    { P3: Double-Layered Strict Initial Stop }
-    Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
-    Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
-    Exit_Price_SL  = MaxList(Exit_Price_ATR, Exit_Price_Cap);
+    { P3 V2.5: Double-Layered Initial Stop, FROZEN at entry.
+      Computed ONCE on the entry bar close and locked for the
+      whole trade. The old per-bar recalculation let the floor
+      drift with ATR during the holding period. }
+    if v_SL_Locked = False then begin
+        Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
+        Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
+        v_Frozen_SL    = MaxList(Exit_Price_ATR, Exit_Price_Cap);
+        v_SL_Locked    = True;
+    end;
 
-    { P4: Legacy MA55 Trailing Stop }
+    Exit_Price_SL = v_Frozen_SL;
+
+    { P4: MA55 trail keeps updating BY DESIGN (let profits run);
+      the frozen initial stop is the floor it never drops below. }
     Exit_Price_Trail = maTrail - TrailOffset;
     Final_Exit_Price = MaxList(Exit_Price_Trail, Exit_Price_SL);
 
@@ -339,6 +363,10 @@ if MP > 0 then begin
             Sell ("TL_TP") next bar at Final_Exit_Price Stop;
     end;
 
+end else begin
+    { Flat: release the lock for the next trade }
+    v_SL_Locked = False;
+    v_Frozen_SL = 0;
 end;
 
 { ==========================================
