@@ -31,6 +31,19 @@
             holidays beyond the published TAIFEX calendar are
             unknowable, so walking off the verified map must fail
             safe, not fail silent. 30-day red warning on chart.
+    V2.5  (2026-06-12) P3 initial stop FROZEN at entry:
+          - Old code recomputed the stop EVERY BAR from current
+            45M ATR and Daily ATR, so the floor drifted with
+            volatility during the trade (user observed the live
+            stop shifting between reloads). Now computed once on
+            the entry bar close and locked (v_SL_Locked pattern,
+            same as L2 SL_Locked / S1 v_EntryATR).
+          - MA55 trail (P4) still updates by design; the frozen
+            initial stop is the floor it can never drop below.
+          - No new inputs. No entry-logic change.
+          - DEPLOYMENT: changes historical exits -> recalculated
+            chart may disagree with a live open position. Deploy
+            ONLY WHEN FLAT (see annotated doc deployment note).
     V2.6  (2026-06-12) P7 Stop Profit Guard, ported from L2
           (Trendbearish_V1 SECTION 12), user-directed:
           - Activation: CLOSE-based profit >= 250 pts. Peak profit
@@ -51,27 +64,18 @@
           - Optimistic-bound improvement +1.93M; path-level
             whipsaw cost invisible to MFE data -> MC9 A/B is the
             final arbiter. Deploy only when flat.
-    V2.5  (2026-06-12) P3 initial stop FROZEN at entry:
-          - Old code recomputed the stop EVERY BAR from current
-            45M ATR and Daily ATR, so the floor drifted with
-            volatility during the trade (user observed the live
-            stop shifting between reloads). Now computed once on
-            the entry bar close and locked (v_SL_Locked pattern,
-            same as L2 SL_Locked / S1 v_EntryATR).
-          - MA55 trail (P4) still updates by design; the frozen
-            initial stop is the floor it can never drop below.
-          - No new inputs. No entry-logic change.
-          - DEPLOYMENT: changes historical exits -> recalculated
-            chart may disagree with a live open position. Deploy
-            ONLY WHEN FLAT (see annotated doc deployment note).
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
-    P3 Stop   : MaxList(ATR x SL_Mult, Daily_ATR x Cap_Mult) from entry
-    P4 Trail  : MA55 - TrailOffset (trailing stop, let trend run)
+    P3 Stop   : Frozen at entry - MaxList(ATR x SL_Mult,
+                Daily_ATR x Cap_Mult), locked for the whole trade
+    P4 Trail  : MA55 - TrailOffset (breathing trail, let trend run)
+    P7 Guard  : Stop Profit - armed at +250 pts close-based, lock
+                floor = Entry + peak x 45 pct, ratchets up only
     P5 v3     : Pre-holiday flat rule (block entries on tail bars,
                 forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
+    Exit      : single stop at Max(P4 trail, P3 frozen, P7 lock)
 
   PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
     Net Profit    : 3,216,200 TWD
@@ -386,8 +390,10 @@ if MP > 0 then begin
     end;
 
     { P4: MA55 trail keeps updating BY DESIGN (let profits run).
-      Final stop = highest of the three floors; every floor is
-      non-loosening, so the effective stop can only rise. }
+      Final stop = highest of three components. The frozen SL and
+      the SP lock never loosen; the trail component breathes both
+      ways, so the effective stop may sag - but only within the
+      band ABOVE the two locked floors, never below them. }
     Exit_Price_Trail = maTrail - TrailOffset;
     Final_Exit_Price = MaxList(Exit_Price_Trail,
                        MaxList(Exit_Price_SL, stopProfitPrice_L));
