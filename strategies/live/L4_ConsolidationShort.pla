@@ -1,11 +1,59 @@
 {================================================================================
- Script Name : _Live_Adaptive_Farmer_v14.0_SpringOnly
+ Script Name : _Live_Adaptive_Farmer_v14.1_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (False Breakout) ONLY
- Version     : v14.0 + CS_Labels
+ Version     : v14.1 + HolidayFlat_v3 + FrozenSL
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ CHANGELOG:
+   v14.0  Initial S_Spring (False Breakout) live release with
+          CS_Labels.
+   v14.1  (2026-06-13) Holiday Flat Rule v3 + Frozen Initial SL:
+          - HOLIDAY IRON RULE: flat (0 position) BEFORE the 05:00
+            close of the last night session preceding every
+            market closure. Audit found 0 historical violations
+            in 88 trades (low frequency + short holding period),
+            but the structural risk remains - notably the
+            upcoming 2026/06/18 Dragon Boat eve.
+          - Holiday_Tail registry (63 TAIFEX-verified dates,
+            same registry as L1/L2/L3). Tail bars (00:00-05:00):
+            entries blocked; forced BuyToCover from
+            Holiday_Flat_Time (15M grid: 04:15 trigger -> fill
+            04:15, retries 04:30/04:45, flat before 05:00).
+          - Registry_Valid_Until fail-safe: beyond 2027-01-01
+            block entries + flatten (CS_RegistryEnd) + 30-day
+            red chart warning.
+          - Manual_Kill_Switch (CS_Kill) for typhoon-class
+            unscheduled closures.
+          - INITIAL STOP DRIFT FIX: Diagnosis matches L1 V2.5
+            pattern - v_Stop_Level = v_Locked_Top +
+            ATR_Stop_Mult * v_Current_ATR recomputed every 15M
+            bar so the initial stop drifted with ATR(60) and
+            with the ratcheting v_Locked_Top. User-observed
+            symptom: stop changed on chart reload.
+          - Freeze_SL_On(true): on entry bar close, lock both
+            v_Frozen_ATR = ATR-at-entry AND v_Frozen_LockedTop
+            = box top at entry. The pre-trail stop is then
+            v_Frozen_LockedTop + ATR_Stop_Mult * v_Frozen_ATR
+            for the whole trade. The Trail layer (post-Box_Btm)
+            keeps using v_Current_ATR by design - we want trail
+            volatility to track current conditions.
+            Set false to replicate v14.0 dynamic behavior.
+          - EXIT PRIORITY (new): ExitFired gate, Priority 0 =
+            Kill / RegistryEnd / Holiday above CS_BreakExit /
+            CS_TimeExit. CS_SL stop order stays armed throughout.
+          - History impact: 0 holiday-crossing trades, so the
+            holiday module changes nothing historical. The
+            frozen-SL re-backtest will rewrite CS_SL fills
+            (different ATR snapshot at entry); MFE/MAE chain
+            should improve marginally. Deploy only when flat.
+          - DEFERRED for separate review: CS_BreakExit is the
+            core bleeder (29 trades, 0 pct WR, -569,800,
+            single-handedly equals total net profit). Not
+            touched here per user scope (this round = safety
+            rails only). Track for the next round.
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 569,200 TWD
@@ -14,6 +62,8 @@
    MDD           : -334,600 (-23.39%)
    Total Trades  : 88
    Backtest      : 2020/02/19 - 2026/06/06
+   ^ v14.0 baseline. Re-backtest after v14.1 deployment for
+     updated PF / CS_SL fill distribution.
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
@@ -39,7 +89,15 @@ inputs:
     { --- 4. Advanced Management --- }
     Cooldown_Bars(8),
     Time_Stop_Bars(60),
-    Trail_ATR_Mult(1.0);
+    Trail_ATR_Mult(1.0),
+
+    { --- 5. v14.1 Frozen Initial SL --- }
+    Freeze_SL_On(true),            { PRODUCTION: lock ATR + LockedTop at entry; false = v14.0 dynamic }
+
+    { --- 6. Holiday Flat Rule v3 (Iron Rule 2026-06-13) --- }
+    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false);
 
 variables:
     { Phase 0: Macro filter }
@@ -70,7 +128,99 @@ variables:
     v_Locked_Btm(0),
     v_BarsSinceExit(999),
     v_Lowest_Low(999999),
-    v_Trail_Active(false);
+    v_Trail_Active(false),
+
+    { v14.1 Frozen Initial SL }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_LockedTop(0),
+
+    { Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0),
+
+    { Exit chain }
+    ExitFired(0);
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  Phase -1: Holiday Tail Registry (TAIFEX-verified, shared
+  with L1/L2/L3). Holiday_Tail = last trading day + 1 calendar
+  day = the date stamped on the 00:00-05:00 tail bars of the
+  final night session before each closure. * = reconstructed.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
 
 { ==========================================
   Phase 0: Master Environment Filter (Data3 - Daily)
@@ -150,7 +300,7 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
             v_In_Trap_Zone = false;
     end;
 
-    { Sub-Phase B: CS_Entry Execution }
+    { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail) }
     v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
 
     if MarketPosition    =  0             and
@@ -158,7 +308,8 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
        v_Trend_Dir       = -1             and
        v_Macro_Block     = false          and
        v_In_Trap_Zone    = true           and
-       Close             < v_Trigger_Price then begin
+       Close             < v_Trigger_Price and
+       v_Holiday_Block   = false          then begin
 
         SellShort ("CS_Entry") next bar at Market;
         v_In_Trap_Zone = false;
@@ -177,8 +328,11 @@ if MarketPosition = 0 then begin
         v_Locked_Top = v_Box_Top;
         v_Locked_Btm = v_Box_Btm;
     end;
-    v_Lowest_Low   = 999999;
-    v_Trail_Active = false;
+    v_Lowest_Low       = 999999;
+    v_Trail_Active     = false;
+    v_SL_Locked        = false;
+    v_Frozen_ATR       = 0;
+    v_Frozen_LockedTop = 0;
 end;
 
 if MarketPosition = -1 then begin
@@ -191,28 +345,70 @@ if MarketPosition = -1 then begin
     if v_Lowest_Low <= v_Locked_Btm then
         v_Trail_Active = true;
 
-    { 3. Stop Loss Calculation (Ratchet mechanism) }
+    { 3. v14.1 Freeze: lock ATR + LockedTop ONCE on entry bar }
+    if Freeze_SL_On and v_SL_Locked = false then begin
+        v_Frozen_ATR       = v_Current_ATR;
+        v_Frozen_LockedTop = v_Locked_Top;
+        v_SL_Locked        = true;
+    end;
+
+    { 4. Stop Level Calculation }
     if v_Trail_Active then begin
+        { Trail layer: by design uses CURRENT ATR to track volatility }
         v_Stop_Level = MinList(v_Stop_Level[1],
             v_Lowest_Low + (Trail_ATR_Mult * v_Current_ATR));
     end else begin
-        v_Stop_Level = v_Locked_Top + (ATR_Stop_Mult * v_Current_ATR);
-        if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
-            v_Locked_Top = v_Box_Top;
+        if Freeze_SL_On then begin
+            { Frozen path: ATR + Top locked at entry; no drift on reload }
+            v_Stop_Level = v_Frozen_LockedTop + (ATR_Stop_Mult * v_Frozen_ATR);
+        end else begin
+            { v14.0 dynamic path: ATR floats, Top ratchets down }
+            v_Stop_Level = v_Locked_Top + (ATR_Stop_Mult * v_Current_ATR);
+            if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
+                v_Locked_Top = v_Box_Top;
+        end;
     end;
 
-    { 4. Execute stop order }
+    { 5. Exit Chain with Priority Gates }
+    ExitFired = 0;
+
+    { Priority 0 - Manual Kill }
+    if (ExitFired = 0) and Manual_Kill_Switch then begin
+        BuyToCover ("CS_Kill") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Registry Fail-Safe }
+    if (ExitFired = 0) and v_Registry_Expired then begin
+        BuyToCover ("CS_RegistryEnd") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Holiday Iron Rule }
+    if (ExitFired = 0) and v_Holiday_Block and
+       (Time >= Holiday_Flat_Time) then begin
+        BuyToCover ("CS_Holiday") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 1 - Disaster Control: box failed + upward break }
+    if (ExitFired = 0) and
+       (v_is_in_consolidation = false) and
+       (Close of Data2 > v_Locked_Top) then begin
+        BuyToCover ("CS_BreakExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 2 - Time stop (only if trail not yet active) }
+    if (ExitFired = 0) and
+       (v_Trail_Active = false) and
+       (BarsSinceEntry >= Time_Stop_Bars) then begin
+        BuyToCover ("CS_TimeExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 3 - CS_SL Stop order (always armed; Stop type
+      is lower priority than Market on the next bar fill) }
     BuyToCover ("CS_SL") next bar at v_Stop_Level Stop;
 
-    { Time stop }
-    if v_Trail_Active = false and
-       BarsSinceEntry >= Time_Stop_Bars then
-        BuyToCover ("CS_TimeExit") next bar at Market;
-
-end;
-
-{ Disaster control: adverse upward break of locked box top }
-if v_is_in_consolidation = false and MarketPosition = -1 then begin
-    if Close of Data2 > v_Locked_Top then
-        BuyToCover ("CS_BreakExit") next bar at Market;
 end;

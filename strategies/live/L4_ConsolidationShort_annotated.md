@@ -1,11 +1,43 @@
 # L4 盤整空 — STRATEGY_WILLY_SHORT_CTEST2
 
-> 腳本名稱：_Live_Adaptive_Farmer_v14.0_SpringOnly
+> 腳本名稱：_Live_Adaptive_Farmer_v14.1_SpringOnly
 > MC 載入名稱：STRATEGY_WILLY_SHORT_CTEST2
-> 版本：v14.0 + CS_Labels
+> 版本：**v14.1 + HolidayFlat_v3 + FrozenSL**（repo 已定稿，**MC9 空手時部署，6/17 前**）
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行
+> 狀態：🟢 已上架實盤運行（運行中為 v14 舊版；待換裝 v14.1）
 > 口數：1 口
+> 深度審查：見 L4 review section（CS_BreakExit 0% 勝率為下一輪重點）
+
+## v14.1 變更摘要（2026-06-13）
+
+| 項目 | v14.0 | v14.1 |
+|------|-------|-------|
+| 假日鐵律 | 無 | ✅ 63 筆 TAIFEX 登錄表 + 04:15 強制歸零 + Registry fail-safe |
+| 初始停損漂移 | ATR 每根重算 + LockedTop ratchet | ✅ Freeze_SL_On=true：進場根鎖 ATR + LockedTop |
+| 出場優先序 | 隱含 | ✅ ExitFired gate：Kill > Registry > Holiday > BreakExit > TimeExit > SL |
+| 新出場標籤 | CS_SL / CS_TimeExit / CS_BreakExit | + CS_Kill / CS_RegistryEnd / CS_Holiday |
+| CS_BreakExit | 未動（下一輪處理） | 未動（下一輪處理） |
+
+## v14.1 假日鐵律模組
+
+| 項目 | 內容 |
+|------|------|
+| 強制歸零 | 尾段日 Time ≥ **04:15** 市價出場（15M 格線：04:15 成交、04:30/04:45 兩次重試、05:00 收盤前必歸零） |
+| 進場封鎖 | 尾段日（00:00-05:00）SellShort 條件加上 `v_Holiday_Block = false` 門禁 |
+| 視界 fail-safe | `Registry_Valid_Until = 1270101`，超過即封鎖+平倉（CS_RegistryEnd）+30 天圖表紅字 |
+| 緊急開關 | `Manual_Kill_Switch` → CS_Kill |
+| 歷史影響 | 0 筆跨假持倉 → 重算後歷史軌跡不變 |
+
+## v14.1 初始停損凍結
+
+| 機制 | 說明 |
+|------|------|
+| 觸發 | `Freeze_SL_On(true) AND v_SL_Locked = false`，僅在進場根執行一次 |
+| 鎖定 | `v_Frozen_ATR = v_Current_ATR`、`v_Frozen_LockedTop = v_Locked_Top` |
+| 套用 | 追蹤停損未啟動前：`v_Stop_Level = v_Frozen_LockedTop + ATR_Stop_Mult × v_Frozen_ATR` |
+| 追蹤層 | 進入追蹤後仍用 `v_Current_ATR`（設計意圖：trail 跟隨當下波動） |
+| 平倉重置 | `MarketPosition = 0` 時 `v_SL_Locked = false`，下一筆重新鎖定 |
+| 切回舊版 | `Freeze_SL_On = false` 完整還原 v14.0 動態行為（baseline 對照用） |
 
 ---
 
@@ -19,7 +51,7 @@
 
 ---
 
-## MC9 回測績效（Excel 報告 2026/06/07）
+## MC9 回測績效（Excel 報告 2026/06/07，v14.0 baseline）
 
 | 指標 | 數值 |
 |------|------|
@@ -40,6 +72,19 @@
 | 平均月報酬 | +8,894 NTD |
 | 年度夏普比率 | 0.442 |
 | 市場曝險時間 | 1.62% |
+
+> ⚠ v14.1 部署後須重新回測：CS_SL 因 ATR 凍結改變 fill 分布，整體 PF/MDD 預期微幅變動。
+
+### 出場標籤統計（v14.0 baseline，需作為 v14.1 比對基準）
+
+| 標籤 | 筆數 | 勝率 | 合計損益 | 平均損益 | 平均 MFE |
+|------|------|------|----------|----------|----------|
+| CS_SL | 47 | 59.6% | +994,000 | +21,149 | 39,336 |
+| CS_TimeExit | 12 | 75.0% | +145,000 | +12,083 | 25,967 |
+| **CS_BreakExit** | **29** | **0.0%** | **-569,800** | -19,648 | 8,007 |
+| 合計 | 88 | 42.05% | +569,200 | | |
+
+> **CS_BreakExit = 0% 勝率，29 筆全虧 −569,800（=策略全部淨利）。** v14.1 不處理，列為下一輪重點。
 
 ### 交易分析
 
@@ -88,40 +133,41 @@
   ④ 日線未封鎖（v_Macro_Block = false）
   ⑤ 在陷阱區內（v_In_Trap_Zone = true）
   ⑥ 收盤 < Box_Top - ATR(60) × 0.4
+  ⑦ **v_Holiday_Block = false（v14.1 新增：尾段日封鎖）**
   → SellShort next bar at Market
 ```
 
-**設計思路（Wyckoff Spring）：**
-價格假突破箱頂 → 多頭追漲者被困 → 價格快速回落到箱體內 → 做空。
-賺的是「假突破後的反轉回落」，trapped longs 被迫停損形成賣壓。
-
 ---
 
-## 出場邏輯
+## 出場邏輯（v14.1 ExitFired 優先序）
 
-### 初始停損
+| 優先級 | 標籤 | 條件 | 方式 |
+|--------|------|------|------|
+| 0 | **CS_Kill** | Manual_Kill_Switch = true | Market |
+| 0 | **CS_RegistryEnd** | 超出登錄表視界 | Market |
+| 0 | **CS_Holiday** | 尾段日 Time ≥ 04:15 | Market |
+| 1 | CS_BreakExit | 盤整失效 + 60M 收盤 > Locked_Top | Market |
+| 2 | CS_TimeExit | 持倉 ≥ 60 bars 且追蹤未啟動 | Market |
+| 3 | CS_SL | 反向觸及停損線 | Stop |
+
+### 初始停損（v14.1 凍結）
 ```
-CS_SL = Locked_Box_Top + ATR(60) × 2.0（Stop 單）
-若箱頂下移 → 停損跟著下移（Ratchet 機制）
+Freeze_SL_On = true（生產）：
+  進場根：v_Frozen_ATR = ATR(60), v_Frozen_LockedTop = Box_Top
+  追蹤未啟動：v_Stop_Level = v_Frozen_LockedTop + 2.0 × v_Frozen_ATR
+  → 整筆交易停損價固定，reload 不變
+
+Freeze_SL_On = false（baseline 對照）：
+  完整還原 v14.0：v_Stop_Level = v_Locked_Top + 2.0 × v_Current_ATR
+  ATR 隨每根 K 棒重算，Locked_Top 若 Box_Top 下移會跟著下移
 ```
 
-### 追蹤停損（啟動條件嚴格）
+### 追蹤停損（保持 v14.0 設計）
 ```
 啟動條件：價格低點觸及 Locked_Box_Btm（跌到箱底）
-啟動後：追蹤停損 = 最低點 + ATR(60) × 1.0
+啟動後：v_Stop_Level = MinList(v_Stop_Level[1], Lowest_Low + 1.0 × v_Current_ATR)
+→ 用「當下 ATR」是設計意圖：追蹤層希望跟隨現行波動率
 方向：只往下修（MinList），不會往上放寬
-```
-
-### 時間停損
-```
-持倉 ≥ 60 根 K 棒（15 小時）且追蹤停損未啟動
-→ 市價出場（CS_TimeExit）
-```
-
-### 盤整失效出場
-```
-盤整失效 + 60M 收盤 > Locked_Box_Top
-→ 市價出場（CS_BreakExit）
 ```
 
 ### 冷卻期
@@ -132,17 +178,7 @@ CS_SL = Locked_Box_Top + ATR(60) × 2.0（Stop 單）
 
 ---
 
-## 出場優先順序
-
-| 優先級 | 標籤 | 條件 | 方式 |
-|--------|------|------|------|
-| 1 | CS_SL | 價格 > 停損線 | Stop |
-| 2 | CS_TimeExit | 持倉 ≥ 60 bars 且無追蹤 | Market |
-| 3 | CS_BreakExit | 盤整失效 + 60M 突破箱頂 | Market |
-
----
-
-## 參數一覽
+## 參數一覽（v14.1）
 
 | 參數 | 值 | 模組 | 說明 |
 |------|-----|------|------|
@@ -158,6 +194,10 @@ CS_SL = Locked_Box_Top + ATR(60) × 2.0（Stop 單）
 | Cooldown_Bars | 8 | 風控 | 出場後冷卻期 |
 | Time_Stop_Bars | 60 | 時間停損 | 持倉上限 K 棒數 |
 | Trail_ATR_Mult | 1.0 | 追蹤停損 | 追蹤 ATR 倍數 |
+| **Freeze_SL_On** | **true** | **v14.1** | **進場根鎖 ATR + LockedTop** |
+| **Holiday_Flat_Time** | **415** | **v14.1** | **15M 格線：04:15 強制歸零** |
+| **Registry_Valid_Until** | **1270101** | **v14.1** | **登錄表視界（2027/1/1）** |
+| **Manual_Kill_Switch** | **false** | **v14.1** | **緊急停市開關** |
 
 ---
 
@@ -175,16 +215,39 @@ CS_SL = Locked_Box_Top + ATR(60) × 2.0（Stop 單）
 
 ---
 
+## 部署檢查清單（v14.1）
+
+- [ ] MC9 確認 L4 為空手狀態
+- [ ] 載入新版 _Live_Adaptive_Farmer_v14.1_SpringOnly
+- [ ] 確認 Inputs 預設值：Freeze_SL_On=true, Holiday_Flat_Time=415, Registry_Valid_Until=1270101, Manual_Kill_Switch=false
+- [ ] 跑完整回測（2020/02/19 起），保存新 Excel 報告
+- [ ] 比對 v14.0 vs v14.1 績效：CS_SL 平均盈虧、CS_BreakExit 應保持 29/0% 不變、總筆數應接近 88
+- [ ] 確認 6/18 端午尾段不會新開空單
+- [ ] 確認 04:15 後若有持倉會自動平倉
+
+---
+
+## 下一輪優化重點（v14.2 候選）
+
+| 優先 | 議題 | 痛點 |
+|------|------|------|
+| **P1** | **CS_BreakExit 改造** | 29 筆 0% 勝率 -569,800（=全部淨利），10 筆 MFE>10K 卻全吐回 |
+| P2 | CS_SL 由盈轉虧 | 47 筆 CS_SL 中 15 筆 MFE>0 但最終虧損，浪費 +445,400 |
+| P2 | 00-05 夜盤進場 | 11 筆 WR 27.3%、−142,400（其他兩時段均賺） |
+| P3 | StopProfit 評估 | 反轉類策略是否適用（≠ L1 趨勢、≠ L3 純區間） |
+
+---
+
 ## 策略特色
 
 1. **Wyckoff Spring Trap**：專抓假突破箱頂後的反轉，做空被困的多頭追漲者
-2. **極低市場曝險**：僅 1.62%，98.4% 時間空倉，是所有策略中最低
-3. **高盈虧比**：2.208，低勝率但靠大波段空頭行情彌補
-4. **日線雙重 Kill Switch**：多頭環境（60MA 上升 + 黃金交叉）完全封鎖做空
-5. **陷阱時間衰減**：假突破後僅 6 根 K 棒內有效，過期作廢
-6. **冷卻期保護**：8 根 K 棒冷卻，防止同一箱體連續虧損
-7. **Ratchet 停損**：初始停損隨箱頂下移而收緊，但不會往上放寬
-8. **追蹤停損門檻**：需跌到箱底才啟動追蹤，確保趨勢已展開
+2. **極低市場曝險**：僅 1.62%，98.4% 時間空倉
+3. **高盈虧比**：2.208，低勝率靠大波段彌補
+4. **日線雙重 Kill Switch**：多頭環境完全封鎖做空
+5. **陷阱時間衰減**：假突破後僅 6 根 K 棒內有效
+6. **冷卻期保護**：8 根 K 棒冷卻
+7. **v14.1 凍結停損**：ATR + LockedTop 鎖在進場根，reload 不漂移
+8. **v14.1 假日鐵律**：63 筆 TAIFEX 登錄表 + 04:15 強制歸零
 
 ---
 
@@ -200,6 +263,6 @@ CS_SL = Locked_Box_Top + ATR(60) × 2.0（Stop 單）
 | MDD | -334,600 (-23.39%) | -269,400 (-15.98%) |
 | 盈虧比 | 2.208 | 4.354 |
 | 曝險 | 1.62% | 4.88% |
-| 最長持平 | 1 年 3 個月 | — |
+| Holiday Flat_Time | 415（15M） | 300（60M） |
 
 > L4 抓盤整假突破反轉，L2 追趨勢新低延續。兩者在不同行情階段互補。
