@@ -55,15 +55,22 @@
             touched here per user scope (this round = safety
             rails only). Track for the next round.
 
- PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
-   Net Profit    : 569,200 TWD
-   Profit Factor : 1.602
-   Win Rate      : 42.05%
-   MDD           : -334,600 (-23.39%)
+ PERFORMANCE (v14.1 NEW BASELINE, deployed 2026-06-13):
+   Net Profit    : 581,200 TWD   (was 569,200, +2.1%)
+   Profit Factor : 1.622         (was 1.602, +1.2%)
+   Win Rate      : 42.05%        (unchanged)
+   MDD           : -328,000 (-22.84%)  (was -334,600, +2%)
    Total Trades  : 88
    Backtest      : 2020/02/19 - 2026/06/06
-   ^ v14.0 baseline. Re-backtest after v14.1 deployment for
-     updated PF / CS_SL fill distribution.
+
+   Freeze validation: CS_SL winners-turned-losers 15 -> 12,
+   wasted MFE 445,400 -> 341,800 (-23%). 3 trades shifted
+   from CS_SL (drifted-tight stop) to CS_TimeExit; 1 trade
+   shifted from CS_BreakExit to CS_SL (frozen stop catches
+   first). 0 CS_Holiday / CS_RegistryEnd / CS_Kill fires
+   (expected; no historical violations in 88 trades).
+   CS_BreakExit 28/0pct/-545,200 still the core bleed -
+   targeted for v14.2 round.
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
