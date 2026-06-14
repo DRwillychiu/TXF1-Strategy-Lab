@@ -69,8 +69,8 @@ print("=" * 72)
 m = re.search(r'Night_Block_On\s*\(\s*(\w+)\s*\)', strip_pl_comments(l4))
 report("PA1: Night_Block_On input declared",
        m is not None, f"got '{m.group(1) if m else None}'")
-report("PA2: Night_Block_On default = false (production safe)",
-       m and m.group(1).lower() == 'false', "")
+report("PA2: Night_Block_On default = true (v14.2B Variant B production)",
+       m and m.group(1).lower() == 'true', "")
 
 # Variable
 report("PA3: v_Night_Block variable declared",

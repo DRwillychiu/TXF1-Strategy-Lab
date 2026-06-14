@@ -1,8 +1,8 @@
 {================================================================================
- Script Name : _Live_Adaptive_Farmer_v14.2_SpringOnly
+ Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
- Description : Consolidation Short - S_Spring (False Breakout) ONLY
- Version     : v14.2 + HolidayFlat_v3 + FrozenSL + PathA/B A/B Engine
+ Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
+ Version     : v14.2B (PRODUCTION) + HolidayFlat_v3 + FrozenSL + Night_Block
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -13,6 +13,54 @@
    v14.1  (2026-06-13) Holiday Flat Rule v3 + Frozen Initial SL.
           Net +12,000 / PF 1.602 -> 1.622 / MDD improved 6,600.
           CS_BreakExit 28/0pct/-545,200 left UNTOUCHED, flagged for v14.2.
+
+   v14.2B (2026-06-13) PRODUCTION: Variant B sealed (Path A on, Path B off).
+          A/B trial complete (variants A-G all backtested in MC9).
+          See docs/L4_v142_variant_results.md for full data.
+
+          WINNER: Variant B (Night_Block_On=true, BE=0, SP=0)
+            Net  : 581,200 -> 687,200  (+106,000, +18.2 pct)
+            PF   : 1.62 -> 1.83
+            MDD  : -328,000 -> -239,800  (improved 88,200, -27 pct)
+            Top-10 winner retention: 100 pct (no winners killed)
+            Path A removes 9 night entries (net -120,800 in A)
+            with ZERO BR cases; one bar leaks through at 02:00
+            (signal fires at 01:45 = Time 145, outside 200-500
+            block window) - net positive trade, acceptable.
+
+          REJECTED variants:
+            C (BE +60/+5): net -345K. CS_BE 25 trades 0 pct WR.
+              Killed Top-10 winners: 4 of 10 became CS_BE.
+              Worst kills: 2025-04-08 (+164K -> -1K),
+              2020-03-13 (+140K -> -1K), 2022-07-01 (+68K -> -1K),
+              2022-04-26 (+59K -> -1K). Total -435,800 stolen
+              from top winners alone. L3 variant D pattern
+              repeated: BE catches first retrace from MFE peak,
+              missing multi-stage continuation.
+            D (SP +80/50pct): net -212K. CS_SP 22 trades 100 pct
+              WR (+235,200) - looked perfect in isolation. But
+              CS_SL dropped from 45/+1,019,200 to 36/+618,600
+              (-401K). SP truncates the multi-stage winners that
+              eventually reach trail exit. Net winner.
+            E (A+C), F (A+D), G (A+SP 100/50pct): A's gain
+              cancelled by C/D/G's loss. All net negative vs A.
+
+          KEY LESSON - L3 trap reborn in different clothing:
+            L3 v13.2D failed because BE +50pts was below the
+            normal range oscillation envelope.
+            L4 v14.2 C/D fail because BE/SP at ANY threshold
+            cuts the first retrace, and L4 big winners have
+            multi-stage profit patterns (e.g. +60 -> +30 -> +200
+            -> trail catches at +180). Both BE and SP catch the
+            first retracement, losing the eventual big win.
+            SP looks good because it has 100 pct WR on its own
+            fires, but the systemic cost is killing CS_SL big
+            winners that would have run further.
+
+          PATH B CODE PRESERVED but inputs default to 0 (off).
+          Future research could try SP with much higher trigger
+          (+200pt) or post-trail-activation only - but for now
+          BE/SP DISABLED is the empirical winner.
 
    v14.2  (2026-06-13) PATH A + PATH B A/B ENGINE (input-switched):
 
@@ -93,14 +141,18 @@
           DEPLOY ONLY WHEN FLAT (changes historical stop fills).
           Production defaults = all off = v14.1 (regression-safe).
 
- PERFORMANCE BASELINE (v14.1, deployed 2026-06-13):
-   Net Profit    : 581,200 TWD
-   Profit Factor : 1.622
-   Win Rate      : 42.05%
-   MDD           : -328,000 (-22.84%)
-   Total Trades  : 88
+ PERFORMANCE (v14.2B Variant B = PRODUCTION, sealed 2026-06-13):
+   Net Profit    : 687,200 TWD   (was 581,200, +18.2 pct)
+   Profit Factor : 1.83          (was 1.62)
+   Win Rate      : 42.86%        (was 42.05%)
+   MDD           : -239,800      (was -328,000, improved 27 pct)
+   Total Trades  : 84            (was 88; removed 4 net = 8 night
+                                   blocked, 4 redistributed)
+   Backtest      : 2020/02/19 - 2026/06/06
+   Top-10 winner retention: 100 pct (no winner killed)
+   CS_BE / CS_SP fires    : 0 (Path B inputs at 0)
 
-   v14.2 variants A-G to be backtested in MC9 and recorded back.
+   v14.2 A-G variant matrix complete; B sealed as production.
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
@@ -137,15 +189,23 @@ inputs:
     Manual_Kill_Switch(false),
 
     { --- 7. v14.2 Path A - Night entry block --- }
-    Night_Block_On(false),         { true = block 02:00-04:59 entries (low liquidity) }
+    Night_Block_On(true),          { PRODUCTION (v14.2B Variant B): block 02:00-04:59 entries.
+                                     Validated: 9 night entries net -120,800 in baseline, 0 CS_BR.
+                                     Removing them: +106K net / MDD improved 27 pct / Top-10 100 pct kept. }
 
-    { --- 8. v14.2 Path B - Breakeven (simple lock) --- }
-    BE_Trigger_Pts(0),             { 0 = off. Arm BE when MFE >= X pts. Suggested: 60/80/100 }
-    BE_Offset_Pts(5),              { Lock floor = Entry - Offset (short = lock X pts profit) }
+    { --- 8. v14.2 Path B - Breakeven (REJECTED in A/B trial, kept code for research) --- }
+    BE_Trigger_Pts(0),             { PRODUCTION 0 = off. A/B trial (variant C/E) verdict:
+                                     L3 trap repeated. CS_BE 25 trades 0pct WR, killed 4 of
+                                     Top-10 winners for -435,800. DO NOT enable without
+                                     redesign (e.g. post-trail-only, or +200pt threshold). }
+    BE_Offset_Pts(5),              { Lock floor = Entry - Offset (inert while BE_Trigger = 0) }
 
-    { --- 9. v14.2 Path B - StopProfit (peak watermark, L1-style) --- }
-    SP_Trigger_Pts(0),             { 0 = off. Arm SP when MFE >= X pts. Suggested: 60/80/100 }
-    SP_Retain_Pct(50);             { 0-100. Floor = Entry - Peak*(1-Retain/100) }
+    { --- 9. v14.2 Path B - StopProfit (REJECTED in A/B trial, kept code for research) --- }
+    SP_Trigger_Pts(0),             { PRODUCTION 0 = off. A/B trial (variant D/F/G) verdict:
+                                     CS_SP 100pct WR but net loser. Truncates CS_SL big
+                                     winners (45/+1,019K to 36/+619K). DO NOT enable without
+                                     redesign. }
+    SP_Retain_Pct(50);             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
 
 variables:
     { Phase 0: Macro filter }
