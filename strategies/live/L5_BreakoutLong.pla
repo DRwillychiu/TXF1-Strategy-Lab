@@ -204,11 +204,17 @@ inputs:
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
     Manual_Kill_Switch(false),
 
-    { [SEC-9] v19.8 Pre-Trail StopProfit (L1 SP philosophy, A/B engine) }
-    SP_Trigger_Pts(0),             { PRODUCTION 0 = off. A/B: try 60/80/100.
-                                     Arms when close-based MFE peak >= X pts. }
-    SP_Retain_Pct(50);             { 0-100. Floor = Entry + Peak*(1-Retain/100).
-                                     L1 uses 55; L5 starts 50 in A/B. }
+    { [SEC-9] v19.8 Pre-Trail StopProfit (L1 SP philosophy, A/B engine).
+              VERDICT 2026-06-13: All 5 SP variants (B/C/D/E/F)
+              FAILED net-vs-baseline. Best variant D was -14 pct
+              net + Top-10 retention only 50 pct. SP permanently
+              disabled in production. Code preserved for
+              archival/research only. See L5_v198_variant_results.md }
+    SP_Trigger_Pts(0),             { PERMANENT 0 = off. All A/B variants FAILED.
+                                     B/C/D/E/F all killed 3 mega-winners
+                                     (2026-04-07 +376K, 2026-03-31 +177K,
+                                     2026-03-12 +131K) reducing them to +7~+38K. }
+    SP_Retain_Pct(50);             { inert while SP_Trigger_Pts = 0 }
 
 variables:
     { [SEC-0] Time filter state }
