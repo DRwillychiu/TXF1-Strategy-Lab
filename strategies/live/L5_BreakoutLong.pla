@@ -1,19 +1,88 @@
 {================================================================================
- Script Name : _Backtest_Adaptive_Farmer_v19_6_Final
+ Script Name : _Live_Adaptive_Farmer_v19_7_BreakoutLong
  MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
  Description : God Mode - Relative MFE + Dynamic Scale-Out + Weekly Filter
- Version     : v19.6 + D3Filter + BL_Labels
+ Version     : v19.7 + HolidayFlat_v3 + FrozenSL + DOW_DeadCode_Removed
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
 
- PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+ CHANGELOG:
+   v19.6  Prior production: God Mode + Daily Commander + Weekly AND Filter
+          + Scale-Out + MFE 3-tier dynamic trail.
+
+   v19.7  (2026-06-13) Three structural fixes (no logic change to
+          God Mode engine; safety + correctness upgrades):
+
+   FIX 1 - DayOfWeek = 7 DEAD CODE REMOVED:
+     v19.6 had 3 references to DayOfWeek(Date) = 7, but in
+     PowerLanguage / MultiCharts DayOfWeek returns 0-6
+     (Sun=0, Mon=1, ..., Sat=6). The value 7 is NEVER true.
+     - Line 103 (entry block on DOW=7) was harmless no-op
+       (Sunday has no TXF1 bars anyway).
+     - Lines 109-114 (BL_SatClose_Bot/Mid market exit at
+       DOW=7 + Time>=400) was DEAD CODE. The original intent
+       was to force-flat on Saturday morning (TXF1 night
+       session ends Sat 05:00) but this never fired.
+     Verified against older AND backtest (4.8yr / 152 trades):
+       BL_SatClose_Bot = 0 fires, BL_SatClose_Mid = 0 fires.
+     v19.7 removes all three DOW=7 references. The existing
+     DOW=6 + Time>=1330 entry block (which IS correct
+     Saturday) is preserved. Weekend gap risk relies on
+     trail/SL catching the runner, same as v19.6 effective
+     behavior (since the SatClose was always dead).
+
+   FIX 2 - HOLIDAY FLAT RULE v3 added:
+     v19.6 had ZERO holiday protection. v19.7 installs the
+     same module that L1/L2/L3/L4 already use:
+       - Holiday_Tail[80] = 63 TAIFEX-verified dates (shared
+         registry with L1/L2/L3/L4; byte-identical).
+       - Tail bars (00:00-05:00 of "last trading day + 1
+         calendar day") block new entries via v_Allow_Entry
+         AND force-flat any position from Holiday_Flat_Time
+         (15M grid = 04:15 trigger, retries 04:30/04:45,
+         flat before 05:00).
+       - Registry_Valid_Until(1270101) fail-safe: beyond
+         this date block entries + flatten (BL_RegistryEnd)
+         + 30-day red chart warning.
+       - Manual_Kill_Switch(false) for typhoon-class
+         unscheduled closures (BL_Kill).
+     History impact: 0 historical violations in 152-trade
+     older Excel (forward protection only). First live test
+     = 2026-06-18 Dragon Boat eve.
+
+   FIX 3 - FROZEN INITIAL STOP added:
+     v19.6 had the same ATR-drift bug as L1 V2.5-era and
+     L4 v14.0-era: v_ATR_Buffer = v_Current_ATR * ATR_Stop_Mult
+     recomputed every 15M bar, so the initial stop drifts
+     with ATR(35) and changes on chart reload.
+       - Freeze_SL_On(true): on entry bar, lock v_Frozen_ATR
+         = ATR-at-entry. The initial stop becomes a function
+         of v_Frozen_ATR (stable) instead of v_Current_ATR
+         (drifting).
+       - Trail layer keeps using v_Current_ATR by design
+         (trail should track current volatility).
+       - Set Freeze_SL_On = false to replicate v19.6 dynamic.
+
+   WHAT THIS ROUND DOES NOT TOUCH (deferred):
+     - BL_BE (post-scale-out breakeven floor) mechanism.
+       L4 v14.2 A/B proved BE can amputate multi-stage
+       winners; L5 has built-in BE since v19.x with no A/B.
+       Future round may test L5 with BE off vs on. NOT done
+       here per "do not refactor beyond scope" rule.
+     - Night entry filter (L4 Path A). L5 older data shows
+       02-04 entries are +87,800 net (12 trades, 7 wins),
+       UNLIKE L4 (-120,800). Night block would harm L5.
+     - Scale-out percentage and trail tier multipliers.
+
+ PERFORMANCE BASELINE (from L5 annotated v19.6 - to be
+ re-verified after v19.7 MC9 deployment with fresh Excel):
    Net Profit    : 1,713,000 TWD
    Profit Factor : 2.136
    Win Rate      : 52.47%
    MDD           : -193,200 (-16.61%)
    Total Trades  : 162
-   Backtest      : ~4 Years 10 Months
+   Backtest      : ~4.8 years
 ================================================================================}
 
 inputs:
@@ -42,7 +111,15 @@ inputs:
 
     { [SEC-6] Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
-    Weekly_MA_Slow(60);
+    Weekly_MA_Slow(60),
+
+    { [SEC-7] v19.7 Frozen Initial SL }
+    Freeze_SL_On(true),            { PRODUCTION: lock ATR at entry; false = v19.6 dynamic }
+
+    { [SEC-8] v19.7 Holiday Flat Rule v3 (Iron Rule 2026-06-13) }
+    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false);
 
 variables:
     { [SEC-0] Time filter state }
@@ -89,10 +166,104 @@ variables:
     { [SEC-6] Data3 Weekly Filter }
     v_Weekly_MA_Fast(0),
     v_Weekly_MA_Slow(0),
-    v_Weekly_Filter(false);
+    v_Weekly_Filter(false),
+
+    { [SEC-7] v19.7 Frozen Initial SL }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_ATR_Buffer(0),
+
+    { [SEC-8] v19.7 Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0);
+
+arrays:
+    Holiday_Tail[80](0);
 
 { ==========================================
-  [SEC-0] TIME FILTER
+  [SEC--1] HOLIDAY TAIL REGISTRY (TAIFEX-verified, shared
+  with L1/L2/L3/L4). Holiday_Tail = last trading day + 1
+  calendar day = the date stamped on the 00:00-05:00 tail
+  bars of the final night session before each closure.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ==========================================
+  [SEC-0] TIME FILTER (v19.7: DayOfWeek=7 dead code removed)
+  Active filters:
+    - Dead-of-night 04:00-05:00 (low liquidity)
+    - Saturday after 13:30 (no TXF1 weekend session anyway,
+      but kept as belt-and-suspenders)
+    - Holiday tail bars (via v_Holiday_Block, added below)
   ========================================== }
 
 v_Allow_Entry = true;
@@ -100,18 +271,11 @@ v_Allow_Entry = true;
 if (Time >= 400) and (Time <= 500) then
     v_Allow_Entry = false;
 
-if DayOfWeek(Date) = 7 then
-    v_Allow_Entry = false;
-
 if DayOfWeek(Date) = 6 and Time >= 1330 then
     v_Allow_Entry = false;
 
-if DayOfWeek(Date) = 7 and Time >= 400 then begin
-    if MarketPosition = 1 then begin
-        Sell ("BL_SatClose_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-        Sell ("BL_SatClose_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
-    end;
-end;
+if v_Holiday_Block then
+    v_Allow_Entry = false;
 
 { ==========================================
   [SEC-1] COMMANDER LOGIC (Data2 - Daily)
@@ -143,6 +307,9 @@ end;
 
 { ==========================================
   [SEC-2] ATR CACHE (Data1 - once per bar)
+  ATR_Buffer used for initial stop and entry filter geometry.
+  v19.7: when Freeze_SL_On is true and we're in position,
+  v_ATR_Buffer (for initial stop) uses v_Frozen_ATR instead.
   ========================================== }
 
 v_Current_ATR     = AvgTrueRange(ATR_Length);
@@ -167,6 +334,12 @@ else
 
 { ==========================================
   [SEC-3] ENTRY LOGIC (Data1 - 15min)
+  Entries gated by:
+    - v_is_in_consolidation (box exists)
+    - v_Allow_Entry (time + holiday + DOW filters)
+    - v_Trend_Dir = 1 (daily MA60 bullish)
+    - v_Weekly_Filter (weekly AND filter)
+    - v_Current_RR >= Min_RR_Bull
   ========================================== }
 
 if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
@@ -215,9 +388,29 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         if High > v_Box_Top + v_ATR_Trail_Start then
             v_Trail_Active = true;
 
+        { v19.7: Freeze ATR ONCE on entry bar }
+        if Freeze_SL_On and v_SL_Locked = false then begin
+            v_Frozen_ATR        = v_Current_ATR;
+            v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult;
+            v_SL_Locked         = true;
+        end;
+
         v_ScaleOut_Size = Round(MaxContracts * ScaleOut_Percent, 0);
         if MaxContracts > 1 and v_ScaleOut_Size = 0 then
             v_ScaleOut_Size = 1;
+
+        { Priority 0: Holiday Iron Rule / Registry / Kill
+          (Market-type, runs before stop/limit logic in PL engine) }
+        if Manual_Kill_Switch then begin
+            Sell ("BL_Kill_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Kill_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Registry_Expired then begin
+            Sell ("BL_RegistryEnd_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_RegistryEnd_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+            Sell ("BL_Holiday_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Holiday_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end;
 
         { Stage 1: Full position }
         if CurrentContracts = MaxContracts then begin
@@ -229,12 +422,22 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
                     from Entry ("BL_Entry_Mid") next bar at v_Target_Mid Limit;
             end;
 
-            Sell ("BL_SL_Bot") CurrentContracts contracts
-                from Entry ("BL_Entry_Bot")
-                next bar at (v_Box_Btm - v_ATR_Buffer) Stop;
-            Sell ("BL_SL_Mid") CurrentContracts contracts
-                from Entry ("BL_Entry_Mid")
-                next bar at (v_Mid_Line - v_ATR_Buffer) Stop;
+            { v19.7: initial stop uses Frozen ATR Buffer when locked }
+            if Freeze_SL_On and v_SL_Locked then begin
+                Sell ("BL_SL_Bot") CurrentContracts contracts
+                    from Entry ("BL_Entry_Bot")
+                    next bar at (v_Box_Btm - v_Frozen_ATR_Buffer) Stop;
+                Sell ("BL_SL_Mid") CurrentContracts contracts
+                    from Entry ("BL_Entry_Mid")
+                    next bar at (v_Mid_Line - v_Frozen_ATR_Buffer) Stop;
+            end else begin
+                Sell ("BL_SL_Bot") CurrentContracts contracts
+                    from Entry ("BL_Entry_Bot")
+                    next bar at (v_Box_Btm - v_ATR_Buffer) Stop;
+                Sell ("BL_SL_Mid") CurrentContracts contracts
+                    from Entry ("BL_Entry_Mid")
+                    next bar at (v_Mid_Line - v_ATR_Buffer) Stop;
+            end;
 
             if BarsSinceEntry >= Time_Stop_Bars then begin
                 Sell ("BL_TimeExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
@@ -302,4 +505,7 @@ if MarketPosition = 0 then begin
     v_Highest_Since_Entry = 0;
     v_Trail_Active        = false;
     v_Dynamic_Trail_Mult  = 3.0;
+    v_SL_Locked           = false;
+    v_Frozen_ATR          = 0;
+    v_Frozen_ATR_Buffer   = 0;
 end;

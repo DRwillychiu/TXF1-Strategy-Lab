@@ -1,11 +1,47 @@
 # L5 盤整多頭突破 — STRATEGY_WILLY_LONG_BREAKOUT_C
 
-> 腳本名稱：_Backtest_Adaptive_Farmer_v19_6_Final
+> 腳本名稱：_Live_Adaptive_Farmer_v19_7_BreakoutLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_BREAKOUT_C
-> 版本：v19.6 + D3Filter + BL_Labels (God Mode)
+> 版本：**v19.7 + HolidayFlat_v3 + FrozenSL + DOW_DeadCode_Removed**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行
+> 狀態：🟢 已上架實盤運行 v19.6（待空手時部署 v19.7）
 > 口數：1 口
+
+## v19.7 三大修正（2026-06-13）
+
+| 修正 | v19.6 狀況 | v19.7 改善 |
+|------|-----------|-----------|
+| **DayOfWeek=7 Dead Code** | 3 處引用 DOW=7，PowerLanguage Sat=6 → 永不成立 | 全移除；BL_SatClose 標籤刪除（4.8 年 0 觸發已實證） |
+| **無假日鐵律** | 跨假持倉無保護 | 加入 HolidayFlat_v3：63 筆 TAIFEX 登錄表 + 04:15 強制歸零 + Registry fail-safe + Manual_Kill_Switch |
+| **初始停損漂移** | v_ATR_Buffer 每根重算，reload 變動 | Freeze_SL_On(true)：進場根鎖 ATR，整筆交易固定 |
+
+### v19.7 新出場標籤
+
+| 標籤 | 觸發 |
+|------|------|
+| BL_Holiday_Bot / BL_Holiday_Mid | 尾段日 04:15 強制歸零 |
+| BL_RegistryEnd_Bot / BL_RegistryEnd_Mid | 登錄表過期 fail-safe |
+| BL_Kill_Bot / BL_Kill_Mid | Manual_Kill_Switch（颱風臨時停市）|
+
+### 本輪刻意 **不**改變
+
+| 議題 | 為什麼不動 |
+|------|-----------|
+| BL_BE 機制 | L4 v14.2 A/B 證明 BE 對多階段獲利策略有截斷副作用，但 L5 BE 是設計內建，未做 A/B；列為下一輪研究 |
+| 夜盤封鎖（Path A）| L5 02-04 進場 12 筆 +87,800 淨利（不像 L4 -120,800），封鎖會傷害 L5 |
+| Scale-Out / Trail 倍數 | 屬於 God Mode 核心引擎，非本輪 scope |
+
+### MC9 部署（空手時）
+
+新增 4 個 inputs 預設值：
+- `Freeze_SL_On(true)`
+- `Holiday_Flat_Time(415)`
+- `Registry_Valid_Until(1270101)`
+- `Manual_Kill_Switch(false)`
+
+部署前提：MC9 空手狀態（v19.7 改變停損價計算，跨版會影響歷史軌跡）。
+
+---
 
 ---
 

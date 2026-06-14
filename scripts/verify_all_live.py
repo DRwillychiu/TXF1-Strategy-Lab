@@ -1,4 +1,4 @@
-"""Master cross-verification for ALL live strategies L1-L4.
+"""Master cross-verification for ALL live strategies L1-L5.
 
 Confirms:
   1. Cross-strategy invariants (Holiday registry, grid params, kill labels)
@@ -18,6 +18,7 @@ FILES = {
     'L2': 'strategies/live/L2_TrendShort.pla',
     'L3': 'strategies/live/L3_ConsolidationLong.pla',
     'L4': 'strategies/live/L4_ConsolidationShort.pla',
+    'L5': 'strategies/live/L5_BreakoutLong.pla',
 }
 content = {}
 for k, p in FILES.items():
@@ -39,17 +40,19 @@ print("LAYER X: Cross-Strategy Invariants (L1/L2/L3/L4 must agree)")
 print("=" * 75)
 
 def extract_registry(s):
+    # Strip comments first - changelogs may mention Holiday_Tail[80] = 63 in prose
+    clean = strip_pl_comments(s)
     return {int(i): int(v) for i, v in
-            re.findall(r'Holiday_Tail\[\s*(\d+)\s*\]\s*=\s*(\d+)', s)}
+            re.findall(r'Holiday_Tail\[\s*(\d+)\s*\]\s*=\s*(\d+)', clean)}
 
 regs = {k: extract_registry(content[k]) for k in FILES}
-for k in 'L1 L2 L3 L4'.split():
+for k in 'L1 L2 L3 L4 L5'.split():
     report(f"X1: {k} holiday registry has 63 entries",
            len(regs[k]) == 63, f"got {len(regs[k])}")
 
 # Pairwise equality
 ref = regs['L3']
-for k in 'L1 L2 L4'.split():
+for k in 'L1 L2 L4 L5'.split():
     diffs = sum(1 for i in set(ref) | set(regs[k]) if ref.get(i) != regs[k].get(i))
     report(f"X2: {k} registry identical to L3", diffs == 0, f"{diffs} diffs")
 
@@ -60,7 +63,7 @@ for k in FILES:
     report(f"X3: {k} Registry_Valid_Until = 1270101", val == '1270101', f"got {val}")
 
 # Holiday_Flat_Time per grid
-expected_flat = {'L1': '345', 'L2': '300', 'L3': '415', 'L4': '415'}
+expected_flat = {'L1': '345', 'L2': '300', 'L3': '415', 'L4': '415', 'L5': '415'}
 for k, exp in expected_flat.items():
     m = re.search(r'Holiday_Flat_Time\s*\(\s*(\d+)\s*\)', strip_pl_comments(content[k]))
     val = m.group(1) if m else None
@@ -73,7 +76,8 @@ for k in FILES:
     report(f"X5: {k} Manual_Kill_Switch default = false", val == 'false', f"got {val}")
 
 # Distinct kill labels
-kill_labels = {'L1': 'TL_Kill', 'L2': 'TS_Kill', 'L3': 'CL_Kill', 'L4': 'CS_Kill'}
+kill_labels = {'L1': 'TL_Kill', 'L2': 'TS_Kill', 'L3': 'CL_Kill',
+               'L4': 'CS_Kill', 'L5': 'BL_Kill'}
 for k, lbl in kill_labels.items():
     report(f"X6: {k} kill label = {lbl}",
            lbl in content[k], "")
@@ -147,6 +151,39 @@ report("L3-7: CL_BE label preserved (code preserved, input off)",
 report("L3-8: Frozen leg / SL / Target locked at entry",
        'v_Frozen_SL' in l3 and 'v_Frozen_Target' in l3, "")
 
+# ===== LAYER L5 =====
+print()
+print("=" * 75)
+print("LAYER L5: v19.7 + HolidayFlat_v3 + FrozenSL + DOW_DeadCode_Removed")
+print("=" * 75)
+
+l5 = content['L5']
+report("L5-1: Version v19.7 in header", 'v19.7' in l5, "")
+l5_clean = strip_pl_comments(l5)
+m = re.search(r'Freeze_SL_On\s*\(\s*(\w+)\s*\)', l5_clean)
+report("L5-2: Freeze_SL_On default = true (v19.7 production)",
+       m and m.group(1).lower() == 'true', f"got {m.group(1) if m else None}")
+m = re.search(r'Manual_Kill_Switch\s*\(\s*(\w+)\s*\)', l5_clean)
+report("L5-3: Manual_Kill_Switch default = false",
+       m and m.group(1).lower() == 'false', f"got {m.group(1) if m else None}")
+report("L5-4: BL_Holiday label", 'BL_Holiday' in l5, "")
+report("L5-5: BL_RegistryEnd label", 'BL_RegistryEnd' in l5, "")
+report("L5-6: BL_Kill label", 'BL_Kill' in l5, "")
+report("L5-7: BL_Entry_Bot + BL_Entry_Mid preserved",
+       'BL_Entry_Bot' in l5 and 'BL_Entry_Mid' in l5, "")
+report("L5-8: BL_BE preserved (existing mechanism untouched)",
+       'BL_BE_Bot' in l5 and 'BL_BE_Mid' in l5, "")
+report("L5-9: BL_Trail preserved (God Mode)",
+       'BL_Trail_Bot' in l5 and 'BL_Trail_Mid' in l5, "")
+report("L5-10: DayOfWeek=7 dead code REMOVED (from code, not changelog)",
+       'DayOfWeek(Date) = 7' not in l5_clean and 'DayOfWeek(Date)= 7' not in l5_clean, "")
+report("L5-11: BL_SatClose dead labels REMOVED (from code, not changelog)",
+       'BL_SatClose' not in l5_clean, "")
+report("L5-12: Frozen ATR Buffer formula present",
+       'v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult' in l5, "")
+report("L5-13: Holiday block as entry gate (v_Allow_Entry = false)",
+       'if v_Holiday_Block then' in l5 and 'v_Allow_Entry = false' in l5, "")
+
 # ===== LAYER L4 =====
 print()
 print("=" * 75)
@@ -205,6 +242,7 @@ required_docs = [
     'strategies/live/L3_ConsolidationLong_annotated.md',
     'strategies/live/L3_ConsolidationLong_review.md',
     'strategies/live/L4_ConsolidationShort_annotated.md',
+    'strategies/live/L5_BreakoutLong_annotated.md',
 ]
 for p in required_docs:
     report(f"DOC: {p}", os.path.exists(p), "")
@@ -212,7 +250,7 @@ for p in required_docs:
 # ===== SUMMARY =====
 print()
 print("=" * 75)
-print("MASTER VERIFICATION SUMMARY (L1-L4 all sealed productions)")
+print("MASTER VERIFICATION SUMMARY (L1-L5 all sealed productions)")
 print("=" * 75)
 passed = sum(1 for _, ok in results if ok)
 total = len(results)
