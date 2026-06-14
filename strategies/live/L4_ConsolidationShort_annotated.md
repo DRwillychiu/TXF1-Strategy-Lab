@@ -1,12 +1,84 @@
 # L4 盤整空 — STRATEGY_WILLY_SHORT_CTEST2
 
-> 腳本名稱：_Live_Adaptive_Farmer_v14.1_SpringOnly
+> 腳本名稱：_Live_Adaptive_Farmer_v14.2_SpringOnly
 > MC 載入名稱：STRATEGY_WILLY_SHORT_CTEST2
-> 版本：**v14.1 + HolidayFlat_v3 + FrozenSL**（repo 已定稿，**MC9 空手時部署，6/17 前**）
+> 版本：**v14.2 + HolidayFlat_v3 + FrozenSL + PathA/B A/B Engine**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行（運行中為 v14 舊版；待換裝 v14.1）
+> 狀態：🟢 已上架實盤運行 v14.1（待 A/B 測試完成後決定是否升級至 v14.2 任一變體）
 > 口數：1 口
-> 深度審查：見 L4 review section（CS_BreakExit 0% 勝率為下一輪重點）
+> Path A 診斷：[L4_v142_pathA_entry_diagnostic.md](../../docs/L4_v142_pathA_entry_diagnostic.md)
+> Path B 設計：[L4_v142_pathB_variant_matrix.md](../../docs/L4_v142_pathB_variant_matrix.md)
+
+## v14.2 A/B Engine（生產預設 = OFF，回歸安全）
+
+v14.2 用 input 開關支援七個變體，**生產預設所有開關關閉 = 行為等同 v14.1**。
+用戶在 MC9 切換 input 跑 A/B 回測，依數據決定最終生產配置。
+
+| Input | 預設 | 用途 |
+|-------|------|------|
+| `Night_Block_On` | **false** | true = 封鎖 02:00-04:59 進場（Path A） |
+| `BE_Trigger_Pts` | **0** | 0 = 關閉。設 60/80/100 啟動 BE 保護（Path B） |
+| `BE_Offset_Pts` | 5 | BE floor = Entry - 5 pts（鎖 5 pts 獲利） |
+| `SP_Trigger_Pts` | **0** | 0 = 關閉。設 60/80/100 啟動峰值守護（Path B） |
+| `SP_Retain_Pct` | 50 | SP floor = Entry - Peak × (1 - Retain%) |
+
+### 七個命名變體（建議 MC9 測試順序）
+
+| 變體 | Night | BE | SP | Retain | 假設 |
+|------|-------|-----|-----|--------|------|
+| **A** baseline | false | 0 | 0 | — | 等同 v14.1（回歸對照） |
+| **B** PathA only | **true** | 0 | 0 | — | 只剔除 02-04 夜盤（預估 +120,800） |
+| **C** PathB BE | false | **60** | 0 | — | 簡單 BE +60/+5 |
+| **D** PathB SP | false | 0 | **80** | **50** | 峰值守護 +80/50% |
+| **E** A+C | **true** | **60** | 0 | — | Night + BE |
+| **F** A+D | **true** | 0 | **80** | **50** | Night + SP（預估最佳）|
+| **G** A+SP保守 | **true** | 0 | **100** | **50** | 最保守組合（最高門檻） |
+
+### 預期結果（理想模擬，實際應折扣到 60-80%）
+
+| 變體 | 預估淨利 | Δ vs v14.1 | 風險評等 |
+|------|----------|------------|----------|
+| A | 581,200 | 0 | — |
+| B | ~702,000 | +20.8% | 極低 |
+| C | ~778,000 | +33.9% | 中（BE 截斷風險） |
+| D | ~831,000 | +43.0% | 低-中 |
+| F | ~950,000 | **+63.5%** | 低-中 |
+| G | ~852,000 | +46.6% | 極低 |
+
+### 新出場標籤
+
+| 標籤 | 觸發 | 優先級 |
+|------|------|--------|
+| CS_BE | BE_Floor 緊於 v_Stop_Level 而被觸發 | SP > **BE** > SL（互斥） |
+| CS_SP | SP_Floor 緊於 v_Stop_Level 而被觸發 | **SP** > BE > SL（互斥） |
+| CS_SL | 原 v_Stop_Level（無 BE/SP 覆蓋時） | SP > BE > **SL** |
+
+每根 K 棒只發出 **一個** 帶標籤 Stop 單，互斥避免衝突。
+
+### L3 變體 D 詛咒檢核
+
+| 維度 | L3 變體 D（失敗） | L4 v14.2（規劃） |
+|------|------------------|------------------|
+| 門檻 | +50 pts（=箱寬 25%，太低） | **+60~+100 pts**（=多倍 ATR） |
+| MFE≥門檻 後典型路徑 | 回測中線（區間反覆） | 趨勢延續（CS_SL 平均最終 +198 pts） |
+| 對贏家的截斷 | 96 筆到價獲利被砍 | **模擬 0 筆**（贏家最終遠高於 floor） |
+| 預設 | 已關（OK） | **關（生產安全）** |
+
+### 接受/否決條件
+
+**通過 PASS**：
+- ✅ 淨利提升 ≥ 100,000
+- ✅ MDD 不變或改善
+- ✅ 勝率 ≥ 40%
+- ✅ CS_BE / CS_SP 勝率 ≥ 50%
+- ✅ Top-10 贏家保留率 ≥ 80%
+
+**否決 FAIL**：
+- ❌ CS_BE 或 CS_SP 勝率 < 30%（L3 詛咒重演）
+- ❌ Top-10 贏家保留率 < 70%（截斷大贏家）
+- ❌ MDD 惡化 > 10%
+
+---
 
 ## v14.1 變更摘要（2026-06-13）
 
