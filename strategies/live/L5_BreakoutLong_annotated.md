@@ -1,11 +1,49 @@
 # L5 盤整多頭突破 — STRATEGY_WILLY_LONG_BREAKOUT_C
 
-> 腳本名稱：_Live_Adaptive_Farmer_v19_7_BreakoutLong
+> 腳本名稱：_Live_Adaptive_Farmer_v19_8_BreakoutLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_BREAKOUT_C
-> 版本：**v19.7 + HolidayFlat_v3 + FrozenSL + DOW_DeadCode_Removed**
+> 版本：**v19.8 + Pre-Trail SP A/B Engine + HolidayFlat_v3 + FrozenSL**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行 v19.6（待空手時部署 v19.7）
+> 狀態：🟢 已上架實盤運行 v19.6（待空手時部署 v19.8，預設 = v19.7 行為）
 > 口數：1 口
+
+## v19.8 Pre-Trail SP A/B Engine（2026-06-13）
+
+**用戶概念**：L5 = L1 獲利延伸 + L3 進場策略；解決「曾經獲利但全部吐回」問題。
+
+**機制**（從 L1 V2.6 SP 移植）：
+- close-based MFE 追蹤（v_Peak_Profit = max(Close - Entry)）
+- v_Peak_Profit >= SP_Trigger_Pts → v_SP_Armed = true
+- v_SP_Floor = EntryPrice + Peak × (1 - SP_Retain_Pct/100)
+- 永不解除（直到 flat）
+- 優先序：Trail > SP > BE > 初始 SL
+
+**Input 開關（生產預設 OFF，等同 v19.7 行為）**：
+| Input | 預設 | 含義 |
+|-------|------|------|
+| `SP_Trigger_Pts` | **0**（off）| 0 = 關閉。A/B 測 60/80/100 |
+| `SP_Retain_Pct` | 50 | 0-100。L1 用 55 |
+
+**新標籤**：BL_SP_Bot / BL_SP_Mid（與 BL_BE / BL_SL / BL_Trail 互斥優先）
+
+**完整變體設計**：[docs/L5_v198_pretrail_sp_design.md](../../docs/L5_v198_pretrail_sp_design.md)
+
+**6 個建議測試變體**：
+| 變體 | SP_Trigger | SP_Retain | 假設 |
+|------|-----------|-----------|------|
+| A baseline | 0 | — | v19.7 對照（迴歸）|
+| B Aggressive | 60 | 50 | 早期保護 |
+| C Mid | 80 | 50 | 中等門檻 |
+| D Conservative | 100 | 50 | 高門檻 |
+| E LessRetain | 80 | 40 | 更多回吐空間 |
+| F L1-Like | 100 | 55 | 完全鏡像 L1 SP |
+
+**接受條件**：淨利 > v19.7、BL_SP 勝率 ≥ 50%、Top-10 保留 ≥ 80%、MDD 不惡化 > 10%
+**否決條件**：BL_SP 勝率 < 30%（L3/L4 詛咒）、Top-10 < 70%、淨利低於 v19.7
+
+**L4 v14.2 失敗教訓已內化**：L5 因為有 Scale-Out 緩衝（40% 在 TP 落袋），SP 截斷風險理論上比 L4 小，但仍須 A/B 驗證。
+
+---
 
 ## v19.7 三大修正（2026-06-13）
 

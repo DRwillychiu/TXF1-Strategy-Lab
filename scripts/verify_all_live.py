@@ -32,7 +32,23 @@ def report(check, ok, detail=""):
     results.append((check, ok))
 
 def strip_pl_comments(s):
-    return re.sub(r'\{[^}]*?\}', '', s, flags=re.DOTALL)
+    """Depth-aware bracket parser. PL uses {...} comments;
+    naive regex fails when header contains nested-looking text
+    (e.g. input lines like Foo(0) { description }). This walks
+    character-by-character tracking brace depth."""
+    out = []
+    depth = 0
+    for c in s:
+        if c == '{':
+            depth += 1
+            continue
+        if c == '}':
+            if depth > 0:
+                depth -= 1
+            continue
+        if depth == 0:
+            out.append(c)
+    return ''.join(out)
 
 # ===== LAYER X: Cross-Strategy Invariants =====
 print("=" * 75)
@@ -154,14 +170,14 @@ report("L3-8: Frozen leg / SL / Target locked at entry",
 # ===== LAYER L5 =====
 print()
 print("=" * 75)
-print("LAYER L5: v19.7 + HolidayFlat_v3 + FrozenSL + DOW_DeadCode_Removed")
+print("LAYER L5: v19.8 + Pre-Trail SP A/B Engine + HolidayFlat_v3 + FrozenSL")
 print("=" * 75)
 
 l5 = content['L5']
-report("L5-1: Version v19.7 in header", 'v19.7' in l5, "")
+report("L5-1: Version v19.8 in header", 'v19.8' in l5, "")
 l5_clean = strip_pl_comments(l5)
 m = re.search(r'Freeze_SL_On\s*\(\s*(\w+)\s*\)', l5_clean)
-report("L5-2: Freeze_SL_On default = true (v19.7 production)",
+report("L5-2: Freeze_SL_On default = true (v19.7 carried over)",
        m and m.group(1).lower() == 'true', f"got {m.group(1) if m else None}")
 m = re.search(r'Manual_Kill_Switch\s*\(\s*(\w+)\s*\)', l5_clean)
 report("L5-3: Manual_Kill_Switch default = false",
@@ -183,6 +199,26 @@ report("L5-12: Frozen ATR Buffer formula present",
        'v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult' in l5, "")
 report("L5-13: Holiday block as entry gate (v_Allow_Entry = false)",
        'if v_Holiday_Block then' in l5 and 'v_Allow_Entry = false' in l5, "")
+# v19.8 SP module checks
+m = re.search(r'SP_Trigger_Pts\s*\(\s*(\d+)\s*\)', l5_clean)
+report("L5-14: SP_Trigger_Pts default = 0 (v19.8 A/B engine OFF in production)",
+       m and m.group(1) == '0', f"got {m.group(1) if m else None}")
+m = re.search(r'SP_Retain_Pct\s*\(\s*(\d+)\s*\)', l5_clean)
+report("L5-15: SP_Retain_Pct default = 50",
+       m and m.group(1) == '50', f"got {m.group(1) if m else None}")
+report("L5-16: v_Peak_Profit close-based tracking (L1 SP pattern)",
+       'Close - EntryPrice > v_Peak_Profit' in l5, "")
+report("L5-17: v_SP_Floor formula = EntryPrice + Peak*(1-Retain/100)",
+       bool(re.search(
+           r'v_SP_Floor\s*=\s*EntryPrice\s*\+\s*\(\s*v_Peak_Profit\s*\*\s*'
+           r'\(\s*1\s*-\s*SP_Retain_Pct\s*/\s*100\s*\)\s*\)', l5)), "")
+report("L5-18: BL_SP_Bot + BL_SP_Mid labels emitted",
+       'BL_SP_Bot' in l5 and 'BL_SP_Mid' in l5, "")
+report("L5-19: SP arming gated by SP_Trigger_Pts > 0",
+       bool(re.search(r'SP_Trigger_Pts\s*>\s*0\s+and\s+v_Peak_Profit\s*>=\s*SP_Trigger_Pts',
+                      l5)), "")
+report("L5-20: Trail > SP priority (Trail uses MaxList with SP_Floor)",
+       'MaxList(EntryPrice, v_SP_Floor)' in l5, "")
 
 # ===== LAYER L4 =====
 print()
@@ -243,6 +279,8 @@ required_docs = [
     'strategies/live/L3_ConsolidationLong_review.md',
     'strategies/live/L4_ConsolidationShort_annotated.md',
     'strategies/live/L5_BreakoutLong_annotated.md',
+    'strategies/live/L5_BreakoutLong_review.md',
+    'docs/L5_v198_pretrail_sp_design.md',
 ]
 for p in required_docs:
     report(f"DOC: {p}", os.path.exists(p), "")
