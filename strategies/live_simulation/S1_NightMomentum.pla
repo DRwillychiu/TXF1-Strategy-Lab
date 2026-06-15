@@ -1,86 +1,72 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.3: Pure Night Strategy with Robust Daily 05:00 Flat (PRIMARY SAFETY)}
-{Category A: Night Session Opening Range Breakout}
+{v2.4: Night Session Breakout + Overnight Gap Capture (honest naming)}
+{Category A: Night Session Opening Range Breakout + Day Open Hold}
 {Direction: Long Only (Short removed: MC12 Short PF=0.93)}
 {Timeframe: 15-min on TXF1}
 
-{ v2.3 CHANGELOG (2026-06-13):
+{ v2.4 CHANGELOG (2026-06-13):
 
-  DESIGN PHILOSOPHY CORRECTION:
-    v2.2 framed the fix as "Holiday Module + ExitTime bug fix",
-    which mis-prioritized the fundamental requirement.
+  USER DIRECTIVE: revert to v2.1 ExitTime behavior.
 
-    For a PURE NIGHT strategy, the CORE requirement is:
-    "Position MUST be 0 at 05:00 night session close, EVERY
-    NIGHT, regardless of whether next day is a holiday."
+  REVELATION FROM v2.3 ACCEPTANCE BACKTEST:
+    v2.3 (true pure-night, exit at 04:30) showed +402,600.
+    v2.2 (exit at 09:00 day open via bug) showed +1,720,600.
+    Delta = +1,318,000 (= +12.6 pts per LX_NM_Time trade)
+    came from OVERNIGHT GAP exposure that was hidden as a bug.
 
-    v2.3 makes this explicit by:
-    1. PRIMARY safety = DailyFlat mechanism (every night)
-    2. SECONDARY safety = Holiday module (for documentation
-       and edge cases; mostly redundant for S1)
-    3. TERTIARY safety = Day Session Emergency (catches any
-       position that somehow survived to 08:45+)
+    This means S1 was never really a pure-night strategy. It was
+    a "Night Breakout + Overnight Gap Capture" hybrid that
+    benefited from TXF1's systematic positive overnight gap on
+    surviving long positions.
 
-  ARCHITECTURE CHANGES:
-    Renamed input ExitTime -> split into 3 dedicated inputs:
-      EntryEnd_Time(415)        : entries BLOCKED at Time >= this
-      DailyFlat_Time(415)       : forced flat fires from Time >= this
-      NightCloseBar_Time(500)   : DO NOT fire on this bar
-                                  (= 04:45-05:00 last night bar;
-                                   firing here = 08:45 day-open
-                                   gap = bug)
+  v2.4 EMBRACES THIS:
+    - ExitTime = 500 (back to v2.1 original)
+    - LX_NM_Time exit fires on last night bar -> fills at 09:00
+      day open (intentional design, not bug)
+    - 強名稱: "Night + Overnight Gap Capture" (honest)
+    - Holiday module KEPT for multi-day gap protection
+      (holiday eves carry 60+ hour gap risk, not 4-hour)
 
-    Renamed label LX_NM_Time -> LX_NM_DailyFlat (clearer intent)
+  USER'S NEW HYPOTHESIS (SL -> next-day gap-down):
+    When night session entry hits SL, structural weakness
+    suggests next-day gap-down is high probability. v2.4 doesn't
+    act on this (SL trades close immediately at SL price, no
+    day-open exposure). But this is fertile ground for a future
+    strategy: "S16 - Day Open Reversal Short after Night SL"
+    could explicitly trade the gap-down signal.
 
-    Added new label LX_NM_DaySession_EMERGENCY:
-      Catches positions that somehow survived to day session
-      (08:45-13:45). Should NEVER fire if DailyFlat works -
-      investigate immediately if it does.
+  WHAT v2.4 RESTORES FROM v2.1:
+    - ExitTime input back to 500 (was 415 in v2.2/v2.3 bug-fix)
+    - Entry condition: Time < ExitTime (= Time < 500)
+    - v_IsNightSession: Time >= NightOpen OR Time < ExitTime
+    - LX_NM_Time label (was LX_NM_DailyFlat in v2.3)
 
-  GUARANTEED FLAT-BY-05:00 LOGIC:
-    With defaults (DailyFlat_Time=415, NightCloseBar_Time=500):
-      Time=415 (04:00-04:15 close) fires sell next bar at market
-        -> fills at OPEN of Time=430 bar (04:15)
-      Time=430 (retry) -> fills at 04:30
-      Time=445 (retry) -> fills at 04:45 OPEN of Time=500 (last night bar)
-      Time=500 (NightCloseBar) -> NEVER FIRES (would cause 08:45 gap)
+  WHAT v2.4 REMOVES FROM v2.3:
+    - EntryEnd_Time input (use ExitTime instead)
+    - DailyFlat_Time input (use ExitTime instead)
+    - NightCloseBar_Time input (no hard cap needed - exit at
+      Time=500 IS the intent)
+    - LX_NM_DaySession_EMERGENCY (would interfere with intent)
 
-    Position GUARANTEED flat by 04:45 OPEN (one bar before close).
-    3 retry chances provide robustness against transient fill issues.
+  WHAT v2.4 KEEPS FROM v2.2/v2.3:
+    - Holiday_Tail registry (63 TAIFEX dates)
+    - Holiday_Flat_Time(415) - holiday-eve exit at 04:15
+      (multi-day gap risk on holiday eves IS bigger than the
+       gap arbitrage benefit)
+    - Registry_Valid_Until(1270101) fail-safe
+    - Manual_Kill_Switch(false)
+    - LX_NM_Holiday / LX_NM_Kill / LX_NM_RegistryEnd labels
+    - v_Holiday_Block entry gate
 
-  BACKWARD INCOMPATIBILITY:
-    Removed input: ExitTime
-    Added inputs: EntryEnd_Time, DailyFlat_Time, NightCloseBar_Time
-    MC12 panel: old ExitTime field disappears, new fields appear
-    with .pla defaults. User must verify panel after loading.
+  EXPECTED PERFORMANCE (v2.4 should match v2.2 baseline):
+    Net: ~+1,720,000
+    PF:  ~1.42
+    MDD: ~-270,000
+    WR:  ~58.5%
+    LX_NM_Time exit time: 09:00 (intentional, captures gap)
 
-  WHY v2.2 BUG PERSISTED IN MC12 EVEN WITH "ExitTime=415" SHOWN:
-    Evidence from user's v2.2 Excel:
-      - Entries at Time=500 (= 05:00, last night bar)
-        IMPOSSIBLE with ExitTime=415 (entry condition `Time<415`)
-      - Exits ALL at Time=900 (= 09:00, day session open)
-    Conclusion: MC12 was effectively running ExitTime=500 even
-    though panel showed 04:15 (likely user looked at
-    Holiday_Flat_Time which is also 415).
-
-    v2.3 prevents this confusion by:
-    1. Removing the ambiguous ExitTime input
-    2. Using NightCloseBar_Time=500 as a HARD cap that prevents
-       the bug REGARDLESS of what DailyFlat_Time user sets
-    3. If user mis-sets DailyFlat_Time too high, it just won't
-       trigger early enough but WILL still trigger before Time=500
-
-  HOLIDAY MODULE (kept, but secondary):
-    For S1 (forced flat every morning), the Holiday module is
-    redundant - daily flat handles holiday eves automatically.
-    Kept for:
-      1. Consistency with L1-L5 (same registry, same labels)
-      2. Manual_Kill_Switch (typhoon emergencies)
-      3. Registry_Valid_Until fail-safe (long-term safety)
-      4. Documentation value
-
-  DEPLOY ONLY WHEN FLAT (changes historical exit fills from
-  09:00 to 04:30 - rewrites every trade that used LX_NM_Time).
+  DEPLOY ONLY WHEN FLAT (changes exit times back from 04:30
+  to 09:00 - rewrites all LX_NM_DailyFlat trades).
 }
 
 inputs:
@@ -94,19 +80,12 @@ inputs:
     TrailActATR(2.75),
     TrailOffATR(0.7),
     NightOpen(1500),
+    ExitTime(500),                  { v2.4 REVERTED to v2.1: captures overnight gap via 09:00 fill }
     VolSlowLen(70),
     VolRatioMin(0.80),
 
-    { v2.3 PRIMARY SAFETY: Daily 05:00 Flat (replaces old ExitTime) }
-    EntryEnd_Time(415),          { Entry orders BLOCKED at Time >= this. 415 = 04:15.
-                                   Last entry-issuing bar = Time=400 (03:45-04:00) }
-    DailyFlat_Time(415),         { Forced flat fires from Time >= this. 415 = 04:15.
-                                   3 retries: 415, 430, 445 (each fires "sell next bar at market") }
-    NightCloseBar_Time(500),     { Last night bar Time = 500. HARD CAP - never fire on this bar
-                                   (next bar = 08:45 day open = 3.75-hour gap exposure) }
-
-    { v2.2 SECONDARY: Holiday Flat Rule v3 (mostly redundant for S1) }
-    Holiday_Flat_Time(415),      { Same trigger time as DailyFlat for consistency }
+    { v2.4 Holiday Safety Module (KEPT from v2.2/v2.3 - genuine multi-day gap protection) }
+    Holiday_Flat_Time(415),         { Holiday eve flat at 04:15 (avoids 60+hr gap on holiday closures) }
     Registry_Valid_Until(1270101),
     Manual_Kill_Switch(false);
 
@@ -124,7 +103,7 @@ variables:
     v_VolRatio(0),
     v_VolPass(false),
 
-    { v2.2 Holiday Flat Rule v3 }
+    { Holiday Safety state }
     v_Holiday_Block(false),
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
@@ -135,8 +114,6 @@ arrays:
 
 { ==========================================
   HOLIDAY TAIL REGISTRY (shared with L1/L2/L3/L4/L5)
-  Used by SECONDARY safety only (Holiday module).
-  PRIMARY safety (DailyFlat) doesn't need this.
   ========================================== }
 
 if CurrentBar = 1 then begin
@@ -207,7 +184,7 @@ end;
 { ATR calculation }
 v_ATR = AvgTrueRange(ATRLen);
 
-{ Volatility expansion filter: compare fast ATR vs slow ATR }
+{ Volatility expansion filter }
 v_SlowATR = AvgTrueRange(VolSlowLen);
 if v_SlowATR > 0 then
     v_VolRatio = v_ATR / v_SlowATR
@@ -215,8 +192,8 @@ else
     v_VolRatio = 1;
 v_VolPass = (v_VolRatio >= VolRatioMin);
 
-{ Detect night session (uses NightCloseBar_Time as upper bound) }
-v_IsNightSession = (Time >= NightOpen) or (Time < NightCloseBar_Time);
+{ Detect night session (v2.1 original definition restored) }
+v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 
 { Reset at night session open }
 if Time >= NightOpen and Time[1] < NightOpen then begin
@@ -240,60 +217,45 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ Entry: Long breakout - blocked after EntryEnd_Time + holiday tail }
-if v_RangeReady and v_IsNightSession and Time < EntryEnd_Time and
+{ Entry: Long breakout (v2.1 original + Holiday Block guard) }
+if v_RangeReady and v_IsNightSession and Time < ExitTime and
    v_VolPass and v_Holiday_Block = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
 
-{ Freeze ATR at entry time - prevents stop drift during trade }
+{ Freeze ATR at entry time }
 if MarketPosition = 1 and v_Prev_MP <= 0 then
     v_EntryATR = v_ATR;
 
-{ ==========================================
-  v2.3 EXIT PRIORITY CHAIN
-  Mutually exclusive (if/else if), highest priority wins.
-  All Market orders -> fill at next bar OPEN.
-
-  PRIMARY (every night, MUST flat by 05:00):
-    LX_NM_DailyFlat  - Time = DailyFlat_Time to NightCloseBar_Time-1
-
-  SECONDARY (holiday-specific, mostly redundant for S1):
-    LX_NM_Kill       - Manual_Kill_Switch (typhoon)
-    LX_NM_RegistryEnd - Registry_Valid_Until exceeded
-    LX_NM_Holiday    - Holiday tail + Time >= Holiday_Flat_Time
-
-  TERTIARY (emergency safety net - should NEVER fire):
-    LX_NM_DaySession_EMERGENCY - position survived to 08:45+ day session
-                                  (means DailyFlat failed - investigate!)
-  ========================================== }
-
+{ Priority 0: Holiday Safety (overrides normal LX_NM_Time exit on holiday eves) }
 if MarketPosition = 1 then begin
     if Manual_Kill_Switch then
         sell ("LX_NM_Kill") next bar at market
     else if v_Registry_Expired then
         sell ("LX_NM_RegistryEnd") next bar at market
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then
-        sell ("LX_NM_Holiday") next bar at market
-    else if Time >= DailyFlat_Time and Time < NightCloseBar_Time then
-        sell ("LX_NM_DailyFlat") next bar at market
-    else if Time >= 845 and Time <= 1245 then
-        sell ("LX_NM_DaySession_EMERGENCY") next bar at market;
+        sell ("LX_NM_Holiday") next bar at market;
 end;
 
-{ Exit: ATR-based stop loss (Stop type, fires only if price hits level) }
+{ Exit: ATR-based stop loss (during night session) }
 if MarketPosition = 1 and v_EntryATR > 0 then
     sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
 
-{ Exit: ATR-based take profit (Limit type, fires only if price hits level) }
+{ Exit: ATR-based take profit (during night session) }
 if MarketPosition = 1 and v_EntryATR > 0 then
     sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
 
-{ Exit: ATR-based trailing stop (activates after profit >= TrailActATR * ATR) }
+{ Exit: ATR-based trailing stop (during night session) }
 if MarketPosition = 1 and v_EntryATR > 0 then begin
     if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
         sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
+end;
+
+{ Exit: Time-based forced close at 09:00 (captures overnight gap, v2.1 original) }
+if Time >= ExitTime and Time < NightOpen then begin
+    if MarketPosition = 1 then
+        sell ("LX_NM_Time") next bar at market;
 end;
 
 { Track previous bar position }

@@ -1,10 +1,76 @@
-# S1 NightMomentum v2.3 — 中文逐行註解
+# S1 NightMomentum v2.4 — 中文逐行註解
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
 > 最後更新：**2026-06-13**
-> 版本：**v2.3 Daily Flat as PRIMARY safety（三層防護架構）**
-> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.3）
-> 設計文件：[docs/S1_v23_daily_flat_redesign.md](../../../docs/S1_v23_daily_flat_redesign.md)
+> 版本：**v2.4 = REVERT to v2.1 ExitTime 行為 + 保留 Holiday 安全 + 誠實命名**
+> 真實本質：**夜盤突破 + 跨夜 Overnight Gap 套利** 混合策略（不是純夜盤）
+> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.4）
+> 完整設計文件：[docs/S1_v24_overnight_gap_revelation.md](../../../docs/S1_v24_overnight_gap_revelation.md)
+
+## v2.4 決策摘要（2026-06-13）
+
+### 用戶決定回歸 v2.1 內容（理由）
+
+v2.3 用 04:30 強制平倉揭露真相：**真正的純夜盤淨利只 +402,600**，遠不如 v2.2 的 +1,720,600。
+差異 +1,318,000 = 跨夜 gap 系統性正向（每筆 +12.6 點）。
+
+**S1 的本質 = 夜盤突破 + 跨夜 gap 套利混合策略，不是純夜盤**。
+
+### v2.4 = v2.1 行為 + Holiday 安全網
+
+| 從 v2.1 恢復 | 從 v2.2/v2.3 保留 |
+|--------------|-------------------|
+| ExitTime = 500（捕捉 gap）| Holiday_Tail 63 筆登錄表 |
+| Entry condition Time<ExitTime | Holiday_Flat_Time=415 |
+| LX_NM_Time 標籤 | Registry_Valid_Until + 30 天警告 |
+| v_IsNightSession 定義 | Manual_Kill_Switch |
+
+| 從 v2.3 移除 |
+|--------------|
+| EntryEnd_Time / DailyFlat_Time / NightCloseBar_Time inputs |
+| LX_NM_DailyFlat / LX_NM_DaySession_EMERGENCY 標籤 |
+
+### 用戶的關鍵洞察：SL → 跳空開低假設
+
+> 「假設夜盤進場，如果碰到止損，是不是隔天跳空開低機率高？」
+
+**間接證據支持**：v2.2 vs v2.3 揭露存活組有 **+12.6 點正向 gap**，意味整體 gap 分布是 **雙峰**：
+- 存活組（夜盤多頭結構強）：正向 gap
+- SL 組（夜盤結構崩）：負向 gap（用戶假設）
+
+**這是未來 S16+ 新策略的種子**：「夜盤 SL → 隔天開盤做空」反向策略。
+
+### 為什麼保留 Holiday 模組（即使是「gap 套利」策略）？
+
+| Gap 類型 | 時長 | 策略處置 |
+|----------|------|----------|
+| 正常夜→日 gap | 4 小時 | ✅ 主動吃（LX_NM_Time 09:00 出場）|
+| 假日跨假 gap | **60+ 小時** | ❌ 避開（LX_NM_Holiday 04:30 出場）|
+
+正常 gap 是統計性可預測的（4 小時、無重大事件累積），假日 gap 不可預測（多天、可能爆發事件）。
+
+**取兩個世界最好的**。
+
+### MC12 部署 v2.4
+
+1. 空手確認 → 完全移除舊 strategy → 重新載入 v2.4 .pla
+2. 確認 Inputs：
+   - **`ExitTime` = 05:00 (500)** ← 回到 v2.1 原值
+   - `Holiday_Flat_Time` = 04:15 (415)
+   - `Registry_Valid_Until` = 1270101
+   - `Manual_Kill_Switch` = false
+   - 不再看到：EntryEnd_Time / DailyFlat_Time / NightCloseBar_Time
+3. 重跑回測
+4. 驗收：
+   - LX_NM_Time 出場時間 = **09:00（intentional gap capture）**
+   - 淨利 ≈ +1,700,000（接近 v2.2 baseline）
+   - LX_NM_Holiday 偶爾觸發（保護跨多日 gap）
+
+---
+
+> 以下保留 v2.3 的歷史內容供參考：
+
+## v2.3（已被 v2.4 取代）三層防護架構（2026-06-13）
 
 ## v2.3 重新架構（2026-06-13）
 
