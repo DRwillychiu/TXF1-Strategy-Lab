@@ -1,9 +1,58 @@
-# S1 NightMomentum v2.2 — 中文逐行註解
+# S1 NightMomentum v2.3 — 中文逐行註解
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
 > 最後更新：**2026-06-13**
-> 版本：**v2.2 ATR-Based + Vol Filter + HolidayFlat_v3 + ExitTime BugFix**
-> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.2）
+> 版本：**v2.3 Daily Flat as PRIMARY safety（三層防護架構）**
+> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.3）
+> 設計文件：[docs/S1_v23_daily_flat_redesign.md](../../../docs/S1_v23_daily_flat_redesign.md)
+
+## v2.3 重新架構（2026-06-13）
+
+### 用戶批評（v2.2 設計缺陷）
+> 「你是特別針對節日作時間調整但本質上這份純夜盤策略應該要在 05:00 就把夜盤策略的單平倉才對。這部分你沒有規劃清楚。」
+
+v2.2 把 **Holiday 模組** 當主角，把 **Daily 05:00 Flat** 寫成「ExitTime bug fix」。本末倒置。
+
+### v2.3 三層安全架構
+| 層級 | 機制 | 標籤 |
+|------|------|------|
+| **PRIMARY**（本質性，每天必做）| Daily 05:00 Flat | **LX_NM_DailyFlat** |
+| SECONDARY（特殊日子加碼）| Holiday / Kill / Registry | LX_NM_Holiday / LX_NM_Kill / LX_NM_RegistryEnd |
+| TERTIARY（緊急救命網）| Day Session Emergency | **LX_NM_DaySession_EMERGENCY** |
+
+### Input 重新拆分（單一 ExitTime → 3 個專責 input）
+
+| Input | v2.3 預設 | 職責 |
+|-------|----------|------|
+| `EntryEnd_Time` | 415 | 進場閘門（Time ≥ 此 → 不再發新單）|
+| `DailyFlat_Time` | 415 | 出場觸發（Time ≥ 此 → forced flat）|
+| **`NightCloseBar_Time`** | **500** | **HARD CAP** — 永不在此 bar 發單 |
+
+### 為什麼 v2.3 不會出 v2.2 的 bug
+
+v2.2：`Time >= ExitTime AND Time < NightOpen=1500` → 包含 Time=500（最後夜盤 bar）→ 發單 → next bar=900 → 09:00 出場 bug
+
+v2.3：`Time >= DailyFlat_Time AND Time < NightCloseBar_Time=500` → 排除 Time=500 → 永不發單在最後 bar → **bug 從架構層級消滅**
+
+### 新出場標籤對照
+
+| 標籤 | v2.2 | v2.3 |
+|------|------|------|
+| LX_NM_Time | ✅ | ❌ 移除（被 LX_NM_DailyFlat 取代） |
+| **LX_NM_DailyFlat** | ❌ | ✅ **新（PRIMARY 出場）** |
+| **LX_NM_DaySession_EMERGENCY** | ❌ | ✅ **新（救命網）** |
+| LX_NM_Kill / Registry / Holiday | ✅ | ✅（preserved）|
+
+### MC12 部署要求（v2.3）
+1. **完全移除** 現有 S1 strategy，重新從 .pla 新增（強制使用新預設值）
+2. 確認看到新 input：`EntryEnd_Time / DailyFlat_Time / NightCloseBar_Time`
+3. 確認不再看到舊 input：`ExitTime`
+4. 重跑回測 → 驗收 `LX_NM_DailyFlat` 出場時間在 04:30-05:00 內
+5. `LX_NM_DaySession_EMERGENCY` 觸發筆數應為 0（若有則需調查）
+
+---
+
+> 以下保留 v2.2 內容供參：
 
 ## v2.2 兩大修正（2026-06-13）
 
