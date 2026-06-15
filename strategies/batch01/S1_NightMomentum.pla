@@ -1,11 +1,56 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.1: ATR-Based + Volatility Expansion Filter}
+{v2.2: ATR-Based + Vol Filter + HolidayFlat_v3 + ExitTime BugFix}
 {Category A: Night Session Opening Range Breakout}
 {Direction: Long Only (Short removed: MC12 Short PF=0.93)}
 {Timeframe: 15-min on TXF1}
 {v_EntryATR freeze: ATR captured at entry, held constant during trade}
-{v2.1: Only enter when fast ATR / slow ATR >= threshold (vol expanding)}
-{Parameters: MC12 v2.1 GA optimized (2020/01~2026/06, 1M capital)}
+
+{ v2.2 CHANGELOG (2026-06-13):
+
+  P0 CRITICAL BUG FIX - ExitTime 500 -> 415:
+    v2.1 had ExitTime(500) = 05:00 = the LAST night bar.
+    On that bar, `sell next bar at market` cannot fill until
+    the next available bar = next-day 08:45-09:00 day session
+    bar. So positions exited at 08:45 day-session OPEN
+    (Time=900 in Excel reports). Confirmed by user
+    observation. This violated the "pure night strategy"
+    design AND created 3.75-hour uncoverable gap exposure.
+
+    Fix: ExitTime = 415 (04:15 trigger). Next bar = 04:30
+    night session bar. Market order fills at 04:30 OPEN
+    (still in night session). If first fill fails, retries
+    at 04:45 and 05:00 bars. Position guaranteed flat
+    before 05:00 night session close.
+
+    Matches L4 v14.2B / L5 v19.7 15M-grid pattern
+    (Holiday_Flat_Time = 415 same convention).
+
+  P1 HOLIDAY FLAT RULE v3 ADDED:
+    Same 63-date TAIFEX-verified registry as L1/L2/L3/L4/L5
+    (byte-identical). For S1 (forced flat every morning),
+    the holiday module is BELT-AND-SUSPENDERS to the daily
+    ExitTime flat - same trigger time on both. Adds:
+      - v_Holiday_Block as additional entry gate
+        (don't open new long on holiday-eve tail bars even
+         though daily flat would handle it - explicit safety)
+      - LX_NM_Holiday market exit at Holiday_Flat_Time
+        (redundant with LX_NM_Time on same bar but lets
+         backtest reports distinguish holiday-eve exits)
+      - Registry_Valid_Until(1270101) fail-safe
+        (beyond 2027-01-01: block entries + flatten with
+         LX_NM_RegistryEnd label + 30-day chart warning)
+      - Manual_Kill_Switch(false) for typhoon-class closures
+        (LX_NM_Kill market exit)
+    History impact: 0 historical holiday violations expected
+    (forced flat every night already handles it). Forward
+    protection value comes from Manual_Kill_Switch and the
+    Registry fail-safe. First live test: 2026-06-18 Dragon
+    Boat eve.
+
+  DEPLOY ONLY WHEN FLAT (changes historical exit fills from
+  09:00 day open to 04:30 night close - rewrites every trade
+  that previously used LX_NM_Time exit).
+}
 
 inputs:
     LookbackBars(11),
@@ -18,9 +63,14 @@ inputs:
     TrailActATR(2.75),
     TrailOffATR(0.7),
     NightOpen(1500),
-    ExitTime(0500),
+    ExitTime(415),                  { v2.2 fix: 500 -> 415 (was bug: 500 = last night bar) }
     VolSlowLen(70),
-    VolRatioMin(0.80);
+    VolRatioMin(0.80),
+
+    { v2.2 Holiday Flat Rule v3 (same module as L1/L2/L3/L4/L5) }
+    Holiday_Flat_Time(415),         { 15M grid: 04:15 trigger; same as ExitTime }
+    Registry_Valid_Until(1270101),  { verified holiday-registry horizon }
+    Manual_Kill_Switch(false);
 
 variables:
     v_NightHigh(0),
@@ -34,7 +84,91 @@ variables:
     v_Prev_MP(0),
     v_SlowATR(0),
     v_VolRatio(0),
-    v_VolPass(false);
+    v_VolPass(false),
+
+    { v2.2 Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0);
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  v2.2 HOLIDAY TAIL REGISTRY (TAIFEX-verified, shared with
+  L1/L2/L3/L4/L5). Holiday_Tail = last trading day + 1
+  calendar day = the date stamped on the 00:00-05:00 tail
+  bars of the final night session before each closure.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
 
 { ATR calculation }
 v_ATR = AvgTrueRange(ATRLen);
@@ -72,8 +206,9 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ Entry: Long breakout — ONLY when volatility is expanding }
-if v_RangeReady and v_IsNightSession and Time < ExitTime and v_VolPass then begin
+{ Entry: Long breakout — ONLY when vol expanding AND not on holiday tail }
+if v_RangeReady and v_IsNightSession and Time < ExitTime and
+   v_VolPass and v_Holiday_Block = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
@@ -81,6 +216,17 @@ end;
 { Freeze ATR at entry time - prevents stop drift during trade }
 if MarketPosition = 1 and v_Prev_MP <= 0 then
     v_EntryATR = v_ATR;
+
+{ v2.2 Priority 0 exits (Kill / RegistryEnd / Holiday) -
+  emitted BEFORE other exits so Market beats Stop on next bar fill }
+if MarketPosition = 1 then begin
+    if Manual_Kill_Switch then
+        sell ("LX_NM_Kill") next bar at market
+    else if v_Registry_Expired then
+        sell ("LX_NM_RegistryEnd") next bar at market
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then
+        sell ("LX_NM_Holiday") next bar at market;
+end;
 
 { Exit: ATR-based stop loss }
 if MarketPosition = 1 and v_EntryATR > 0 then
@@ -96,7 +242,7 @@ if MarketPosition = 1 and v_EntryATR > 0 then begin
         sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
 end;
 
-{ Exit: time-based forced close }
+{ Exit: time-based forced close (v2.2 fix: ExitTime now 415, not 500) }
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then
         sell ("LX_NM_Time") next bar at market;

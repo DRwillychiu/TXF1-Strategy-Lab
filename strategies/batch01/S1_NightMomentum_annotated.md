@@ -1,8 +1,53 @@
-# S1 NightMomentum v2.0 ATR — 中文逐行註解
+# S1 NightMomentum v2.2 — 中文逐行註解
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
-> 最後更新：2026-06-07
-> 版本：v2.1 ATR-Based + 波動率擴張過濾器
+> 最後更新：**2026-06-13**
+> 版本：**v2.2 ATR-Based + Vol Filter + HolidayFlat_v3 + ExitTime BugFix**
+> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.2）
+
+## v2.2 兩大修正（2026-06-13）
+
+### 🔴 P0 — ExitTime 500 → 415（Critical Bug Fix）
+
+| 維度 | v2.1（壞）| v2.2（修）|
+|------|----------|----------|
+| ExitTime | 500（05:00 = **最後一根夜盤 K 棒**）| **415（04:15 觸發）**|
+| Market 單觸發 bar | 04:45-05:00 收盤 | 04:00-04:15 收盤 |
+| Market 單成交 bar | **隔天 08:45-09:00 日盤首根** ❌ | 04:15-04:30 夜盤 ✅ |
+| Excel 出場時間 | **09:00**（日盤開盤）| 04:30（夜盤內）|
+| 跨夜盤 gap 暴露 | **3 小時 45 分鐘** ❌ | 無 ✅ |
+| 純夜盤聲明 | 失真 ❌ | 真實 ✅ |
+| 重試次數 | 0（已是最後一根）| 3 次（04:30/04:45/05:00）|
+
+**bug 機制**：v2.1 在 Time=500 觸發 `sell next bar at market`，但 05:00 後夜盤結束，PowerLanguage 找不到下一根 K 棒直到 08:45 開盤 → 訂單卡在 queue → 08:45 OPEN 才成交。
+
+**修正原則**：對齊 L4 v14.2B / L5 v19.7 的 15M 鐵律（Holiday_Flat_Time=415）。
+
+### 🟡 P1 — HolidayFlat_v3 模組（與 L1-L5 同等保護）
+
+| 新增項目 | 用途 |
+|----------|------|
+| Holiday_Tail[80] 63 筆登錄表 | TAIFEX-verified，與 L1-L5 byte-identical |
+| `Holiday_Flat_Time(415)` | 假日尾段日強制歸零（同 ExitTime 值，belt-and-suspenders）|
+| `Registry_Valid_Until(1270101)` | 視界 fail-safe，超過 2027/1/1 自動封鎖 |
+| `Manual_Kill_Switch(false)` | 緊急停市開關（颱風等）|
+| v_Holiday_Block | 額外進場閘門（尾段日 00:00-05:00 禁止 LE_NM_Long）|
+| 30 天紅字警告 | LastBarOnChart 過期前提醒 |
+
+**新增出場標籤（Priority 0）**：
+- `LX_NM_Kill` — Manual_Kill_Switch 觸發
+- `LX_NM_RegistryEnd` — 視界過期觸發
+- `LX_NM_Holiday` — 尾段日 04:15 觸發（與 LX_NM_Time 同 bar 觸發但讓報表可區分）
+
+**對 S1 而言 P1 的特殊性**：因為 S1 已是「每晚 04:15 強制歸零」，假日跨假風險本來就被 ExitTime 處理掉。HolidayFlat_v3 主要價值是：
+1. Manual_Kill_Switch（真正獨有的新保護）
+2. Registry_Valid_Until fail-safe
+3. 與 L1-L5 一致性（將來組合分析容易）
+
+---
+
+> 原始 v2.1 內容如下（保留供參）：
+>
 > 參數來源：MC12 v2.1 GA 最佳化（已寫入 .pla）→ P1~P3 全通過 → ✅ PASS@1M，可上架實測
 
 ---
