@@ -11,11 +11,29 @@
 - 回測區間：2020/01/01 ~ 今天
 - 交易時段：日盤 08:45-13:45 / 夜盤 15:00-05:00
 
-## 目錄結構
+## 目錄結構（三層分類，2026-06-13 重組）
 ```
 CLAUDE.md                          # 本檔案 - Claude Code 的專案指引
 strategies/
-  batchNN/                         # 每批策略（Markdown + 回測 JSON）
+  live/                            # 實盤上架（真金白銀）— L1-L5
+    README.md                      # 上架策略清單 + 共通保護模組
+    L1_TrendLong.pla
+    L2_TrendShort.pla
+    L3_ConsolidationLong.pla
+    L4_ConsolidationShort.pla
+    L5_BreakoutLong.pla
+    L*_annotated.md
+    L*_review.md
+  live_simulation/                 # 上架但模擬中（MC12 模擬帳戶）— S1
+    README.md                      # 模擬中策略 + 晉升 live 條件
+    S1_NightMomentum.pla
+    S1_NightMomentum_annotated.md
+  research/                        # 研究中（未通過 P1-P3）— S2-S15
+    README.md                      # 研究流程 + 晉升模擬條件
+    batch01/                       # 第一批：S2-S5
+    S06_FlashCrashMomentum/        # 各自獨立資料夾
+    ... (S07-S15)
+    _batch_summaries/
 backtest/
   fetch_data.py                    # 資料抓取（yfinance ^TWII）
   run_backtest.py                  # 批次回測腳本
@@ -29,11 +47,34 @@ optimization/
   configs/                         # 各策略的優化設定 YAML
   reports/                         # 優化報告輸出
 scripts/
+  verify_all_live.py               # ★ Master 跨策略驗證（L1-L5）110 項
+  verify_l4_v142.py                # L4 深度驗證 67 項
+  verify_s1_v22.py                 # S1 模擬上架驗證 26 項
+  analyze_l5_v198_variants.py      # L5 v19.8 A/B 分析
   export_to_mc.py                  # 匯出 PowerLanguage 原始碼供 MC 載入
   strategy_comparison.py           # 策略組合分析
 docs/
+  entry_exit_sop.md                # 9 層出場架構標準
+  position_sizing_and_capacity.md  # 口數配置框架
+  L4_v142_pathA_entry_diagnostic.md   # L4 A/B Path A 完整診斷
+  L4_v142_pathB_variant_matrix.md     # L4 A/B Path B 變體設計
+  L4_v142_variant_results.md          # L4 A/B 七變體實證結果
+  L5_v198_pretrail_sp_design.md       # L5 SP 模組設計
+  L5_v198_variant_results.md          # L5 A/B 六變體實證結果
+  optimization_opportunities_2026Q2.md  # 優化空間清單
   optimization_guide.md            # 優化方法論文件
 ```
+
+## 三層晉升流程
+
+```
+research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實證]──►  live/
+（開發中）                       （MC12 模擬）                      （MC9 實盤）
+```
+
+**晉升條件**：
+- research → live_simulation：通過 WFE > 50%、MC 95% MDD < 帳戶 30%、OOS PF > 1.0
+- live_simulation → live：模擬 ≥ 30 筆交易、模擬 PF ≥ 1.2、回測偏離度 ≤ 30%
 
 ## PowerLanguage 程式碼規範
 1. 所有參數用 `inputs:` 宣告，不可寫死

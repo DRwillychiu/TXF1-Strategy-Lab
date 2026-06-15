@@ -2,7 +2,7 @@
 import re, sys, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-with open('strategies/batch01/S1_NightMomentum.pla', 'r', encoding='utf-8') as f:
+with open('strategies/live_simulation/S1_NightMomentum.pla', 'r', encoding='utf-8') as f:
     s = f.read()
 
 def strip_comments(s):
