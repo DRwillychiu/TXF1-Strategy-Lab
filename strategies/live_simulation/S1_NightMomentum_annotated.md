@@ -1,3 +1,107 @@
+# S1 NightMomentum v2.5 — 中文逐行註解
+
+> 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
+> 最後更新：**2026-06-13**
+> 版本：**v2.5 = v2.4 + Trail A/B engine（修活 Trail + 真移動停損）**
+> 真實本質：**夜盤突破 + 跨夜 Overnight Gap 套利 + 本金保護 MFE 鎖利**
+> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.5）
+
+## v2.5 解決什麼問題（用戶批評）
+
+> 「這份 S1 策略是不是沒有做移動停損？不然我的本金要如何保護？」
+
+### 鐵證：v2.4 的 LX_NM_Trail 是 DEAD CODE
+- v2.4 程式碼存在 LX_NM_Trail，但 6.5 年 / 783 筆回測 **觸發 0 次**
+- 原因：`TrailActATR(2.75) > TargetATRMult(2.0)` → **TP 永遠先觸發，Trail 永遠等不到**
+- 結果：本金保護只剩初始 SL（Entry - 2.75 ATR），MFE 峰值完全無保護
+
+### v2.5 A/B 雙修
+
+| 變體 | 機制 | 觸發 | 效果 |
+|------|------|------|------|
+| **A 修活 Trail（一次性鎖）**| 達 1.5 ATR → 鎖停損在 Entry + 0.8 ATR | 一次性鎖死 | 把死碼變活 |
+| **B 真移動停損（DEFAULT）**| 追蹤 HighestClose，停損 = HighestClose - 0.7 ATR | 隨高點 ratchet up | **鎖住 MFE 峰值** |
+
+## v2.5 新 Input
+
+| Input | v2.4 | **v2.5** | 變動 |
+|-------|------|----------|------|
+| `TrailActATR` | 2.75（死碼）| **1.5** | 降低到 TP 之下，讓 Trail 能啟動 |
+| `TrailOffATR` | 0.7 | 0.7 | 不變 |
+| **`Trail_Mode`** | — | **2（B）** | **新增：0=off / 1=A / 2=B（預設）** |
+
+## v2.5 新標籤
+
+| 標籤 | 觸發 |
+|------|------|
+| **`LX_NM_Trail_A`** | Trail_Mode=1 時，固定鎖價在 Entry + 0.8 ATR |
+| **`LX_NM_Trail_B`** | Trail_Mode=2 時，真移動停損 HighestClose - 0.7 ATR |
+| ~~LX_NM_Trail~~ | 移除（舊死碼）|
+
+## 防呆機制：Dead-Config 紅字警告
+
+若用戶誤設 `TrailActATR >= TargetATRMult`（會讓 Trail 再次死碼），程式自動在圖表上畫紅字警告：
+
+```
+TRAIL DEAD: TrailActATR=2.75 >= TargetATRMult=2.0
+            - TP fires first, Trail never activates!
+```
+
+## v2.5 三層本金保護
+
+```
+1. 初始 SL（最大虧損鎖）
+   Entry - 2.75 × ATR
+   ↓ 若 SL 沒觸發
+
+2. Trail（MFE 峰值守護）— v2.5 NEW
+   Mode A: 達 1.5 ATR 鎖在 Entry + 0.8 ATR
+   Mode B: 真移動停損 HighestClose - 0.7 ATR
+   ↓ 若 Trail 沒觸發
+
+3. TP（目標獲利）
+   Entry + 2.0 × ATR
+```
+
+## A/B 測試矩陣（建議 MC12 部署順序）
+
+| 變體 | Trail_Mode | TrailActATR | 測試目的 |
+|------|-----------|-------------|----------|
+| Baseline | 0 | (any) | 應與 v2.4 一致（迴歸檢查）|
+| A | 1 | 1.5 | 修活的固定鎖效果 |
+| **B**（DEFAULT）| 2 | 1.5 | **真移動停損效果** |
+
+## 預期績效（v2.5 vs v2.4 baseline）
+
+| 變體 | 預期淨利 | 預期 MDD | 機制 |
+|------|----------|----------|------|
+| v2.4 baseline | +1,720,600 | -269,800 | 無 Trail |
+| v2.5 Mode 0 | ≈ +1,720,600 | ≈ -270K | 迴歸檢查（應一致）|
+| v2.5 Mode A | ~+1,850K | ≈ -260K | 救回部分 1.5-1.8 ATR 回檔 |
+| **v2.5 Mode B** | **~+2,000K~+2,200K** | **~-250K** | **真鎖 MFE 峰值** |
+
+實際數字待 MC12 三變體 backtest 驗證。
+
+## MC12 部署步驟（v2.5）
+
+1. 空手確認 S1 模擬部位 = 0
+2. **完全移除** 舊 S1 strategy（避免 input 殘留）
+3. **重新從 v2.5 .pla 載入**
+4. 確認 Inputs：
+   - `Trail_Mode` = 2（B 預設）
+   - `TrailActATR` = 1.5（不是 2.75）
+   - `TrailOffATR` = 0.7
+   - `ExitTime` = 05:00（v2.4 保留）
+   - 其他 v2.4 input 不變
+5. 跑 3 個 A/B 變體（Mode=0/1/2），分別 export Excel
+6. 傳回給我做 v2.5 完整 acceptance 分析
+
+---
+
+## v2.4 內容保留（v2.5 完全相容）
+
+以下保留原 v2.4 內容供參考：
+
 # S1 NightMomentum v2.4 — 中文逐行註解
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）

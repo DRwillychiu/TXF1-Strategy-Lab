@@ -1,72 +1,95 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.4: Night Session Breakout + Overnight Gap Capture (honest naming)}
-{Category A: Night Session Opening Range Breakout + Day Open Hold}
-{Direction: Long Only (Short removed: MC12 Short PF=0.93)}
+{v2.5: v2.4 base + Trail A/B engine (fix dead Trail + add TRUE ratcheting trail)}
+{Category A: Night Session Breakout + Overnight Gap Capture + MFE protection}
+{Direction: Long Only}
 {Timeframe: 15-min on TXF1}
 
-{ v2.4 CHANGELOG (2026-06-13):
+{ v2.5 CHANGELOG (2026-06-13):
 
-  USER DIRECTIVE: revert to v2.1 ExitTime behavior.
+  USER REQUEST: "立即處理優化 A 修活 Trail + B 真移動停損"
 
-  REVELATION FROM v2.3 ACCEPTANCE BACKTEST:
-    v2.3 (true pure-night, exit at 04:30) showed +402,600.
-    v2.2 (exit at 09:00 day open via bug) showed +1,720,600.
-    Delta = +1,318,000 (= +12.6 pts per LX_NM_Time trade)
-    came from OVERNIGHT GAP exposure that was hidden as a bug.
+  ROOT CAUSE OF v2.4 DEAD TRAIL:
+    v2.4 (and v2.1 original) had a Trail mechanism with:
+      TrailActATR(2.75) = activation at 2.75 ATR profit
+      TargetATRMult(2.0) = TP Limit at 2.0 ATR profit
 
-    This means S1 was never really a pure-night strategy. It was
-    a "Night Breakout + Overnight Gap Capture" hybrid that
-    benefited from TXF1's systematic positive overnight gap on
-    surviving long positions.
+    Since 2.75 > 2.0, TP Limit ALWAYS fires before Trail can
+    activate. Result: LX_NM_Trail label exists in code but
+    fired 0 times in 6.5 years / 783 trades. Pure dead code.
 
-  v2.4 EMBRACES THIS:
-    - ExitTime = 500 (back to v2.1 original)
-    - LX_NM_Time exit fires on last night bar -> fills at 09:00
-      day open (intentional design, not bug)
-    - 強名稱: "Night + Overnight Gap Capture" (honest)
-    - Holiday module KEPT for multi-day gap protection
-      (holiday eves carry 60+ hour gap risk, not 4-hour)
+    Principal protection was effectively ONLY initial SL
+    (Entry - 2.75 × ATR). MFE peaks would round-trip with
+    no protection.
 
-  USER'S NEW HYPOTHESIS (SL -> next-day gap-down):
-    When night session entry hits SL, structural weakness
-    suggests next-day gap-down is high probability. v2.4 doesn't
-    act on this (SL trades close immediately at SL price, no
-    day-open exposure). But this is fertile ground for a future
-    strategy: "S16 - Day Open Reversal Short after Night SL"
-    could explicitly trade the gap-down signal.
+  v2.5 TWO-PRONGED FIX (A/B input-switched engine):
 
-  WHAT v2.4 RESTORES FROM v2.1:
-    - ExitTime input back to 500 (was 415 in v2.2/v2.3 bug-fix)
-    - Entry condition: Time < ExitTime (= Time < 500)
-    - v_IsNightSession: Time >= NightOpen OR Time < ExitTime
-    - LX_NM_Time label (was LX_NM_DailyFlat in v2.3)
+  ★ Variant A — "Fixed Lock" (resurrect old Trail mechanism):
+    - Activation: MaxContractProfit >= TrailActATR × ATR
+    - Stop: EntryPrice + (TrailActATR - TrailOffATR) × ATR
+    - Same calc as v2.4 but with TrailActATR lowered to 1.5
+      (below TP 2.0) so it CAN activate
+    - One-shot lock (stop doesn't move once set)
+    - Label: LX_NM_Trail_A
 
-  WHAT v2.4 REMOVES FROM v2.3:
-    - EntryEnd_Time input (use ExitTime instead)
-    - DailyFlat_Time input (use ExitTime instead)
-    - NightCloseBar_Time input (no hard cap needed - exit at
-      Time=500 IS the intent)
-    - LX_NM_DaySession_EMERGENCY (would interfere with intent)
+  ★ Variant B — "True Ratcheting Trail" (NEW mechanism):
+    - Track v_HighestClose during position
+    - Activation: MaxContractProfit >= TrailActATR × ATR
+    - Stop: v_HighestClose - TrailOffATR × ATR
+    - DYNAMICALLY moves up as new highs are made
+    - Captures MFE peaks (e.g. 200pt peaks that would otherwise
+      round-trip to 0)
+    - Label: LX_NM_Trail_B
+    - Matches L5 v19.7 God Mode trail concept (proven effective)
 
-  WHAT v2.4 KEEPS FROM v2.2/v2.3:
-    - Holiday_Tail registry (63 TAIFEX dates)
-    - Holiday_Flat_Time(415) - holiday-eve exit at 04:15
-      (multi-day gap risk on holiday eves IS bigger than the
-       gap arbitrage benefit)
-    - Registry_Valid_Until(1270101) fail-safe
-    - Manual_Kill_Switch(false)
-    - LX_NM_Holiday / LX_NM_Kill / LX_NM_RegistryEnd labels
-    - v_Holiday_Block entry gate
+  PARAMETER CHANGES:
+    TrailActATR : 2.75 -> 1.5  (now BELOW TargetATRMult=2.0)
+    TrailOffATR : 0.7  -> 0.7  (unchanged)
+    Trail_Mode  : NEW input (0=off, 1=Variant A, 2=Variant B)
 
-  EXPECTED PERFORMANCE (v2.4 should match v2.2 baseline):
-    Net: ~+1,720,000
-    PF:  ~1.42
-    MDD: ~-270,000
-    WR:  ~58.5%
-    LX_NM_Time exit time: 09:00 (intentional, captures gap)
+  DEFAULT: Trail_Mode = 2 (Variant B = true ratcheting)
+    User can toggle to 1 (A) or 0 (off=v2.4 baseline) for A/B test.
 
-  DEPLOY ONLY WHEN FLAT (changes exit times back from 04:30
-  to 09:00 - rewrites all LX_NM_DailyFlat trades).
+  NEW VARIABLES:
+    v_HighestClose : tracks max close since entry (for B)
+    v_TrailArmed   : flag once activation threshold first hit
+    Trail_Warn_ID  : red text warning if config is dead
+
+  DEAD-CONFIG WARNING:
+    If TrailActATR >= TargetATRMult AND Trail_Mode > 0:
+      → Trail will be unable to activate (TP fires first)
+      → Red text on chart warns user
+      → Prevents silent dead-code reincarnation
+
+  WHAT v2.5 PRESERVES FROM v2.4:
+    All other logic intact:
+      ExitTime(500) - v2.1 original gap capture
+      Entry condition Time < ExitTime
+      LX_NM_Time at 09:00 (overnight gap capture)
+      Initial SL at Entry - 2.75 × ATR (principal protection)
+      TP at Entry + 2.0 × ATR
+      Holiday safety module (LX_NM_Holiday at 04:15)
+      Manual_Kill_Switch / Registry_Valid_Until
+      v_Holiday_Block entry gate
+
+  EXPECTED IMPACT (v2.5 Variant B vs v2.4):
+    - MFE-peak round-trip trades: trail catches profit ~+50%
+      of peak (instead of round-tripping to 0)
+    - Top-200 trades (high MFE): may capture 1-1.5 ATR more
+      than current LX_NM_Time exit
+    - Overall net: +200K~+500K estimated improvement
+    - MDD: should improve (less round-trip damage)
+    - Trade count: unchanged (trail doesn't affect entries)
+
+  L5 v19.8 LESSON CHECK:
+    L5 SP module failed because Top-10 tail concentration > 70%
+    made SP cut winners. S1's tail concentration unknown - need
+    to check from v2.4 data. If Top-10 < 70%, Trail B should
+    work fine (similar to L5 God Mode trail which DID work).
+    Verification done in pre-deployment analysis.
+
+  DEPLOY ONLY WHEN FLAT (changes exit fills for trades with
+  MFE between 1.5 ATR and 2.0 ATR that previously survived
+  to LX_NM_Time at 09:00).
 }
 
 inputs:
@@ -77,15 +100,19 @@ inputs:
     RangeMaxATR(4.5),
     StopATRMult(2.75),
     TargetATRMult(2.0),
-    TrailActATR(2.75),
-    TrailOffATR(0.7),
+
+    { v2.5: Trail parameters (TrailActATR lowered from 2.75 to 1.5) }
+    TrailActATR(1.5),               { v2.5: MUST be < TargetATRMult or Trail is dead. Was 2.75. }
+    TrailOffATR(0.7),               { Trail offset (unchanged) }
+    Trail_Mode(2),                  { v2.5 NEW: 0=off (v2.4 behavior), 1=Variant A (fixed lock), 2=Variant B (true ratcheting trail). Default = B (recommended) }
+
     NightOpen(1500),
-    ExitTime(500),                  { v2.4 REVERTED to v2.1: captures overnight gap via 09:00 fill }
+    ExitTime(500),                  { v2.4: captures overnight gap via 09:00 fill }
     VolSlowLen(70),
     VolRatioMin(0.80),
 
-    { v2.4 Holiday Safety Module (KEPT from v2.2/v2.3 - genuine multi-day gap protection) }
-    Holiday_Flat_Time(415),         { Holiday eve flat at 04:15 (avoids 60+hr gap on holiday closures) }
+    { v2.4 Holiday Safety Module }
+    Holiday_Flat_Time(415),
     Registry_Valid_Until(1270101),
     Manual_Kill_Switch(false);
 
@@ -107,7 +134,12 @@ variables:
     v_Holiday_Block(false),
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
-    hidx(0);
+    hidx(0),
+
+    { v2.5 Trail state }
+    v_HighestClose(0),              { tracks max close during position (Variant B) }
+    v_TrailArmed(false),            { trail has been armed once threshold hit }
+    Trail_Warn_ID(-1);              { dead-config warning text ID }
 
 arrays:
     Holiday_Tail[80](0);
@@ -181,6 +213,19 @@ if LastBarOnChart and
     end;
 end;
 
+{ v2.5 Dead-Trail-Config WARNING - prevents silent dead code }
+if LastBarOnChart and Trail_Mode > 0 and TrailActATR >= TargetATRMult then begin
+    if Trail_Warn_ID < 0 then begin
+        Trail_Warn_ID = Text_New(Date, Time, High + 600,
+            "TRAIL DEAD: TrailActATR=" + NumToStr(TrailActATR, 2) +
+            " >= TargetATRMult=" + NumToStr(TargetATRMult, 2) +
+            " - TP fires first, Trail never activates!");
+        Text_SetColor(Trail_Warn_ID, Red);
+        Text_SetSize(Trail_Warn_ID, 16);
+        Text_SetAttribute(Trail_Warn_ID, 1, true);
+    end;
+end;
+
 { ATR calculation }
 v_ATR = AvgTrueRange(ATRLen);
 
@@ -192,7 +237,7 @@ else
     v_VolRatio = 1;
 v_VolPass = (v_VolRatio >= VolRatioMin);
 
-{ Detect night session (v2.1 original definition restored) }
+{ Detect night session }
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 
 { Reset at night session open }
@@ -217,7 +262,7 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ Entry: Long breakout (v2.1 original + Holiday Block guard) }
+{ Entry: Long breakout (v2.1 logic + Holiday Block guard) }
 if v_RangeReady and v_IsNightSession and Time < ExitTime and
    v_VolPass and v_Holiday_Block = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
@@ -228,7 +273,15 @@ end;
 if MarketPosition = 1 and v_Prev_MP <= 0 then
     v_EntryATR = v_ATR;
 
-{ Priority 0: Holiday Safety (overrides normal LX_NM_Time exit on holiday eves) }
+{ v2.5 Track HighestClose during position (for Variant B trail) }
+if MarketPosition = 1 then begin
+    if v_HighestClose = 0 then
+        v_HighestClose = Close;
+    if Close > v_HighestClose then
+        v_HighestClose = Close;
+end;
+
+{ Priority 0: Holiday Safety }
 if MarketPosition = 1 then begin
     if Manual_Kill_Switch then
         sell ("LX_NM_Kill") next bar at market
@@ -238,24 +291,44 @@ if MarketPosition = 1 then begin
         sell ("LX_NM_Holiday") next bar at market;
 end;
 
-{ Exit: ATR-based stop loss (during night session) }
+{ Exit: ATR-based stop loss (principal protection) }
 if MarketPosition = 1 and v_EntryATR > 0 then
     sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
 
-{ Exit: ATR-based take profit (during night session) }
+{ Exit: ATR-based take profit }
 if MarketPosition = 1 and v_EntryATR > 0 then
     sell ("LX_NM_TP") next bar at EntryPrice + v_EntryATR * TargetATRMult limit;
 
-{ Exit: ATR-based trailing stop (during night session) }
-if MarketPosition = 1 and v_EntryATR > 0 then begin
+{ v2.5 Trail (mutually exclusive A/B by Trail_Mode) }
+if MarketPosition = 1 and v_EntryATR > 0 and Trail_Mode > 0 then begin
+
+    { Arm trail once profit threshold hit }
     if MaxContractProfit / 200 >= v_EntryATR * TrailActATR then
-        sell ("LX_NM_Trail") next bar at EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
+        v_TrailArmed = true;
+
+    if v_TrailArmed then begin
+        if Trail_Mode = 1 then
+            { Variant A: fixed lock at Entry + (TrailAct - TrailOff) × ATR }
+            sell ("LX_NM_Trail_A") next bar at
+                EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
+        if Trail_Mode = 2 then
+            { Variant B: true ratcheting trail at HighestClose - TrailOff × ATR }
+            sell ("LX_NM_Trail_B") next bar at
+                v_HighestClose - v_EntryATR * TrailOffATR stop;
+    end;
+
 end;
 
-{ Exit: Time-based forced close at 09:00 (captures overnight gap, v2.1 original) }
+{ Exit: Time-based forced close at 09:00 (overnight gap capture) }
 if Time >= ExitTime and Time < NightOpen then begin
     if MarketPosition = 1 then
         sell ("LX_NM_Time") next bar at market;
+end;
+
+{ v2.5 State reset on flat }
+if MarketPosition = 0 then begin
+    v_HighestClose = 0;
+    v_TrailArmed = false;
 end;
 
 { Track previous bar position }
