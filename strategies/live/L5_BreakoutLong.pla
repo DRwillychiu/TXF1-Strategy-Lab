@@ -204,6 +204,9 @@ inputs:
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
     Manual_Kill_Switch(false),
 
+    { [SEC-8b] Monthly Settlement Flat (2026-06-17 added) }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement (3rd Wed) }
+
     { [SEC-9] v19.8 Pre-Trail StopProfit (L1 SP philosophy, A/B engine).
               VERDICT 2026-06-13: All 5 SP variants (B/C/D/E/F)
               FAILED net-vs-baseline. Best variant D was -14 pct
@@ -273,6 +276,9 @@ variables:
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
     hidx(0),
+
+    { [SEC-8b] Settlement Day state }
+    v_Settlement_Day(false),
 
     { [SEC-9] v19.8 Pre-Trail StopProfit }
     v_Peak_Profit(0),              { close-based MFE in points }
@@ -346,6 +352,11 @@ if Date > Registry_Valid_Until then begin
     v_Holiday_Block    = true;
 end;
 
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
 if LastBarOnChart and
    DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
     if Registry_Warn_ID < 0 then begin
@@ -377,6 +388,9 @@ if DayOfWeek(Date) = 6 and Time >= 1330 then
     v_Allow_Entry = false;
 
 if v_Holiday_Block then
+    v_Allow_Entry = false;
+
+if v_Settlement_Day then
     v_Allow_Entry = false;
 
 { ==========================================
@@ -522,6 +536,9 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         end else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
             Sell ("BL_Holiday_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
             Sell ("BL_Holiday_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+            Sell ("BL_Settlement_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Settlement_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
         end;
 
         { Stage 1: Full position }

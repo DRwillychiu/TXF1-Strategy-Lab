@@ -115,6 +115,14 @@ Inputs:
                                      Bump this when rebuilding the registry from the next
                                      TAIFEX annual calendar (Q4 each year). }
 
+    { P6 (2026-06-17): Monthly Settlement Flat
+      TXF1 settles every month's 3rd Wednesday at 13:30.
+      Position held to settlement gets force cash-settled by exchange.
+      Detection: DayOfWeek = 3 (Wed) AND DayOfMonth in [15,21].
+      Flat-time 12:30 gives 1hr buffer before 13:30 settlement.
+      Same exit-priority framework as Holiday_Flat_Time. }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 monthly settlement }
+
     { P6: Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
     Weekly_MA_Slow(60);
@@ -144,6 +152,9 @@ Variables:
     v_Registry_Expired(False),
     Registry_Warn_ID(-1),
     idx(0),
+
+    { P6 Settlement Variables }
+    v_Settlement_Day(False),
 
     { MDD Visual Tracking Variables }
     MyEquity(0),
@@ -327,6 +338,17 @@ if Date > Registry_Valid_Until then begin
     v_Holiday_Block    = True;
 end;
 
+{ ==========================================
+  P6 Settlement-Day Detection (2026-06-17 added)
+  TXF1 monthly settlement = 3rd Wednesday of each month.
+  Logic: DayOfWeek=3 (Wed in MC) AND DayOfMonth in [15,21].
+  Dynamic detection - no registry needed (TAIFEX rule is stable).
+  ========================================== }
+
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
 { Live-chart warning: registry horizon within ~30 days }
 
 if LastBarOnChart and
@@ -352,7 +374,8 @@ MP = MarketPosition;
 if MP = 0 then begin
     if Cond_Breakout and
        (v_Weekly_Filter = true) and
-       (v_Holiday_Block = false) then begin
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
         Buy ("TL_Entry") next bar at Market;
     end;
 end;
@@ -438,6 +461,9 @@ if MP > 0 then begin
     end
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
         Sell ("TL_Holiday") next bar at Market;
+    end
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+        Sell ("TL_Settlement") next bar at Market;
     end;
 
     if Manual_Kill_Switch = True then begin

@@ -188,6 +188,9 @@ inputs:
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
     Manual_Kill_Switch(false),
 
+    { --- 6b. Monthly Settlement Flat (2026-06-17 added) --- }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement on 3rd Wed }
+
     { --- 7. v14.2 Path A - Night entry block --- }
     Night_Block_On(true),          { PRODUCTION (v14.2B Variant B): block 02:00-04:59 entries.
                                      Validated: 9 night entries net -120,800 in baseline, 0 CS_BR.
@@ -249,6 +252,9 @@ variables:
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
     hidx(0),
+
+    { Settlement Day }
+    v_Settlement_Day(false),
 
     { v14.2 Path B - close-based MFE peak (in points) }
     v_Peak_Profit_Pts(0),
@@ -325,6 +331,11 @@ if Date > Registry_Valid_Until then begin
     v_Registry_Expired = true;
     v_Holiday_Block    = true;
 end;
+
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
 
 if LastBarOnChart and
    DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
@@ -438,7 +449,8 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
        v_In_Trap_Zone    = true           and
        Close             < v_Trigger_Price and
        v_Holiday_Block   = false          and
-       v_Night_Block     = false          then begin
+       v_Night_Block     = false          and
+       v_Settlement_Day  = false          then begin
 
         SellShort ("CS_Entry") next bar at Market;
         v_In_Trap_Zone = false;
@@ -548,6 +560,13 @@ if MarketPosition = -1 then begin
     if (ExitFired = 0) and v_Holiday_Block and
        (Time >= Holiday_Flat_Time) then begin
         BuyToCover ("CS_Holiday") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Monthly Settlement Flat }
+    if (ExitFired = 0) and v_Settlement_Day and
+       (Time >= Settlement_Flat_Time) then begin
+        BuyToCover ("CS_Settlement") next bar at Market;
         ExitFired = 1;
     end;
 

@@ -91,7 +91,13 @@ Inputs:
    { Holiday Flat Rule v3 (Iron Rule 2026-06-12) }
    Holiday_Flat_Time      ( 300 ),     { 03:00 trigger on 60M grid -> fill 03:00, retry 04:00 }
    Registry_Valid_Until   ( 1270101 ), { verified holiday-registry horizon; bump each Q4 }
-   Manual_Kill_Switch     ( False );
+   Manual_Kill_Switch     ( False ),
+
+   { Monthly Settlement Flat (2026-06-17 added)
+     TXF1 settles every 3rd Wed of month at 13:30.
+     Detection: DayOfWeek=3 AND DayOfMonth in [15,21].
+     Flat at 12:30 (1hr buffer before 13:30 settlement). }
+   Settlement_Flat_Time   ( 1230 );
 
 
 { ============================================================
@@ -158,7 +164,10 @@ Variables:
    v_Holiday_Block      ( False ),
    v_Registry_Expired   ( False ),
    Registry_Warn_ID     ( -1    ),
-   hidx                 ( 0     );
+   hidx                 ( 0     ),
+
+   { Monthly Settlement Flat }
+   v_Settlement_Day     ( False );
 
 
 { ============================================================
@@ -307,6 +316,11 @@ If Date > Registry_Valid_Until Then Begin
    v_Holiday_Block    = True;
 End;
 
+{ Monthly Settlement Day detection (3rd Wed) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
 If LastBarOnChart And
    DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 Then Begin
    If Registry_Warn_ID < 0 Then Begin
@@ -413,6 +427,7 @@ If FilterOK = True And
    C_A      = True And
    C_B      = True And
    ( v_Holiday_Block = False ) And
+   ( v_Settlement_Day = False ) And
    ( MarketPosition = 0 ) Then
    SellShort( "TS_Entry" ) Next Bar at Market;
 
@@ -611,6 +626,12 @@ If MarketPosition = -1 Then Begin
    If ( ExitFired = 0 ) And ( v_Holiday_Block = True ) And
       ( Time >= Holiday_Flat_Time ) Then Begin
       BuyToCover( "TS_Holiday" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Settlement_Day = True ) And
+      ( Time >= Settlement_Flat_Time ) Then Begin
+      BuyToCover( "TS_Settlement" ) Next Bar at Market;
       ExitFired = 1;
    End;
 

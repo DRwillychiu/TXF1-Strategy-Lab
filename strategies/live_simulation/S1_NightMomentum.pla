@@ -170,7 +170,13 @@ inputs:
     TrendFilterMode(0),             { 0=off(v2.4), 1=Vol, 2=Vol+Daily, 3=Vol+Daily+Weekly }
     TF_VolRatioMin(1.00),           { stricter vol ratio (v2.4 base uses 0.80) }
     TF_DailyMALen(20),              { daily MA period (data2, ~1 month) }
-    TF_WeeklyMALen(13);             { weekly MA period (data3, Adaptive Farmer Layer 1) }
+    TF_WeeklyMALen(13),             { weekly MA period (data3, Adaptive Farmer Layer 1) }
+
+    { v2.7 Monthly Settlement Flat (2026-06-17 added).
+      For S1, day-session entry blocking is mostly moot since
+      entries only happen during night session 15:00-04:59 anyway,
+      but kept for cross-strategy consistency with L1-L5. }
+    Settlement_Flat_Time(1230);
 
 variables:
     v_NightHigh(0),
@@ -191,6 +197,9 @@ variables:
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
     hidx(0),
+
+    { Settlement Day }
+    v_Settlement_Day(false),
 
     { v2.5 Trail state }
     v_HighestClose(0),              { tracks max close during position (Variant B) }
@@ -263,6 +272,11 @@ if Date > Registry_Valid_Until then begin
     v_Registry_Expired = true;
     v_Holiday_Block    = true;
 end;
+
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
 
 if LastBarOnChart and
    DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
@@ -351,10 +365,12 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ Entry: Long breakout (v2.1 logic + Holiday Block guard) }
-{ v2.6: added v_TrendPass gate (Mode 0 = always true = v2.4 baseline) }
+{ Entry: Long breakout (v2.1 + Holiday + Settlement + TrendFilter gates) }
+{ v2.6: added v_TrendPass (Mode 0 = always true = v2.4 baseline) }
+{ v2.7: added v_Settlement_Day (3rd Wed monthly settlement) }
 if v_RangeReady and v_IsNightSession and Time < ExitTime and
-   v_VolPass and v_TrendPass and v_Holiday_Block = false then begin
+   v_VolPass and v_TrendPass and v_Holiday_Block = false and
+   v_Settlement_Day = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
@@ -371,14 +387,16 @@ if MarketPosition = 1 then begin
         v_HighestClose = Close;
 end;
 
-{ Priority 0: Holiday Safety }
+{ Priority 0: Holiday + Settlement Safety }
 if MarketPosition = 1 then begin
     if Manual_Kill_Switch then
         sell ("LX_NM_Kill") next bar at market
     else if v_Registry_Expired then
         sell ("LX_NM_RegistryEnd") next bar at market
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then
-        sell ("LX_NM_Holiday") next bar at market;
+        sell ("LX_NM_Holiday") next bar at market
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then
+        sell ("LX_NM_Settlement") next bar at market;
 end;
 
 { Exit: ATR-based stop loss (principal protection) }

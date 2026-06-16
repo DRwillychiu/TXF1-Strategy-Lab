@@ -95,6 +95,10 @@ inputs:
     Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
     Manual_Kill_Switch(false),
 
+    { --- Monthly Settlement Flat (2026-06-17 added) ---
+      TXF1 settles every 3rd Wed at 13:30. Dynamic detection. }
+    Settlement_Flat_Time(1230),
+
     { --- v13.2 A/B switches (defaults = PRODUCTION variant B) --- }
     Freeze_SL_On(true),            { PRODUCTION: lock leg/stop/target at entry; false = old v13 dynamic }
     BE_Trigger_Pts(0),             { PRODUCTION: 0 = BE off. REJECTED at 50 for range strategies
@@ -133,6 +137,9 @@ variables:
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
     hidx(0),
+
+    { --- Settlement Day --- }
+    v_Settlement_Day(false),
 
     { --- v13.2 Frozen SL / BE --- }
     v_SL_Locked(false),
@@ -210,6 +217,11 @@ if Date > Registry_Valid_Until then begin
     v_Holiday_Block    = true;
 end;
 
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
 if LastBarOnChart and
    DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
     if Registry_Warn_ID < 0 then begin
@@ -285,7 +297,8 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
-           (v_Holiday_Block = false) then begin
+           (v_Holiday_Block = false) and
+           (v_Settlement_Day = false) then begin
 
             { Bottom Re-Entry: false breakdown at Box_Btm }
             if (Close < v_Box_Btm) and
@@ -385,7 +398,9 @@ if MarketPosition = 1 then begin
     if v_Registry_Expired then
         Sell ("CL_RegistryEnd") next bar at Market
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then
-        Sell ("CL_Holiday") next bar at Market;
+        Sell ("CL_Holiday") next bar at Market
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then
+        Sell ("CL_Settlement") next bar at Market;
 
     if Manual_Kill_Switch then
         Sell ("CL_Kill") next bar at Market;
