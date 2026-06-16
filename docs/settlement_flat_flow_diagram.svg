@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1100 1750" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <title>Settlement_Flat 模組完整決策流程圖</title>
+  <desc>從每根 K 棒進入策略的判斷邏輯、結算日當天時間軸、Priority 0 出場鏈、與非結算日對照範例。</desc>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f2937"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+    </marker>
+  </defs>
+
+  <style>
+    .h1 { font-size: 22px; font-weight: 700; fill: #111827; }
+    .h2 { font-size: 16px; font-weight: 700; fill: #111827; }
+    .lbl { font-size: 13px; fill: #374151; }
+    .lblB { font-size: 13px; font-weight: 700; fill: #111827; }
+    .sm { font-size: 11px; fill: #4b5563; }
+    .mono { font-family: Consolas, monospace; font-size: 12px; fill: #1f2937; }
+    .monoSm { font-family: Consolas, monospace; font-size: 11px; fill: #374151; }
+    .arrow { stroke: #1f2937; stroke-width: 1.5; fill: none; }
+    .arrowRed { stroke: #dc2626; stroke-width: 1.8; fill: none; }
+    .arrowGreen { stroke: #059669; stroke-width: 1.8; fill: none; }
+    .nodeNeutral { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.4; }
+    .nodeBlock { fill: #fef2f2; stroke: #dc2626; stroke-width: 1.6; }
+    .nodePass  { fill: #ecfdf5; stroke: #059669; stroke-width: 1.6; }
+    .nodeCheck { fill: #fffbeb; stroke: #d97706; stroke-width: 1.6; }
+    .sectionBg { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1; rx: 8; }
+    .tlAxis { stroke: #64748b; stroke-width: 1.5; }
+    .tlTick { stroke: #64748b; stroke-width: 1; }
+    .priBox { fill: #ffffff; stroke-width: 1.4; rx: 6; }
+    .yes { fill: #059669; font-weight: 700; font-size: 11px; }
+    .no  { fill: #dc2626; font-weight: 700; font-size: 11px; }
+  </style>
+
+  <text x="550" y="34" class="h1" text-anchor="middle">Settlement_Flat 模組 - 完整決策流程</text>
+  <text x="550" y="56" class="sm" text-anchor="middle">每根 K 棒判斷邏輯 + 結算日當天時間軸 + Priority 0 出場鏈 + 對照範例</text>
+
+  <rect x="20" y="80" width="1060" height="510" class="sectionBg"/>
+  <text x="40" y="108" class="h2">(1) 每根 K 棒進入策略的判斷流程</text>
+
+  <ellipse cx="160" cy="155" rx="80" ry="22" class="nodeNeutral"/>
+  <text x="160" y="160" class="lblB" text-anchor="middle">新 K 棒進入</text>
+  <line x1="160" y1="177" x2="160" y2="208" class="arrow" marker-end="url(#arr)"/>
+
+  <polygon points="160,210 290,250 160,290 30,250" class="nodeCheck"/>
+  <text x="160" y="245" class="lblB" text-anchor="middle">DayOfWeek(Date)</text>
+  <text x="160" y="262" class="lbl" text-anchor="middle">= 3 (Wed)?</text>
+
+  <line x1="30" y1="250" x2="-10" y2="250" class="arrow"/>
+  <text x="-30" y="245" class="no" text-anchor="end">NO</text>
+
+  <line x1="160" y1="290" x2="160" y2="320" class="arrow" marker-end="url(#arr)"/>
+  <text x="170" y="306" class="yes">YES</text>
+
+  <polygon points="160,322 320,370 160,418 0,370" class="nodeCheck"/>
+  <text x="160" y="362" class="lblB" text-anchor="middle">DayOfMonth(Date)</text>
+  <text x="160" y="380" class="lbl" text-anchor="middle">in [15, 21]?</text>
+
+  <line x1="0" y1="370" x2="-30" y2="370" class="arrow"/>
+
+  <rect x="20" y="440" width="280" height="50" class="nodePass" rx="6"/>
+  <text x="160" y="463" class="lblB" text-anchor="middle">v_Settlement_Day = FALSE</text>
+  <text x="160" y="480" class="sm" text-anchor="middle">策略照常運作</text>
+
+  <path d="M -10 250 L -50 250 L -50 465 L 20 465" class="arrow" marker-end="url(#arr)" fill="none"/>
+  <path d="M -30 370 L -50 370" class="arrow" fill="none"/>
+
+  <line x1="160" y1="418" x2="160" y2="450" class="arrow" marker-end="url(#arr)"/>
+  <text x="170" y="436" class="yes">YES</text>
+
+  <rect x="320" y="450" width="240" height="50" class="nodeBlock" rx="6"/>
+  <text x="440" y="473" class="lblB" text-anchor="middle">v_Settlement_Day = TRUE</text>
+  <text x="440" y="490" class="sm" text-anchor="middle">當天進入結算流程</text>
+
+  <line x1="160" y1="418" x2="440" y2="450" class="arrow" marker-end="url(#arr)"/>
+  <line x1="440" y1="500" x2="440" y2="530" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="320" y="530" width="240" height="50" class="nodeBlock" rx="6"/>
+  <text x="440" y="552" class="lblB" text-anchor="middle">Entry Gate 阻擋</text>
+  <text x="440" y="569" class="monoSm" text-anchor="middle">v_Settlement_Day = false 不成立</text>
+
+  <rect x="600" y="140" width="460" height="180" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="620" y="162" class="lblB">PowerLanguage 偵測 (3 行)</text>
+  <text x="620" y="186" class="mono">v_Settlement_Day =</text>
+  <text x="640" y="206" class="mono">(DayOfWeek(Date) = 3) and</text>
+  <text x="640" y="225" class="mono">(DayOfMonth(Date) &gt;= 15) and</text>
+  <text x="640" y="244" class="mono">(DayOfMonth(Date) &lt;= 21);</text>
+  <line x1="620" y1="258" x2="1040" y2="258" stroke="#cbd5e1"/>
+  <text x="620" y="278" class="sm">數學等價: [15,21] AND Wed &lt;=&gt; 該月第三個 Wed</text>
+  <text x="620" y="296" class="sm">2020-2030 共 132/132 月正確; False Positive = 0</text>
+  <text x="620" y="313" class="sm">MC convention: Sun=0, Mon=1, ..., Wed=3, ..., Sat=6</text>
+
+  <rect x="600" y="380" width="460" height="180" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="620" y="402" class="lblB">兩條獨立保護路徑</text>
+  <circle cx="630" cy="430" r="6" fill="#dc2626"/>
+  <text x="645" y="434" class="lblB">A. 進場阻擋 (無倉)</text>
+  <text x="645" y="452" class="sm">if (...) and (v_Settlement_Day = false) then Buy</text>
+  <text x="645" y="468" class="sm">=&gt; 結算日當天 0 新單</text>
+  <circle cx="630" cy="494" r="6" fill="#dc2626"/>
+  <text x="645" y="498" class="lblB">B. Priority 0 強制平倉 (有倉)</text>
+  <text x="645" y="516" class="sm">else if v_Settlement_Day and Time &gt;= 1230 then</text>
+  <text x="645" y="532" class="mono">  Sell("*_Settlement") next bar at Market;</text>
+  <text x="645" y="550" class="sm">=&gt; 12:30 觸發 / 12:45 OPEN 成交</text>
+
+  <rect x="20" y="610" width="1060" height="380" class="sectionBg"/>
+  <text x="40" y="640" class="h2">(2) Priority 0 互斥出場優先序鏈</text>
+
+  <rect x="120" y="670" width="860" height="44" class="priBox" stroke="#dc2626"/>
+  <text x="138" y="697" class="lblB" fill="#dc2626">P0-1</text>
+  <text x="200" y="697" class="lblB">Manual_Kill_Switch = TRUE</text>
+  <text x="500" y="697" class="sm">緊急停市 =&gt; BuyToCover/Sell("*_Kill") next bar at Market</text>
+  <line x1="550" y1="714" x2="550" y2="734" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="120" y="734" width="860" height="44" class="priBox" stroke="#dc2626"/>
+  <text x="138" y="761" class="lblB" fill="#dc2626">P0-2</text>
+  <text x="200" y="761" class="lblB">v_Registry_Expired = TRUE</text>
+  <text x="500" y="761" class="sm">假日登錄表過期 =&gt; 出場 + 凍結進場</text>
+  <line x1="550" y1="778" x2="550" y2="798" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="120" y="798" width="860" height="44" class="priBox" stroke="#dc2626"/>
+  <text x="138" y="825" class="lblB" fill="#dc2626">P0-3</text>
+  <text x="200" y="825" class="lblB">v_Holiday_Block = TRUE</text>
+  <text x="500" y="825" class="sm">假日前夕 04:15 =&gt; 出場 ("*_HolFlat")</text>
+  <line x1="550" y1="842" x2="550" y2="862" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="120" y="862" width="860" height="48" class="priBox" stroke="#7c3aed" fill="#f5f3ff"/>
+  <text x="138" y="891" class="lblB" fill="#7c3aed">P0-4 NEW</text>
+  <text x="240" y="891" class="lblB">v_Settlement_Day = TRUE AND Time &gt;= 1230</text>
+  <text x="240" y="906" class="sm">=&gt; Sell/BuyToCover ("*_Settlement") next bar at Market</text>
+  <line x1="550" y1="910" x2="550" y2="930" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="120" y="930" width="860" height="44" class="priBox" stroke="#059669" fill="#ecfdf5"/>
+  <text x="138" y="957" class="lblB" fill="#059669">P0-5</text>
+  <text x="200" y="957" class="lblB">以上皆否</text>
+  <text x="500" y="957" class="sm">=&gt; 進入該策略原始邏輯 (SP / Trail / Daily Exit / Stop)</text>
+
+  <rect x="20" y="1010" width="1060" height="370" class="sectionBg"/>
+  <text x="40" y="1040" class="h2">(3) 結算日當天時間軸 (範例: 2026/06/17 Wed)</text>
+
+  <line x1="80" y1="1180" x2="1040" y2="1180" class="tlAxis" marker-end="url(#arr)"/>
+  <g class="sm" text-anchor="middle">
+    <line x1="100"  y1="1175" x2="100"  y2="1190" class="tlTick"/>
+    <text x="100"  y="1208">00:00</text>
+    <line x1="220"  y1="1175" x2="220"  y2="1190" class="tlTick"/>
+    <text x="220"  y="1208">08:45 開盤</text>
+    <line x1="520"  y1="1175" x2="520"  y2="1190" class="tlTick"/>
+    <text x="520"  y="1208">12:30 觸發</text>
+    <line x1="660"  y1="1175" x2="660"  y2="1190" class="tlTick"/>
+    <text x="660"  y="1208">12:45 OPEN 成交</text>
+    <line x1="780"  y1="1175" x2="780"  y2="1190" class="tlTick"/>
+    <text x="780"  y="1208">13:00 重試</text>
+    <line x1="880"  y1="1175" x2="880"  y2="1190" class="tlTick"/>
+    <text x="880"  y="1208">13:15 末重試</text>
+    <line x1="980"  y1="1175" x2="980"  y2="1190" class="tlTick"/>
+    <text x="980"  y="1208">13:30 結算</text>
+    <line x1="1020" y1="1175" x2="1020" y2="1190" class="tlTick"/>
+    <text x="1020" y="1208">13:45 收</text>
+  </g>
+
+  <rect x="90" y="1080" width="200" height="68" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="190" y="1102" class="lblB" text-anchor="middle">00:00 ~ 08:45</text>
+  <text x="190" y="1120" class="sm" text-anchor="middle">v_Settlement_Day = TRUE</text>
+  <text x="190" y="1136" class="sm" text-anchor="middle">進場 gate 阻擋新單</text>
+  <line x1="190" y1="1148" x2="190" y2="1175" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="310" y="1080" width="190" height="68" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="405" y="1102" class="lblB" text-anchor="middle">08:45 ~ 12:30</text>
+  <text x="405" y="1120" class="sm" text-anchor="middle">無新進場</text>
+  <text x="405" y="1136" class="sm" text-anchor="middle">舊倉照常走原邏輯</text>
+  <line x1="405" y1="1148" x2="405" y2="1175" class="arrow" marker-end="url(#arr)"/>
+
+  <rect x="520" y="1080" width="130" height="68" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+  <text x="585" y="1102" class="lblB" text-anchor="middle" fill="#dc2626">12:30 觸發</text>
+  <text x="585" y="1120" class="sm" text-anchor="middle">Time &gt;= Settlement</text>
+  <text x="585" y="1136" class="sm" text-anchor="middle">_Flat_Time(1230)</text>
+  <line x1="585" y1="1148" x2="585" y2="1175" class="arrowRed" marker-end="url(#arrRed)"/>
+
+  <rect x="660" y="1080" width="100" height="68" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+  <text x="710" y="1102" class="lblB" text-anchor="middle" fill="#dc2626">12:45</text>
+  <text x="710" y="1120" class="sm" text-anchor="middle">next bar</text>
+  <text x="710" y="1136" class="sm" text-anchor="middle">at Market</text>
+  <line x1="710" y1="1148" x2="710" y2="1175" class="arrowGreen" marker-end="url(#arrGreen)"/>
+
+  <rect x="770" y="1080" width="200" height="68" rx="6" fill="#fff7ed" stroke="#ea580c"/>
+  <text x="870" y="1102" class="lblB" text-anchor="middle" fill="#ea580c">13:00 + 13:15</text>
+  <text x="870" y="1120" class="sm" text-anchor="middle">若 12:45 未成交</text>
+  <text x="870" y="1136" class="sm" text-anchor="middle">每根 K 重發單</text>
+  <line x1="870" y1="1148" x2="870" y2="1175" class="arrowRed" marker-end="url(#arrRed)"/>
+
+  <rect x="980" y="1080" width="80" height="68" rx="6" fill="#ecfdf5" stroke="#059669"/>
+  <text x="1020" y="1102" class="lblB" text-anchor="middle" fill="#059669">13:30</text>
+  <text x="1020" y="1120" class="sm" text-anchor="middle">官方</text>
+  <text x="1020" y="1136" class="sm" text-anchor="middle">結算</text>
+  <line x1="1020" y1="1148" x2="1020" y2="1175" class="arrowGreen" marker-end="url(#arrGreen)"/>
+
+  <g>
+    <rect x="80" y="1240" width="440" height="40" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+    <text x="300" y="1264" class="lblB" text-anchor="middle">阻擋區 (不可進場)</text>
+    <rect x="520" y="1240" width="360" height="40" rx="6" fill="#fef3c7" stroke="#d97706"/>
+    <text x="700" y="1264" class="lblB" text-anchor="middle">出場執行區 (12:30=&gt;13:15 三次機會)</text>
+    <rect x="880" y="1240" width="180" height="40" rx="6" fill="#ecfdf5" stroke="#059669"/>
+    <text x="970" y="1264" class="lblB" text-anchor="middle">必空手</text>
+  </g>
+
+  <rect x="80" y="1300" width="980" height="62" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="100" y="1322" class="lblB">為什麼選 12:30 不選 13:25?</text>
+  <text x="100" y="1340" class="sm">- 12:30 = 結算前 60 分鐘, 留 3 根 15-min K 棒當重試 buffer, 即使首根流動性不佳仍可在 13:00 / 13:15 補單.</text>
+  <text x="100" y="1356" class="sm">- 與 HolidayFlat 04:15 同邏輯: 發單早 + next-bar 成交 + 多次重試 = 即使極端流動性也保證 13:30 前歸零.</text>
+
+  <rect x="20" y="1400" width="1060" height="330" class="sectionBg"/>
+  <text x="40" y="1428" class="h2">(4) 結算日 vs 一般交易日 行為對照</text>
+
+  <rect x="50" y="1450" width="490" height="260" rx="8" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="295" y="1476" class="lblB" text-anchor="middle" fill="#dc2626">A. 結算日 (每月第 3 個 Wed)</text>
+  <text x="70" y="1502" class="lbl">v_Settlement_Day</text>
+  <text x="280" y="1502" class="mono">= TRUE</text>
+  <text x="70" y="1524" class="lbl">進場 (無倉)</text>
+  <text x="280" y="1524" class="lbl" fill="#dc2626">X 阻擋 (gate fails)</text>
+  <text x="70" y="1546" class="lbl">既有持倉 09:00 ~ 12:29</text>
+  <text x="280" y="1546" class="lbl">依原邏輯 (SP / Trail / Daily)</text>
+  <text x="70" y="1568" class="lbl">既有持倉 12:30+</text>
+  <text x="280" y="1568" class="lbl" fill="#dc2626">P0-4 強制平倉 *_Settlement</text>
+  <text x="70" y="1590" class="lbl">12:30 重試窗</text>
+  <text x="280" y="1590" class="lbl">12:30 =&gt; 12:45 =&gt; 13:00 =&gt; 13:15</text>
+  <text x="70" y="1612" class="lbl">13:30 部位</text>
+  <text x="280" y="1612" class="lbl" fill="#059669">必為 0</text>
+  <text x="70" y="1640" class="sm">範例: 2026/06/17, 2026/07/15, 2026/08/19 ...</text>
+  <text x="70" y="1660" class="sm">出場標籤: TL_Settlement / TS_Settlement / CL_Settlement</text>
+  <text x="70" y="1680" class="sm">CS_Settlement / BL_Settlement_Bot+Mid / LX_NM_Settlement</text>
+
+  <rect x="560" y="1450" width="490" height="260" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+  <text x="805" y="1476" class="lblB" text-anchor="middle" fill="#059669">B. 一般交易日</text>
+  <text x="580" y="1502" class="lbl">v_Settlement_Day</text>
+  <text x="790" y="1502" class="mono">= FALSE</text>
+  <text x="580" y="1524" class="lbl">進場 (無倉)</text>
+  <text x="790" y="1524" class="lbl" fill="#059669">通過 gate (其他條件)</text>
+  <text x="580" y="1546" class="lbl">既有持倉</text>
+  <text x="790" y="1546" class="lbl">完全依原策略邏輯</text>
+  <text x="580" y="1568" class="lbl">12:30+ 行為</text>
+  <text x="790" y="1568" class="lbl">無 P0-4 觸發</text>
+  <text x="580" y="1590" class="lbl">收盤平倉</text>
+  <text x="790" y="1590" class="lbl">依 Daily Flat / Hold-overnight 設計</text>
+  <text x="580" y="1612" class="lbl">隔日狀態</text>
+  <text x="790" y="1612" class="lbl">部位可繼續存活</text>
+  <text x="580" y="1640" class="sm">範例: 2026/06/18 (Thu), 6/19 ...</text>
+  <text x="580" y="1660" class="sm">=&gt; 06 月結算後策略不持有 06 合約</text>
+  <text x="580" y="1680" class="sm">=&gt; 隔日新單會建立在 07 合約上</text>
+</svg>
