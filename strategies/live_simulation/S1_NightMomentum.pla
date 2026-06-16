@@ -1,5 +1,5 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.5: v2.4 base + Trail A/B engine (fix dead Trail + add TRUE ratcheting trail)}
+{v2.6: v2.5 base + Entry-side Trend Filter (VolRatio / DailyMA / WeeklyMA)}
 {Category A: Night Session Breakout + Overnight Gap Capture + MFE protection}
 {Direction: Long Only}
 {Timeframe: 15-min on TXF1}
@@ -92,6 +92,56 @@
   to LX_NM_Time at 09:00).
 }
 
+{ v2.6 CHANGELOG (2026-06-16):
+
+  USER INSIGHT (2026-06-13):
+    "This strategy should ONLY trade when US market is strong ->
+    TXF1 night session follows -> 09:00 gap up. On non-trend or
+    consolidation days, it should NOT open any position."
+
+  v2.5 LESSON LEARNED:
+    Trail_B failed (-385K). 88.2% win rate trail STILL destroyed
+    alpha. Cross-strategy iron law #7 confirmed:
+    "entry quality filtering > mid-position protection"
+
+  v2.6 DIRECTION: Trend filter on ENTRY side. Do NOT touch exits.
+    Trail_Mode defaulted to 0 (permanently off after v2.5 failure).
+
+  TREND FILTER MODES (TrendFilterMode, stacked additive):
+    0 = OFF — exact v2.4 baseline (TrendPass always true)
+    1 = Stricter VolRatio (>= TF_VolRatioMin, default 1.00)
+    2 = Mode 1 + Daily MA uptrend (Close[1] > MA, data2 required)
+    3 = Mode 2 + Weekly MA uptrend (Close[1] > MA, data3 required)
+
+  DATA REQUIREMENTS:
+    Mode 0-1: data1 = TXF1 15-min only (same as v2.4)
+    Mode 2  : + data2 = TXF1 daily
+    Mode 3  : + data3 = TXF1 weekly
+
+  A/B TESTING: TrendFilterMode = Optimize(0, 0, 3, 1) in MC12
+
+  NEW INPUTS:
+    TrendFilterMode(0)      0=off, 1=Vol, 2=Vol+Daily, 3=All
+    TF_VolRatioMin(1.00)    stricter vol threshold (v2.4 base=0.80)
+    TF_DailyMALen(20)       daily MA period (data2)
+    TF_WeeklyMALen(13)      weekly MA period (data3)
+
+  CHANGED DEFAULTS:
+    Trail_Mode: 2 -> 0      v2.5 Trail_B failed, permanently off
+
+  NEW VARIABLES:
+    v_TrendPass    overall trend filter gate
+    v_TF_VolOK     stricter vol ratio check
+    v_TF_DailyOK   daily MA uptrend check
+    v_TF_WeeklyOK  weekly MA uptrend check
+    v_DailyMA      daily MA value
+    v_WeeklyMA     weekly MA value
+
+  ENTRY CHANGE (single line, all exits UNCHANGED):
+    Added "and v_TrendPass" to entry condition gate.
+    Mode 0: v_TrendPass=true, zero behavioral change vs v2.4.
+}
+
 inputs:
     LookbackBars(11),
     ATRLen(11),
@@ -104,7 +154,7 @@ inputs:
     { v2.5: Trail parameters (TrailActATR lowered from 2.75 to 1.5) }
     TrailActATR(1.5),               { v2.5: MUST be < TargetATRMult or Trail is dead. Was 2.75. }
     TrailOffATR(0.7),               { Trail offset (unchanged) }
-    Trail_Mode(2),                  { v2.5 NEW: 0=off (v2.4 behavior), 1=Variant A (fixed lock), 2=Variant B (true ratcheting trail). Default = B (recommended) }
+    Trail_Mode(0),                  { v2.5: 0=off, 1=A fixed lock, 2=B ratchet. v2.6: DEFAULT 2->0 (Trail_B failed -385K) }
 
     NightOpen(1500),
     ExitTime(500),                  { v2.4: captures overnight gap via 09:00 fill }
@@ -114,7 +164,13 @@ inputs:
     { v2.4 Holiday Safety Module }
     Holiday_Flat_Time(415),
     Registry_Valid_Until(1270101),
-    Manual_Kill_Switch(false);
+    Manual_Kill_Switch(false),
+
+    { v2.6: Trend Filter — entry-side quality gate }
+    TrendFilterMode(0),             { 0=off(v2.4), 1=Vol, 2=Vol+Daily, 3=Vol+Daily+Weekly }
+    TF_VolRatioMin(1.00),           { stricter vol ratio (v2.4 base uses 0.80) }
+    TF_DailyMALen(20),              { daily MA period (data2, ~1 month) }
+    TF_WeeklyMALen(13);             { weekly MA period (data3, Adaptive Farmer Layer 1) }
 
 variables:
     v_NightHigh(0),
@@ -139,7 +195,15 @@ variables:
     { v2.5 Trail state }
     v_HighestClose(0),              { tracks max close during position (Variant B) }
     v_TrailArmed(false),            { trail has been armed once threshold hit }
-    Trail_Warn_ID(-1);              { dead-config warning text ID }
+    Trail_Warn_ID(-1),              { dead-config warning text ID }
+
+    { v2.6 Trend Filter state }
+    v_TrendPass(true),
+    v_TF_VolOK(true),
+    v_TF_DailyOK(true),
+    v_TF_WeeklyOK(true),
+    v_DailyMA(0),
+    v_WeeklyMA(0);
 
 arrays:
     Holiday_Tail[80](0);
@@ -237,6 +301,31 @@ else
     v_VolRatio = 1;
 v_VolPass = (v_VolRatio >= VolRatioMin);
 
+{ v2.6 Trend Filter — entry quality gate }
+{ Mode 0: TrendPass=true (exact v2.4 baseline, no filtering) }
+{ Mode 1: stricter VolRatio (TF_VolRatioMin=1.00 vs base 0.80) }
+{ Mode 2: Mode 1 + daily MA uptrend (data2[1] for completed bar) }
+{ Mode 3: Mode 2 + weekly MA uptrend (data3[1] for completed bar) }
+if TrendFilterMode = 0 then
+    v_TrendPass = true
+else begin
+    v_TF_VolOK = (v_VolRatio >= TF_VolRatioMin);
+
+    if TrendFilterMode >= 2 then begin
+        v_DailyMA = Average(Close of data2, TF_DailyMALen)[1];
+        v_TF_DailyOK = Close of data2[1] > v_DailyMA;
+    end else
+        v_TF_DailyOK = true;
+
+    if TrendFilterMode >= 3 then begin
+        v_WeeklyMA = Average(Close of data3, TF_WeeklyMALen)[1];
+        v_TF_WeeklyOK = Close of data3[1] > v_WeeklyMA;
+    end else
+        v_TF_WeeklyOK = true;
+
+    v_TrendPass = v_TF_VolOK and v_TF_DailyOK and v_TF_WeeklyOK;
+end;
+
 { Detect night session }
 v_IsNightSession = (Time >= NightOpen) or (Time < ExitTime);
 
@@ -263,8 +352,9 @@ if v_IsNightSession and v_RangeReady = false then begin
 end;
 
 { Entry: Long breakout (v2.1 logic + Holiday Block guard) }
+{ v2.6: added v_TrendPass gate (Mode 0 = always true = v2.4 baseline) }
 if v_RangeReady and v_IsNightSession and Time < ExitTime and
-   v_VolPass and v_Holiday_Block = false then begin
+   v_VolPass and v_TrendPass and v_Holiday_Block = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;
