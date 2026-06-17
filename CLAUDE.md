@@ -54,6 +54,9 @@ scripts/
   export_to_mc.py                  # 匯出 PowerLanguage 原始碼供 MC 載入
   strategy_comparison.py           # 策略組合分析
 docs/
+  SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # ★ 結算日策略設計憲法（強制位階）
+  settlement_flat_module_20260617.md     # Settlement_Flat 模組詳細設計
+  settlement_flat_flow_diagram.svg       # 結算日完整決策流程圖
   entry_exit_sop.md                # 9 層出場架構標準
   position_sizing_and_capacity.md  # 口數配置框架
   L4_v142_pathA_entry_diagnostic.md   # L4 A/B Path A 完整診斷
@@ -87,6 +90,11 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
 8. 用 `v_Prev_MP` 追蹤前根部位狀態，腳本最末行更新
 9. 策略名稱 `STRATEGY_GEN_` 前綴
 10. 每隻策略 < 150 行，進場條件 ≤ 5 個
+11. **★ 強制規範**：所有策略必須含 Settlement_Flat 模組（7 元素）
+    - 詳見 [docs/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md](docs/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md)
+    - Priority 0 出場順序：Kill > Registry > Holiday > **Settlement** > 原邏輯
+    - 進場 gate 必含 `v_Settlement_Day = false`
+    - 驗證腳本 `scripts/verify_settlement_flat.py` 必須通過
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
