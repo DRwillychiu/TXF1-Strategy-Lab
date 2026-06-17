@@ -2,7 +2,8 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.3 (= v14.2B + Settlement_Flat + RangeForceExit Time=1200)
+ Version     : v14.3.1 (= v14.2B + Settlement_Flat + RangeForceExit 1200-1330)
+               HOTFIX: v14.3 used Time>=1200 only -> night session falsely fired.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -191,12 +192,16 @@ inputs:
     { --- 6b. Monthly Settlement Flat (2026-06-17 added) --- }
     Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement on 3rd Wed }
 
-    { --- 6c. v14.3 Range Force Exit (Constitution v1.1 Clause 7) ---
-      盤整短倉策略強制日盤 12:00 前出場, 防止漂移到 Swing-Range 禁區.
+    { --- 6c. v14.3.1 Range Force Exit (Constitution v1.1 Clause 7) ---
+      盤整短倉策略強制日盤後半 (12:00 ~ 13:30) 出場, 防止漂移到 Swing-Range 禁區.
+      ★ 必須有上界 (Range_ForceExit_End): MC Time 24-hour 制下,
+        Time >= 1200 在夜盤 15:00-23:59 都為 true, 會誤觸夜盤平倉.
+        v14.3 -> v14.3.1: 加入 Time <= Range_ForceExit_End 防呆.
       理由: mean reversion alpha 撐到 12:30 = 反轉未發生 = 正在虧;
             Settlement_Flat 12:30 平倉 = 在反轉前砍倉 = 災難.
-      設計: 主動於 12:00 強制平倉, 將策略鎖定在 Q3 安全象限. }
-    Range_ForceExit_Time(1200),
+      設計: 主動於日盤 12:00-13:30 強制平倉, 不影響夜盤 swing. }
+    Range_ForceExit_Time(1200),       { 觸發下界 }
+    Range_ForceExit_End(1330),        { 觸發上界 - 防夜盤誤觸 }
 
     { --- 7. v14.2 Path A - Night entry block --- }
     Night_Block_On(true),          { PRODUCTION (v14.2B Variant B): block 02:00-04:59 entries.
@@ -577,8 +582,11 @@ if MarketPosition = -1 then begin
         ExitFired = 1;
     end;
 
-    { Priority 0 - Range Force Exit (Constitution v1.1 Clause 7) }
-    if (ExitFired = 0) and (Time >= Range_ForceExit_Time) then begin
+    { Priority 0 - Range Force Exit (Constitution v1.1 Clause 7)
+      ★ Time 24-hour 制: 必須加上界, 否則夜盤 15:00+ 會誤觸 }
+    if (ExitFired = 0) and
+       (Time >= Range_ForceExit_Time) and
+       (Time <= Range_ForceExit_End) then begin
         BuyToCover ("CS_RangeForceExit") next bar at Market;
         ExitFired = 1;
     end;

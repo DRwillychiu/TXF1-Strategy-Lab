@@ -93,6 +93,26 @@ def check_file(text, sid, label, direction):
         else:
             results.append((f'{sid}-6', False, f'time order WRONG: Range({rv}) >= Settlement({sv})'))
 
+    # 7. CRITICAL: must have upper bound (Range_ForceExit_End) to prevent
+    #    night-session false fire. MC Time is 24-hour, Time >= 1200 is true
+    #    for 15:00-23:59. Without upper bound, night positions get nuked.
+    end_t = re.search(r'Range_ForceExit_End\s*\(\s*(\d+)\s*\)', text)
+    if end_t:
+        ev = int(end_t.group(1))
+        if 1300 <= ev <= 1345:
+            results.append((f'{sid}-7', True, f'Range_ForceExit_End({ev}) safe upper bound declared'))
+        else:
+            results.append((f'{sid}-7', False, f'Range_ForceExit_End({ev}) out of safe range [1300,1345]'))
+    else:
+        results.append((f'{sid}-7', False, 'CRITICAL: Range_ForceExit_End upper bound MISSING (night-session false fire risk)'))
+
+    # 8. Must guard with Time <= upper bound in the exit code
+    upper_guard = re.compile(r'Time\s*<=\s*Range_ForceExit_End', re.IGNORECASE)
+    if upper_guard.search(text):
+        results.append((f'{sid}-8', True, 'Time <= Range_ForceExit_End guard present in exit code'))
+    else:
+        results.append((f'{sid}-8', False, 'CRITICAL: Time <= Range_ForceExit_End guard MISSING'))
+
     return results
 
 
