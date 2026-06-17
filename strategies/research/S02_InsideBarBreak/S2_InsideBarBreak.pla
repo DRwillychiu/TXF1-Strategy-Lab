@@ -1,0 +1,246 @@
+{================================================================================
+ Script Name : _Research_InsideBarBreak_v0.2
+ MC Load Name: STRATEGY_GEN_InsideBarBreak
+ Description : Daily Inside Bar Breakout (Bidirectional, MA-filtered)
+ Version     : v0.2 (Phase 1: 從 archive 重啟 + 接入憲法 v1.2 強制模組)
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 30M / Data2 = Daily
+ Category    : B (Pattern Breakout) — predicted Swing-Trend by constitution clause 6
+ Direction   : Bidirectional (Long when MA up, Short when MA down)
+
+ CHANGELOG:
+   v0.1   (archive batch01 Python proxy backtest)
+          - 34 trades, WR 64.7%, PF 4.61, +791k NTD, MDD -64k
+          - Python ^TWII daily proxy — NOT MC minute-bar verified
+          - Missing all constitutional protection modules
+
+   v0.2   (2026-06-17 Reactivation Phase 1)
+          - Pulled from archive/batch01_S2-S5/ for live track
+          - Added: Settlement_Flat (Constitution v1.2 Clause 1)
+                   * Settlement_Flat_Time(1230) input
+                   * v_Settlement_Day detection (3rd Wed)
+                   * Entry gate + Priority 0 exit (LX/SX_IB_Settlement)
+          - Added: HolidayFlat_v3 (63-date TAIFEX registry, shared with L1-L5)
+                   * Holiday_Flat_Time(415), Registry_Valid_Until(1270101)
+                   * Tail-bar block + 04:15 force flat (LX/SX_IB_HolFlat)
+          - Added: Manual_Kill_Switch(false) for typhoon-class events
+                   * LX/SX_IB_Kill exit labels
+          - Added: Registry expiry fail-safe
+                   * LX/SX_IB_RegistryEnd exit labels
+          - Standardized labels: LE_IB_/SE_IB_/LX_IB_/SX_IB_ prefix
+                   * Original LE_IB_Long -> LE_IB_Entry
+                   * Original LX_IB_Time -> LX_IB_Time (unchanged)
+                   * New: LX_IB_Settlement, LX_IB_HolFlat, LX_IB_Kill, LX_IB_RegistryEnd
+                          SX_IB_Settlement, SX_IB_HolFlat, SX_IB_Kill, SX_IB_RegistryEnd
+          - Entry strategy logic UNCHANGED (preserves original alpha)
+================================================================================}
+
+inputs:
+    { ===== Strategy Core Parameters (original v0.1) ===== }
+    BreakOffset(5),         { 突破閥值: Close 必須超出 Inside Bar 高/低點 N 點 }
+    StopPct(50),            { 停損 = 母棒範圍 × StopPct% }
+    TargetMult(1.5),        { 停利 = 母棒範圍 × TargetMult }
+    MinMotherRange(50),     { 母棒範圍下界 (篩掉過小波動)}
+    MaxMotherRange(400),    { 母棒範圍上界 (篩掉異常巨大波動)}
+    MALen(20),              { 日線 MA 過濾長度 }
+    MaxBarsHeld(30),        { 最長持倉 30 根 30M K = 15 小時 }
+    MinStopPts(40),         { 停損下限 (避免母棒過小導致停損過近)}
+
+    { ===== Priority 0 Protection (憲法 v1.2 強制) ===== }
+    Holiday_Flat_Time(415),         { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101),  { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false),
+    Settlement_Flat_Time(1230);     { 12:30 trigger before 13:30 monthly settlement }
+
+variables:
+    { ===== Strategy Core Variables ===== }
+    v_IsInsideBar(false),
+    v_MotherHigh(0),
+    v_MotherLow(0),
+    v_MotherRange(0),
+    v_StopDist(0),
+    v_TargetDist(0),
+    v_MA_Up(false),
+    v_MA_Down(false),
+    v_EntryBar(0),
+    v_Prev_MP(0),
+
+    { ===== Priority 0 Protection Variables ===== }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    v_Settlement_Day(false),
+    Registry_Warn_ID(-1),
+    hidx(0);
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ============================================================================
+  0. Holiday Tail Registry (TAIFEX-verified, shared with L1/L2/L3/L4/L5)
+  Holiday_Tail = last trading day + 1 calendar day (the date stamped
+  on the 00:00-05:00 tail bars of the final night session before
+  each market closure).
+  ============================================================================ }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 } Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+{ ============================================================================
+  1. Holiday Block Detection (tail bars 00:00-05:00 only)
+  ============================================================================ }
+v_Holiday_Block = false;
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+{ ============================================================================
+  2. Registry Expiry Fail-Safe (force flat + block entries after horizon)
+  ============================================================================ }
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+{ ============================================================================
+  3. Monthly Settlement Day Detection (3rd Wed of month)
+  Mathematical equivalence: DayOfWeek=Wed AND DayOfMonth in [15,21]
+  ============================================================================ }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+{ ============================================================================
+  4. Strategy Logic: Inside Bar Detection (Data2 = Daily)
+  Inside Bar = today's H/L wholly inside yesterday's H/L
+  Mother Bar  = yesterday (the bar before the Inside Bar)
+  Index [1] = closed bar; [2] = bar before that.
+  ============================================================================ }
+v_IsInsideBar = (High of Data2[1] < High of Data2[2]) and
+                (Low of Data2[1] > Low of Data2[2]);
+
+v_MotherHigh = High of Data2[2];
+v_MotherLow = Low of Data2[2];
+v_MotherRange = v_MotherHigh - v_MotherLow;
+
+{ MA direction filter on Data2 (Daily). Long only when above MA, Short only when below. }
+v_MA_Up = Close of Data2[1] > Average(Close of Data2, MALen)[1];
+v_MA_Down = Close of Data2[1] < Average(Close of Data2, MALen)[1];
+
+{ Dynamic stop/target distance from Mother Bar range }
+v_StopDist = MaxList(v_MotherRange * StopPct / 100, MinStopPts);
+v_TargetDist = v_MotherRange * TargetMult;
+
+{ ============================================================================
+  5. Entry Logic (with Priority 0 gates)
+  ============================================================================ }
+if v_IsInsideBar and
+   v_MotherRange >= MinMotherRange and
+   v_MotherRange <= MaxMotherRange and
+   v_Holiday_Block = false and
+   v_Settlement_Day = false and
+   v_Registry_Expired = false then begin
+
+    { Long: MA up + close breaks above Inside Bar high by BreakOffset }
+    if v_Prev_MP <= 0 and v_MA_Up and
+       Close > High of Data2[1] + BreakOffset then begin
+        buy ("LE_IB_Entry") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+
+    { Short: MA down + close breaks below Inside Bar low by BreakOffset }
+    if v_Prev_MP >= 0 and v_MA_Down and
+       Close < Low of Data2[1] - BreakOffset then begin
+        sell short ("SE_IB_Entry") next bar at market;
+        v_EntryBar = BarNumber;
+    end;
+end;
+
+{ ============================================================================
+  6. Priority 0 Exit Chain - LONG side
+  Order: Kill > RegistryEnd > HolFlat (04:15) > Settlement (12:30) > strategy exits
+  ============================================================================ }
+if MarketPosition = 1 then begin
+
+    if Manual_Kill_Switch then
+        sell ("LX_IB_Kill") next bar at Market
+    else if v_Registry_Expired then
+        sell ("LX_IB_RegistryEnd") next bar at Market
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then
+        sell ("LX_IB_HolFlat") next bar at Market
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then
+        sell ("LX_IB_Settlement") next bar at Market
+    else begin
+        { Original strategy exits: SL/TP/Time }
+        sell ("LX_IB_SL") next bar at EntryPrice - v_StopDist stop;
+        sell ("LX_IB_TP") next bar at EntryPrice + v_TargetDist limit;
+        if BarNumber - v_EntryBar >= MaxBarsHeld then
+            sell ("LX_IB_Time") next bar at market;
+    end;
+end;
+
+{ ============================================================================
+  7. Priority 0 Exit Chain - SHORT side
+  Order: Kill > RegistryEnd > HolFlat (04:15) > Settlement (12:30) > strategy exits
+  ============================================================================ }
+if MarketPosition = -1 then begin
+
+    if Manual_Kill_Switch then
+        buy to cover ("SX_IB_Kill") next bar at Market
+    else if v_Registry_Expired then
+        buy to cover ("SX_IB_RegistryEnd") next bar at Market
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then
+        buy to cover ("SX_IB_HolFlat") next bar at Market
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then
+        buy to cover ("SX_IB_Settlement") next bar at Market
+    else begin
+        { Original strategy exits: SL/TP/Time }
+        buy to cover ("SX_IB_SL") next bar at EntryPrice + v_StopDist stop;
+        buy to cover ("SX_IB_TP") next bar at EntryPrice - v_TargetDist limit;
+        if BarNumber - v_EntryBar >= MaxBarsHeld then
+            buy to cover ("SX_IB_Time") next bar at market;
+    end;
+end;
+
+{ ============================================================================
+  8. Previous-MarketPosition Tracker (must be last line)
+  ============================================================================ }
+v_Prev_MP = MarketPosition;
