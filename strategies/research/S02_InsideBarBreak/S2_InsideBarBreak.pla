@@ -2,7 +2,7 @@
  Script Name : _Research_InsideBarBreak_v0.3
  MC Load Name: STRATEGY_GEN_InsideBarBreak
  Description : Daily Inside Bar Breakout (Bidirectional, MA-filtered)
- Version     : v0.4 (A+B+C: volatility-compression quantification + B + C)
+ Version     : v0.5 (Long_Only_Mode + TargetMult 1.5->1.0 based on MC evidence)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 30M / Data2 = Daily
@@ -71,7 +71,7 @@
           Set all _On switches to false + BreakOffset_Mode=0
           to recreate exact v0.2 behavior for A/B testing.
 
-   v0.4   (2026-06-17 A series: vol-compression quantification) ★ THIS VERSION
+   v0.4   (2026-06-17 A series: vol-compression quantification)
           Issues solved (3 of remaining 21): A-1, A-2, A-3.
 
           A-1  Inside / Mother range ratio filter. Pattern alone
@@ -103,13 +103,48 @@
           REMAINING ISSUES (18/29): D-1~5 (no MC backtest yet),
           E-1~3 (alpha decay), F-1~3 (correlation), G-1~3 (MTF),
           H-1~2 (long/short asymmetry), I-1~3 (MFE/MAE).
+
+   v0.5   (2026-06-17 Long_Only_Mode + TargetMult cut) ★ THIS VERSION
+          First MC backtest (Naive 5.6yr) revealed:
+            - Overall PF -0.92 (loses money)
+            - Long-only PF 1.057 (barely)
+            - Short-only PF 0.672 (no alpha)
+            - TP hit rate only 19% (TargetMult 1.5 too far)
+          Issues solved (H-1, H-2):
+
+          H-1  Long/Short asymmetry confirmed. New input
+               Long_Only_Mode(true) gates the Short entry
+               block entirely. Short logic preserved but
+               only triggers when Long_Only_Mode = false.
+
+          H-2  Bear-market only Short worked (2022 +127K)
+               but rest of years Short -280K. Long_Only_Mode
+               accepts the asymmetry; we rely on L2/L4 in
+               portfolio for downside protection.
+
+          PERF FIX (not a tracked issue but raised by MC):
+               TargetMult default 1.5 -> 1.0. v0.4's 1.5 had
+               only 19% TP hit rate; 1.0 should raise it to
+               ~40-50% based on MFE distribution analysis.
+
+          Mathematical trade-off:
+               Old: WR 43% × 3:1 RR = +0.72 expected/trade
+               New: WR ~50% × 2:1 RR = +0.50 expected/trade
+               But: less hold time = less slippage cost =
+                    cleaner realized PnL.
+
+          Rationale in: S2_why_long_bias_works.md
+
+          REMAINING ISSUES (16/29): D-1~5 (no MC backtest yet),
+          E-1~3 (alpha decay, partially answered by Naive PF data),
+          F-1~3 (correlation), G-1~3 (MTF), I-1~3 (MFE/MAE).
 ================================================================================}
 
 inputs:
     { ===== Strategy Core (v0.2 unchanged) ===== }
     BreakOffset(5),         { v0.2 fixed offset, retained for Mode=0 }
     StopPct(50),
-    TargetMult(1.5),
+    TargetMult(1.0),        { v0.5: was 1.5, reduced based on MC TP hit rate 19% }
     MinMotherRange(50),
     MaxMotherRange(400),
     MALen(20),
@@ -155,7 +190,13 @@ inputs:
     ATR_Filter_On(true),        { A-3: enable ATR short/long contraction }
     ATR_Short_Len(5),           { A-3: short ATR length (Daily) }
     ATR_Long_Len(20),           { A-3: long ATR length (Daily) }
-    ATR_Compression_Threshold(0.8);  { A-3: ATR_Short < ATR_Long × this passes }
+    ATR_Compression_Threshold(0.8),  { A-3: ATR_Short < ATR_Long × this passes }
+
+    { ===== v0.5 H series: Long/Short asymmetry handling ===== }
+    Long_Only_Mode(true);       { H-1: true = block all Short entries
+                                  Default true based on MC evidence:
+                                  Naive Long PF 1.057 / Short PF 0.672
+                                  Set false to restore v0.4 bidirectional }
 
 variables:
     { ===== Strategy Core (v0.2) ===== }
@@ -417,8 +458,9 @@ if v_PendingLong then begin
     end;
 end;
 
-{ Short: stage 1 detection }
-if v_Prev_MP >= 0 and v_PendingShort = false and v_PendingLong = false and
+{ Short: stage 1 detection (only if Long_Only_Mode = false) }
+if Long_Only_Mode = false and    { v0.5 H-1 gate }
+   v_Prev_MP >= 0 and v_PendingShort = false and v_PendingLong = false and
    v_IsInsideBar and
    v_MotherRange >= MinMotherRange and
    v_MotherRange <= MaxMotherRange and
