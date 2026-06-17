@@ -5,8 +5,8 @@
 > 違反條款 = 不可上架。
 
 **生效日**：2026-06-17（第一次月結算日當天定憲）
-**最後更新**：2026-06-17（v1.1 新增條款 6-8）
-**當前版本**：v1.1
+**最後更新**：2026-06-17（v1.2 條款 7/8 撤回，條款 1-6 保留）
+**當前版本**：v1.2
 **涵蓋商品**：TXF1（台指期近月連續）
 
 ---
@@ -137,38 +137,40 @@ end;
 
 **禁止用「設計意圖」分類**。代碼可能有 bug、input 可能被改、Trail 可能未觸發 → 設計意圖 ≠ 實際行為。
 
-### 條款 7：盤整類策略強制 TimeExit < 12:00
+### 條款 7：⚠️ 已撤回（2026-06-17）— 盤整類策略強制 TimeExit
 
-凡 Alpha 來源為 mean reversion / 區間震盪 / Bollinger / RSI overbought 的策略，
-**必須在 PowerLanguage 強制設定**：
+**原條款**：盤整類策略必須在 12:00 強制平倉。
 
-```powerlanguage
-{ 強制 12:00 前出場, 避免漂移到 Swing-Range 禁區 }
-if MarketPosition <> 0 and Time >= 1200 then
-    Sell ("XX_RangeForceExit") next bar at Market;
-```
+**撤回原因**：
+1. 2026-06-17 在 L3 v13.3 / L4 v14.3 嘗試實作
+2. 初版條件 `Time >= 1200` 在 MC PowerLanguage 24-hour 制下，
+   夜盤 15:00-23:59 全部為 true → 持倉到夜盤開盤就被誤平倉
+3. Hotfix v13.3.1 / v14.3.1 加入 `Time <= 1330` 上界
+4. 用戶實測 L4 績效仍轉負 → **概念本身對既有盤整策略破壞性過大**
+5. 完全回滾為 L3 v13.4 / L4 v14.4（保留 Settlement_Flat，移除 RangeForceExit）
 
-理由：
-- 盤整策略撐到結算 12:30 = 反轉尚未發生 = 部位正在虧損
-- Settlement_Flat 12:30 強制平倉 = 在反轉前砍倉 = 災難
-- 12:00 強制出場 = 主動避免進入禁區
-- Settlement_Flat 仍保留作為「策略代碼故障」的最後兜底
+**目前狀態**：暫不強制執行此條款。
+**保留條款**：條款 1-6 仍有效。
+**未來研究方向**（暫不上架）：
+- 「結算日當天 + 盤整策略 = 12:00 提前」（限定條件，不影響一般日）
+- 「持倉 > N 個商品交易日後 + 盤整策略 = 強制平倉」（基於持倉天數）
+- 重新評估「跨日盤整 = 災難」這個論點是否在 L3/L4 實證上成立
 
-### 條款 8：含 Trail / BE 的策略追加跨日防線
+詳見：[`docs/range_force_exit_rollback_20260617.md`](range_force_exit_rollback_20260617.md)
 
-若策略含 Trail Stop / Break Even / 動態 SP 等「跟隨價格移動」機制：
+### 條款 8：⚠️ 同樣存在時段陷阱風險 — Trail / BE 的「跨日防線」
 
-**追加強制**：
-```powerlanguage
-{ 13:30 前無論 Trail/BE 是否觸發, 強制出場 }
-if MarketPosition <> 0 and Time >= 1330 then
-    Sell ("XX_DayCloseForce") next bar at Market;
-```
+**原條款**：含 Trail / BE 的策略必須在 13:30 強制出場。
 
-理由：
-- Trail / BE 在收盤前可能未自然觸發
-- 留倉到隔日 → gap risk → Trail 失效或反向觸發
-- 純日盤策略不可依賴 Trail 在收盤前必觸發
+**重新檢視**：
+與條款 7 同樣的 MC `Time` 24-hour 制陷阱 — `Time >= 1330` 在夜盤 15:00-23:59 都為 true。
+
+**若未來實作此條款必須**：
+1. 用閉區間 `Time >= 1330 AND Time <= 1345`（日盤收盤前 15 分鐘）
+2. 或加日盤判定 `Time >= 1330 AND Time <= 1345 AND DayOfWeek(Date) in [1,2,3,4,5]`
+3. 加 verify 腳本檢查「任何時段條件必須閉區間」
+
+**目前狀態**：暫不強制執行此條款。實際上 L1 / L5 雖含 Trail / SP / BE，但歷史回測未出現「Trail 未觸發跨日 + Settlement_Flat 鎖利」的衝突。
 
 ### 補充規則 4：手動 Roll Over 後必須在 MC 同步 Force Flat
 
@@ -227,8 +229,9 @@ python scripts/verify_strategy_holding_classification.py
 - [ ] 是否通過 `scripts/verify_settlement_flat.py`？
 - [ ] **是否通過 `scripts/verify_strategy_holding_classification.py`？**
 - [ ] **三象限分類落位（A/B/C）= ？必須非 C**
-- [ ] **若 Alpha 為 mean reversion：是否含 Time >= 1200 強制出場？**
-- [ ] **若含 Trail/BE：是否含 Time >= 1330 強制出場？**
+- [ ] ~~若 Alpha 為 mean reversion：是否含 Time >= 1200 強制出場？~~ （條款 7 暫撤回）
+- [ ] ~~若含 Trail/BE：是否含 Time >= 1330 強制出場？~~ （條款 8 暫撤回）
+- [ ] 任何 `Time >=` 條件是否同時有 `Time <=` 閉區間？（防夜盤誤觸）
 - [ ] 結算日當天的回測表現是否單獨計算？
 - [ ] 結算日績效是否被排除在主績效指標外？
 
@@ -336,8 +339,9 @@ python scripts/verify_strategy_holding_classification.py
 | 版本 | 日期 | 變更 |
 |------|------|------|
 | 1.0 | 2026-06-17 | 初版生效（條款 1-5 + 章節 1-7）|
-| **1.1** | **2026-06-17** | **新增條款 6-8 + 補充規則 4-5（基於 L3/L4/L5 跨日 33-47% 實證發現）** |
+| 1.1 | 2026-06-17 | 新增條款 6-8 + 補充規則 4-5（基於 L3/L4/L5 跨日 33-47% 實證發現）|
+| **1.2** | **2026-06-17** | **條款 7/8 撤回 — RangeForceExit 實作失敗（夜盤誤觸 + L4 績效轉負），保留條款 1-6 與補充規則 4-5。詳見 [rollback report](range_force_exit_rollback_20260617.md)** |
 
 ---
 
-**本憲法 v1.1 生效於 2026-06-17。任何在此之後開發的策略，若無 Settlement_Flat 模組、未通過三象限分類驗證、或落入 Swing-Range 禁區，將不被視為合格上架候選。**
+**本憲法 v1.2 生效於 2026-06-17。任何在此之後開發的策略，若無 Settlement_Flat 模組（條款 1-5）、未通過三象限分類驗證（條款 6），將不被視為合格上架候選。條款 7/8 暫撤回待重新設計。**
