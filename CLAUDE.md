@@ -54,9 +54,11 @@ scripts/
   export_to_mc.py                  # 匯出 PowerLanguage 原始碼供 MC 載入
   strategy_comparison.py           # 策略組合分析
 docs/
-  SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # ★ 結算日策略設計憲法（強制位階）
+  SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # ★ 結算日策略設計憲法 v1.1（強制位階）
   settlement_flat_module_20260617.md     # Settlement_Flat 模組詳細設計
   settlement_flat_flow_diagram.svg       # 結算日完整決策流程圖
+  settlement_flat_backtest_validation_20260617.md  # 6 隻策略真實回測深度驗證
+  strategy_classification_decision_matrix.svg      # ★ 策略分類×Settlement 角色決策矩陣
   entry_exit_sop.md                # 9 層出場架構標準
   position_sizing_and_capacity.md  # 口數配置框架
   L4_v142_pathA_entry_diagnostic.md   # L4 A/B Path A 完整診斷

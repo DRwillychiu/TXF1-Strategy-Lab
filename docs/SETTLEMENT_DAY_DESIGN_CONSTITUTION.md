@@ -5,7 +5,8 @@
 > 違反條款 = 不可上架。
 
 **生效日**：2026-06-17（第一次月結算日當天定憲）
-**最後更新**：2026-06-17
+**最後更新**：2026-06-17（v1.1 新增條款 6-8）
+**當前版本**：v1.1
 **涵蓋商品**：TXF1（台指期近月連續）
 
 ---
@@ -118,6 +119,80 @@ end;
 理由：跨 chart 信號同步複雜度高，違反「先求穩定再求最佳」原則。
 若未來要做，必須先在 research/ 跑滿 6 個月模擬 + 通過 P1-P3 才可晉升 live_simulation。
 
+### 條款 6：策略分類三選一（用回測數據確認，非設計意圖）
+
+**先前共識「日內 vs 跨日」二分法被 2026-06-17 實證推翻**。
+真實分類維度不是「會否跨日」，而是「**會否撐到結算日 12:30**」。
+
+| 類別 | 定義 | Settlement_Flat 角色 | 上架許可 |
+|------|------|---------------------|---------|
+| **A. Swing-Trend** | 趨勢類 + 任一筆撐到結算 12:30 | **核心鎖利機制** | ✅ |
+| **B. Intraday / Night** | 任何 Alpha 類型 + 0 筆撐到結算 | **無感兜底保險** | ✅ |
+| **C. Swing-Range** | 盤整類 + 任一筆撐到結算 12:30 | **災難級兜底**（在反轉前砍倉）| ❌ **設計禁區** |
+
+**分類強制用回測數據**：
+- 看 *_Settlement 標籤出場是否出現
+- 若有任一筆觸發 → 該策略撐到結算
+- 若無 → 該策略不撐結算
+
+**禁止用「設計意圖」分類**。代碼可能有 bug、input 可能被改、Trail 可能未觸發 → 設計意圖 ≠ 實際行為。
+
+### 條款 7：盤整類策略強制 TimeExit < 12:00
+
+凡 Alpha 來源為 mean reversion / 區間震盪 / Bollinger / RSI overbought 的策略，
+**必須在 PowerLanguage 強制設定**：
+
+```powerlanguage
+{ 強制 12:00 前出場, 避免漂移到 Swing-Range 禁區 }
+if MarketPosition <> 0 and Time >= 1200 then
+    Sell ("XX_RangeForceExit") next bar at Market;
+```
+
+理由：
+- 盤整策略撐到結算 12:30 = 反轉尚未發生 = 部位正在虧損
+- Settlement_Flat 12:30 強制平倉 = 在反轉前砍倉 = 災難
+- 12:00 強制出場 = 主動避免進入禁區
+- Settlement_Flat 仍保留作為「策略代碼故障」的最後兜底
+
+### 條款 8：含 Trail / BE 的策略追加跨日防線
+
+若策略含 Trail Stop / Break Even / 動態 SP 等「跟隨價格移動」機制：
+
+**追加強制**：
+```powerlanguage
+{ 13:30 前無論 Trail/BE 是否觸發, 強制出場 }
+if MarketPosition <> 0 and Time >= 1330 then
+    Sell ("XX_DayCloseForce") next bar at Market;
+```
+
+理由：
+- Trail / BE 在收盤前可能未自然觸發
+- 留倉到隔日 → gap risk → Trail 失效或反向觸發
+- 純日盤策略不可依賴 Trail 在收盤前必觸發
+
+### 補充規則 4：手動 Roll Over 後必須在 MC 同步 Force Flat
+
+實戰場景：用戶在 broker 端手動把舊月份合約 Roll 到新月份合約。
+**MC 不知道這個動作**，策略狀態仍顯示「持有舊合約」。
+
+**強制流程**：
+1. broker 手動 Roll 完成
+2. **立刻**到 MC 對應策略上執行「Force Flat」（強制歸零策略內部部位）
+3. 策略 reset 後，下一根 K 棒會根據新月份合約重新評估進場
+
+未執行此流程 → Settlement_Flat 12:30 會發送平倉指令到 broker，但 broker 無對應部位 → 策略狀態錯亂。
+
+### 補充規則 5：每次 input 調整後必須重跑分類驗證
+
+實戰風險：今天 L5 在 Q1（Intraday/Night），但若改 TimeExit 從 13:30 改 14:00，
+就可能漂移到 Q2 或 Q4。
+
+**強制**：每次 input 修改後執行：
+```bash
+python scripts/verify_strategy_holding_classification.py
+```
+確認所有策略仍在 Q1/Q2/Q3 三象限內，無一漂移到 Q4。
+
 ---
 
 ## 第三章：12:30 為什麼是最佳觸發時點
@@ -150,6 +225,10 @@ end;
 
 - [ ] 是否內建 Settlement_Flat 模組（7 元素）？
 - [ ] 是否通過 `scripts/verify_settlement_flat.py`？
+- [ ] **是否通過 `scripts/verify_strategy_holding_classification.py`？**
+- [ ] **三象限分類落位（A/B/C）= ？必須非 C**
+- [ ] **若 Alpha 為 mean reversion：是否含 Time >= 1200 強制出場？**
+- [ ] **若含 Trail/BE：是否含 Time >= 1330 強制出場？**
 - [ ] 結算日當天的回測表現是否單獨計算？
 - [ ] 結算日績效是否被排除在主績效指標外？
 
@@ -158,11 +237,18 @@ end;
 - [ ] Settlement_Flat 模組是否經過實盤模擬至少 1 次結算日測試？
 - [ ] Settlement 出場標籤是否與其他出場明顯區隔？
 - [ ] 對策略 PF / MDD 的衝擊是否 < 5%？
+- [ ] **回測中 *_Settlement 觸發次數記錄存檔（決定 A 或 B 類別）？**
 
 **任何 live_simulation → live 晉升必須回答**：
 
 - [ ] 是否已在 MC9 / MC12 上完成「完全移除 → 重載 .pla」流程？
 - [ ] 是否有完整文件記錄 Settlement_Flat 的部署日與測試結果？
+- [ ] **是否已記錄手動 Roll Over 後 MC Force Flat 的標準流程？**
+
+**任何 input 調整後必做**：
+
+- [ ] 重跑 `verify_strategy_holding_classification.py`
+- [ ] 確認分類仍在 A / B 象限（無漂移到 C 禁區）
 
 ---
 
@@ -225,13 +311,33 @@ end;
 
 ## 附錄：相關文件交叉引用
 
+### 設計文件
 - [`docs/settlement_flat_module_20260617.md`](settlement_flat_module_20260617.md) — 模組詳細設計與五方案比較
-- [`docs/settlement_flat_flow_diagram.svg`](settlement_flat_flow_diagram.svg) — 完整決策流程圖
-- [`scripts/verify_settlement_flat.py`](../scripts/verify_settlement_flat.py) — 42 項自動驗證
+- [`docs/settlement_flat_flow_diagram.svg`](settlement_flat_flow_diagram.svg) — 結算日完整決策流程圖
+- [`docs/strategy_classification_decision_matrix.svg`](strategy_classification_decision_matrix.svg) — 策略分類×Settlement 角色決策矩陣 ★
+
+### 實證報告
+- [`docs/settlement_flat_backtest_validation_20260617.md`](settlement_flat_backtest_validation_20260617.md) — 6 隻策略真實回測深度驗證（L1 67.3% PnL 來自 Settlement）
+
+### 驗證腳本
+- [`scripts/verify_settlement_flat.py`](../scripts/verify_settlement_flat.py) — 42 項自動驗證（部署完整性）
 - [`scripts/verify_settlement_detection_proof.py`](../scripts/verify_settlement_detection_proof.py) — 數學證明 + 132/132 月實測
+- [`scripts/verify_strategy_holding_classification.py`](../scripts/verify_strategy_holding_classification.py) — ★ 三象限分類強制驗證
+- [`scripts/analyze_settlement_backtest.py`](../scripts/analyze_settlement_backtest.py) — Settlement 出場績效分析
 - [`scripts/verify_all_live.py`](../scripts/verify_all_live.py) — 110 項上架策略 master 驗證
-- [`CLAUDE.md`](../CLAUDE.md) — 專案總則
+
+### 專案總則
+- [`CLAUDE.md`](../CLAUDE.md) — 含 PowerLanguage 規範第 11 條
 
 ---
 
-**本憲法生效於 2026-06-17。任何在此之後開發的策略，若無 Settlement_Flat 模組或違反任一條款，將不被視為合格上架候選。**
+## 修訂歷史
+
+| 版本 | 日期 | 變更 |
+|------|------|------|
+| 1.0 | 2026-06-17 | 初版生效（條款 1-5 + 章節 1-7）|
+| **1.1** | **2026-06-17** | **新增條款 6-8 + 補充規則 4-5（基於 L3/L4/L5 跨日 33-47% 實證發現）** |
+
+---
+
+**本憲法 v1.1 生效於 2026-06-17。任何在此之後開發的策略，若無 Settlement_Flat 模組、未通過三象限分類驗證、或落入 Swing-Range 禁區，將不被視為合格上架候選。**
