@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.2B (PRODUCTION = Variant B: Freeze ON, BE OFF) + HolidayFlat_v3
+ Version     : v13.3 (= v13.2B + Settlement_Flat + RangeForceExit Time=1200)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -98,6 +98,13 @@ inputs:
     { --- Monthly Settlement Flat (2026-06-17 added) ---
       TXF1 settles every 3rd Wed at 13:30. Dynamic detection. }
     Settlement_Flat_Time(1230),
+
+    { --- v13.3 Range Force Exit (Constitution v1.1 Clause 7) ---
+      盤整策略強制日盤 12:00 前出場, 防止漂移到 Swing-Range 禁區.
+      理由: mean reversion alpha 撐到 12:30 = 反轉未發生 = 正在虧;
+            Settlement_Flat 12:30 平倉 = 在反轉前砍倉 = 災難.
+      設計: 主動於 12:00 強制平倉, 將策略鎖定在 Q3 安全象限. }
+    Range_ForceExit_Time(1200),
 
     { --- v13.2 A/B switches (defaults = PRODUCTION variant B) --- }
     Freeze_SL_On(true),            { PRODUCTION: lock leg/stop/target at entry; false = old v13 dynamic }
@@ -400,7 +407,9 @@ if MarketPosition = 1 then begin
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then
         Sell ("CL_Holiday") next bar at Market
     else if v_Settlement_Day and Time >= Settlement_Flat_Time then
-        Sell ("CL_Settlement") next bar at Market;
+        Sell ("CL_Settlement") next bar at Market
+    else if Time >= Range_ForceExit_Time then
+        Sell ("CL_RangeForceExit") next bar at Market;
 
     if Manual_Kill_Switch then
         Sell ("CL_Kill") next bar at Market;

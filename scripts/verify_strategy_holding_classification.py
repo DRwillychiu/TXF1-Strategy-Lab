@@ -45,9 +45,9 @@ def txf_trade_date(d, hhmm):
 FILES = [
     ('L1', 'TrendLong',          'WILLY_ATR_LONG_60M',           'Swing-Trend'),
     ('L2', 'TrendShort',         'Trendbearish_V1',              'Swing-Trend'),
-    ('L3', 'ConsolidationLong',  'STRATEGY_WILLY_LONG_C',        'Intraday'),
-    ('L4', 'ConsolidationShort', 'STRATEGY_WILLY_SHORT_CTEST2',  'Intraday'),
-    ('L5', 'BreakoutLong',       'STRATEGY_WILLY_LONG_BREAKOUT_C','Intraday'),
+    ('L3', 'ConsolidationLong',  'STRATEGY_WILLY_LONG_C',        'Intraday'),     # post v13.3 with RangeForceExit
+    ('L4', 'ConsolidationShort', 'STRATEGY_WILLY_SHORT_CTEST2',  'Intraday'),     # post v14.3 with RangeForceExit
+    ('L5', 'BreakoutLong',       'STRATEGY_WILLY_LONG_BREAKOUT_C','Swing-Trend'),  # 突破策略本質跨日, 與 L1 同類
     ('S1', 'NightMomentum',      'STRATEGY_GEN_NightMomentum',   'Night'),
 ]
 
