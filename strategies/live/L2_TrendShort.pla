@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND BEARISH STRATEGY
   Signal Name : Trendbearish_V1
   MC Load Name: Trendbearish_V1
-  Version     : 5.2 + HolidayFlat_v3 (Iron Rule)
+  Version     : 5.2 + HolidayFlat_v3 (Iron Rule) + ImmediateStop
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : 60-Minute (Day + Night Sessions, grid verified
@@ -32,6 +32,17 @@
          - Header performance reflects the OLD module set;
            re-backtest after deployment. Deploy only when flat
            (changes history for holiday-crossing trades).
+    5.2+ (2026-06-18) P3b Immediate Stop Guard:
+         - SetStopLoss = MC engine-level stop, active on entry
+           bar (no IOG dependency). Closes the structural 60-min
+           unprotected window between fill and first custom stop.
+         - Distance = AbsValue((DC_Lower + ATR*SL_ATR_Ratio) -
+           Close) * BigPointValue. Same anchor as Section 8 SL.
+         - Called only when not short (MP>=0) -> freezes when
+           short position opens (same principle as SL_Locked).
+         - Does NOT replace Section 8-13 exit logic. Dormant
+           backup once custom stops tighten.
+         - Deploy only when flat.
 
   PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
     Net Profit    : 1,400,200 TWD
@@ -421,6 +432,13 @@ If ZLEMA_Val < EMA20_Val Then
    C_B = True
 Else
    C_B = False;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when not short -> freezes at signal-bar values once position opens. }
+If MarketPosition >= 0 Then
+   SetStopLoss( AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close )
+                * BigPointValue );
 
 If FilterOK = True And
    C0       = True And
