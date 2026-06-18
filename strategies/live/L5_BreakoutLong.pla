@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v19_8_BreakoutLong
  MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
  Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
- Version     : v19.8 + Pre-Trail SP + HolidayFlat_v3 + FrozenSL
+ Version     : v19.8 + Pre-Trail SP + HolidayFlat_v3 + FrozenSL + ImmediateStop
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
@@ -166,6 +166,19 @@
    MDD           : -193,200 (-16.61%)
    Total Trades  : 162
    Backtest      : ~4.8 years
+
+   v19.8+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue(Close - (Box_Btm - ATR*4.5)) *
+            BigPointValue. Uses the WIDER Bot-leg stop for both
+            entry legs (Bot and Mid). Conservative: Mid-leg entries
+            get more buffer than strictly needed, but ensures
+            disaster protection for all entries.
+          - Called only when flat (MP<=0) inside consolidation
+            block -> freezes when position opens.
+          - Dormant backup once custom stops tighten.
+          - Deploy only when flat.
 ================================================================================}
 
 inputs:
@@ -471,6 +484,13 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
     v_Target_Bot = v_Mid_Line - (FrontRun_Ticks * v_TickSize);
     v_Target_Mid = v_Box_Top  - (FrontRun_Ticks * v_TickSize);
+
+    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+      Uses WIDER Bot-leg stop for both entry legs (conservative). }
+    if MarketPosition <= 0 then
+        SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
+                    * BigPointValue);
 
     if MarketPosition = 0 and v_Allow_Entry then begin
         if (v_Trend_Dir = 1) and

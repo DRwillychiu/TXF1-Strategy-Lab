@@ -1,6 +1,6 @@
 # P3b Immediate Stop Guard Design Discussion (2026-06-18)
 
-**Status**: PHASE 1 IN PROGRESS — L1 implemented (2026-06-18), S1 next
+**Status**: ALL 6 STRATEGIES IMPLEMENTED (2026-06-18)
 **Trigger**: User discovered L1 entry fill had no initial stop on chart
 **Root cause**: IOG=false + stop computed in `if MP>0` block = entry bar has 0 protection
 
@@ -236,3 +236,7 @@ recalculation will disagree with any live open position).
 | 2026-06-18 | Confirmed V2.5 Frozen SL compatibility | SetStopLoss freezes via if-guard, same principle |
 | 2026-06-18 | Design phase — NO code changes yet | User requires thorough discussion before implementation |
 | 2026-06-18 | L1 Phase 1 implemented | SetStopLoss added to L1_TrendLong.pla, 17/17 verification pass |
+| 2026-06-18 | S1 Phase 1 completed | SetStopLoss added to S1_NightMomentum.pla, 15/15 pass |
+| 2026-06-18 | L2 Phase 2 completed | SetStopLoss added to L2_TrendShort.pla, 15/15 pass |
+| 2026-06-18 | L3/L4/L5 Phase 3 completed | Box-based SetStopLoss added, 27/27 pass |
+| 2026-06-18 | ALL 6 STRATEGIES DONE | Layer 2 defense-in-depth complete across entire portfolio |

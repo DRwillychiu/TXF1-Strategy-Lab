@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.4 (= v13.2B + Settlement_Flat only; RangeForceExit rolled back)
+ Version     : v13.4 + ImmediateStop
                v13.3/v13.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -68,6 +68,16 @@
                 -> 72/+691,800). Cost: 2025 trend year -396,400
                 (redistribution; trend years belong to L1/L5).
           - Defaults now = variant B. Deploy only when flat.
+   v13.4+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected
+            window between fill and first custom stop.
+          - Distance = AbsValue(Close - (Box_Btm - ATR*3.0)) *
+            BigPointValue. Same anchor as Frozen SL.
+          - Called only when flat (MP<=0) inside consolidation
+            block -> freezes when position opens.
+          - Dormant backup once custom stops tighten.
+          - Deploy only when flat.
 
  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
@@ -293,6 +303,13 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
     v_Mid_Line   = (v_Box_Top + v_Box_Btm) / 2;
     v_ATR_Buffer = ATR_Stop_Mult * v_Current_ATR;
+
+    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+      Only called when flat -> freezes at signal-bar box snapshot. }
+    if MarketPosition <= 0 then
+        SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
+                    * BigPointValue);
 
     { --- Entry Logic (gated by Holiday Tail) --- }
     if MarketPosition = 0 then begin

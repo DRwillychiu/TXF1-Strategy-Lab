@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.4 (= v14.2B + Settlement_Flat only; RangeForceExit rolled back)
+ Version     : v14.4 + ImmediateStop
                v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -155,6 +155,16 @@
    CS_BE / CS_SP fires    : 0 (Path B inputs at 0)
 
    v14.2 A-G variant matrix complete; B sealed as production.
+
+   v14.4+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue((Box_Top + ATR*2.0) - Close) *
+            BigPointValue. Same anchor as Frozen SL.
+          - Called only when not short (MP>=0) inside consolidation
+            block -> freezes when short position opens.
+          - Dormant backup once custom stops tighten.
+          - Deploy only when flat.
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
@@ -440,6 +450,13 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         if v_Trap_Counter > Time_Limit_Bars then
             v_In_Trap_Zone = false;
     end;
+
+    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+      Only called when not short -> freezes at signal-bar box snapshot. }
+    if MarketPosition >= 0 then
+        SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close)
+                    * BigPointValue);
 
     { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail + Night Block) }
     v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
