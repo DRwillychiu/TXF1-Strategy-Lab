@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.6 + StopProfit + FrozenSL + HolidayFlat_v3
+  Version     : V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -64,11 +64,29 @@
           - Optimistic-bound improvement +1.93M; path-level
             whipsaw cost invisible to MFE data -> MC9 A/B is the
             final arbiter. Deploy only when flat.
+    V2.6+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on the
+            ENTRY BAR itself (no IOG dependency). Closes the
+            structural 45-minute unprotected window between fill
+            and first custom stop order (IOG=false -> script
+            evaluates at bar close only).
+          - Distance = same as P3 frozen SL: MaxList(ATR x 1.5,
+            Daily_ATR x 0.5) x BigPointValue.
+          - Called only when flat (MP<=0) -> freezes automatically
+            when position established (same principle as V2.5
+            Frozen SL via v_SL_Locked).
+          - Does NOT replace P3/P4/P7 exit logic. Once custom
+            stops tighten beyond SetStopLoss, engine picks the
+            tighter level. SetStopLoss becomes dormant backup.
+          - Deploy only when flat.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
     P3 Stop   : Frozen at entry - MaxList(ATR x SL_Mult,
                 Daily_ATR x Cap_Mult), locked for the whole trade
+    P3b Guard : SetStopLoss (engine-level, active on entry bar)
+                Covers the 45min IOG=false gap between fill and
+                first custom stop order. Same distance as P3.
     P4 Trail  : MA55 - TrailOffset (breathing trail, let trend run)
     P7 Guard  : Stop Profit - armed at +250 pts close-based, lock
                 floor = Entry + peak x 45 pct, ratchets up only
@@ -370,6 +388,13 @@ end;
 
 Cond_Breakout = (Close Crosses Over Breakout_Level);
 MP = MarketPosition;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when flat -> freezes at signal-bar ATR once position opens. }
+if MP <= 0 then
+    SetStopLoss(MaxList(Current_ATR * SL_Multiplier,
+                        Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 
 if MP = 0 then begin
     if Cond_Breakout and
