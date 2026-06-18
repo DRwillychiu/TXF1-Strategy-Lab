@@ -1,5 +1,5 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.6: v2.5 base + Entry-side Trend Filter (VolRatio / DailyMA / WeeklyMA)}
+{v2.6+ImmediateStop: v2.5 base + Entry-side Trend Filter + P3b SetStopLoss}
 {Category A: Night Session Breakout + Overnight Gap Capture + MFE protection}
 {Direction: Long Only}
 {Timeframe: 15-min on TXF1}
@@ -140,6 +140,22 @@
   ENTRY CHANGE (single line, all exits UNCHANGED):
     Added "and v_TrendPass" to entry condition gate.
     Mode 0: v_TrendPass=true, zero behavioral change vs v2.4.
+}
+
+{ v2.6+ P3b CHANGELOG (2026-06-18):
+
+  Immediate Stop Guard (same design as L1 P3b).
+  SetStopLoss = MC engine-level stop, active on entry bar itself.
+  Closes the structural 15-minute unprotected window (IOG=false,
+  script evaluates at bar close only).
+
+  Distance = same as existing SL: v_ATR x StopATRMult x BigPointValue.
+  Called only when flat (MarketPosition<=0) -> freezes automatically
+  when position opens (same principle as v_EntryATR freeze).
+  Does NOT replace LX_NM_SL. Once custom stop tightens,
+  engine picks tighter. SetStopLoss becomes dormant backup.
+
+  Deploy only when flat.
 }
 
 inputs:
@@ -364,6 +380,12 @@ if v_IsNightSession and v_RangeReady = false then begin
             v_RangeReady = true;
     end;
 end;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when flat -> freezes at signal-bar ATR once position opens. }
+if MarketPosition <= 0 then
+    SetStopLoss(v_ATR * StopATRMult * BigPointValue);
 
 { Entry: Long breakout (v2.1 + Holiday + Settlement + TrendFilter gates) }
 { v2.6: added v_TrendPass (Mode 0 = always true = v2.4 baseline) }
