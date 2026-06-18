@@ -106,6 +106,13 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - 金額 = 點數距離 × `BigPointValue`（TXF1 = 200）
     - 每隻策略僅限 1 個 `SetStopLoss` 呼叫（不可重複）
     - 新策略開發時，此項與 Settlement_Flat 同為必備結構模組
+13. **★ 強制規範**：所有新策略 / 既有策略優化必須通過機構級 10 維度評估
+    - 詳見 [docs/institutional_risk_framework_20260619.md](docs/institutional_risk_framework_20260619.md)
+    - 10 維度：Sharpe/Sortino/Calmar、VaR/CVaR、跨策略相關性 < 0.7、
+      Drawdown clustering、樣本數 ≥ 100、WFE > 50%、三市況 PF > 1.0、
+      成本分析、Operational risk、法規 / 帳戶限制
+    - 任一維度 fail → 不可上 live_simulation
+    - 即使是 1-line input 改動，也須評估這 10 維度的變化
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
