@@ -146,11 +146,11 @@ report("L2-7: Entry gate has v_Holiday_Block",
 # ===== LAYER L3 =====
 print()
 print("=" * 75)
-print("LAYER L3: v13.2B PRODUCTION (Freeze ON, BE OFF per A/B verdict)")
+print("LAYER L3: v13.4 PRODUCTION (= v13.2B + Settlement_Flat + ImmediateStop)")
 print("=" * 75)
 
 l3 = content['L3']
-report("L3-1: Version v13.2B in header", 'v13.2B' in l3, "")
+report("L3-1: Version v13.4 in header", 'v13.4' in l3, "")
 l3_clean = strip_pl_comments(l3)
 m = re.search(r'Freeze_SL_On\s*\(\s*(\w+)\s*\)', l3_clean)
 report("L3-2: Freeze_SL_On default = true (production)",
