@@ -97,6 +97,15 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - Priority 0 出場順序：Kill > Registry > Holiday > **Settlement** > 原邏輯
     - 進場 gate 必含 `v_Settlement_Day = false`
     - 驗證腳本 `scripts/verify_settlement_flat.py` 必須通過
+12. **★ 強制規範**：所有策略必須含 P3b Immediate Stop Guard（SetStopLoss）
+    - 詳見 [docs/P3b_immediate_stop_guard_design_20260618.md](docs/P3b_immediate_stop_guard_design_20260618.md)
+    - `SetStopLoss` 為 MC 引擎層級函數，進場成交瞬間即生效（無 IOG 依賴）
+    - 必須在進場區塊之前、指標計算之後呼叫
+    - Guard 條件：Long 策略 `if MP <= 0`、Short 策略 `if MP >= 0`（進場後自動凍結）
+    - 距離公式必須與該策略的 Frozen SL 使用相同變數和乘數
+    - 金額 = 點數距離 × `BigPointValue`（TXF1 = 200）
+    - 每隻策略僅限 1 個 `SetStopLoss` 呼叫（不可重複）
+    - 新策略開發時，此項與 Settlement_Flat 同為必備結構模組
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
