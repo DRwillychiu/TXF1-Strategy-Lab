@@ -2,7 +2,7 @@
  Script Name : _Research_InsideBarBreak_v0.3
  MC Load Name: STRATEGY_GEN_InsideBarBreak
  Description : Daily Inside Bar Breakout (Bidirectional, MA-filtered)
- Version     : v0.5 (Long_Only_Mode + TargetMult 1.5->1.0 based on MC evidence)
+ Version     : v0.6 (B-series culprit fix + MaxDailyEntries + A-series defaults off)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 30M / Data2 = Daily
@@ -104,7 +104,7 @@
           E-1~3 (alpha decay), F-1~3 (correlation), G-1~3 (MTF),
           H-1~2 (long/short asymmetry), I-1~3 (MFE/MAE).
 
-   v0.5   (2026-06-17 Long_Only_Mode + TargetMult cut) ★ THIS VERSION
+   v0.5   (2026-06-17 Long_Only_Mode + TargetMult cut)
           First MC backtest (Naive 5.6yr) revealed:
             - Overall PF -0.92 (loses money)
             - Long-only PF 1.057 (barely)
@@ -138,6 +138,52 @@
           REMAINING ISSUES (16/29): D-1~5 (no MC backtest yet),
           E-1~3 (alpha decay, partially answered by Naive PF data),
           F-1~3 (correlation), G-1~3 (MTF), I-1~3 (MFE/MAE).
+
+   v0.6   (2026-06-18 B-series culprit fix + daily limit) ★ THIS VERSION
+          Path B diagnosis: v0.3/v0.4 had 0 entries because B-series
+          filters were too aggressive. Code-level root cause analysis:
+
+          B-3 FIX (primary culprit):
+               VolFilter_On default true -> FALSE. TXF1 30M Volume
+               data in MC12 is unreliable (often 0 or missing).
+               When v_VolMA=0, the condition v_VolMA>0 always fails,
+               making v_VolPass=false permanently -> 0 entries.
+               VolFilter kept as input switch for users with valid
+               volume data, but default OFF.
+
+          B-2 FIX (secondary culprit):
+               ConfirmBars default 2 -> 1. Requiring 2 consecutive
+               30M bars holding above MotherHigh is too strict for
+               Inside Bar breakouts (common pattern: break, pullback,
+               resume). 1 bar = minimal false-breakout filter without
+               killing most signals. User can test ConfirmBars=2 via
+               Optimize(1,1,3,1).
+
+          A-SERIES DEFAULTS (safety reset):
+               Compression_On, BB_Filter_On, ATR_Filter_On all
+               defaulted to FALSE. Rationale: B-series fix must be
+               validated first; stacking untested A-series filters
+               risks another 0-entry outcome. User enables one at a
+               time after v0.6 baseline is established.
+
+          NEW: MaxDailyEntries(1) — Issue #6 fix.
+               Same-day multiple entries (SL out -> re-enter 30min
+               later on same Inside Bar signal) caused risk doubling.
+               v_DailyEntryCount tracks entries per date; resets on
+               new day. Default 1 = max 1 entry per Inside Bar signal.
+
+          MC12 DEPLOYMENT WARNING (input persistence trap):
+               User MUST completely remove old strategy from chart
+               and reload from this .pla to get new defaults.
+               Just recompiling does NOT update existing input values.
+
+          TESTING SEQUENCE for v0.6:
+               1. Load v0.6 defaults -> baseline (expect 50-80 trades)
+               2. Toggle ConfirmBars=2 -> compare
+               3. Toggle VolFilter_On=true -> compare (if Volume valid)
+               4. Toggle A-series on one at a time -> compare each
+
+          REMAINING ISSUES (15/29): D-1~5, E-1~3, F-1~3, G-1~3, I-1~3.
 ================================================================================}
 
 inputs:
@@ -162,8 +208,8 @@ inputs:
     BreakOffset_Pct(5),       { B-1: dynamic offset = MotherRange × this% }
     MinBreakOffset(5),        { B-1: floor for dynamic offset }
     Confirm_On(true),         { B-2: enable confirm-bars filter }
-    ConfirmBars(2),           { B-2: require N consecutive bars holding }
-    VolFilter_On(true),       { B-3: enable volume filter }
+    ConfirmBars(1),           { B-2: v0.6 relaxed from 2 to 1 (2 killed too many signals) }
+    VolFilter_On(false),      { B-3: v0.6 OFF by default (TXF1 30M Volume unreliable in MC12) }
     VolMALen(20),             { B-3: volume MA length }
     VolMultiplier(1.2),       { B-3: volume must exceed MA × this }
 
@@ -178,19 +224,22 @@ inputs:
     SP_GiveBack_Pct(45),      { C-3: allowed giveback from peak % }
 
     { ===== v0.4 A series: volatility compression quantification ===== }
-    Compression_On(true),       { A-1: enable inside/mother ratio filter }
+    Compression_On(false),      { A-1: v0.6 OFF (validate B-fix first, then enable) }
     MaxCompressionRatio(0.6),   { A-1: inside/mother <= this passes }
 
-    BB_Filter_On(true),         { A-2: enable BB Width contraction }
+    BB_Filter_On(false),        { A-2: v0.6 OFF (validate B-fix first, then enable) }
     BB_Length(20),              { A-2: BB calculation length (Daily) }
     BB_StdDev_Mult(2),          { A-2: BB std-dev multiplier }
     BB_AvgLen(60),              { A-2: history avg length for comparison }
     BB_Width_Threshold(0.8),    { A-2: current BB Width < avg × this passes }
 
-    ATR_Filter_On(true),        { A-3: enable ATR short/long contraction }
+    ATR_Filter_On(false),       { A-3: v0.6 OFF (validate B-fix first, then enable) }
     ATR_Short_Len(5),           { A-3: short ATR length (Daily) }
     ATR_Long_Len(20),           { A-3: long ATR length (Daily) }
     ATR_Compression_Threshold(0.8),  { A-3: ATR_Short < ATR_Long × this passes }
+
+    { ===== v0.6 Issue #6 fix: daily entry limit ===== }
+    MaxDailyEntries(1),         { max entries per trading day per direction; fixes same-day dupe }
 
     { ===== v0.5 H series: Long/Short asymmetry handling ===== }
     Long_Only_Mode(true);       { H-1: true = block all Short entries
@@ -266,7 +315,11 @@ variables:
 
     v_ATR_Short(0),            { A-3: short ATR }
     v_ATR_Long(0),             { A-3: long ATR }
-    v_ATR_Pass(false);         { A-3: passes filter }
+    v_ATR_Pass(false),         { A-3: passes filter }
+
+    { ===== v0.6 daily entry limit ===== }
+    v_DailyEntryCount(0),      { entries placed today }
+    v_LastEntryDate(0);        { date of last entry count reset }
 
 arrays:
     Holiday_Tail[80](0);
@@ -410,6 +463,14 @@ else
     v_VolPass = false;
 
 { ============================================================================
+  4b. v0.6 Daily entry count reset (Issue #6 fix)
+  ============================================================================ }
+if Date <> v_LastEntryDate then begin
+    v_DailyEntryCount = 0;
+    v_LastEntryDate = Date;
+end;
+
+{ ============================================================================
   5. v0.3 B-2: Two-stage entry with ConfirmBars
   Stage 1: breakout detected -> mark pending
   Stage 2: subsequent bars must hold; if N bars hold -> enter
@@ -418,6 +479,7 @@ else
 
 { Long: stage 1 detection (only when flat and gates pass) }
 if v_Prev_MP <= 0 and v_PendingLong = false and v_PendingShort = false and
+   v_DailyEntryCount < MaxDailyEntries and  { v0.6: daily limit }
    v_IsInsideBar and
    v_MotherRange >= MinMotherRange and
    v_MotherRange <= MaxMotherRange and
@@ -434,6 +496,7 @@ if v_Prev_MP <= 0 and v_PendingLong = false and v_PendingShort = false and
         { No confirmation: immediate entry, same as v0.2 }
         buy ("LE_IB_Entry") next bar at market;
         v_EntryBar = BarNumber;
+        v_DailyEntryCount = v_DailyEntryCount + 1;   { v0.6 }
     end else begin
         { Confirmation required: mark pending }
         v_PendingLong = true;
@@ -443,11 +506,12 @@ end;
 
 { Long: stage 2 confirmation }
 if v_PendingLong then begin
-    if Close > v_MotherHigh then begin
+    if Close > v_MotherHigh and v_DailyEntryCount < MaxDailyEntries then begin
         v_PendingLong_Bars = v_PendingLong_Bars + 1;
         if v_PendingLong_Bars >= ConfirmBars then begin
             buy ("LE_IB_Entry") next bar at market;
             v_EntryBar = BarNumber;
+            v_DailyEntryCount = v_DailyEntryCount + 1;   { v0.6 }
             v_PendingLong = false;
             v_PendingLong_Bars = 0;
         end;
@@ -461,6 +525,7 @@ end;
 { Short: stage 1 detection (only if Long_Only_Mode = false) }
 if Long_Only_Mode = false and    { v0.5 H-1 gate }
    v_Prev_MP >= 0 and v_PendingShort = false and v_PendingLong = false and
+   v_DailyEntryCount < MaxDailyEntries and  { v0.6: daily limit }
    v_IsInsideBar and
    v_MotherRange >= MinMotherRange and
    v_MotherRange <= MaxMotherRange and
@@ -476,6 +541,7 @@ if Long_Only_Mode = false and    { v0.5 H-1 gate }
     if Confirm_On = false then begin
         sell short ("SE_IB_Entry") next bar at market;
         v_EntryBar = BarNumber;
+        v_DailyEntryCount = v_DailyEntryCount + 1;   { v0.6 }
     end else begin
         v_PendingShort = true;
         v_PendingShort_Bars = 1;
@@ -484,11 +550,12 @@ end;
 
 { Short: stage 2 confirmation }
 if v_PendingShort then begin
-    if Close < v_MotherLow then begin
+    if Close < v_MotherLow and v_DailyEntryCount < MaxDailyEntries then begin
         v_PendingShort_Bars = v_PendingShort_Bars + 1;
         if v_PendingShort_Bars >= ConfirmBars then begin
             sell short ("SE_IB_Entry") next bar at market;
             v_EntryBar = BarNumber;
+            v_DailyEntryCount = v_DailyEntryCount + 1;   { v0.6 }
             v_PendingShort = false;
             v_PendingShort_Bars = 0;
         end;

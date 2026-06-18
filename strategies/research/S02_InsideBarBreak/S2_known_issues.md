@@ -1,8 +1,9 @@
 # S2 InsideBarBreak — 重大問題清單 (Issue Tracker)
 
 **建立日**：2026-06-17（Phase 1 完成當天）
-**目的**：誠實記錄 S2 v0.2 當前所有已知缺陷與未驗證假設
-**狀態**：所有問題均**未解決**，待逐一處理
+**更新日**：2026-06-18（v0.6 B-series culprit fix + MaxDailyEntries）
+**目的**：誠實記錄 S2 所有已知缺陷與未驗證假設
+**狀態**：30 題 / 18 解 / 12 未解（v0.6 新增 J-1，解決 B-2 fix / B-3 fix / J-1）
 **逐題解決流程**：每解決一個問題 → 更新此檔案 → commit + push + 用戶反饋
 
 ---
@@ -12,12 +13,13 @@
 | ID | 類別 | 嚴重性 | 優先序 | 狀態 |
 |----|------|------|------|------|
 | **D** | 未經嚴謹驗證 | 🔴 致命 | **P0** | ❌ 待解 |
-| **A** | 波動率壓縮確認不完整 | 🔴 高 | **P1** | ✅ **v0.4 解決** |
-| **B** | 假突破過濾薄弱 | 🔴 高 | **P1** | ✅ **v0.3 解決** |
+| **A** | 波動率壓縮確認不完整 | 🔴 高 | **P1** | ✅ **v0.4 設計 / v0.6 defaults OFF** |
+| **B** | 假突破過濾薄弱 | 🔴 高 | **P1** | ✅ **v0.3 設計 / v0.6 元兇修正** |
 | **C** | 停損 SOP 不完整 | 🔴 高 | **P1** | ✅ **v0.3 解決** |
 | **E** | Alpha 衰減風險 | 🟡 中 | **P2** | ✅ **論證完成** |
 | **F** | 與既有策略相關性未分析 | 🟡 中 | **P2** | ❌ 待解 |
 | **H** | 雙向 alpha 不對稱未驗證 | 🟡 中 | **P2** | ✅ **v0.5 解決（Long-only）** |
+| **J** | 同日多進場風險 | 🟡 中 | **P2** | ✅ **v0.6 解決（MaxDailyEntries）** |
 | **G** | MTF 設計細節未驗證 | 🟢 低 | **P3** | ❌ 待解 |
 | **I** | MFE/MAE 進場後行為監控缺失 | 🟢 低 | **P3** | ❌ 待解 |
 
@@ -65,23 +67,20 @@
 - **問題**：S2 只用 Inside Bar 樣態 + MotherRange 50-400 確認壓縮
 - **缺什麼**：沒有量化的「**壓縮強度**」指標
 - **影響**：可能進入「弱壓縮」狀態（爆發力不足），導致假突破多
-- **解決方向**：
-  - 加入 `Inside_Mother_Ratio < 0.6` 過濾（Inside 範圍 / Mother 範圍）
-  - 加入 `近 5 日 ATR < 近 20 日 ATR 中位數 × 0.8` 過濾
-  - 加入 `NR4 / NR7`（過去 4/7 日最窄）過濾
-- **狀態**：❌ 待設計
+- **解決方向**：v0.4 加入 Compression_On(MaxCompressionRatio 0.6)
+- **狀態**：✅ **v0.4 設計完成 / v0.6 default OFF（待 baseline 後逐一啟用）**
 
 ### A-2. 沒有 BB Width 收縮驗證
 - **問題**：經典波動率壓縮指標 (Bollinger Band Width) 未使用
 - **影響**：錯失「另一個獨立波動率訊號」交叉確認
-- **解決方向**：加入 `BB_Width(20, 2) < 歷史 50 分位` 過濾
-- **狀態**：❌ 待設計
+- **解決方向**：v0.4 加入 BB_Filter_On(BB_Width_Avg_Len, BB_Width_Mult)
+- **狀態**：✅ **v0.4 設計完成 / v0.6 default OFF（待 baseline 後逐一啟用）**
 
 ### A-3. 沒有 ATR 比例條件
 - **問題**：當前 ATR 與歷史 ATR 沒做比較
 - **影響**：無法區分「真壓縮」vs「常態低波動」
-- **解決方向**：加入 `Current_ATR / Average_ATR(60) < 0.8` 過濾
-- **狀態**：❌ 待設計
+- **解決方向**：v0.4 加入 ATR_Filter_On(Short_ATR_Len 5, Long_ATR_Len 20, ATR_Ratio_Mult 0.8)
+- **狀態**：✅ **v0.4 設計完成 / v0.6 default OFF（待 baseline 後逐一啟用）**
 
 ---
 
@@ -89,27 +88,26 @@
 
 ### B-1. 只有 5 點 BreakOffset
 - **問題**：只擋「剛好觸及」級別的假突破
-- **影響**：突破後立刻反向的「Bull/Bear Trap」會吃滿停損
-- **解決方向**：BreakOffset 動態化 = MotherRange × 5%（小波動小過濾，大波動大過濾）
-- **狀態**：❌ 待設計
+- **解決方向**：v0.3 加入 BreakOffset_Mode(1) 動態化 = MotherRange × BreakOffset_Pct%
+- **狀態**：✅ **v0.3 解決**
 
-### B-2. 沒有「下一根 K 站穩」確認
-- **問題**：當前是 next bar at Market，突破就進
-- **影響**：突破當根後立刻反轉的 trap 沒被擋掉
-- **解決方向**：要求「Close 連續 2 根都站穩在 MotherHigh 之上」才進場
-- **狀態**：❌ 待設計
+### B-2. 沒有「下一根 K 站穩」確認（v0.6 元兇之一）
+- **問題**：ConfirmBars(2) 要求 2 根連續站穩，對 30M Inside Bar 太嚴格
+- **影響**：Secondary culprit for v0.3/v0.4 zero entries
+- **解決方向**：v0.6 ConfirmBars default 2 → 1（保留 input 讓用戶調整）
+- **狀態**：✅ **v0.3 設計 / v0.6 修正 default（ConfirmBars=1）**
 
-### B-3. 沒有成交量放大確認
-- **問題**：真突破通常伴隨成交量放大；假突破成交量平淡
-- **影響**：無 volume signature → 真假突破難辨
-- **解決方向**：加入 `Volume > Volume MA(20) × 1.2` 過濾
-- **狀態**：❌ 待設計
+### B-3. 成交量放大確認（v0.6 元兇 — PRIMARY）
+- **問題**：TXF1 30M Volume 在 MC12 不可靠（經常為 0 或缺失）
+- **影響**：**PRIMARY culprit for 0 entries** — v_VolMA=0 → v_VolMA>0 永遠 false → v_VolPass=false
+- **根本原因**：Volume 依賴 data feed 品質，MC12 的 TXF1 30M 無可靠 Volume
+- **解決方向**：v0.6 VolFilter_On default true → FALSE（保留 switch 給有 Volume 的用戶）
+- **狀態**：✅ **v0.6 解決 — default OFF**
 
 ### B-4. 沒有突破後快速回測過濾
 - **問題**：True breakout 通常不會回測；False breakout 會
-- **影響**：被 false breakout 收割
-- **解決方向**：突破後 3 根 K 內不能跌回 MotherHigh 之下；否則 cancel
-- **狀態**：❌ 待設計
+- **解決方向**：v0.3 B-2 ConfirmBars 機制已涵蓋（ConfirmBars >= 2 = 排除快速反轉）
+- **狀態**：✅ **v0.3 解決（被 B-2 涵蓋）**
 
 ---
 
@@ -209,16 +207,14 @@
 ## H. 雙向 alpha 不對稱性未驗證（🟡 中，P2）
 
 ### H-1. Long vs Short 績效可能差距大
-- **問題**：可能 Long 賺錢 Short 賠錢（或反之）
-- **影響**：應該拆成 Long-only / Short-only 各自部署
-- **解決方向**：Phase 2 後拆兩個子集分析
-- **狀態**：❌ 待 Phase 2
+- **問題**：Naive 5.6yr 實測 Long PF 1.057 / Short PF 0.672（alpha 不對稱）
+- **解決方向**：v0.5 加入 Long_Only_Mode(true)
+- **狀態**：✅ **v0.5 解決 — Long-only 為預設**
 
 ### H-2. 台股長期偏多頭（COVID 後）
-- **問題**：S2 Short 信號可能多在熊市出現
-- **影響**：Short 部位賺的是「短暫回檔」，賺幅有限
-- **解決方向**：拆 2022 熊市 / 2024 牛市分別看 Long/Short 表現
-- **狀態**：❌ 待 Phase 3
+- **問題**：Short 只在 2022 熊市 +127K，其餘年 Short -280K
+- **解決方向**：Long_Only_Mode 接受不對稱性，空頭由 L2/L4 portfolio 覆蓋
+- **狀態**：✅ **v0.5 解決**
 
 ---
 
@@ -241,6 +237,16 @@
 - **影響**：無法評估 BE 觸發點
 - **解決方向**：每筆記錄 MAE / EntryPrice 比率
 - **狀態**：❌ 待 Phase 2
+
+---
+
+## J. 同日多進場風險（🟡 中，P2）— v0.6 新增
+
+### J-1. SL 出場後同日再進場（Issue #6）
+- **問題**：SL 觸發 → MarketPosition=0 → 30 分鐘後同根 Inside Bar 信號再次觸發 → 同日 2 筆進場
+- **影響**：同日風險翻倍 + 同一信號重複虧損
+- **解決方向**：v0.6 加入 MaxDailyEntries(1) + v_DailyEntryCount + v_LastEntryDate
+- **狀態**：✅ **v0.6 解決 — 每日最多 1 筆進場**
 
 ---
 
