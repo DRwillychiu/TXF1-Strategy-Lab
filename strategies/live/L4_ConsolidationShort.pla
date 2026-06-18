@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.5R (A/B FAILED - reverted to v14.4 defaults; filters preserved as input switches for research)
+ Version     : v14.4 + ImmediateStop (PRODUCTION; v14.5 fully removed after A/B failure)
                v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -165,50 +165,45 @@
             block -> freezes when short position opens.
           - Dormant backup once custom stops tighten.
 
-   v14.5  (2026-06-18) CS_BreakExit -378K fix (2 input-switched filters):
-          Diagnostic source: L4_v144_deep_analysis_20260618.md.
-          CS_BreakExit = 20 trades / 0% WR / -378K = single largest
-          leak. Two orthogonal filters both default ON:
+   v14.5  (2026-06-18) ★ TRIED + FULLY REMOVED ★
+          Two filters were added to address CS_BreakExit -378K leak:
+            A. Strong Long Block (Daily MA gap% > 1.0 = no short entry)
+            B. Fast BreakExit (15M Close > Locked_Top + 0.5 ATR)
 
-          Filter A: Strong Long Block (entry-side)
-            - v_Daily_MA_Gap_Pct = (FastMA - SlowMA) / SlowMA * 100
-            - if Strong_Long_Filter_On and Gap >= Max_Gap_Pct_Allowed
-              then block entry (do not short in strong uptrend)
-            - Default Max_Gap_Pct_Allowed = 1.0 (medium-strong uptrend)
-            - Expected to filter out 30-40% of v14.4's CS_BreakExit
-              entries (true uptrend conditions)
+          A/B test (4 configs MC12 same day) result:
+            Config 1 v14.4 replica  : 81 trades / +238,600 / PF 1.414
+            Config 2 A only         : 81 trades / +238,600 / PF 1.414
+            Config 3 B only         : 85 trades / +220,600 / PF 1.372
+            Config 4 v14.5 full     : 85 trades / +220,600 / PF 1.372
 
-          Filter B: Fast BreakExit (exit-side)
-            - v14.4 CS_BreakExit triggers on 60M Close > Locked_Top
-              (slow: up to 1 hour of additional bleed)
-            - v14.5 CS_FastBreakExit triggers on 15M Close >
-              Locked_Top + ATR * Fast_Exit_ATR_Buffer
-            - Default Fast_Exit_ATR_Buffer = 0.5 (clear breakout
-              signal, not consolidation noise)
-            - Expected: avg loss -18.9K -> -10K to -13K
-            - New label CS_FastBreakExit for tracking separability
+          Root cause of failure:
+            A is a STRICT SUBSET of existing v_Macro_Block condition
+              (Macro_Block already blocks when Fast > Slow; A's "gap>1%"
+              is a subset). 100% redundant -> zero effect.
+            B's 0.5 ATR buffer (~30-50pt) is too tight for consolidation
+              noise. 27 false-trigger FastBreakExit cost -437K, only
+              5 real BreakExit -98K. Combined -535K vs v14.4's -378K.
+              Also shortened cooldown allowed 4 extra bad entries.
 
-          All input-switched (default ON, set false to recreate v14.4).
-          A/B test combinations:
-            v14.4 replica  : Strong_Long_Filter_On=false + Fast_BreakExit_On=false
-            A only         : Strong_Long_Filter_On=true  + Fast_BreakExit_On=false
-            B only         : Strong_Long_Filter_On=false + Fast_BreakExit_On=true
-            v14.5 full     : both true (default)
+          User decision 2026-06-18: B selected = accept L4 v14.4 as
+          final, stop optimizing, fully remove v14.5 code.
 
-          Lesson check from RangeForceExit v13.3/14.3 failure:
-            - No Time-based conditions (no 24-hour pitfall)
-            - Defaults can be disabled (no zero-entry risk if either
-              filter is too aggressive on user's data)
-            - No change to existing CS_SL/SP/Trail logic
+          See: docs/L4_v145_ab_results_20260618.md for full analysis.
+          See: memory feedback_filter_redundancy_check.md for rule.
 
-          Expected net improvement (estimate):
-            Net    : +239K -> +350-450K (+47% to +88%)
-            CS_BR  : -378K -> -150-200K (cut by half)
-            WR     : 58% -> 60-65%
-            MDD    : -12.87% -> < -12%
+   v14.4+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue((Box_Top + ATR*2.0) - Close) *
+            BigPointValue. Same anchor as Frozen SL.
+          - Called only when not short (MP>=0) inside consolidation
+            block -> freezes when short position opens.
+          - Dormant backup once custom stops tighten.
 
-          Deploy only when flat. Requires "fully remove + reload"
-          per MC12 input persistence rule.
+   STATUS: v14.4 + P3b ImmediateStop is the PRODUCTION version.
+   Do NOT re-add Strong_Long_Filter or Fast_BreakExit without
+   the redundancy+pass-rate analysis required by Constitution
+   (memory: feedback_filter_redundancy_check.md).
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
@@ -264,26 +259,7 @@ inputs:
                                      CS_SP 100pct WR but net loser. Truncates CS_SL big
                                      winners (45/+1,019K to 36/+619K). DO NOT enable without
                                      redesign. }
-    SP_Retain_Pct(50),             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
-
-    { --- 10. v14.5 Filter A: Strong Long Block (entry-side)
-             ★ FAILED A/B TEST 2026-06-18: REDUNDANT with v_Macro_Block.
-             v_Macro_Block already triggers on Fast > Slow, which is a
-             superset of "gap > X%". A only test = baseline (0 effect).
-             Default reverted to FALSE. Input retained for research only. }
-    Strong_Long_Filter_On(false),   { Default OFF after A/B test. }
-    Max_Gap_Pct_Allowed(1.0),       { Daily FastMA-SlowMA gap % threshold (inert when _On=false) }
-
-    { --- 11. v14.5 Filter B: Fast BreakExit (exit-side)
-             ★ FAILED A/B TEST 2026-06-18: 0.5 ATR buffer too small.
-             Real triggers 5/-98K (vs 20/-378K v14.4) - good.
-             But generated 27 false-trigger FastBreakExit -437K.
-             Net: 32 trades -535K vs 20 trades -378K = WORSE.
-             Also stole CS_SL trail-rescue chances (cooldown shortened
-             allowed more bad entries). Default reverted to FALSE.
-             Future research: try buffer 1.5-2.0 ATR + confirm bars. }
-    Fast_BreakExit_On(false),       { Default OFF after A/B test. }
-    Fast_Exit_ATR_Buffer(0.5);      { ATR buffer (inert when _On=false) }
+    SP_Retain_Pct(50);             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
 
 variables:
     { Phase 0: Macro filter }
@@ -338,10 +314,6 @@ variables:
     v_BE_Floor(0),
     v_SP_Floor(0),
     v_Effective_Stop(0),
-
-    { v14.5 Filter A: Strong Long Block }
-    v_Daily_MA_Gap_Pct(0),
-    v_Strong_Long_Block(false),
 
     { Exit chain }
     ExitFired(0);
@@ -450,17 +422,6 @@ if Night_Block_On = true and Time >= 200 and Time < 500 then
 v_Daily_FastMA = Average(Close, Daily_FastMA_Len) of Data3;
 v_Daily_SlowMA = Average(Close, Daily_SlowMA_Len) of Data3;
 
-{ v14.5 Filter A: Strong Long Block calculation
-  Daily FastMA leading SlowMA by Max_Gap_Pct_Allowed % or more
-  = strong uptrend structure = block short entries }
-if v_Daily_SlowMA > 0 then
-    v_Daily_MA_Gap_Pct = (v_Daily_FastMA - v_Daily_SlowMA) / v_Daily_SlowMA * 100
-else
-    v_Daily_MA_Gap_Pct = 0;
-
-v_Strong_Long_Block = Strong_Long_Filter_On and
-                      (v_Daily_MA_Gap_Pct >= Max_Gap_Pct_Allowed);
-
 if ((Close of Data3 > v_Daily_SlowMA) and
     (v_Daily_SlowMA >= v_Daily_SlowMA[1]))
    or (v_Daily_FastMA > v_Daily_SlowMA) then begin
@@ -547,8 +508,7 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
        Close             < v_Trigger_Price and
        v_Holiday_Block   = false          and
        v_Night_Block     = false          and
-       v_Settlement_Day  = false          and
-       v_Strong_Long_Block = false        then begin   { v14.5 Filter A }
+       v_Settlement_Day  = false          then begin
 
         SellShort ("CS_Entry") next bar at Market;
         v_In_Trap_Zone = false;
@@ -645,16 +605,6 @@ if MarketPosition = -1 then begin
     { Priority 0 - Manual Kill }
     if (ExitFired = 0) and Manual_Kill_Switch then begin
         BuyToCover ("CS_Kill") next bar at Market;
-        ExitFired = 1;
-    end;
-
-    { v14.5 Filter B: Fast BreakExit (15M Close > Locked_Top + ATR * Buffer)
-      Sits BEFORE the slow 60M-based CS_BreakExit. Cuts the unprotected
-      window between "box breaks up" and "60M Close confirms breakup". }
-    if (ExitFired = 0) and Fast_BreakExit_On and
-       v_Locked_Top > 0 and
-       Close > v_Locked_Top + v_Current_ATR * Fast_Exit_ATR_Buffer then begin
-        BuyToCover ("CS_FastBreakExit") next bar at Market;
         ExitFired = 1;
     end;
 
