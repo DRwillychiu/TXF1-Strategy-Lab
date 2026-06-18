@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.5 (CS_BreakExit fix: Strong Long Filter + Fast BreakExit)
+ Version     : v14.5R (A/B FAILED - reverted to v14.4 defaults; filters preserved as input switches for research)
                v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -266,13 +266,24 @@ inputs:
                                      redesign. }
     SP_Retain_Pct(50),             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
 
-    { --- 10. v14.5 Filter A: Strong Long Block (entry-side) --- }
-    Strong_Long_Filter_On(true),    { v14.5 default ON. Set false to recreate v14.4 entry behavior }
-    Max_Gap_Pct_Allowed(1.0),       { Daily FastMA-SlowMA gap % above which short entries are blocked }
+    { --- 10. v14.5 Filter A: Strong Long Block (entry-side)
+             ★ FAILED A/B TEST 2026-06-18: REDUNDANT with v_Macro_Block.
+             v_Macro_Block already triggers on Fast > Slow, which is a
+             superset of "gap > X%". A only test = baseline (0 effect).
+             Default reverted to FALSE. Input retained for research only. }
+    Strong_Long_Filter_On(false),   { Default OFF after A/B test. }
+    Max_Gap_Pct_Allowed(1.0),       { Daily FastMA-SlowMA gap % threshold (inert when _On=false) }
 
-    { --- 11. v14.5 Filter B: Fast BreakExit (exit-side) --- }
-    Fast_BreakExit_On(true),        { v14.5 default ON. Set false to recreate v14.4 exit behavior }
-    Fast_Exit_ATR_Buffer(0.5);      { Close > Locked_Top + ATR * this -> fast exit on 15M (vs 60M Close) }
+    { --- 11. v14.5 Filter B: Fast BreakExit (exit-side)
+             ★ FAILED A/B TEST 2026-06-18: 0.5 ATR buffer too small.
+             Real triggers 5/-98K (vs 20/-378K v14.4) - good.
+             But generated 27 false-trigger FastBreakExit -437K.
+             Net: 32 trades -535K vs 20 trades -378K = WORSE.
+             Also stole CS_SL trail-rescue chances (cooldown shortened
+             allowed more bad entries). Default reverted to FALSE.
+             Future research: try buffer 1.5-2.0 ATR + confirm bars. }
+    Fast_BreakExit_On(false),       { Default OFF after A/B test. }
+    Fast_Exit_ATR_Buffer(0.5);      { ATR buffer (inert when _On=false) }
 
 variables:
     { Phase 0: Macro filter }
