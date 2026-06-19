@@ -113,8 +113,8 @@ v_RegimeGate_WATCH =
 
   /* (B) OR (C): at least one overheating condition */
   (
-    /* (B) RSI overheat sustained 2 daily bars */
-    ( RSI(Close of Data3, 14)[1] > 70 AND RSI(Close of Data3, 14)[2] > 70 )
+    /* (B) RSI overheat sustained 2 daily bars — snapshot-based */
+    ( v_Daily_RSI_Snap1 > 70 AND v_Daily_RSI_Snap2 > 70 )
 
     OR
 
@@ -122,6 +122,8 @@ v_RegimeGate_WATCH =
     ( (Close[1] of Data3 - Average(Close,20)[1] of Data3) / Average(Close,20)[1] of Data3 * 100 > 3.0 )
   )
 ```
+
+> **PowerLanguage gotcha**: `RSI(Close of Data3, N)[N]` is **Data1-indexed (5M offset), not Daily-indexed**. The `[N]` offset operator works on the *executing* data stream (Data1 = 5M bars), so `[1]` looks back one 5M bar, not one daily bar. To get true daily-RSI history, snapshot the value at calendar-date rollover into variables (`v_Daily_RSI_Snap0..3`) and read those snapshots inside the gate. The v1.1 `.pla` uses this pattern; do **not** revert to the inline `RSI(...)[N]` form.
 
 ### 3.2 Concrete signal list with thresholds
 
@@ -600,6 +602,44 @@ If `Daily dist_MA20 > +5%` (1.4 days/month), what should happen?
 
 ---
 
+## 11a. Implementation Notes (v1.1)
+
+_Added 2026-06-19, post-audit. Captures the gap between the v1.0 build and what the spec actually required — and the architectural decisions taken to close it._
+
+### 11a.1 v1.0 audit — 13 bugs found and root causes
+
+| # | Bug | Root cause |
+|---|-----|------------|
+| 1 | `RSI(Close of Data3, 14)[1]` used inline in Tier 1 gate | PowerLanguage `[N]` offset operates on the *executing* data stream (Data1 = 5M), not on the source Data3 — so `[1]` looked back **5 minutes**, not **1 day**. Multi-data offset trap. |
+| 2 | Daily RSI overheat condition never latched true outside opening 5M bar | Same as #1 — by the second 5M bar of a day, the snapshot of Daily RSI had already shifted; spec's "sustained 2 daily bars" semantic was unreachable. |
+| 3 | `HighD(0)` used as session high inside pullback band M4 | `HighD(0)` includes overnight session data — contaminated the 5M intraday peak with prior-night prices, distorting the 0.5–1.5% band. |
+| 4 | `Time >= Daily_Flat_Time` allowed entry on the boundary 5M bar | Off-by-one: gate used `>=` for the cutoff but `<=` upstream, producing a fill-gap window in which entry and exit fired on the same bar. |
+| 5 | Frozen SL relied solely on script-level `v_SL_Level` comparison | `SetStopLoss` per Rule #12 was missing; on fill the engine had no native stop armed until the next 5M bar evaluation — exposing ~5 min of unguarded position. |
+| 6 | `v_S3_Watch` never disarmed | Staleness counter declared but never decremented; once true, Watch stayed true indefinitely. |
+| 7 | Same-day cooldown latched `Date` only on TP exit | Other SX_RPS_* exits (SL, TimeStop, DayClose) did not update `v_S3_LastExitDate` → re-entry possible after a stop-out. |
+| 8 | Settlement_Day detection used `DayOfMonth in [15..21]` without `DayOfWeek = 3` AND | Logical-OR slip — flagged the entire third week as settlement day instead of just Wednesday. |
+| 9 | Holiday_Tail registry guard placed inside `Time <= 500` block but Holiday_Flat_Time = 245 | The 245-cutoff was reachable only when the `<= 500` outer guard was satisfied — both bounds correct, but layered guard structure was inverted from L2 template. |
+| 10 | `BarsSinceEntry >= 24` time stop fired on bar 23 due to 0-indexed counter | Off-by-one in time-stop comparison; spec intended 24 *complete* 5M bars (= 120 min). |
+| 11 | `AvgTrueRange(5)` and `AvgTrueRange(20)` in M3 trigger used same period variable | Copy-paste error: both calls used `AvgTrueRange(SL_ATR_Len)` — ratio always 1.0, M3 never fired. |
+| 12 | EMA20 TP backup compared `Close` to `XAverage(Close, 20)` (current bar) | Forward-leakage risk on intrabar evaluation; spec required `[1]` index on the MA reference for stable TP trigger. |
+| 13 | Registry sentinel `1270101` missing from header docblock comment | Rule #11 element-7 markers incomplete; `verify_s3_pullbackshort.py` Section D would have caught it had it been run pre-commit. |
+
+### 11a.2 Architectural decisions adopted in v1.1
+
+- **Snapshot-based Daily indicator history** — All Daily-derived values (RSI14, MA20, MA60, dist_MA20) are read once per calendar-date rollover into `v_Daily_RSI_Snap0..3`, `v_Daily_MA20_Snap0..1`, etc., and the gate consumes those snapshots. Eliminates the PL multi-data `[N]` offset trap (root cause of bugs #1 and #2).
+- **Day-session-only intraday high** — Replaced `HighD(0)` with a manually-tracked `v_DaySession_High` that resets at `Time = 845` and updates only when `IsDay = true`. Removes overnight contamination from the M4 pullback band (bug #3).
+- **Strict `<` boundaries on Time-window gates** — All entry/exit time checks now use closed-interval form `(Time >= Open) AND (Time <= Close)` for activation and `Time < Cutoff` for entry suppression, so the cutoff bar itself is unambiguously assigned to "exit-only" (bug #4). Aligns with `feedback_mc_time_24hr_pitfall.md`.
+- **Frozen SL belt-and-suspenders** — Script-level `v_SL_Level` comparison (P2 cascade) is retained, **and** Rule #12's `SetStopLoss(SL_distance × BigPointValue)` is called every bar `if MarketPosition >= 0` to give engine-level protection from fill-tick onward. Both layers use the same frozen distance, ensuring consistency (bugs #5, #11, #12).
+
+### 11a.3 Cross-references
+
+- Workflow audit task: **`w2zrqguup`** (`scripts/_audit/s3_v1.0_findings.md`)
+- v1.1 implementation commit: **TBD** (will be back-filled once the rebuilt `.pla` is committed)
+- Verification harness: `scripts/verify_s3_pullbackshort.py` Section J (Watch state machine) and Section K (Same-day cooldown) gained additional checks for bugs #6 and #7
+- Related memory: `feedback_mc_time_24hr_pitfall.md`, `feedback_filter_redundancy_check.md`
+
+---
+
 ## 12. Spec Anchors
 
 - **Empirical pullback distribution**: `scripts/_temp_s3_pullback_stats.json` (22 historical episodes, 2020-2026 TWII daily)
@@ -614,3 +654,10 @@ If `Daily dist_MA20 > +5%` (1.4 days/month), what should happen?
 ---
 
 _Final v2 design specification synthesized 2026-06-20 from 5 parallel deep-research reports (regime gate, momentum trigger, exit mechanism, portfolio impact, implementation architecture). All numbers in §3-§5 are anchored to empirical evidence from `_temp_s3_pullback_stats.json` (TWII daily 2020-2026, 22 historical bull+RSI>75+strong-trend episodes) or to Agent B's mechanism-diversity analysis. 5M ATR estimate extrapolated analytically; must be verified in Phase 1 MC backtest. All numbers subject to A/B variant scan in Phase 1 sensitivity analysis._
+
+---
+
+**Document version**: `spec_v2` + v1.1 implementation notes (2026-06-19)
+**Change log**:
+- 2026-06-20: spec_v2 initial publication (sections 1–12)
+- 2026-06-19: Added §11a Implementation Notes (v1.1) — 13-bug v1.0 audit, snapshot-based Daily indicator architecture, day-session-only intraday high, strict Time boundaries, frozen-SL belt-and-suspenders. Corrected §3.1 RSI gate to snapshot-variable form with PowerLanguage multi-data offset gotcha note. Confirmed `Holiday_Flat_Time = 245` throughout (no `415` legacy references present).
