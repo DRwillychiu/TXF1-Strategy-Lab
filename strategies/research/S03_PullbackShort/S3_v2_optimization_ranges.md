@@ -139,6 +139,18 @@ Stage 2: Refine Sweep
 | `Manual_Kill_Switch` | False | 緊急 kill switch |
 | `Settlement_Flat_Time` | 1230 | 結算日 12:30 平倉 |
 
+### 2.5b Secular Bull Filter (v2.0.2 NEW, Section 2b)  ★ thesis-driven
+
+| Input | Default | Coarse Range | Sens | 備註 |
+|-------|---------|--------------|------|------|
+| `Enable_Secular_Bull_Filter` | **True** | [False, True] | **HIGH** | v2.0.2 NEW；A/B 對照建議：先 True 跑，再 False 跑驗證 filter 效果 |
+| `H60_SecularMA_Fast` | **1140** | [760, 1140, 1900] | MED | 60M bars，1140 ≈ 60 day 季線（mirror Daily MA60）|
+| `H60_SecularMA_Slow` | **3800** | [2280, 3800, 5700] | MED | 60M bars，3800 ≈ 200 day 年線（mirror Daily MA200）|
+
+**約束**：`H60_SecularMA_Fast < H60_SecularMA_Slow` 必成立。
+**Filter 邏輯**：3 條件 AND（Close > Fast AND Close > Slow AND Fast > Slow）= 完整多頭格局確認。
+**歷史模擬效果**：blocks 2022 三筆 + 2025 #12（救回 -32.6k 累積虧損）；2026 H1 全 pass。
+
 ---
 
 ### 2.6 Diagnostic (logging-only, 不掃描)

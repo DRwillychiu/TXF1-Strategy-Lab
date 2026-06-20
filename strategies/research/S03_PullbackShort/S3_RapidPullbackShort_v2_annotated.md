@@ -254,6 +254,75 @@ end;
 
 ---
 
+## 5.7 Section 2b — SECULAR BULL FILTER (v2.0.2 NEW)★
+
+### 5.7.1 完整 code
+
+```pla
+v_H60_SecularMA_Fast = ( Average( Close, H60_SecularMA_Fast ) of Data2 )[1];
+v_H60_SecularMA_Slow = ( Average( Close, H60_SecularMA_Slow ) of Data2 )[1];
+
+if Enable_Secular_Bull_Filter = False or (
+   ( Close of Data2 )[1] > v_H60_SecularMA_Fast and
+   ( Close of Data2 )[1] > v_H60_SecularMA_Slow and
+   v_H60_SecularMA_Fast    > v_H60_SecularMA_Slow
+) then
+    v_Secular_Bull_OK = True
+else
+    v_Secular_Bull_OK = False;
+```
+
+### 5.7.2 3 條件 AND
+
+| # | 條件 | 含意 |
+|---|------|------|
+| 1 | Close > MA_Fast | 60M 收盤 > 季線（~60 day）|
+| 2 | Close > MA_Slow | 60M 收盤 > 年線（~200 day）|
+| 3 | MA_Fast > MA_Slow | **MA 結構多頭**（季線 > 年線）|
+
+**3 條件全成立才 pass** — 確認「真多頭」（非短期反彈 / 弱多頭）。
+
+### 5.7.3 為什麼用 AND 而非 L1 P6 的 OR
+
+| 策略 | 思路 | OR/AND 選擇 |
+|------|------|-----------|
+| L1 (trend long) | 不要錯過 early bull → 用 OR | 寬鬆 |
+| **S3 (counter-trend short)** | **不要在假反彈做空** | **AND（嚴格）** |
+
+S3 跟 L1 需求**相反**：L1 寧可早進，S3 寧可少進。
+
+### 5.7.4 為什麼用 1140 / 3800 (60M bars)
+
+| Daily proxy | 60M bars 換算 | 意義 |
+|------------|--------------|------|
+| Daily MA60 (季線) | 60 × 19 ≈ **1140** | 中期格局 |
+| Daily MA200 (年線) | 200 × 19 ≈ **3800** | 長期格局 |
+
+19 = 一天 19 個 60M bars (TXF1 24hr 連續 session)。
+
+### 5.7.5 進場 gate 加 v_Secular_Bull_OK = True
+
+```pla
+if ( MarketPosition = 0 ) and
+   ( v_Regime_Watch = True ) and          // Tier 1 60M 過熱
+   ( v_Trigger_Fired = True ) and         // Tier 2 5M 動能轉空
+   ( v_Secular_Bull_OK = True ) and       // ⭐ NEW Secular Bull Filter
+   ...
+```
+
+### 5.7.6 歷史 backtest 阻擋效果
+
+| Trade | 日期 | 為何擋 | 救回 |
+|-------|------|--------|------|
+| #8 | 2022-07-28 | 大空頭中，3 條件都 fail | +400 (僥倖小贏，但 thesis 對) |
+| #9 | 2022-10-05 | 弱空，close < MA | +9,000 |
+| #10 | 2022-11-11 | 大空頭反彈，MA60 < MA200 | +13,200 |
+| #12 | 2025-07-01 | 弱多但 MA60 < MA200（條件 3 fail）| +10,800 |
+
+**合計救回 +32.6k 累積虧損**。2026 H1 三筆全 pass，0 影響。
+
+---
+
 ## 6. Section 9 — DIAGNOSTIC LOGGING（line 765-787）
 
 ```pla

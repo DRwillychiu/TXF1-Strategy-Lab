@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0.1 (2026-06-20)
+  Version     : v2.0.2 (2026-06-20) - Secular Bull Filter added
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M  (entry trigger / exit chain)
@@ -128,6 +128,15 @@ inputs:
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  ),   { 1hr buffer before 13:30 settlement }
 
+    { ===== Secular Bull Filter (v2.0.2 NEW, Section 2b) =====
+      Mirror of L1 P6 Weekly filter, downscaled to 60M level.
+      3 conditions AND: Close > MA_Fast AND Close > MA_Slow AND MA_Fast > MA_Slow.
+      Prevents counter-trend short entries during bear regime OR weak-rally periods.
+      Default ON; can disable via input. }
+    Enable_Secular_Bull_Filter ( True  ),   { v2.0.2 NEW: default ON }
+    H60_SecularMA_Fast         ( 1140  ),   { 60M bars ~60 trading day ≈ 季線 }
+    H60_SecularMA_Slow         ( 3800  ),   { 60M bars ~200 trading day ≈ 年線 }
+
     { ===== Diagnostic (logging-only) ===== }
     Log_HighConviction        ( True  ),
     HighConv_Threshold_Pct    ( 2.5   ); { opt 2..4 step 0.5; v2.0=2.5 (was 5 on Daily) }
@@ -205,6 +214,11 @@ variables:
     Registry_Warn_ID         ( -1    ),
     hidx                     ( 0     ),
     ExitFired                ( 0     ),
+
+    { ===== Secular Bull Filter state (v2.0.2 Section 2b) ===== }
+    v_H60_SecularMA_Fast     ( 0     ),
+    v_H60_SecularMA_Slow     ( 0     ),
+    v_Secular_Bull_OK        ( False ),
 
     { ===== Diagnostic ===== }
     v_HighConv_Active        ( False );
@@ -434,6 +448,50 @@ else
 
 
 { ============================================================
+  SECTION 2b - SECULAR BULL FILTER (v2.0.2 NEW)
+
+  Mirror of L1 P6 Weekly trend filter, downscaled to 60M level.
+  Per user 2026-06-20: S3 thesis is "counter-trend short during
+  OVERHEATED BULL pullback" - so we MUST be in confirmed bull
+  regime before any entry.
+
+  3 CONDITIONS ALL AND (stricter than L1's OR because S3 is
+  counter-trend; OR would let weak rallies pass and we'd be
+  shorting fake bulls):
+    1. Close (60M, [1] closed bar) > SecularMA_Fast  (~60 day)
+    2. Close (60M, [1] closed bar) > SecularMA_Slow  (~200 day)
+    3. SecularMA_Fast > SecularMA_Slow              (MA structure bull)
+
+  Historical backtest (15 trades) blocking effect (TWII daily proxy):
+    - 2022 bear regime trades #8/#9/#10 (-21.8k) → all blocked ✓
+    - 2025 H1 weak rally trade #12 (-10.8k) → blocked by condition 3
+      (MA60 < MA200 at the time, structure bear) ✓
+    - 2026 H1 trades #13/#14/#15 (+274k) → all 3 conditions pass ✓
+    - Other ✅ bull trades → all pass (no false skip)
+
+  60M MA bar lengths chosen to match Daily proxy of MA60/MA200:
+    1 trading day ≈ 19 60M bars (24hr continuous TXF1 session)
+    60 day × 19 = 1140 bars (季線)
+    200 day × 19 = 3800 bars (年線)
+
+  Per CLAUDE.md Rule #3: ( ... of Data2 )[1] explicit parens for
+  Data2-binding-before-history idiom (mirrors v1.1 BUG FIX #7).
+  ============================================================ }
+
+v_H60_SecularMA_Fast = ( Average( Close, H60_SecularMA_Fast ) of Data2 )[1];
+v_H60_SecularMA_Slow = ( Average( Close, H60_SecularMA_Slow ) of Data2 )[1];
+
+if Enable_Secular_Bull_Filter = False or (
+   ( Close of Data2 )[1] > v_H60_SecularMA_Fast and
+   ( Close of Data2 )[1] > v_H60_SecularMA_Slow and
+   v_H60_SecularMA_Fast    > v_H60_SecularMA_Slow
+) then
+    v_Secular_Bull_OK = True
+else
+    v_Secular_Bull_OK = False;
+
+
+{ ============================================================
   SECTION 3 - 5M TIER 2 CALCULATIONS (Data1)
 
   Preserved identically from v1.1 (momentum micro-structure is
@@ -617,6 +675,7 @@ if MarketPosition >= 0 then
 if ( MarketPosition = 0 ) and
    ( v_Regime_Watch = True ) and
    ( v_Trigger_Fired = True ) and
+   ( v_Secular_Bull_OK = True ) and        { v2.0.2 NEW Secular Bull Filter }
    ( Time >= Entry_Open_Time ) and
    ( Time <= Entry_Cutoff_Time ) and
    ( v_DailyCooldown_Active = False ) and
@@ -776,6 +835,32 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
     SESSIONS      : Day-only preserved (Night deferred to v2.1)
     STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
     LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
+
+  v2.0.1 -> v2.0.2 PATCH (Secular Bull Filter, 2026-06-20):
+    NOTE: 此 v2.0.2 跟先前 retired 的 v2.0.2 (params lock-in) 不同。
+    這個是 thesis-driven 新 filter module，不是 opt-fitted params 寫死。
+    既有 defaults 維持 v2.0.1 原始值不動，新 filter default ON 但可關閉。
+
+    BACKGROUND: 用戶 2026-06-20 audit 15-trade 歷史數據發現：
+      - 4 筆 trade 在「不適合格局」進場（2022 trend bear / 2025 weak rally）
+      - 累積虧損 -32.6k，違反策略 thesis 「只在過熱多頭做空回檔」
+      - 現有 Tier 1 A 條件 (60M MA20>MA60) 只看短中期，沒擋長期 bear 反彈
+
+    SOLUTION: 加 Section 2b Secular Bull Filter (mirror L1 P6 Weekly)
+      3 條件 AND（嚴格，因為 S3 是 counter-trend）:
+        1. Close (60M, [1]) > MA_Fast (~60 day)
+        2. Close (60M, [1]) > MA_Slow (~200 day)
+        3. MA_Fast > MA_Slow (結構多頭)
+      新 inputs: Enable_Secular_Bull_Filter (True), H60_SecularMA_Fast (1140),
+                 H60_SecularMA_Slow (3800)
+      新 variables: v_H60_SecularMA_Fast/Slow, v_Secular_Bull_OK
+
+    EXPECTED EFFECT (TWII daily proxy 模擬):
+      - 2022 #8/#9/#10 三筆 (-21.8k) → ALL BLOCKED
+      - 2025 #12 (-10.8k) → BLOCKED (條件 3 MA60<MA200)
+      - 2026 H1 #13/#14/#15 (+274k) → ALL PASS
+      - 其他多頭 trades → ALL PASS
+      - 預估 15 trades → 11 trades, 救回 ~32.6k
 
   v2.0 -> v2.0.1 PATCH (MC12 compliance, 2026-06-20):
     [MC12-1] Section 4 boundary detection: Hour(Time) -> ( Date of Data2,

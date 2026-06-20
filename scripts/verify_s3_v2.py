@@ -110,6 +110,14 @@ def main():
           not re.search(r"\bDaily_(FastMA_Len|SlowMA_Len|RSI_Len|RSI_Threshold|"
                         r"RSI_Sustained_Bars|Dist_MA20_Pct)\s*\(\s*\d", src))
 
+    # === v2.0.2 Secular Bull Filter inputs ===
+    check("I23 Enable_Secular_Bull_Filter declared (default True, v2.0.2)",
+          re.search(r"Enable_Secular_Bull_Filter\s*\(\s*True\s*\)", src))
+    check("I24 H60_SecularMA_Fast declared (default 1140, v2.0.2)",
+          re.search(r"H60_SecularMA_Fast\s*\(\s*1140\s*\)", src))
+    check("I25 H60_SecularMA_Slow declared (default 3800, v2.0.2)",
+          re.search(r"H60_SecularMA_Slow\s*\(\s*3800\s*\)", src))
+
     # === Variables ===
     check("V01 v_H60_FastMA declared",
           re.search(r"v_H60_FastMA\s*\(", src))
@@ -139,6 +147,14 @@ def main():
           re.search(r"v_HighConv_Active\s*\(", src))
     check("V12 No v_Daily_* variables remain",
           not re.search(r"v_Daily_(FastMA|SlowMA|RSI|Dist_Pct|RSI_Snap[0-3])", src))
+
+    # === v2.0.2 Secular Bull Filter variables ===
+    check("V13 v_H60_SecularMA_Fast declared (v2.0.2)",
+          re.search(r"v_H60_SecularMA_Fast\s*\(\s*0\s*\)", src))
+    check("V14 v_H60_SecularMA_Slow declared (v2.0.2)",
+          re.search(r"v_H60_SecularMA_Slow\s*\(\s*0\s*\)", src))
+    check("V15 v_Secular_Bull_OK declared (default False, v2.0.2)",
+          re.search(r"v_Secular_Bull_OK\s*\(\s*False\s*\)", src))
 
     # === Arrays / Holiday registry ===
     check("A01 Holiday_Tail array declared 80 slots",
@@ -247,15 +263,34 @@ def main():
     check("S5-4 SetStopLoss called exactly once (Rule #12)",
           sl_count == 1, f"count={sl_count}")
 
+    # === v2.0.2 Section 2b Secular Bull Filter calculations ===
+    check("S2b-1 v_H60_SecularMA_Fast computed via ( Average(...) of Data2 )[1]",
+          re.search(r"v_H60_SecularMA_Fast\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"H60_SecularMA_Fast\s*\)\s*of Data2\s*\)\[1\]", src))
+    check("S2b-2 v_H60_SecularMA_Slow computed via ( Average(...) of Data2 )[1]",
+          re.search(r"v_H60_SecularMA_Slow\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"H60_SecularMA_Slow\s*\)\s*of Data2\s*\)\[1\]", src))
+    check("S2b-3 Secular AND filter: 3 conditions (Close>Fast, Close>Slow, Fast>Slow)",
+          re.search(
+              r"\(\s*Close of Data2\s*\)\[1\]\s*>\s*v_H60_SecularMA_Fast\s+and\s+"
+              r"\(\s*Close of Data2\s*\)\[1\]\s*>\s*v_H60_SecularMA_Slow\s+and\s+"
+              r"v_H60_SecularMA_Fast\s*>\s*v_H60_SecularMA_Slow",
+              src))
+    check("S2b-4 Filter respects Enable_Secular_Bull_Filter input (can disable)",
+          re.search(r"Enable_Secular_Bull_Filter\s*=\s*False\s+or", src))
+    check("S2b-5 Else branch sets v_Secular_Bull_OK = False",
+          re.search(r"else\s+v_Secular_Bull_OK\s*=\s*False", src))
+
     # === Section 6: Entry logic ===
     check("S6-1 Entry SellShort label SE_RPS_v2_Entry",
           re.search(r'SellShort\(\s*"SE_RPS_v2_Entry"\s*\)\s*next bar at Market', src))
     check("S6-2 Entry gated by MarketPosition = 0",
           re.search(r"MarketPosition\s*=\s*0", src))
-    check("S6-3 Entry gates: Regime + Trigger + Time window + Cooldown + Holiday + Settlement + Registry",
+    check("S6-3 Entry gates: Regime + Trigger + SecularBull + Time + Cooldown + Holiday + Settlement + Registry",
           all(g in src for g in [
               "v_Regime_Watch = True",
               "v_Trigger_Fired = True",
+              "v_Secular_Bull_OK = True",      # v2.0.2 NEW
               "Time >= Entry_Open_Time",
               "Time <= Entry_Cutoff_Time",
               "v_DailyCooldown_Active = False",
@@ -337,6 +372,8 @@ def main():
           "v2.0 DIFFS vs v1.1" in src or "v2.0 CHANGE LOG" in src)
     check("D02 Time-safety end-of-file audit present",
           "TIME-SAFETY VERIFICATION" in src)
+    check("D03 v2.0.2 Secular Bull Filter patch note present",
+          "v2.0.1 -> v2.0.2 PATCH" in src and "Secular Bull Filter" in src)
 
     # === Sanity: file size in expected range ===
     n_lines = len(src.splitlines())
