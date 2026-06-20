@@ -1,0 +1,745 @@
+{ ================================================================================
+  S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
+  Signal Name : S3_RapidPullbackShort_v2
+  MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
+  Version     : v2.0  (2026-06-20)
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 12 PowerLanguage x64
+  Timeframe   : Data1 = 5M  (entry trigger / exit chain)
+                Data2 = 60M (regime gate: MA20/MA60/RSI14/dist%)
+                          ★ v2.0: previously reserved in v1.1, now ACTIVE
+                Data3 = (removed in v2.0; was Daily regime gate)
+  Class       : Counter-trend short with momentum confirmation
+                (sells overheated bull pullbacks intraday)
+                SAME thesis as v1.1 - only regime time-frame changed.
+
+  ============================================================
+  v2.0 CHANGE LOG vs v1.1 (USER OPTION B, 2026-06-20)
+  ============================================================
+  Thesis: UNCHANGED - "Counter-trend short during overheated bull
+                       regime pullbacks"
+  Root cause of v1.1 underperformance: Daily Tier 1 too restrictive
+    -> only 9 trades/yr (target 25-40), PF after slippage -0.92.
+  Fix path: Shorten regime time-frame Daily -> 60M (one tier shorter).
+    Same A AND (B OR C) structure, recalibrated thresholds.
+
+  CHANGES:
+    [REGIME] Data3 Daily -> Data2 60M
+             Daily_FastMA_Len 20 -> H60_FastMA_Len 20  (~20 hours ~= 1 trading day)
+             Daily_SlowMA_Len 60 -> H60_SlowMA_Len 60  (~60 hours ~= 3 trading days)
+             Daily_RSI_Threshold 70 -> H60_RSI_Threshold 65 (shorter TF, RSI noisier)
+             Daily_RSI_Sustained_Bars 2 -> H60_RSI_Sustained_Bars 2
+                                            (still 2, but each bar = 1hr not 1day)
+             Daily_Dist_MA20_Pct 3.0 -> H60_Dist_MA20_Pct 1.5
+                                        (60M dist is intrinsically smaller)
+    [RSI_SNAP] Removed Daily snapshot trick (Snap0..Snap3).
+               60M K updates hourly; v_H60_RSI_Hist tracks last 4 hourly
+               closed-bar RSI values via hour-boundary detection in
+               Data1 context. (Same anti-stale principle, faster cadence.)
+    [EXIT]   TP_Pct       0.7 -> 0.6
+             SL_ATR_Mult  4   -> 3
+             Max_Bars_TimeStop 24 -> 18   (24 * 5M = 120min -> 18 * 5M = 90min)
+    [ENTRY]  Entry_Cutoff_Time 1230 -> 1325  (wider day window)
+    [MOMENTUM] 5M Tier 2 (M1-M4) preserved identically.
+               Default Pullback_Min_Pct 0.5 -> 0.3 (allow tighter entries)
+    [SESSION] Day-only operation preserved. Night session deferred to v2.1
+              (v2.0 LOCKED decision #2 dual-session split into staged delivery).
+    [STRUCT] 100% preserved from v1.1:
+             - Holiday tail registry (63 entries)
+             - Settlement_Flat module (Rule #11)
+             - SetStopLoss + Frozen SL backup (Rule #12)
+             - Daily force flat 13:25 / cooldown / kill switch
+             - Closed-interval time audit
+
+  EXPECTED PERFORMANCE (pre-backtest):
+             Trades/yr   v1.1:  9      ->  v2.0: 25-50 (target)
+             PF gross    v1.1:  1.37   ->  v2.0: 1.25-1.45
+             PF net      v1.1: -0.92   ->  v2.0: 1.05-1.25
+             WR          v1.1:  53.8%  ->  v2.0: 48-55%
+             Sample concentration: less 2026 H1 over-fit expected
+
+  ============================================================
+  CONSTITUTION COMPLIANCE (CLAUDE.md):
+    Rule #11 Settlement_Flat (7 elements): present in Priority 0.
+    Rule #12 P3b SetStopLoss: single call before entry block,
+             guarded by MarketPosition >= 0 (short variant).
+    Rule #13 10-dim eval before live_simulation: deferred to
+             post-backtest gate.
+
+  LABEL CONVENTIONS:
+    SE_RPS_v2_*  short entry labels
+    SX_RPS_v2_*  short exit labels (one per exit reason)
+
+  PERFORMANCE: NO BACKTEST YET. v2.0 is research-tier only.
+================================================================================ }
+
+[IntrabarOrderGeneration = false]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  All numeric thresholds parameterized for MC12 optimization.
+  v2.0 defaults differ from v1.1 where noted.
+  See: S3_v2_optimization_ranges.md
+  ============================================================ }
+
+inputs:
+    { ===== Tier 1 : Regime Gate Parameters (60M, Data2) =====
+      v2.0: time-frame shortened from Daily to 60M.
+      Same A AND (B OR C) structure; thresholds recalibrated. }
+    H60_FastMA_Len            ( 20    ),   { opt 10..30 step 5  ; ~20hr trend }
+    H60_SlowMA_Len            ( 60    ),   { opt 40..120 step 10; ~60hr trend }
+    H60_RSI_Len               ( 14    ),   { opt 7..21 step 7   ; 14hr RSI }
+    H60_RSI_Threshold         ( 65    ),   { opt 55..75 step 5  ; v1.1=70 (Daily) }
+    H60_RSI_Sustained_Bars    ( 2     ),   { opt 1..4 step 1    ; bars=hours }
+    H60_Dist_MA20_Pct         ( 1.5   ),   { opt 1.0..3.0 step 0.5; v1.1=3 (Daily) }
+
+    { ===== Tier 2 : Momentum Trigger Parameters (5M, Data1) =====
+      Preserved identically from v1.1 - momentum micro-structure
+      is regime-independent. Only Pullback_Min_Pct default loosened. }
+    Consec_Red_Bars           ( 3     ),   { opt 2..5 step 1 }
+    EMA_Fast_Len              ( 5     ),   { opt 5..10 step 1 }
+    ATR_Short_Len             ( 5     ),   { opt 3..7 step 1 }
+    ATR_Long_Len              ( 20    ),   { opt 15..30 step 5 }
+    ATR_Spike_Mult            ( 1.3   ),   { opt 1.1..1.6 step 0.1 }
+    Pullback_Min_Pct          ( 0.3   ),   { opt 0.2..0.6 step 0.1; v1.1 default 0.5 }
+    Pullback_Max_Pct          ( 1.5   ),   { opt 1.0..2.0 step 0.25 }
+
+    { ===== Exit Parameters (v2.0 tightened) ===== }
+    TP_Pct                    ( 0.6   ),   { opt 0.4..0.9 step 0.1; v1.1=0.7 }
+    TP_Use_EMA20_Backup       ( True  ),   { D4 structural backup preserved }
+    TP_MA_Len                 ( 20    ),   { opt 15..30 step 5 }
+    TP_EMA20_MinBars          ( 3     ),   { opt 2..6 step 1 }
+    SL_ATR_Len                ( 14    ),   { opt 10..21 step 1 }
+    SL_ATR_Mult               ( 3     ),   { opt 2.5..4.5 step 0.5; v1.1=4 }
+    Max_Bars_TimeStop         ( 18    ),   { 18*5M=90min; opt 12..24; v1.1=24 (120min) }
+    Entry_Open_Time           ( 850   ),   { D5: first eligible 5M bar (08:50 close) }
+    Entry_Cutoff_Time         ( 1325  ),   { v2.0: widened from 1230 to 1325 }
+    Daily_Flat_Time           ( 1325  ),   { force flat by 13:25 (matches cutoff) }
+
+    { ===== Priority 0 Protection (Rule #11 / #12) - unchanged from v1.1 ===== }
+    Holiday_Flat_Time         ( 245   ),   { 02:45 holiday tail flat retry start }
+    Registry_Valid_Until      ( 1270101 ), { TAIFEX-verified horizon }
+    Manual_Kill_Switch        ( False ),
+    Settlement_Flat_Time      ( 1230  ),   { 1hr buffer before 13:30 settlement }
+
+    { ===== Diagnostic (logging-only) ===== }
+    Log_HighConviction        ( True  ),
+    HighConv_Threshold_Pct    ( 2.5   ); { opt 2..4 step 0.5; v2.0=2.5 (was 5 on Daily) }
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+variables:
+    { ===== 60M Tier 1 (Data2) ===== }
+    v_H60_FastMA             ( 0     ),
+    v_H60_SlowMA             ( 0     ),
+    v_H60_RSI                ( 0     ),
+    v_H60_RSI_Sustained      ( False ),
+    v_H60_Dist_Pct           ( 0     ),
+    v_Trend_OK               ( False ),
+    v_RSI_OK                 ( False ),
+    v_Dist_OK                ( False ),
+    v_Regime_Watch           ( False ),
+
+    { ===== 60M RSI hourly snapshots (anti-stale, cadence = hour change) =====
+      Same anti-stale principle as v1.1 Daily snapshots, but cadence is
+      hour-boundary in Data1 context (each new hour = a fresh closed 60M bar).
+      Snap0 = most recent CLOSED 60M RSI
+      Snap1 = 1 hour ago; Snap2 = 2 hours ago; Snap3 = 3 hours ago
+      Shifts in Section 4 when hour rolls over. }
+    v_H60_RSI_Snap0          ( 0     ),
+    v_H60_RSI_Snap1          ( 0     ),
+    v_H60_RSI_Snap2          ( 0     ),
+    v_H60_RSI_Snap3          ( 0     ),
+    v_LastSeenHour           ( -1    ),
+
+    { ===== 5M Tier 2 (Data1) - preserved from v1.1 ===== }
+    v_M1_Consec              ( False ),
+    v_M2_BelowEMA            ( False ),
+    v_M3_ATR_Spike           ( False ),
+    v_M4_Pullback            ( False ),
+    v_5M_EMA                 ( 0     ),
+    v_5M_EMA_Prev            ( 0     ),
+    v_5M_ATR_Short           ( 0     ),
+    v_5M_ATR_Long            ( 0     ),
+    v_Pullback_Pct           ( 0     ),
+    v_Trigger_Fired          ( False ),
+    v_Red_Loop_OK            ( True  ),
+    v_red_idx                ( 0     ),
+    { Day-session-only intraday high (v1.1 BUG FIX #4 preserved):
+      HighD(0) is calendar-date-scoped; TXF1 night-tail 00:00-05:00 bars
+      carry NEXT trading day's Date, so HighD(0) at 08:45 already includes
+      overnight tail high. Reset and accumulate from Entry_Open_Time per Date. }
+    v_DaySess_High           ( 0     ),
+    v_DaySess_HighDate       ( 0     ),
+
+    { ===== Exit state - preserved from v1.1 ===== }
+    v_TP_Pct_Level           ( 0     ),
+    v_TP_EMA20               ( 0     ),
+    v_5M_EMA20               ( 0     ),
+    v_SL_ATR                 ( 0     ),
+    v_SL_Locked              ( False ),
+    v_Frozen_ATR_5M          ( 0     ),
+    v_Frozen_SL_Dist         ( 0     ),
+    v_SL_Level               ( 0     ),
+    v_Bars_Held              ( 0     ),
+
+    { ===== Cooldown (one trade per day) ===== }
+    v_DailyCooldown_Active   ( False ),
+    v_LastSeenDate           ( 0     ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block          ( False ),
+    v_Registry_Expired       ( False ),
+    v_Settlement_Day         ( False ),
+    Registry_Warn_ID         ( -1    ),
+    hidx                     ( 0     ),
+    ExitFired                ( 0     ),
+
+    { ===== Diagnostic ===== }
+    v_HighConv_Active        ( False );
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  Holiday_Tail: shared 63-entry TAIFEX registry (byte-identical
+  to L1/L2/L3/L5 and v1.1).
+  ============================================================ }
+
+arrays:
+    Holiday_Tail[80]( 0 );
+
+
+{ ============================================================
+  SECTION 0 - HOLIDAY TAIL REGISTRY (TAIFEX-verified)
+  Identical to v1.1 - DO NOT MODIFY without updating L1-L5 + S1
+  in lockstep (byte-identical invariant).
+  ============================================================ }
+
+if CurrentBar = 1 then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;  { CNY }
+    Holiday_Tail[5]  = 1200228;  { 228 }
+    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+    Holiday_Tail[7]  = 1200501;  { Labor Day }
+    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+    Holiday_Tail[10] = 1201009;  { National Day }
+    Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;  { CNY }
+    Holiday_Tail[13] = 1210227;  { 228 }
+    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+    Holiday_Tail[17] = 1211009;  { National Day }
+    Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;  { CNY }
+    Holiday_Tail[20] = 1220226;  { 228 }
+    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+    Holiday_Tail[22] = 1220430;  { Labor Day (5/2 make-up) }
+    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+    Holiday_Tail[25] = 1221008;  { National Day }
+    Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;  { CNY }
+    Holiday_Tail[28] = 1230225;  { 228 }
+    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+    Holiday_Tail[30] = 1230429;  { Labor Day }
+    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+    Holiday_Tail[33] = 1231007;  { National Day }
+    Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;  { CNY }
+    Holiday_Tail[36] = 1240228;  { 228 }
+    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+    Holiday_Tail[38] = 1240501;  { Labor Day }
+    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+    Holiday_Tail[41] = 1241010;  { National Day }
+    Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+    { --- 2025 --- }
+    Holiday_Tail[43] = 1250123;  { CNY }
+    Holiday_Tail[44] = 1250228;  { 228 }
+    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+    Holiday_Tail[46] = 1250501;  { Labor Day }
+    Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+    Holiday_Tail[48] = 1250927;  { Teachers Day (9/29 make-up) }
+    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+    Holiday_Tail[50] = 1251010;  { National Day }
+    Holiday_Tail[51] = 1251024;  { Retrocession Day }
+    Holiday_Tail[52] = 1251225;  { Constitution Day }
+    Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+    Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+end;
+
+
+{ ============================================================
+  SECTION 1B - HOLIDAY / REGISTRY / SETTLEMENT DETECTION
+  Identical to v1.1.
+  ============================================================ }
+
+v_Holiday_Block = False;
+
+if Time < 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+v_Registry_Expired = False;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
+end;
+
+{ Monthly Settlement detection (3rd Wed of month) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+{ Registry-expiry red warning, 30 days out }
+if LastBarOnChart and
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New( Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr( Registry_Valid_Until, 0 ) +
+            " - REBUILD FROM TAIFEX CALENDAR" );
+        Text_SetColor( Registry_Warn_ID, Red );
+        Text_SetSize( Registry_Warn_ID, 14 );
+        Text_SetAttribute( Registry_Warn_ID, 1, True );
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 2 - 60M TIER 1 CALCULATIONS (Data2)
+
+  v2.0: replaces v1.1's Daily Tier 1 (Data3).
+  Same A AND (B OR C) structure; recalibrated to 60M scale.
+
+  Per CLAUDE.md Rule #3: Data2 current bar may be partial -
+  use [1] for already-closed 60M values. All Tier 1 inputs
+  reference [1] of Data2 for stability.
+  ============================================================ }
+
+v_H60_FastMA = Average( Close, H60_FastMA_Len )[1] of Data2;
+v_H60_SlowMA = Average( Close, H60_SlowMA_Len )[1] of Data2;
+
+{ Current 60M RSI from snapshot (Section 4 maintains the snap shift
+  at each hour-boundary in Data1 context). Snap0 = most recent
+  closed 60M RSI value. }
+v_H60_RSI    = v_H60_RSI_Snap0;
+
+{ Distance from 60M MA20 as percentage. Positive when price above MA20.
+  Note: ( Close of Data2 )[1] - explicit parens force parser to bind
+  'of Data2' first, then apply [1] history to Data2-bound expression.
+  Removes Data1/Data2 binding ambiguity. }
+if v_H60_FastMA > 0 then
+    v_H60_Dist_Pct = ( ( Close of Data2 )[1] - v_H60_FastMA ) /
+                     v_H60_FastMA * 100
+else
+    v_H60_Dist_Pct = 0;
+
+{ A: bullish 60M structure }
+if v_H60_FastMA > v_H60_SlowMA then
+    v_Trend_OK = True
+else
+    v_Trend_OK = False;
+
+{ B: RSI > threshold sustained for N completed 60M bars (= N hours).
+  Snapshot-based history maintained in Section 4 at hour-boundary.
+  Each Snap is a genuine separate 60M bar's closed RSI.
+  Supports H60_RSI_Sustained_Bars in [1..4]; >4 capped at 4. }
+v_H60_RSI_Sustained = True;
+if H60_RSI_Sustained_Bars >= 1 and
+   v_H60_RSI_Snap0 <= H60_RSI_Threshold then
+    v_H60_RSI_Sustained = False;
+if H60_RSI_Sustained_Bars >= 2 and
+   v_H60_RSI_Snap1 <= H60_RSI_Threshold then
+    v_H60_RSI_Sustained = False;
+if H60_RSI_Sustained_Bars >= 3 and
+   v_H60_RSI_Snap2 <= H60_RSI_Threshold then
+    v_H60_RSI_Sustained = False;
+if H60_RSI_Sustained_Bars >= 4 and
+   v_H60_RSI_Snap3 <= H60_RSI_Threshold then
+    v_H60_RSI_Sustained = False;
+
+if v_H60_RSI_Sustained then
+    v_RSI_OK = True
+else
+    v_RSI_OK = False;
+
+{ C: 60M distance from MA20 exceeds threshold (overextended) }
+if v_H60_Dist_Pct > H60_Dist_MA20_Pct then
+    v_Dist_OK = True
+else
+    v_Dist_OK = False;
+
+{ Regime: A AND (B OR C) - identical structure to v1.1 }
+if v_Trend_OK and ( v_RSI_OK or v_Dist_OK ) then
+    v_Regime_Watch = True
+else
+    v_Regime_Watch = False;
+
+{ HighConviction zone: 60M dist > +2.5% (v2.0 scale; was +5% Daily in v1.1).
+  Logging-only diagnostic. }
+if v_H60_Dist_Pct > HighConv_Threshold_Pct then
+    v_HighConv_Active = True
+else
+    v_HighConv_Active = False;
+
+
+{ ============================================================
+  SECTION 3 - 5M TIER 2 CALCULATIONS (Data1)
+
+  Preserved identically from v1.1 (momentum micro-structure is
+  regime-independent). Only Pullback_Min_Pct default loosened.
+
+  M1: Consec_Red_Bars consecutive red 5M candles.
+  M2: Close < EMA(EMA_Fast_Len) AND EMA falling vs prior bar.
+  M3: ATR(ATR_Short_Len) > ATR(ATR_Long_Len) * ATR_Spike_Mult.
+  M4: (v_DaySess_High - Close) / v_DaySess_High * 100 in [Min, Max] %.
+  ============================================================ }
+
+{ M1 : consecutive red bars (small loop) }
+v_Red_Loop_OK = True;
+for v_red_idx = 0 to Consec_Red_Bars - 1 begin
+    if Close[v_red_idx] >= Open[v_red_idx] then
+        v_Red_Loop_OK = False;
+end;
+v_M1_Consec = v_Red_Loop_OK;
+
+{ M2 : EMA fast break + slope down. One XAverage call + variable[1]
+  lookback (v1.1 BUG FIX #9 preserved). }
+v_5M_EMA      = XAverage( Close, EMA_Fast_Len );
+v_5M_EMA_Prev = v_5M_EMA[1];
+
+if ( Close < v_5M_EMA ) and ( v_5M_EMA < v_5M_EMA_Prev ) then
+    v_M2_BelowEMA = True
+else
+    v_M2_BelowEMA = False;
+
+{ M3 : short/long ATR spike }
+v_5M_ATR_Short = AvgTrueRange( ATR_Short_Len );
+v_5M_ATR_Long  = AvgTrueRange( ATR_Long_Len );
+
+if ( v_5M_ATR_Long > 0 ) and
+   ( v_5M_ATR_Short > v_5M_ATR_Long * ATR_Spike_Mult ) then
+    v_M3_ATR_Spike = True
+else
+    v_M3_ATR_Spike = False;
+
+{ M4 : intraday DAY-SESSION pullback geometry (v1.1 BUG FIX #4 preserved).
+  Reset at first bar >= Entry_Open_Time on each new Date. }
+if ( Date <> v_DaySess_HighDate ) and ( Time >= Entry_Open_Time ) then begin
+    v_DaySess_High     = High;
+    v_DaySess_HighDate = Date;
+end
+else if ( Date = v_DaySess_HighDate ) and
+        ( Time >= Entry_Open_Time ) and ( Time <= 1345 ) then begin
+    if High > v_DaySess_High then
+        v_DaySess_High = High;
+end;
+
+if v_DaySess_High > 0 then
+    v_Pullback_Pct = ( v_DaySess_High - Close ) / v_DaySess_High * 100
+else
+    v_Pullback_Pct = 0;
+
+if ( v_Pullback_Pct >= Pullback_Min_Pct ) and
+   ( v_Pullback_Pct <= Pullback_Max_Pct ) then
+    v_M4_Pullback = True
+else
+    v_M4_Pullback = False;
+
+{ All four AND-ed }
+if v_M1_Consec and v_M2_BelowEMA and v_M3_ATR_Spike and v_M4_Pullback then
+    v_Trigger_Fired = True
+else
+    v_Trigger_Fired = False;
+
+{ Exit-side indicator: 5M EMA20 (for D4 structural TP backup) }
+v_5M_EMA20 = XAverage( Close, TP_MA_Len );
+
+
+{ ============================================================
+  SECTION 4 - HOURLY RSI SNAPSHOT + DAILY COOLDOWN RESET
+
+  v2.0: snapshot cadence changed from daily (v1.1) to hourly.
+  Each new hour in Data1 context = a newly-closed 60M bar
+  (because Data2 60M bars close at top of every hour).
+
+  Snapshot shifts on hour-boundary; cooldown resets on date-boundary
+  (gated by day-session open).
+  ============================================================ }
+
+{ Hourly RSI snapshot (v2.0 replaces v1.1's daily snapshot trick) }
+if Hour( Time ) <> v_LastSeenHour then begin
+    v_H60_RSI_Snap3 = v_H60_RSI_Snap2;
+    v_H60_RSI_Snap2 = v_H60_RSI_Snap1;
+    v_H60_RSI_Snap1 = v_H60_RSI_Snap0;
+    v_H60_RSI_Snap0 = RSI( Close, H60_RSI_Len ) of Data2;
+    v_LastSeenHour  = Hour( Time );
+end;
+
+{ Daily cooldown reset (v1.1 BUG FIX #8 preserved) -
+  gated by day-session open so a same-trading-day late-night re-entry
+  attempt cannot bypass the gate. }
+if Date <> v_LastSeenDate then begin
+    if Time >= Entry_Open_Time then begin
+        v_DailyCooldown_Active = False;
+        v_LastSeenDate         = Date;
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 5 - P3b IMMEDIATE STOP GUARD (SetStopLoss)  [Rule #12]
+
+  Preserved identically from v1.1.
+  MC engine-level stop, active on entry bar without IOG dependency.
+  Closes the structural unprotected window between fill and the
+  first custom stop evaluation.
+  ============================================================ }
+
+{ ---- 5a: Frozen SL setup (locks once per trade on entry bar) ---- }
+if MarketPosition = -1 then begin
+    if v_SL_Locked = False then begin
+        v_Frozen_ATR_5M  = AvgTrueRange( SL_ATR_Len );
+        v_Frozen_SL_Dist = v_Frozen_ATR_5M * SL_ATR_Mult;
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        v_SL_Locked      = True;
+    end;
+end
+else begin
+    v_SL_Locked      = False;
+    v_Frozen_ATR_5M  = 0;
+    v_Frozen_SL_Dist = 0;
+    v_SL_Level       = 0;
+end;
+
+{ ---- 5b: P3b SetStopLoss engine guard (shares frozen ATR once locked) ---- }
+if v_SL_Locked = True then
+    v_SL_ATR = v_Frozen_ATR_5M
+else
+    v_SL_ATR = AvgTrueRange( SL_ATR_Len );
+
+if MarketPosition >= 0 then
+    SetStopLoss( v_SL_ATR * SL_ATR_Mult * BigPointValue );
+
+
+{ ============================================================
+  SECTION 6 - ENTRY LOGIC
+
+  Gates (all must be true):
+    - Flat (MP = 0)
+    - v_Regime_Watch           (Tier 1 60M regime)
+    - v_Trigger_Fired          (Tier 2 4-AND 5M momentum)
+    - Time in [Entry_Open_Time, Entry_Cutoff_Time]  (v2.0: widened to 1325)
+    - Not on cooldown
+    - Not on a holiday tail bar (v_Holiday_Block = false)
+    - Not on a settlement day (v_Settlement_Day = false)
+    - Holiday registry not expired
+
+  Closed-interval safety: Time >= X AND Time <= Y (no half-open trap).
+  ============================================================ }
+
+if ( MarketPosition = 0 ) and
+   ( v_Regime_Watch = True ) and
+   ( v_Trigger_Fired = True ) and
+   ( Time >= Entry_Open_Time ) and
+   ( Time <= Entry_Cutoff_Time ) and
+   ( v_DailyCooldown_Active = False ) and
+   ( v_Holiday_Block = False ) and
+   ( v_Settlement_Day = False ) and
+   ( v_Registry_Expired = False ) then begin
+    SellShort( "SE_RPS_v2_Entry" ) next bar at Market;
+end;
+
+
+{ ============================================================
+  SECTION 7 - EXIT CHAIN (Priority 0 first)
+
+  PRIORITY ORDER (per CLAUDE.md Rule #11 Settlement_Flat):
+    P0-1  SX_RPS_v2_Kill          (Manual_Kill_Switch)
+    P0-2  SX_RPS_v2_RegistryEnd   (registry expired)
+    P0-3  SX_RPS_v2_HolFlat       (holiday tail + Holiday_Flat_Time)
+    P0-4  SX_RPS_v2_Settlement    (settlement day + Settlement_Flat_Time)
+    P0a   SX_RPS_v2_DayClose      (daily force flat by 13:25)
+    S-1   SX_RPS_v2_TP            (0.6% target OR EMA20 touch)
+    S-2   SX_RPS_v2_TimeStop      (18 5M bars = 90 min)
+    S-3   SX_RPS_v2_SL            (Frozen SL backup)
+    (Engine SL handled by SetStopLoss in Section 5)
+
+  Time-safety preserved from v1.1:
+    Holiday_Flat_Time   : guarded by v_Holiday_Block + Time <= 455
+    Settlement_Flat_Time: guarded by v_Settlement_Day (date-scoped)
+    Daily_Flat_Time     : Time <= 1340 paired (avoids 15:00 cross-gap fill)
+  ============================================================ }
+
+ExitFired = 0;
+
+if MarketPosition = -1 then begin
+
+    { ---- P0-1 Manual kill switch ---- }
+    if ( ExitFired = 0 ) and ( Manual_Kill_Switch = True ) then begin
+        BuyToCover( "SX_RPS_v2_Kill" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-2 Registry fail-safe ---- }
+    if ( ExitFired = 0 ) and ( v_Registry_Expired = True ) then begin
+        BuyToCover( "SX_RPS_v2_RegistryEnd" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-3 Holiday iron rule (state-guarded Time>=X) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Holiday_Block = True ) and
+       ( Time >= Holiday_Flat_Time ) and
+       ( Time <= 455 ) then begin
+        BuyToCover( "SX_RPS_v2_HolFlat" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-4 Settlement flat (state-guarded Time>=X) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Settlement_Day = True ) and
+       ( Time >= Settlement_Flat_Time ) then begin
+        BuyToCover( "SX_RPS_v2_Settlement" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0a Daily force flat before 13:25 (Time<=1340 paired) ---- }
+    if ( ExitFired = 0 ) and
+       ( Time >= Daily_Flat_Time ) and
+       ( Time <= 1340 ) then begin
+        BuyToCover( "SX_RPS_v2_DayClose" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- Strategy exits (TP / time stop / frozen SL) ---- }
+    if ExitFired = 0 then begin
+
+        v_Bars_Held     = BarsSinceEntry;
+        v_TP_Pct_Level  = EntryPrice * ( 1 - TP_Pct / 100 );
+        v_TP_EMA20      = v_5M_EMA20;
+
+        { TP: percentage target OR (optional) 5M EMA20 touch from above.
+          v1.1 BUG FIX #1 preserved: three guards prevent fill-bar trap:
+            1. v_Bars_Held >= TP_EMA20_MinBars
+            2. v_5M_EMA20[1] < EntryPrice
+            3. Close[1] > v_TP_EMA20[1] (genuine cross-from-above this bar) }
+        if ( Close <= v_TP_Pct_Level ) or
+           ( ( TP_Use_EMA20_Backup = True ) and
+             ( v_Bars_Held >= TP_EMA20_MinBars ) and
+             ( v_5M_EMA20[1] < EntryPrice ) and
+             ( Close[1] > v_TP_EMA20[1] ) and
+             ( Close <= v_TP_EMA20 ) ) then begin
+            BuyToCover( "SX_RPS_v2_TP" ) next bar at Market;
+            ExitFired = 1;
+        end
+        else if v_Bars_Held >= Max_Bars_TimeStop then begin
+            BuyToCover( "SX_RPS_v2_TimeStop" ) next bar at Market;
+            ExitFired = 1;
+        end;
+
+        { ---- S-3 Frozen SL backup (belt+suspenders with Section 5b) ---- }
+        if ( ExitFired = 0 ) and ( v_SL_Locked = True ) then
+            BuyToCover( "SX_RPS_v2_SL" ) next bar at v_SL_Level Stop;
+
+    end;
+
+end;
+
+
+{ ============================================================
+  SECTION 8 - COOLDOWN SET ON EXIT
+  Any exit fired this bar -> cooldown active until tomorrow.
+  Cleared in Section 4 when Date changes.
+  ============================================================ }
+
+if ExitFired > 0 then begin
+    v_DailyCooldown_Active = True;
+end;
+
+
+{ ============================================================
+  SECTION 9 - DIAGNOSTIC LOGGING (HighConviction zone)
+  v2.0: HighConv threshold = 60M dist > +2.5% (was +5% on Daily in v1.1).
+  Log once per new Date to avoid 240+ lines/day spam.
+  ============================================================ }
+
+if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
+    Print( "S3v2 HighConv ", Date:8:0,
+           " dist60m=", v_H60_Dist_Pct:0:2, "%",
+           " regime=",  v_Regime_Watch,
+           " trigger=", v_Trigger_Fired,
+           " RSI60m0=", v_H60_RSI_Snap0:0:2,
+           " RSI60m1=", v_H60_RSI_Snap1:0:2 );
+
+
+{ ============================================================
+  END OF FILE - S3_RapidPullbackShort_v2.pla  v2.0
+
+  TIME-SAFETY VERIFICATION (closed-interval audit):
+    Line in Section 1B  if Time < 500            OK upper-bounded
+    Line in Section 6   Time >= Entry_Open_Time
+                        AND Time <= Entry_Cutoff_Time
+                                                  OK paired
+    Line in Section 7   Time >= Holiday_Flat_Time guarded by
+                        v_Holiday_Block AND Time <= 455
+                                                  OK state-guarded + paired
+    Line in Section 7   Time >= Settlement_Flat_Time guarded by
+                        v_Settlement_Day (date-scoped)  OK
+    Line in Section 7   Time >= Daily_Flat_Time
+                        AND Time <= 1340          OK paired
+
+  No bare Time>=X without a pair or a state-guard. Cross-day
+  pitfall avoided.
+
+  v2.0 DIFFS vs v1.1 (summary):
+    REGIME GATE   : Daily Tier 1 (Data3) -> 60M Tier 1 (Data2)
+    RSI SNAPSHOT  : Daily cadence -> Hourly cadence (Section 4)
+    EXIT          : TP 0.7->0.6 / SL ATR x4->x3 / TimeStop 24->18
+    ENTRY WINDOW  : Cutoff 1230 -> 1325 (widened day window)
+    SESSIONS      : Day-only preserved (Night deferred to v2.1)
+    STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
+    LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
+
+  v1.1 -> v2.0 is REGIME-FRAME shortened. Same thesis, faster cadence,
+  more trades expected per year.
+============================================================ }
