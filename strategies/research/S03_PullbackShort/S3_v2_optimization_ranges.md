@@ -77,9 +77,9 @@ Stage 2: Refine Sweep
 | `H60_FastMA_Len` | 20 | **20** | [10, 15, 20, 30] | ±5 around best | **HIGH** | 20 根 60M ≈ 20 hr ≈ 1 trading day |
 | `H60_SlowMA_Len` | 60 | **60** | [40, 60, 80, 120] | ±10 around best | **HIGH** | 60 根 60M ≈ 60 hr ≈ 3 trading day；必須 > FastMA |
 | `H60_RSI_Len` | 14 | **14** | [7, 14, 21] | ±2 around best | LOW | RSI 計算期；不建議大幅調 |
-| `H60_RSI_Threshold` | 70 | **70** ⭐ | [55, 60, 65, 70, 75] | ±2 around best | **HIGH** | v2.0.2 LOCKED：27-trade opt 跟 v1.1 同回到 70 |
+| `H60_RSI_Threshold` | 70 | **65** | [55, 60, 65, 70, 75] | ±2 around best | **HIGH** | v1.1 用 70 太嚴 (3.4/yr)；60M scale 鬆綁 |
 | `H60_RSI_Sustained_Bars` | 2 | **2** | [1, 2, 3, 4] | ±1 | **MED** | 每 bar = 1 hr，過大 → 觸發稀疏 |
-| `H60_Dist_MA20_Pct` | 3.0 | **2.5** ⭐ | [1.0, 1.5, 2.0, 2.5, 3.0] | ±0.5 around best | **HIGH** | v2.0.2 LOCKED：27-trade opt 鎖 2.5（比 v1.1 3.0 略鬆）|
+| `H60_Dist_MA20_Pct` | 3.0 | **1.5** | [1.0, 1.5, 2.0, 2.5, 3.0] | ±0.5 around best | **HIGH** | 60M 距離自然較小（v1.1 Daily +3% ≈ 60M +1.5%） |
 
 **Tier 1 約束**：`H60_FastMA_Len < H60_SlowMA_Len`（GA 須加 constraint）
 **Tier 1 預期效果**：相較 v1.1 Daily Tier 1 (3.4/yr 觸發)，60M Tier 1 預估 30-60/yr regime watch 日（再經 Tier 2 5M momentum filter 後 25-50/yr 實際進場）
@@ -94,26 +94,24 @@ Stage 2: Refine Sweep
 | `EMA_Fast_Len` | 5 | **5** | [3, 5, 8, 10] | ±1 around best | **MED** | EMA 與斜率判動能反轉 |
 | `ATR_Short_Len` | 5 | **5** | [3, 5, 8] | — | LOW | 不建議掃 |
 | `ATR_Long_Len` | 20 | **20** | [14, 20, 30] | — | LOW | 不建議掃 |
-| `ATR_Spike_Mult` | 1.3 | **1.1** ⭐ | [1.0, 1.1, 1.2, 1.3, 1.5] | ±0.1 around best | **HIGH** | v2.0.2 LOCKED：27-trade opt 鎖 1.1（比 v1.1 鬆，更易觸發）|
-| `Pullback_Min_Pct` | 0.5 | **0.6** ⭐ | [0.2, 0.3, 0.4, 0.5, 0.6] | ±0.1 around best | **MED** | v2.0.2 LOCKED：27-trade opt 鎖 0.6（比 v1.1 略嚴）|
+| `ATR_Spike_Mult` | 1.3 | **1.3** | [1.1, 1.2, 1.3, 1.5, 1.8] | ±0.1 around best | **HIGH** | 波動度噴出倍數 |
+| `Pullback_Min_Pct` | 0.5 | **0.3** ⚠️ | [0.2, 0.3, 0.4, 0.5, 0.7] | ±0.1 around best | **MED** | **v2.0 鬆綁**：允許更近 high 的進場 |
 | `Pullback_Max_Pct` | 1.5 | **1.5** | [1.0, 1.5, 2.0, 2.5] | ±0.25 around best | **MED** | 距離 intraday high 上限 |
 
 **Tier 2 約束**：`Pullback_Min_Pct < Pullback_Max_Pct`；`ATR_Short_Len < ATR_Long_Len`
 
 ---
 
-### 2.3 Exit Tier  **★ v2.0.2 LOCKED defaults from 27-trade opt**
+### 2.3 Exit Tier  **★ v2.0 三個變動**
 
-| Input | v1.1 Default | **v2.0.2 LOCKED** | Coarse Range | Refine Step | Sens | 備註 |
-|-------|-------------|--------------------|--------------|-------------|------|------|
-| `TP_Pct` | 0.7 | **1.0** ⭐ | [0.5, 0.6, 0.7, 0.8, 1.0, 1.2] | ±0.1 around best | **HIGH** | 27-trade opt 鎖定 1.0%（v2.0 試 0.6 過嚴）|
+| Input | v1.1 Default | v2.0 Default | Coarse Range | Refine Step | Sens | 備註 |
+|-------|-------------|--------------|--------------|-------------|------|------|
+| `TP_Pct` | 0.7 | **0.6** ⚠️ | [0.4, 0.5, 0.6, 0.7, 0.9] | ±0.1 around best | **HIGH** | **v2.0 收緊**：90 min hold 內較難打到 0.7% |
 | `TP_MA_Len` | 20 | **20** | [10, 20, 30, 50] | ±5 around best | **MED** | EMA20 結構觸碰備援 TP |
 | `TP_EMA20_MinBars` | 3 | **3** | [2, 3, 4, 6] | ±1 | **MED** | EMA20 backup 最少持倉 bar；防 fill-bar trap |
 | `SL_ATR_Len` | 14 | **14** | [10, 14, 20] | — | LOW | ATR 計算基準 |
-| `SL_ATR_Mult` | 4 | **3** ⭐ | [1.5, 2, 2.5, 3, 3.5] | ±0.5 around best | **HIGH** | 27-trade opt 鎖定 3，比 v1.1 的 4 收緊 |
-| `Max_Bars_TimeStop` | 24 | **12** ⭐ | [12, 15, 18, 21, 24, 30] | ±3 around best | **MED** | 27-trade opt 鎖定 12 bar = **60 min**（大幅收緊）|
-
-> ⚠️ v2.1 ATR Trailing SL layer **已 retired**（2026-06-20 backtest 證實不適合短週期反趨勢策略）。詳見 strategy.md §8 Decision Log。
+| `SL_ATR_Mult` | 4 | **3** ⚠️ | [2.5, 3, 3.5, 4, 4.5] | ±0.5 around best | **HIGH** | **v2.0 收緊**：90 min hold 不允許 ATR×4 寬停損 |
+| `Max_Bars_TimeStop` | 24 | **18** ⚠️ | [12, 15, 18, 21, 24] | ±3 around best | **MED** | **v2.0 收緊**：18 bar = 90 min（v1.1 = 24 bar = 120 min） |
 
 **Exit Tier 配套邏輯**：
 - TP 0.6% + SL ATR×3 (~0.44%) = R:R ≈ 1.36

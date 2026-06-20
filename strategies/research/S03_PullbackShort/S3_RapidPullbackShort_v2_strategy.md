@@ -98,26 +98,18 @@ v1.1 用 Daily 過熱定義對了 thesis 但用錯了 cadence，導致 backtests
 
 **為什麼 M4 鬆綁**：v1.1 0.5% 下限對應 Daily-scale 進場時機（一天可能只有少數機會）；v2.0 60M scale 下，0.3% 起步更符合 intraday 即時觸發。
 
-### 3.3 Exit Tier（v2.0.2 LOCKED from 27-trade opt）
+### 3.3 Exit Tier（v2.0 整體收緊）
 
-| 出場 | v1.1 | **v2.0.2 LOCKED** | 理由 |
-|------|------|--------------------|------|
-| TP_Pct | 0.7% | **1.0%** ⭐ | 27-trade opt 鎖定 1.0%（v2.0 試 0.6 太緊砍掉 winner）|
-| SL_ATR_Mult (Engine + Frozen SL) | × 4 (~0.58%) | **× 3 (~0.44%)** | 27-trade opt 鎖定 3 |
-| Max_Bars_TimeStop | 24 bar (120 min) | **12 bar (60 min)** ⭐ | 27-trade opt 鎖定 12 bar = 60 min（大幅收緊）|
+| 出場 | v1.1 | **v2.0** | 理由 |
+|------|------|----------|------|
+| TP_Pct | 0.7% | **0.6%** | 90 min hold cap 內 0.7% 較難達成 |
+| SL_ATR_Mult | × 4 (~0.58%) | **× 3 (~0.44%)** | 90 min hold cap 對應較短的容忍幅度 |
+| Max_Bars_TimeStop | 24 bar (120 min) | **18 bar (90 min)** | 縮短「猶豫部位」拖延時間 |
 | EMA20 backup TP | 有 | 有（同 v1.1 fix #1）| TP_EMA20_MinBars=3 guard 保留 |
-| Frozen SL backup S-3 | 固定 | **固定**（恢復原樣）| v2.1 trailing 已 retire |
+| Frozen SL backup | 有 | 有（同 v1.1 fix #10）| Section 5a + S-3 belt+suspenders |
 | Same-day cooldown | 有 | 有 | 不變 |
 
-**R:R 計算**：v1.1 0.7/0.58 = 1.21 → v2.0.2 1.0/0.44 = **2.27**（顯著提升）
-
-### 3.3.1 為什麼 v2.1 ATR Trailing 已 retire
-
-詳見 §8 Decision Log。簡要：
-- v2.1 trail-ON / trail-OFF / v2.0.1 opt 三組 backtest 對照
-- v2.0.1 opt 在 risk-adjusted 4/4 指標 (Sharpe / Sortino / Calmar / 調整 PF / MDD) 全勝
-- Trailing 結構不適合短週期反趨勢策略：trail 縮緊後容易被反彈甩出 → SL 比例增加
-- v2.0.2 = v2.0.1 原結構 + 27-trade opt 鎖定 params
+**R:R 計算**：v1.1 0.7/0.58 = 1.21 → v2.0 0.6/0.44 = 1.36（略提升）
 
 ### 3.4 Entry Window（v2.0 拓寬）
 
@@ -235,8 +227,6 @@ v2.0 角色不變於 v1.1：**反趨勢空頭組件**，填補 L1-L5+S1 大多�
 
 | 日期 | 決策 | 來源 |
 |------|------|------|
-| 2026-06-20 | **v2.1 → v2.0.2 ROLLBACK + LOCK-IN**：4 版 backtest 對照（baseline 74 / v2.0.1 opt 27 / v2.1 trail-ON 24 / v2.1 trail-OFF 83）證實 v2.0.1 opt 全面 risk-adjusted 最佳（PF 3.17 / Sharpe 0.26 / MDD -7.8% / 調整 PF 1.81）。Trailing 結構對短週期反趨勢策略無效。**Section 5c + 2 trailing inputs + 4 trailing variables 全部刪除**。同時把 27-trade opt 的 best params hard-lock 進 .pla defaults：H60_RSI 65→70 / H60_Dist 1.5→2.5 / ATR_Spike 1.3→1.1 / Pullback_Min 0.3→0.6 / TP_Pct 0.6→1.0 / Max_Bars_TimeStop 18→12 / Entry_Cutoff_Time 1325→1230（per 11:xx WR 20% 數據）/ HighConv_Threshold 2.5→5。verify 99→107 PASS。 | 本 session（用戶 final 拍板） |
-| 2026-06-20 | **v2.1 ATR Trailing SL（已 retired）**：曾實作 Section 5c trailing layer 解 Q5「賺後回吐」風險。Backtest 結果 trail-ON 24 trades PF 2.82 / MDD -9.4%（trail-OFF 83 trades PF 1.33 / MDD -21%），但跟同期 v2.0.1 opt 比仍輸（PF 3.17 / MDD -7.8%）。結論：trail 概念對 short-cycle counter-trend 不適合。已 rollback。 | 本 session（用戶 backtest 證實） |
 | 2026-06-20 | **v2.0.1 MC12 patch**: Section 4 boundary detection `Hour(Time) <> v_LastSeenHour` (assumed 60M align hour, FALSE for TXF1 session-aligned 60M) → `(Date of Data2, Time of Data2)` tuple. Snap0 reads `( RSI(...) of Data2 )[1]` (just-closed, not partial). Section 2 60M MA: `Average(...)[1] of Data2` → `( Average(...) of Data2 )[1]` (explicit parens). | 本 session（用戶 audit） |
 | 2026-06-20 | User selects Option B: preserve thesis, shorten regime TF Daily → 60M | 本 session |
 | 2026-06-20 | User rejects: v2.0 雙路徑 (Path C+D) draft (Path C alpha 驗為負) | 本 session |

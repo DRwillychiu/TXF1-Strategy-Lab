@@ -46,8 +46,8 @@ def main():
     src = PLA.read_text(encoding="utf-8")
 
     # === Header ===
-    check("H01 version v2.x in header",
-          re.search(r"Version\s*:\s*v2\.\d+(\.\d+)?", src))
+    check("H01 version v2.0.x in header",
+          re.search(r"Version\s*:\s*v2\.0(\.\d+)?", src))
     check("H02 Data2 = 60M active regime gate",
           "Data2 = 60M (regime gate" in src)
     check("H03 Data3 removed in v2.0",
@@ -64,34 +64,34 @@ def main():
           re.search(r"H60_SlowMA_Len\s*\(\s*60\s*\)", src))
     check("I03 H60_RSI_Len exists",
           re.search(r"H60_RSI_Len\s*\(\s*14\s*\)", src))
-    check("I04 H60_RSI_Threshold default 70 (v2.0.2 LOCKED from 27-trade opt)",
-          re.search(r"H60_RSI_Threshold\s*\(\s*70\s*\)", src))
+    check("I04 H60_RSI_Threshold default 65 (v2.0 loosened from 70)",
+          re.search(r"H60_RSI_Threshold\s*\(\s*65\s*\)", src))
     check("I05 H60_RSI_Sustained_Bars default 2",
           re.search(r"H60_RSI_Sustained_Bars\s*\(\s*2\s*\)", src))
-    check("I06 H60_Dist_MA20_Pct default 2.5 (v2.0.2 LOCKED from 27-trade opt)",
-          re.search(r"H60_Dist_MA20_Pct\s*\(\s*2\.5\s*\)", src))
+    check("I06 H60_Dist_MA20_Pct default 1.5 (v2.0 loosened from 3.0)",
+          re.search(r"H60_Dist_MA20_Pct\s*\(\s*1\.5\s*\)", src))
 
-    check("I07 Consec_Red_Bars LOCKED 3",
+    check("I07 Consec_Red_Bars preserved",
           re.search(r"Consec_Red_Bars\s*\(\s*3\s*\)", src))
     check("I08 EMA_Fast_Len preserved",
           re.search(r"EMA_Fast_Len\s*\(\s*5\s*\)", src))
-    check("I09 ATR_Spike_Mult default 1.1 (v2.0.2 LOCKED from 27-trade opt)",
-          re.search(r"ATR_Spike_Mult\s*\(\s*1\.1\s*\)", src))
-    check("I10 Pullback_Min_Pct default 0.6 (v2.0.2 LOCKED from 27-trade opt)",
-          re.search(r"Pullback_Min_Pct\s*\(\s*0\.6\s*\)", src))
+    check("I09 ATR_Spike_Mult preserved",
+          re.search(r"ATR_Spike_Mult\s*\(\s*1\.3\s*\)", src))
+    check("I10 Pullback_Min_Pct default 0.3 (v2.0 loosened from 0.5)",
+          re.search(r"Pullback_Min_Pct\s*\(\s*0\.3\s*\)", src))
     check("I11 Pullback_Max_Pct preserved",
           re.search(r"Pullback_Max_Pct\s*\(\s*1\.5\s*\)", src))
 
-    check("I12 TP_Pct default 1.0 (v2.0.2 LOCKED from 27-trade opt)",
-          re.search(r"TP_Pct\s*\(\s*1(\.0)?\s*\)", src))
-    check("I13 SL_ATR_Mult default 3 LOCKED",
+    check("I12 TP_Pct default 0.6 (v2.0 tightened from 0.7)",
+          re.search(r"TP_Pct\s*\(\s*0\.6\s*\)", src))
+    check("I13 SL_ATR_Mult default 3 (v2.0 tightened from 4)",
           re.search(r"SL_ATR_Mult\s*\(\s*3\s*\)", src))
-    check("I14 Max_Bars_TimeStop default 12 (v2.0.2 LOCKED 60 min from opt)",
-          re.search(r"Max_Bars_TimeStop\s*\(\s*12\s*\)", src))
+    check("I14 Max_Bars_TimeStop default 18 (v2.0 tightened from 24)",
+          re.search(r"Max_Bars_TimeStop\s*\(\s*18\s*\)", src))
     check("I15 Entry_Open_Time = 850",
           re.search(r"Entry_Open_Time\s*\(\s*850\s*\)", src))
-    check("I16 Entry_Cutoff_Time = 1230 (v2.0.2 LOCKED per 11:xx WR=20% data)",
-          re.search(r"Entry_Cutoff_Time\s*\(\s*1230\s*\)", src))
+    check("I16 Entry_Cutoff_Time = 1325 (v2.0 widened from 1230)",
+          re.search(r"Entry_Cutoff_Time\s*\(\s*1325\s*\)", src))
     check("I17 Daily_Flat_Time = 1325",
           re.search(r"Daily_Flat_Time\s*\(\s*1325\s*\)", src))
 
@@ -101,8 +101,8 @@ def main():
           re.search(r"Registry_Valid_Until\s*\(\s*1270101\s*\)", src))
     check("I20 Settlement_Flat_Time = 1230",
           re.search(r"Settlement_Flat_Time\s*\(\s*1230\s*\)", src))
-    check("I21 HighConv_Threshold_Pct = 5 (v2.0.2 LOCKED, align with backtest setting)",
-          re.search(r"HighConv_Threshold_Pct\s*\(\s*5\s*\)", src))
+    check("I21 HighConv_Threshold_Pct = 2.5 (v2.0 60M scale)",
+          re.search(r"HighConv_Threshold_Pct\s*\(\s*2\.5\s*\)", src))
 
     # I22: check only DECLARED inputs (pattern: name followed by paren+default),
     # not bare references inside comment/changelog text.
@@ -242,31 +242,10 @@ def main():
                     src, re.S))
     check("S5-3 SetStopLoss called once, guarded by MP >= 0 (short variant)",
           re.search(r"if MarketPosition >= 0 then\s+SetStopLoss\(", src))
-    # SetStopLoss count check (Rule #12: exactly ONE call).
-    # Match only true calls: SetStopLoss( v_... ) - excludes comment mentions
-    # like "Engine SetStopLoss (5b)" which the v2.1 patch adds.
-    sl_count = len(re.findall(r"\bSetStopLoss\s*\(\s*v_", src))
-    check("S5-4 SetStopLoss called exactly once with v_ argument (Rule #12)",
+    # SetStopLoss count check (Rule #12: exactly ONE call)
+    sl_count = len(re.findall(r"\bSetStopLoss\s*\(", src))
+    check("S5-4 SetStopLoss called exactly once (Rule #12)",
           sl_count == 1, f"count={sl_count}")
-
-    # === v2.0.2: Trailing layer REMOVED (rollback from v2.1) ===
-    check("R01 TrailingActivate_Pct input REMOVED (v2.0.2 rollback)",
-          not re.search(r"TrailingActivate_Pct\s*\(", src))
-    check("R02 TrailingATR_Mult input REMOVED (v2.0.2 rollback)",
-          not re.search(r"TrailingATR_Mult\s*\(", src))
-    check("R03 v_InTheMoney_Pct variable REMOVED",
-          not re.search(r"v_InTheMoney_Pct\s*\(", src))
-    check("R04 v_Trailing_Active variable REMOVED",
-          not re.search(r"v_Trailing_Active\s*\(", src))
-    check("R05 v_Trailing_ATR variable REMOVED",
-          not re.search(r"v_Trailing_ATR\s*\(", src))
-    check("R06 v_Trailing_Cand variable REMOVED",
-          not re.search(r"v_Trailing_Cand\s*\(", src))
-    check("R07 Section 5c label REMOVED from active code",
-          not re.search(r"^\s*\{\s*=+\s*\n\s*SECTION 5c",
-                        src, re.M))
-    check("R08 v2.0.2 ROLLBACK note present in header",
-          "v2.1 -> v2.0.2 ROLLBACK" in src)
 
     # === Section 6: Entry logic ===
     check("S6-1 Entry SellShort label SE_RPS_v2_Entry",

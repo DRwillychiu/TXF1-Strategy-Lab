@@ -20,7 +20,6 @@
 | Section 2 60M TIER 1 (line 363-443) | **大幅變動**（Daily → 60M） | 本檔 §4 |
 | Section 3 5M TIER 2 (line 446-518) | 不變（M4 default 微調） | reference v1.1 §3 |
 | Section 4 60M SNAP + COOLDOWN (line 530-580) | **大幅變動**（cadence 改，v2.0.1 MC12 patch） | 本檔 §5 |
-| ~~Section 5c ATR Trailing SL~~ | **已 RETIRED (v2.1 → v2.0.2 rollback)** | 本檔 §5.5 說明 |
 | Section 5 SetStopLoss + Frozen SL (line 550-592) | 不變 | reference v1.1 §5 |
 | Section 6 ENTRY (line 595-624) | 不變（label SE_RPS_v2_Entry） | reference v1.1 §6 |
 | Section 7 EXIT (line 627-750) | 不變（label SX_RPS_v2_*） | reference v1.1 §7 |
@@ -252,16 +251,6 @@ end;
 ```
 
 **v1.1 BUG FIX #8 preserved**：cooldown reset 仍 gated by `Time >= Entry_Open_Time`，避免夜盤誤觸發。
-
----
-
-## 5.5 ⚠️ Section 5c ATR Trailing SL — 已 RETIRED (v2.1 → v2.0.2 rollback)
-
-**v2.1 曾實作 Section 5c ATR Trailing SL layer**，但 2026-06-20 經三組 backtest 對照（trail-ON 24 trades / trail-OFF 83 trades / v2.0.1 opt 27 trades 無 trail），**v2.0.1 opt 27-trade 版本全面 risk-adjusted 最佳**。
-
-**Retired 原因**：trail 縮緊後容易被反彈甩出，導致 SL 比例顯著增加。短週期反趨勢策略結構不適合 trailing layer。
-
-詳見 [`S3_RapidPullbackShort_v2_strategy.md`](S3_RapidPullbackShort_v2_strategy.md) §8 Decision Log。
 
 ---
 
