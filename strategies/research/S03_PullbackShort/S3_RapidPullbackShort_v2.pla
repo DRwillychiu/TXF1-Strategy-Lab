@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0.3 (2026-06-20) - Secular Bull Filter switched to Daily Data3
+  Version     : v2.0.4 (2026-06-20) - USER-MANDATED defaults LOCKED to 17-trade MC opt
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M    (entry trigger / exit chain)
@@ -95,36 +95,38 @@
 inputs:
     { ===== Tier 1 : Regime Gate Parameters (60M, Data2) =====
       v2.0: time-frame shortened from Daily to 60M.
-      Same A AND (B OR C) structure; thresholds recalibrated. }
+      Same A AND (B OR C) structure; thresholds recalibrated.
+      ★ v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt (2026-06-20). }
     H60_FastMA_Len            ( 20    ),   { opt 10..30 step 5  ; ~20hr trend }
     H60_SlowMA_Len            ( 60    ),   { opt 40..120 step 10; ~60hr trend }
     H60_RSI_Len               ( 14    ),   { opt 7..21 step 7   ; 14hr RSI }
-    H60_RSI_Threshold         ( 65    ),   { opt 55..75 step 5  ; v1.1=70 (Daily) }
+    H60_RSI_Threshold         ( 70    ),   { v2.0.4 LOCKED 70 (was 65); opt 55..75 step 5 }
     H60_RSI_Sustained_Bars    ( 2     ),   { opt 1..4 step 1    ; bars=hours }
-    H60_Dist_MA20_Pct         ( 1.5   ),   { opt 1.0..3.0 step 0.5; v1.1=3 (Daily) }
+    H60_Dist_MA20_Pct         ( 1.5   ),   { v2.0.4 LOCKED 1.5; opt 1.0..3.0 step 0.5 }
 
     { ===== Tier 2 : Momentum Trigger Parameters (5M, Data1) =====
       Preserved identically from v1.1 - momentum micro-structure
-      is regime-independent. Only Pullback_Min_Pct default loosened. }
-    Consec_Red_Bars           ( 3     ),   { opt 2..5 step 1 }
+      is regime-independent.
+      ★ v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt. }
+    Consec_Red_Bars           ( 3     ),   { LOCKED 3; opt 2..5 step 1 }
     EMA_Fast_Len              ( 5     ),   { opt 5..10 step 1 }
     ATR_Short_Len             ( 5     ),   { opt 3..7 step 1 }
     ATR_Long_Len              ( 20    ),   { opt 15..30 step 5 }
-    ATR_Spike_Mult            ( 1.3   ),   { opt 1.1..1.6 step 0.1 }
-    Pullback_Min_Pct          ( 0.3   ),   { opt 0.2..0.6 step 0.1; v1.1 default 0.5 }
-    Pullback_Max_Pct          ( 1.5   ),   { opt 1.0..2.0 step 0.25 }
+    ATR_Spike_Mult            ( 1.0   ),   { v2.0.4 LOCKED 1.0 (was 1.3); opt 1.0..1.6 step 0.1 }
+    Pullback_Min_Pct          ( 0.5   ),   { v2.0.4 LOCKED 0.5 (was 0.3); opt 0.2..0.6 step 0.1 }
+    Pullback_Max_Pct          ( 1.5   ),   { LOCKED 1.5; opt 1.0..2.0 step 0.25 }
 
-    { ===== Exit Parameters (v2.0 tightened) ===== }
-    TP_Pct                    ( 0.6   ),   { opt 0.4..0.9 step 0.1; v1.1=0.7 }
+    { ===== Exit Parameters - v2.0.4 USER-MANDATED LOCK-IN ===== }
+    TP_Pct                    ( 1.0   ),   { v2.0.4 LOCKED 1.0 (was 0.6); opt 0.5..1.2 step 0.1 }
     TP_Use_EMA20_Backup       ( True  ),   { D4 structural backup preserved }
     TP_MA_Len                 ( 20    ),   { opt 15..30 step 5 }
     TP_EMA20_MinBars          ( 3     ),   { opt 2..6 step 1 }
     SL_ATR_Len                ( 14    ),   { opt 10..21 step 1 }
-    SL_ATR_Mult               ( 3     ),   { opt 2.5..4.5 step 0.5; v1.1=4 }
-    Max_Bars_TimeStop         ( 18    ),   { 18*5M=90min; opt 12..24; v1.1=24 (120min) }
+    SL_ATR_Mult               ( 2.5   ),   { v2.0.4 LOCKED 2.5 (was 3); winning value vs SL=1.5/2.0/3 backtests }
+    Max_Bars_TimeStop         ( 27    ),   { v2.0.4 LOCKED 27 = 135min hold (was 18); allows winners to develop }
     Entry_Open_Time           ( 850   ),   { D5: first eligible 5M bar (08:50 close) }
-    Entry_Cutoff_Time         ( 1325  ),   { v2.0: widened from 1230 to 1325 }
-    Daily_Flat_Time           ( 1325  ),   { force flat by 13:25 (matches cutoff) }
+    Entry_Cutoff_Time         ( 1230  ),   { v2.0.4 LOCKED 1230 (was 1325); per 11:xx WR=20% empirical }
+    Daily_Flat_Time           ( 1325  ),   { force flat by 13:25 }
 
     { ===== Priority 0 Protection (Rule #11 / #12) - unchanged from v1.1 ===== }
     Holiday_Flat_Time         ( 245   ),   { 02:45 holiday tail flat retry start }
@@ -147,7 +149,7 @@ inputs:
 
     { ===== Diagnostic (logging-only) ===== }
     Log_HighConviction        ( True  ),
-    HighConv_Threshold_Pct    ( 2.5   ); { opt 2..4 step 0.5; v2.0=2.5 (was 5 on Daily) }
+    HighConv_Threshold_Pct    ( 5.0   ); { v2.0.4 LOCKED 5.0 (was 2.5); aligned with backtest setting; log-only, no trade impact }
 
 
 { ============================================================
@@ -845,6 +847,49 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
     SESSIONS      : Day-only preserved (Night deferred to v2.1)
     STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
     LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
+
+  v2.0.3 -> v2.0.4 PATCH (USER-MANDATED params lock-in, 2026-06-20):
+    USER DIRECTIVE 2026-06-20 (DELIBERATE shift from prior "no lock-in" stance):
+      經過 SL_ATR_Mult 三組 backtest 對照 (1.5/2.0/2.5)，SL=2.5 全面勝出
+      (PF 9.43 / Sharpe 0.49 / Sortino 0.91 / MaxDD -6.74% / WR 76.5%
+       risk-adjusted 全勝)。User 改變先前「.pla 維持 neutral framework」
+      directive，明確要求把 17-trade backtest best params lock 進 .pla。
+
+    ⚠️ DISTINGUISH FROM RETIRED v2.0.2 LOCK-IN (commit 68f26e1, reverted):
+      那次是「v2.0.1 結構 + 27-trade lock-in」沒有 Secular Filter，
+      user 反對是因 .pla 應保留 neutrality。
+      v2.0.4 = v2.0.3 結構（含 Secular Bull Filter）+ 17-trade lock-in，
+      user explicit mandate 接受。
+
+    LOCKED DEFAULTS (v2.0.3 default → v2.0.4 LOCKED):
+      H60_RSI_Threshold       65   -> 70    (Tier 1 RSI 提高)
+      ATR_Spike_Mult          1.3  -> 1.0   (Tier 2 鬆綁，更多訊號)
+      Pullback_Min_Pct        0.3  -> 0.5   (Tier 2 略嚴)
+      TP_Pct                  0.6  -> 1.0   (拉高 winner target)
+      SL_ATR_Mult             3    -> 2.5   (略鬆，給空間等真回檔)
+      Max_Bars_TimeStop       18   -> 27    (放寬到 135 min hold，讓 winner 走)
+      Entry_Cutoff_Time       1325 -> 1230  (砍 11:xx WR 20% 時段)
+      HighConv_Threshold_Pct  2.5  -> 5.0   (log only, align with backtest)
+
+    UNCHANGED:
+      H60_FastMA_Len, H60_SlowMA_Len, H60_RSI_Len, H60_RSI_Sustained_Bars,
+      H60_Dist_MA20_Pct, Consec_Red_Bars, EMA_Fast_Len, ATR_Short/Long_Len,
+      Pullback_Max_Pct, TP_Use_EMA20_Backup, TP_MA_Len, TP_EMA20_MinBars,
+      SL_ATR_Len, Entry_Open_Time, Daily_Flat_Time, Holiday/Settlement/
+      Registry/Kill, Enable_Secular_Bull_Filter, Daily_SecularMA_Fast/Slow
+
+    STRUCTURE PRESERVED (v2.0.3 完整不動):
+      - Tier 1 60M regime (A AND (B OR C))
+      - Tier 2 5M 4-AND momentum (M1-M4)
+      - Engine SetStopLoss + Frozen SL (no trailing)
+      - Holiday(63) + Settlement + Kill + Daily flat 13:25
+      - Same-day cooldown (但有 edge case bug 待 audit, v2.0.5 candidate)
+      - Daily Data3 Secular Bull Filter (Section 2b)
+
+    BACKTEST 結果 (17 trades, 2020-12 ~ 2026-06):
+      PF 9.43 / Sharpe 0.49 / Sortino 0.91 / MaxDD -6.74% / WR 76.5%
+      Net Profit +354,000 NTD / 帳戶報酬 942%+
+      Caveat: 樣本 17 仍不到 Rule #13 標準 (100+)；2026 H1 集中度 89%
 
   v2.0.2 -> v2.0.3 PATCH (Secular Filter switched 60M -> Daily, 2026-06-20):
     REASON: 用戶發現 60M MA3800 需要 Max Bars = 5000 setting，等同

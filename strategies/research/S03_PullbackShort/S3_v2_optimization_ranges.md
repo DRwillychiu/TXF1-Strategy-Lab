@@ -77,9 +77,9 @@ Stage 2: Refine Sweep
 | `H60_FastMA_Len` | 20 | **20** | [10, 15, 20, 30] | ±5 around best | **HIGH** | 20 根 60M ≈ 20 hr ≈ 1 trading day |
 | `H60_SlowMA_Len` | 60 | **60** | [40, 60, 80, 120] | ±10 around best | **HIGH** | 60 根 60M ≈ 60 hr ≈ 3 trading day；必須 > FastMA |
 | `H60_RSI_Len` | 14 | **14** | [7, 14, 21] | ±2 around best | LOW | RSI 計算期；不建議大幅調 |
-| `H60_RSI_Threshold` | 70 | **65** | [55, 60, 65, 70, 75] | ±2 around best | **HIGH** | v1.1 用 70 太嚴 (3.4/yr)；60M scale 鬆綁 |
+| `H60_RSI_Threshold` | 70 | **70** ⭐ v2.0.4 LOCKED | [55, 60, 65, 70, 75] | ±2 around best | **HIGH** | 17-trade opt 鎖定 70 |
 | `H60_RSI_Sustained_Bars` | 2 | **2** | [1, 2, 3, 4] | ±1 | **MED** | 每 bar = 1 hr，過大 → 觸發稀疏 |
-| `H60_Dist_MA20_Pct` | 3.0 | **1.5** | [1.0, 1.5, 2.0, 2.5, 3.0] | ±0.5 around best | **HIGH** | 60M 距離自然較小（v1.1 Daily +3% ≈ 60M +1.5%） |
+| `H60_Dist_MA20_Pct` | 3.0 | **1.5** ⭐ v2.0.4 LOCKED | [1.0, 1.5, 2.0, 2.5, 3.0] | ±0.5 around best | **HIGH** | 17-trade opt 鎖定 1.5 |
 
 **Tier 1 約束**：`H60_FastMA_Len < H60_SlowMA_Len`（GA 須加 constraint）
 **Tier 1 預期效果**：相較 v1.1 Daily Tier 1 (3.4/yr 觸發)，60M Tier 1 預估 30-60/yr regime watch 日（再經 Tier 2 5M momentum filter 後 25-50/yr 實際進場）
@@ -94,8 +94,8 @@ Stage 2: Refine Sweep
 | `EMA_Fast_Len` | 5 | **5** | [3, 5, 8, 10] | ±1 around best | **MED** | EMA 與斜率判動能反轉 |
 | `ATR_Short_Len` | 5 | **5** | [3, 5, 8] | — | LOW | 不建議掃 |
 | `ATR_Long_Len` | 20 | **20** | [14, 20, 30] | — | LOW | 不建議掃 |
-| `ATR_Spike_Mult` | 1.3 | **1.3** | [1.1, 1.2, 1.3, 1.5, 1.8] | ±0.1 around best | **HIGH** | 波動度噴出倍數 |
-| `Pullback_Min_Pct` | 0.5 | **0.3** ⚠️ | [0.2, 0.3, 0.4, 0.5, 0.7] | ±0.1 around best | **MED** | **v2.0 鬆綁**：允許更近 high 的進場 |
+| `ATR_Spike_Mult` | 1.3 | **1.0** ⭐ v2.0.4 LOCKED | [1.0, 1.1, 1.2, 1.3, 1.5] | ±0.1 around best | **HIGH** | 17-trade opt 鎖定 1.0（鬆綁多訊號）|
+| `Pullback_Min_Pct` | 0.5 | **0.5** ⭐ v2.0.4 LOCKED | [0.2, 0.3, 0.4, 0.5, 0.6] | ±0.1 around best | **MED** | 17-trade opt 鎖定 0.5（同 v1.1） |
 | `Pullback_Max_Pct` | 1.5 | **1.5** | [1.0, 1.5, 2.0, 2.5] | ±0.25 around best | **MED** | 距離 intraday high 上限 |
 
 **Tier 2 約束**：`Pullback_Min_Pct < Pullback_Max_Pct`；`ATR_Short_Len < ATR_Long_Len`
@@ -106,12 +106,12 @@ Stage 2: Refine Sweep
 
 | Input | v1.1 Default | v2.0 Default | Coarse Range | Refine Step | Sens | 備註 |
 |-------|-------------|--------------|--------------|-------------|------|------|
-| `TP_Pct` | 0.7 | **0.6** ⚠️ | [0.4, 0.5, 0.6, 0.7, 0.9] | ±0.1 around best | **HIGH** | **v2.0 收緊**：90 min hold 內較難打到 0.7% |
+| `TP_Pct` | 0.7 | **1.0** ⭐ v2.0.4 LOCKED | [0.5, 0.6, 0.7, 0.8, 1.0, 1.2] | ±0.1 around best | **HIGH** | 17-trade opt 鎖定 1.0（拉高 winner target）|
 | `TP_MA_Len` | 20 | **20** | [10, 20, 30, 50] | ±5 around best | **MED** | EMA20 結構觸碰備援 TP |
 | `TP_EMA20_MinBars` | 3 | **3** | [2, 3, 4, 6] | ±1 | **MED** | EMA20 backup 最少持倉 bar；防 fill-bar trap |
 | `SL_ATR_Len` | 14 | **14** | [10, 14, 20] | — | LOW | ATR 計算基準 |
-| `SL_ATR_Mult` | 4 | **3** ⚠️ | [2.5, 3, 3.5, 4, 4.5] | ±0.5 around best | **HIGH** | **v2.0 收緊**：90 min hold 不允許 ATR×4 寬停損 |
-| `Max_Bars_TimeStop` | 24 | **18** ⚠️ | [12, 15, 18, 21, 24] | ±3 around best | **MED** | **v2.0 收緊**：18 bar = 90 min（v1.1 = 24 bar = 120 min） |
+| `SL_ATR_Mult` | 4 | **2.5** ⭐ v2.0.4 LOCKED | [1.5, 2, 2.5, 3, 3.5] | ±0.5 around best | **HIGH** | A/B 三組對照（1.5/2.0/2.5）2.5 全面勝出（PF 9.43, MaxDD -6.7%）|
+| `Max_Bars_TimeStop` | 24 | **27** ⭐ v2.0.4 LOCKED | [12, 15, 18, 21, 24, 27, 30] | ±3 around best | **MED** | 17-trade opt 鎖定 27 = 135 min hold（讓 winner 走完）|
 
 **Exit Tier 配套邏輯**：
 - TP 0.6% + SL ATR×3 (~0.44%) = R:R ≈ 1.36
@@ -125,7 +125,7 @@ Stage 2: Refine Sweep
 | Input | v1.1 | v2.0 | 備註 |
 |-------|------|------|------|
 | `Entry_Open_Time` | 850 | **850** | 08:50 close bar (08:45 stamp 不存在) |
-| `Entry_Cutoff_Time` | 1230 | **1325** ⚠️ | v2.0 widened to match Daily_Flat_Time |
+| `Entry_Cutoff_Time` | 1230 | **1230** ⭐ v2.0.4 LOCKED | per 11:xx 進場 WR=20% 數據，砍掉中午時段 |
 | `Daily_Flat_Time` | 1325 | **1325** | 日盤強制平倉 |
 
 ---
@@ -160,7 +160,7 @@ Stage 2: Refine Sweep
 | Input | v1.1 | v2.0 | 備註 |
 |-------|------|------|------|
 | `Log_HighConviction` | True | **True** | 印出 60M dist > threshold 日 |
-| `HighConv_Threshold_Pct` | 5.0 | **2.5** ⚠️ | 60M scale (v1.1 Daily 5% ≈ 60M 2.5%) |
+| `HighConv_Threshold_Pct` | 5.0 | **5.0** ⭐ v2.0.4 LOCKED | log-only, align with backtest setting |
 
 ---
 

@@ -64,8 +64,8 @@ def main():
           re.search(r"H60_SlowMA_Len\s*\(\s*60\s*\)", src))
     check("I03 H60_RSI_Len exists",
           re.search(r"H60_RSI_Len\s*\(\s*14\s*\)", src))
-    check("I04 H60_RSI_Threshold default 65 (v2.0 loosened from 70)",
-          re.search(r"H60_RSI_Threshold\s*\(\s*65\s*\)", src))
+    check("I04 H60_RSI_Threshold default 70 (v2.0.4 LOCKED from 17-trade opt)",
+          re.search(r"H60_RSI_Threshold\s*\(\s*70\s*\)", src))
     check("I05 H60_RSI_Sustained_Bars default 2",
           re.search(r"H60_RSI_Sustained_Bars\s*\(\s*2\s*\)", src))
     check("I06 H60_Dist_MA20_Pct default 1.5 (v2.0 loosened from 3.0)",
@@ -75,23 +75,23 @@ def main():
           re.search(r"Consec_Red_Bars\s*\(\s*3\s*\)", src))
     check("I08 EMA_Fast_Len preserved",
           re.search(r"EMA_Fast_Len\s*\(\s*5\s*\)", src))
-    check("I09 ATR_Spike_Mult preserved",
-          re.search(r"ATR_Spike_Mult\s*\(\s*1\.3\s*\)", src))
-    check("I10 Pullback_Min_Pct default 0.3 (v2.0 loosened from 0.5)",
-          re.search(r"Pullback_Min_Pct\s*\(\s*0\.3\s*\)", src))
+    check("I09 ATR_Spike_Mult default 1.0 (v2.0.4 LOCKED from 17-trade opt)",
+          re.search(r"ATR_Spike_Mult\s*\(\s*1(\.0)?\s*\)", src))
+    check("I10 Pullback_Min_Pct default 0.5 (v2.0.4 LOCKED from 17-trade opt)",
+          re.search(r"Pullback_Min_Pct\s*\(\s*0\.5\s*\)", src))
     check("I11 Pullback_Max_Pct preserved",
           re.search(r"Pullback_Max_Pct\s*\(\s*1\.5\s*\)", src))
 
-    check("I12 TP_Pct default 0.6 (v2.0 tightened from 0.7)",
-          re.search(r"TP_Pct\s*\(\s*0\.6\s*\)", src))
-    check("I13 SL_ATR_Mult default 3 (v2.0 tightened from 4)",
-          re.search(r"SL_ATR_Mult\s*\(\s*3\s*\)", src))
-    check("I14 Max_Bars_TimeStop default 18 (v2.0 tightened from 24)",
-          re.search(r"Max_Bars_TimeStop\s*\(\s*18\s*\)", src))
+    check("I12 TP_Pct default 1.0 (v2.0.4 LOCKED from 17-trade opt)",
+          re.search(r"TP_Pct\s*\(\s*1(\.0)?\s*\)", src))
+    check("I13 SL_ATR_Mult default 2.5 (v2.0.4 LOCKED — wins vs 1.5/2.0/3 A/B test)",
+          re.search(r"SL_ATR_Mult\s*\(\s*2\.5\s*\)", src))
+    check("I14 Max_Bars_TimeStop default 27 = 135min (v2.0.4 LOCKED)",
+          re.search(r"Max_Bars_TimeStop\s*\(\s*27\s*\)", src))
     check("I15 Entry_Open_Time = 850",
           re.search(r"Entry_Open_Time\s*\(\s*850\s*\)", src))
-    check("I16 Entry_Cutoff_Time = 1325 (v2.0 widened from 1230)",
-          re.search(r"Entry_Cutoff_Time\s*\(\s*1325\s*\)", src))
+    check("I16 Entry_Cutoff_Time = 1230 (v2.0.4 LOCKED, per 11:xx WR=20% data)",
+          re.search(r"Entry_Cutoff_Time\s*\(\s*1230\s*\)", src))
     check("I17 Daily_Flat_Time = 1325",
           re.search(r"Daily_Flat_Time\s*\(\s*1325\s*\)", src))
 
@@ -101,8 +101,8 @@ def main():
           re.search(r"Registry_Valid_Until\s*\(\s*1270101\s*\)", src))
     check("I20 Settlement_Flat_Time = 1230",
           re.search(r"Settlement_Flat_Time\s*\(\s*1230\s*\)", src))
-    check("I21 HighConv_Threshold_Pct = 2.5 (v2.0 60M scale)",
-          re.search(r"HighConv_Threshold_Pct\s*\(\s*2\.5\s*\)", src))
+    check("I21 HighConv_Threshold_Pct = 5.0 (v2.0.4 LOCKED, align with backtest, log-only)",
+          re.search(r"HighConv_Threshold_Pct\s*\(\s*5(\.0)?\s*\)", src))
 
     # I22: check only DECLARED inputs (pattern: name followed by paren+default),
     # not bare references inside comment/changelog text.
@@ -384,8 +384,8 @@ def main():
 
     # === Sanity: file size in expected range ===
     n_lines = len(src.splitlines())
-    check("Z01 File size 600-950 LOC (v2.0.3 expected ~900)",
-          600 <= n_lines <= 950, f"lines={n_lines}")
+    check("Z01 File size 600-1000 LOC (v2.0.4 expected ~950 with full patch logs)",
+          600 <= n_lines <= 1000, f"lines={n_lines}")
 
     # === Render report ===
     total = len(results)
