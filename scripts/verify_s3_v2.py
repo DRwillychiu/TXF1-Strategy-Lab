@@ -49,9 +49,9 @@ def main():
     check("H01 version v2.0.x in header",
           re.search(r"Version\s*:\s*v2\.0(\.\d+)?", src))
     check("H02 Data2 = 60M active regime gate",
-          "Data2 = 60M (regime gate" in src)
-    check("H03 Data3 removed in v2.0",
-          "Data3 = (removed" in src)
+          re.search(r"Data2\s*=\s*60M\s*\(regime gate", src))
+    check("H03 Data3 = Daily Secular Bull Filter (v2.0.3 re-added)",
+          re.search(r"Data3\s*=\s*Daily\s*\(Secular", src))
     check("H04 v2.0 change log present",
           "v2.0 CHANGE LOG vs v1.1" in src)
     check("H05 IntrabarOrderGeneration false",
@@ -110,13 +110,16 @@ def main():
           not re.search(r"\bDaily_(FastMA_Len|SlowMA_Len|RSI_Len|RSI_Threshold|"
                         r"RSI_Sustained_Bars|Dist_MA20_Pct)\s*\(\s*\d", src))
 
-    # === v2.0.2 Secular Bull Filter inputs ===
-    check("I23 Enable_Secular_Bull_Filter declared (default True, v2.0.2)",
+    # === v2.0.3 Secular Bull Filter inputs (Daily Data3) ===
+    check("I23 Enable_Secular_Bull_Filter declared (default True)",
           re.search(r"Enable_Secular_Bull_Filter\s*\(\s*True\s*\)", src))
-    check("I24 H60_SecularMA_Fast declared (default 1140, v2.0.2)",
-          re.search(r"H60_SecularMA_Fast\s*\(\s*1140\s*\)", src))
-    check("I25 H60_SecularMA_Slow declared (default 3800, v2.0.2)",
-          re.search(r"H60_SecularMA_Slow\s*\(\s*3800\s*\)", src))
+    check("I24 Daily_SecularMA_Fast declared (default 60 = Daily 季線)",
+          re.search(r"Daily_SecularMA_Fast\s*\(\s*60\s*\)", src))
+    check("I25 Daily_SecularMA_Slow declared (default 200 = Daily 年線)",
+          re.search(r"Daily_SecularMA_Slow\s*\(\s*200\s*\)", src))
+    # I26 deleted: covered by I24 (new Daily_SecularMA_Fast=60),
+    # I25 (Daily_SecularMA_Slow=200), and S2b-6 (no Data2-based secular refs).
+    # Patch-note comments still mention legacy H60_SecularMA_* names which is OK.
 
     # === Variables ===
     check("V01 v_H60_FastMA declared",
@@ -148,13 +151,15 @@ def main():
     check("V12 No v_Daily_* variables remain",
           not re.search(r"v_Daily_(FastMA|SlowMA|RSI|Dist_Pct|RSI_Snap[0-3])", src))
 
-    # === v2.0.2 Secular Bull Filter variables ===
-    check("V13 v_H60_SecularMA_Fast declared (v2.0.2)",
-          re.search(r"v_H60_SecularMA_Fast\s*\(\s*0\s*\)", src))
-    check("V14 v_H60_SecularMA_Slow declared (v2.0.2)",
-          re.search(r"v_H60_SecularMA_Slow\s*\(\s*0\s*\)", src))
-    check("V15 v_Secular_Bull_OK declared (default False, v2.0.2)",
+    # === v2.0.3 Secular Bull Filter variables (Daily Data3) ===
+    check("V13 v_Daily_SecularMA_Fast declared",
+          re.search(r"v_Daily_SecularMA_Fast\s*\(\s*0\s*\)", src))
+    check("V14 v_Daily_SecularMA_Slow declared",
+          re.search(r"v_Daily_SecularMA_Slow\s*\(\s*0\s*\)", src))
+    check("V15 v_Secular_Bull_OK declared (default False)",
           re.search(r"v_Secular_Bull_OK\s*\(\s*False\s*\)", src))
+    check("V16 NO obsolete v_H60_SecularMA_* variables",
+          not re.search(r"v_H60_SecularMA_(Fast|Slow)\s*\(", src))
 
     # === Arrays / Holiday registry ===
     check("A01 Holiday_Tail array declared 80 slots",
@@ -263,23 +268,25 @@ def main():
     check("S5-4 SetStopLoss called exactly once (Rule #12)",
           sl_count == 1, f"count={sl_count}")
 
-    # === v2.0.2 Section 2b Secular Bull Filter calculations ===
-    check("S2b-1 v_H60_SecularMA_Fast computed via ( Average(...) of Data2 )[1]",
-          re.search(r"v_H60_SecularMA_Fast\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
-                    r"H60_SecularMA_Fast\s*\)\s*of Data2\s*\)\[1\]", src))
-    check("S2b-2 v_H60_SecularMA_Slow computed via ( Average(...) of Data2 )[1]",
-          re.search(r"v_H60_SecularMA_Slow\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
-                    r"H60_SecularMA_Slow\s*\)\s*of Data2\s*\)\[1\]", src))
+    # === v2.0.3 Section 2b Secular Bull Filter calculations (Daily Data3) ===
+    check("S2b-1 v_Daily_SecularMA_Fast via ( Average(...) of Data3 )[1]",
+          re.search(r"v_Daily_SecularMA_Fast\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"Daily_SecularMA_Fast\s*\)\s*of Data3\s*\)\[1\]", src))
+    check("S2b-2 v_Daily_SecularMA_Slow via ( Average(...) of Data3 )[1]",
+          re.search(r"v_Daily_SecularMA_Slow\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"Daily_SecularMA_Slow\s*\)\s*of Data3\s*\)\[1\]", src))
     check("S2b-3 Secular AND filter: 3 conditions (Close>Fast, Close>Slow, Fast>Slow)",
           re.search(
-              r"\(\s*Close of Data2\s*\)\[1\]\s*>\s*v_H60_SecularMA_Fast\s+and\s+"
-              r"\(\s*Close of Data2\s*\)\[1\]\s*>\s*v_H60_SecularMA_Slow\s+and\s+"
-              r"v_H60_SecularMA_Fast\s*>\s*v_H60_SecularMA_Slow",
+              r"\(\s*Close of Data3\s*\)\[1\]\s*>\s*v_Daily_SecularMA_Fast\s+and\s+"
+              r"\(\s*Close of Data3\s*\)\[1\]\s*>\s*v_Daily_SecularMA_Slow\s+and\s+"
+              r"v_Daily_SecularMA_Fast\s*>\s*v_Daily_SecularMA_Slow",
               src))
     check("S2b-4 Filter respects Enable_Secular_Bull_Filter input (can disable)",
           re.search(r"Enable_Secular_Bull_Filter\s*=\s*False\s+or", src))
     check("S2b-5 Else branch sets v_Secular_Bull_OK = False",
           re.search(r"else\s+v_Secular_Bull_OK\s*=\s*False", src))
+    check("S2b-6 NO obsolete of Data2 secular references (v2.0.3 → Data3)",
+          not re.search(r"v_H60_SecularMA_(Fast|Slow)\s*=", src))
 
     # === Section 6: Entry logic ===
     check("S6-1 Entry SellShort label SE_RPS_v2_Entry",
@@ -372,13 +379,13 @@ def main():
           "v2.0 DIFFS vs v1.1" in src or "v2.0 CHANGE LOG" in src)
     check("D02 Time-safety end-of-file audit present",
           "TIME-SAFETY VERIFICATION" in src)
-    check("D03 v2.0.2 Secular Bull Filter patch note present",
-          "v2.0.1 -> v2.0.2 PATCH" in src and "Secular Bull Filter" in src)
+    check("D03 v2.0.3 Secular Filter Daily Data3 patch note present",
+          "v2.0.2 -> v2.0.3 PATCH" in src and "Secular Filter switched 60M -> Daily" in src)
 
     # === Sanity: file size in expected range ===
     n_lines = len(src.splitlines())
-    check("Z01 File size 600-900 LOC (v2.0 expected ~750)",
-          600 <= n_lines <= 900, f"lines={n_lines}")
+    check("Z01 File size 600-950 LOC (v2.0.3 expected ~900)",
+          600 <= n_lines <= 950, f"lines={n_lines}")
 
     # === Render report ===
     total = len(results)

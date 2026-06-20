@@ -2,13 +2,17 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0.2 (2026-06-20) - Secular Bull Filter added
+  Version     : v2.0.3 (2026-06-20) - Secular Bull Filter switched to Daily Data3
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
-  Timeframe   : Data1 = 5M  (entry trigger / exit chain)
-                Data2 = 60M (regime gate: MA20/MA60/RSI14/dist%)
-                          ★ v2.0: previously reserved in v1.1, now ACTIVE
-                Data3 = (removed in v2.0; was Daily regime gate)
+  Timeframe   : Data1 = 5M    (entry trigger / exit chain)
+                Data2 = 60M   (regime gate: MA20/MA60/RSI14/dist%)
+                            ★ v2.0: previously reserved in v1.1, now ACTIVE
+                Data3 = Daily (Secular Bull Filter MA60/MA200)
+                            ★ v2.0.3: re-added Daily (was removed in v2.0,
+                              re-introduced for Secular Bull Filter on
+                              standard 60/200 day MA - shorter Max Bars
+                              requirement than 60M MA3800 alternative)
   Class       : Counter-trend short with momentum confirmation
                 (sells overheated bull pullbacks intraday)
                 SAME thesis as v1.1 - only regime time-frame changed.
@@ -128,14 +132,18 @@ inputs:
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  ),   { 1hr buffer before 13:30 settlement }
 
-    { ===== Secular Bull Filter (v2.0.2 NEW, Section 2b) =====
-      Mirror of L1 P6 Weekly filter, downscaled to 60M level.
+    { ===== Secular Bull Filter (v2.0.3 REVISED, Section 2b) =====
+      Mirror of L1 P6 Weekly filter, applied at Daily level (Data3).
       3 conditions AND: Close > MA_Fast AND Close > MA_Slow AND MA_Fast > MA_Slow.
       Prevents counter-trend short entries during bear regime OR weak-rally periods.
-      Default ON; can disable via input. }
-    Enable_Secular_Bull_Filter ( True  ),   { v2.0.2 NEW: default ON }
-    H60_SecularMA_Fast         ( 1140  ),   { 60M bars ~60 trading day ≈ 季線 }
-    H60_SecularMA_Slow         ( 3800  ),   { 60M bars ~200 trading day ≈ 年線 }
+      Default ON; can disable via input.
+      v2.0.3 改用 Daily Data3 (取代 v2.0.2 的 60M MA1140/MA3800):
+        - Max Bars 從 5000 縮回 300 (Daily MA200 + buffer)
+        - Input 數字回到金融標準 60/200 day MA
+        - Warmup 仍 ~200 day (差不多)，但 chart load 變單純 }
+    Enable_Secular_Bull_Filter ( True ),   { v2.0.3: default ON }
+    Daily_SecularMA_Fast       ( 60   ),   { Daily MA60 (季線) }
+    Daily_SecularMA_Slow       ( 200  ),   { Daily MA200 (年線) }
 
     { ===== Diagnostic (logging-only) ===== }
     Log_HighConviction        ( True  ),
@@ -215,9 +223,9 @@ variables:
     hidx                     ( 0     ),
     ExitFired                ( 0     ),
 
-    { ===== Secular Bull Filter state (v2.0.2 Section 2b) ===== }
-    v_H60_SecularMA_Fast     ( 0     ),
-    v_H60_SecularMA_Slow     ( 0     ),
+    { ===== Secular Bull Filter state (v2.0.3 Section 2b, Daily Data3) ===== }
+    v_Daily_SecularMA_Fast   ( 0     ),
+    v_Daily_SecularMA_Slow   ( 0     ),
     v_Secular_Bull_OK        ( False ),
 
     { ===== Diagnostic ===== }
@@ -448,9 +456,9 @@ else
 
 
 { ============================================================
-  SECTION 2b - SECULAR BULL FILTER (v2.0.2 NEW)
+  SECTION 2b - SECULAR BULL FILTER (v2.0.3 REVISED, Daily Data3)
 
-  Mirror of L1 P6 Weekly trend filter, downscaled to 60M level.
+  Mirror of L1 P6 Weekly trend filter, applied at Daily level.
   Per user 2026-06-20: S3 thesis is "counter-trend short during
   OVERHEATED BULL pullback" - so we MUST be in confirmed bull
   regime before any entry.
@@ -458,33 +466,35 @@ else
   3 CONDITIONS ALL AND (stricter than L1's OR because S3 is
   counter-trend; OR would let weak rallies pass and we'd be
   shorting fake bulls):
-    1. Close (60M, [1] closed bar) > SecularMA_Fast  (~60 day)
-    2. Close (60M, [1] closed bar) > SecularMA_Slow  (~200 day)
-    3. SecularMA_Fast > SecularMA_Slow              (MA structure bull)
+    1. Close (Daily, [1] closed bar) > SecularMA_Fast  (=60 day, 季線)
+    2. Close (Daily, [1] closed bar) > SecularMA_Slow  (=200 day, 年線)
+    3. SecularMA_Fast > SecularMA_Slow                 (MA structure bull)
 
-  Historical backtest (15 trades) blocking effect (TWII daily proxy):
+  WHY DAILY (v2.0.3) vs 60M (v2.0.2 retired):
+    - Daily MA60/MA200 是金融標準格局判定指標 (vs 60M MA1140/MA3800 數字奇怪)
+    - Max Bars Strategy Reference 從 5000 縮回 300 (Daily MA200 + buffer)
+    - Warmup ~200 trading day (跟 60M MA3800 大致相同)
+    - Chart 多掛 Data3 Daily 是 L1/v1.1 慣例
+
+  Historical backtest (15 trades) blocking effect:
     - 2022 bear regime trades #8/#9/#10 (-21.8k) → all blocked ✓
+      (Daily MA60 在 2022 全年都 < MA200，條件 3 fail)
     - 2025 H1 weak rally trade #12 (-10.8k) → blocked by condition 3
-      (MA60 < MA200 at the time, structure bear) ✓
+      (Daily MA60 < MA200 at 2025-07-01, structure bear)
     - 2026 H1 trades #13/#14/#15 (+274k) → all 3 conditions pass ✓
     - Other ✅ bull trades → all pass (no false skip)
 
-  60M MA bar lengths chosen to match Daily proxy of MA60/MA200:
-    1 trading day ≈ 19 60M bars (24hr continuous TXF1 session)
-    60 day × 19 = 1140 bars (季線)
-    200 day × 19 = 3800 bars (年線)
-
-  Per CLAUDE.md Rule #3: ( ... of Data2 )[1] explicit parens for
-  Data2-binding-before-history idiom (mirrors v1.1 BUG FIX #7).
+  Per CLAUDE.md Rule #3: ( ... of Data3 )[1] explicit parens for
+  Data3-binding-before-history idiom (mirrors v1.1 BUG FIX #7).
   ============================================================ }
 
-v_H60_SecularMA_Fast = ( Average( Close, H60_SecularMA_Fast ) of Data2 )[1];
-v_H60_SecularMA_Slow = ( Average( Close, H60_SecularMA_Slow ) of Data2 )[1];
+v_Daily_SecularMA_Fast = ( Average( Close, Daily_SecularMA_Fast ) of Data3 )[1];
+v_Daily_SecularMA_Slow = ( Average( Close, Daily_SecularMA_Slow ) of Data3 )[1];
 
 if Enable_Secular_Bull_Filter = False or (
-   ( Close of Data2 )[1] > v_H60_SecularMA_Fast and
-   ( Close of Data2 )[1] > v_H60_SecularMA_Slow and
-   v_H60_SecularMA_Fast    > v_H60_SecularMA_Slow
+   ( Close of Data3 )[1] > v_Daily_SecularMA_Fast and
+   ( Close of Data3 )[1] > v_Daily_SecularMA_Slow and
+   v_Daily_SecularMA_Fast    > v_Daily_SecularMA_Slow
 ) then
     v_Secular_Bull_OK = True
 else
@@ -836,7 +846,19 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
     STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
     LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
 
-  v2.0.1 -> v2.0.2 PATCH (Secular Bull Filter, 2026-06-20):
+  v2.0.2 -> v2.0.3 PATCH (Secular Filter switched 60M -> Daily, 2026-06-20):
+    REASON: 用戶發現 60M MA3800 需要 Max Bars = 5000 setting，等同
+            chart 需 load 1 年 60M historical 才能 backtest。改用 Daily
+            Data3 + MA60/MA200 同樣 warmup ~200 day 但 Max Bars 縮到 300。
+    CHANGES:
+      [DATA] Data3 從 v2.0 移除狀態恢復 → Daily (Secular Bull Filter)
+      [INPUTS] H60_SecularMA_Fast/Slow (1140/3800) → Daily_SecularMA_Fast/Slow (60/200)
+      [VARS]   v_H60_SecularMA_Fast/Slow → v_Daily_SecularMA_Fast/Slow
+      [SECT 2b] of Data2 → of Data3 (其他邏輯不變，仍 3 條件 AND)
+      [MC CHART] 改為 Data1=5M + Data2=60M + Data3=Daily
+      [MAX BARS Strategy Reference] 5000 → 300
+
+  v2.0.1 -> v2.0.2 PATCH (Secular Bull Filter, 2026-06-20, RETIRED in v2.0.3):
     NOTE: 此 v2.0.2 跟先前 retired 的 v2.0.2 (params lock-in) 不同。
     這個是 thesis-driven 新 filter module，不是 opt-fitted params 寫死。
     既有 defaults 維持 v2.0.1 原始值不動，新 filter default ON 但可關閉。

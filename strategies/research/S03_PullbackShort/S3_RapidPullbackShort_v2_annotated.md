@@ -254,23 +254,28 @@ end;
 
 ---
 
-## 5.7 Section 2b — SECULAR BULL FILTER (v2.0.2 NEW)★
+## 5.7 Section 2b — SECULAR BULL FILTER (v2.0.3 REVISED: Daily Data3) ★
 
 ### 5.7.1 完整 code
 
 ```pla
-v_H60_SecularMA_Fast = ( Average( Close, H60_SecularMA_Fast ) of Data2 )[1];
-v_H60_SecularMA_Slow = ( Average( Close, H60_SecularMA_Slow ) of Data2 )[1];
+v_Daily_SecularMA_Fast = ( Average( Close, Daily_SecularMA_Fast ) of Data3 )[1];
+v_Daily_SecularMA_Slow = ( Average( Close, Daily_SecularMA_Slow ) of Data3 )[1];
 
 if Enable_Secular_Bull_Filter = False or (
-   ( Close of Data2 )[1] > v_H60_SecularMA_Fast and
-   ( Close of Data2 )[1] > v_H60_SecularMA_Slow and
-   v_H60_SecularMA_Fast    > v_H60_SecularMA_Slow
+   ( Close of Data3 )[1] > v_Daily_SecularMA_Fast and
+   ( Close of Data3 )[1] > v_Daily_SecularMA_Slow and
+   v_Daily_SecularMA_Fast    > v_Daily_SecularMA_Slow
 ) then
     v_Secular_Bull_OK = True
 else
     v_Secular_Bull_OK = False;
 ```
+
+**v2.0.3 從 60M Data2 (v2.0.2) 改成 Daily Data3**：
+- Max Bars Strategy Reference: 5000 → **300**
+- Input 數字: H60_SecularMA 1140/3800 → **Daily_SecularMA 60/200**（金融標準）
+- 邏輯（3 條件 AND）+ 預期效果 完全不變
 
 ### 5.7.2 3 條件 AND
 
