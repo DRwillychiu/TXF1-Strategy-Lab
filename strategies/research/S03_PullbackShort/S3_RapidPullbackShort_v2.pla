@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.1   (2026-06-20)
+  Version     : v2.0.2 (2026-06-20)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M  (entry trigger / exit chain)
@@ -47,15 +47,9 @@
     [ENTRY]  Entry_Cutoff_Time 1230 -> 1325  (wider day window)
     [MOMENTUM] 5M Tier 2 (M1-M4) preserved identically.
                Default Pullback_Min_Pct 0.5 -> 0.3 (allow tighter entries)
-    [SESSION] Day-only operation preserved. Night session deferred to v2.2
-              (v2.1 slot taken by ATR Trailing SL layer per user 2026-06-20).
-    [TRAIL]   ★ v2.1 NEW: ATR Trailing SL layer (Section 5c).
-              Activate when in-the-money >= TrailingActivate_Pct (default 0.5%).
-              Each bar tightens v_SL_Level to MIN( current, Close + ATR × mult ).
-              SHORT variant: trail moves DOWNWARD only (one-way tightening).
-              Engine SetStopLoss (5b) STAYS FIXED at entry-bar ATR × SL_ATR_Mult
-              (initial max-loss cap preserved per user mandate). Trailing
-              enforcement happens via S-3 BuyToCover at v_SL_Level Stop.
+    [SESSION] Day-only operation preserved. Night session deferred to v2.1
+              (now reclaimed - v2.0.2 supersedes the previous v2.1 ATR Trailing
+              experiment which was retired after backtest comparison).
     [STRUCT] 100% preserved from v1.1:
              - Holiday tail registry (63 entries)
              - Settlement_Flat module (Rule #11)
@@ -98,36 +92,37 @@
 inputs:
     { ===== Tier 1 : Regime Gate Parameters (60M, Data2) =====
       v2.0: time-frame shortened from Daily to 60M.
-      Same A AND (B OR C) structure; thresholds recalibrated. }
+      Same A AND (B OR C) structure; thresholds recalibrated.
+      v2.0.2 defaults LOCKED to 27-trade backtest best (2026-06-20). }
     H60_FastMA_Len            ( 20    ),   { opt 10..30 step 5  ; ~20hr trend }
     H60_SlowMA_Len            ( 60    ),   { opt 40..120 step 10; ~60hr trend }
     H60_RSI_Len               ( 14    ),   { opt 7..21 step 7   ; 14hr RSI }
-    H60_RSI_Threshold         ( 65    ),   { opt 55..75 step 5  ; v1.1=70 (Daily) }
+    H60_RSI_Threshold         ( 70    ),   { v2.0.2 LOCKED 70; opt 55..75 step 5 }
     H60_RSI_Sustained_Bars    ( 2     ),   { opt 1..4 step 1    ; bars=hours }
-    H60_Dist_MA20_Pct         ( 1.5   ),   { opt 1.0..3.0 step 0.5; v1.1=3 (Daily) }
+    H60_Dist_MA20_Pct         ( 2.5   ),   { v2.0.2 LOCKED 2.5; opt 1.0..3.0 step 0.5 }
 
     { ===== Tier 2 : Momentum Trigger Parameters (5M, Data1) =====
-      Preserved identically from v1.1 - momentum micro-structure
-      is regime-independent. Only Pullback_Min_Pct default loosened. }
-    Consec_Red_Bars           ( 3     ),   { opt 2..5 step 1 }
+      Preserved identically from v1.1.
+      v2.0.2 defaults LOCKED to 27-trade backtest best (2026-06-20). }
+    Consec_Red_Bars           ( 3     ),   { LOCKED 3; opt 2..4 step 1 }
     EMA_Fast_Len              ( 5     ),   { opt 5..10 step 1 }
     ATR_Short_Len             ( 5     ),   { opt 3..7 step 1 }
     ATR_Long_Len              ( 20    ),   { opt 15..30 step 5 }
-    ATR_Spike_Mult            ( 1.3   ),   { opt 1.1..1.6 step 0.1 }
-    Pullback_Min_Pct          ( 0.3   ),   { opt 0.2..0.6 step 0.1; v1.1 default 0.5 }
+    ATR_Spike_Mult            ( 1.1   ),   { v2.0.2 LOCKED 1.1; opt 1.0..1.5 step 0.1 }
+    Pullback_Min_Pct          ( 0.6   ),   { v2.0.2 LOCKED 0.6; opt 0.2..0.6 step 0.1 }
     Pullback_Max_Pct          ( 1.5   ),   { opt 1.0..2.0 step 0.25 }
 
-    { ===== Exit Parameters (v2.0 tightened) ===== }
-    TP_Pct                    ( 0.6   ),   { opt 0.4..0.9 step 0.1; v1.1=0.7 }
+    { ===== Exit Parameters (v2.0.2 LOCKED from 27-trade backtest opt) ===== }
+    TP_Pct                    ( 1.0   ),   { v2.0.2 LOCKED 1.0; opt 0.5..1.2 step 0.1 }
     TP_Use_EMA20_Backup       ( True  ),   { D4 structural backup preserved }
     TP_MA_Len                 ( 20    ),   { opt 15..30 step 5 }
     TP_EMA20_MinBars          ( 3     ),   { opt 2..6 step 1 }
     SL_ATR_Len                ( 14    ),   { opt 10..21 step 1 }
-    SL_ATR_Mult               ( 3     ),   { opt 2.5..4.5 step 0.5; v1.1=4 }
-    Max_Bars_TimeStop         ( 18    ),   { 18*5M=90min; opt 12..24; v1.1=24 (120min) }
+    SL_ATR_Mult               ( 3     ),   { LOCKED 3; opt 1.5..3.5 step 0.5 }
+    Max_Bars_TimeStop         ( 12    ),   { v2.0.2 LOCKED 12 (60min); opt 12..30 step 3 }
     Entry_Open_Time           ( 850   ),   { D5: first eligible 5M bar (08:50 close) }
-    Entry_Cutoff_Time         ( 1325  ),   { v2.0: widened from 1230 to 1325 }
-    Daily_Flat_Time           ( 1325  ),   { force flat by 13:25 (matches cutoff) }
+    Entry_Cutoff_Time         ( 1230  ),   { v2.0.2 LOCKED 1230 (per backtest 11:xx WR 20%) }
+    Daily_Flat_Time           ( 1325  ),   { force flat by 13:25 }
 
     { ===== Priority 0 Protection (Rule #11 / #12) - unchanged from v1.1 ===== }
     Holiday_Flat_Time         ( 245   ),   { 02:45 holiday tail flat retry start }
@@ -135,16 +130,9 @@ inputs:
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  ),   { 1hr buffer before 13:30 settlement }
 
-    { ===== ATR Trailing SL (v2.1 NEW, Section 5c) =====
-      Activates only after in-the-money >= TrailingActivate_Pct.
-      Each bar tightens v_SL_Level to MIN( current, Close + ATR × mult ).
-      Engine SetStopLoss (5b) NOT trailed - stays fixed at entry. }
-    TrailingActivate_Pct      ( 0.5   ),   { opt 0.3..0.8 step 0.1; in-the-money % to arm trail }
-    TrailingATR_Mult          ( 2.0   ),   { opt 1.5..3.0 step 0.5; trail distance = ATR × mult }
-
     { ===== Diagnostic (logging-only) ===== }
     Log_HighConviction        ( True  ),
-    HighConv_Threshold_Pct    ( 2.5   ); { opt 2..4 step 0.5; v2.0=2.5 (was 5 on Daily) }
+    HighConv_Threshold_Pct    ( 5     ); { LOCKED 5; opt 2..5 step 0.5 }
 
 
 { ============================================================
@@ -219,12 +207,6 @@ variables:
     Registry_Warn_ID         ( -1    ),
     hidx                     ( 0     ),
     ExitFired                ( 0     ),
-
-    { ===== ATR Trailing SL state (v2.1 Section 5c) ===== }
-    v_InTheMoney_Pct         ( 0     ),
-    v_Trailing_Active        ( False ),
-    v_Trailing_ATR           ( 0     ),
-    v_Trailing_Cand          ( 0     ),
 
     { ===== Diagnostic ===== }
     v_HighConv_Active        ( False );
@@ -619,45 +601,6 @@ if MarketPosition >= 0 then
 
 
 { ============================================================
-  SECTION 5c - ATR TRAILING SL  (v2.1 NEW LAYER)
-
-  Activates when in-the-money >= TrailingActivate_Pct.
-  Each bar tightens v_SL_Level to MIN( current, Close + ATR × mult ).
-  SHORT variant: trail moves DOWNWARD only (one-way tightening) -
-  never loosens, never re-arms backwards.
-
-  IMPORTANT - Engine SetStopLoss (Section 5b) is NOT trailed:
-    - 5b only fires when MarketPosition >= 0 (flat or long)
-    - Once entered short (MP=-1), 5b skipped, engine SL frozen at entry
-    - Per user mandate 2026-06-20: initial stop must remain fixed; only
-      v_SL_Level (Section 5a Frozen SL backup) is allowed to tighten
-    - Trail enforcement happens via S-3 BuyToCover at v_SL_Level Stop
-      in Section 7
-
-  In-the-money formula (short): ( EntryPrice - Close ) / EntryPrice * 100
-  Trail candidate (short):       Close + ATR( SL_ATR_Len ) × TrailingATR_Mult
-  Tighten rule:                  v_SL_Level = MIN( v_SL_Level, candidate )
-  ============================================================ }
-
-if ( MarketPosition = -1 ) and ( v_SL_Locked = True ) then begin
-    v_InTheMoney_Pct = ( EntryPrice - Close ) / EntryPrice * 100;
-    if v_InTheMoney_Pct >= TrailingActivate_Pct then begin
-        v_Trailing_Active = True;
-        v_Trailing_ATR    = AvgTrueRange( SL_ATR_Len );
-        v_Trailing_Cand   = Close + v_Trailing_ATR * TrailingATR_Mult;
-        if v_Trailing_Cand < v_SL_Level then
-            v_SL_Level = v_Trailing_Cand;
-    end;
-end
-else begin
-    v_Trailing_Active = False;
-    v_InTheMoney_Pct  = 0;
-    v_Trailing_ATR    = 0;
-    v_Trailing_Cand   = 0;
-end;
-
-
-{ ============================================================
   SECTION 6 - ENTRY LOGIC
 
   Gates (all must be true):
@@ -836,26 +779,31 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
     STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
     LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
 
-  v2.0.1 -> v2.1 PATCH (ATR Trailing SL, 2026-06-20, user mandate):
-    [TRAIL-1] New Section 5c inserted between Section 5b (SetStopLoss)
-              and Section 6 (Entry). Activates one-way trailing of
-              v_SL_Level once in-the-money >= TrailingActivate_Pct.
-    [TRAIL-2] SHORT variant uses MIN (tighten downward), not MAX.
-              Trail candidate = Close + ATR( SL_ATR_Len ) × TrailingATR_Mult.
-              v_SL_Level only updates when candidate < current v_SL_Level.
-    [TRAIL-3] Engine SetStopLoss (Section 5b) UNCHANGED - stays fixed
-              at entry-bar ATR × SL_ATR_Mult per user mandate. Initial
-              max-loss cap preserved; trail enforcement via S-3 BuyToCover
-              at v_SL_Level Stop in Section 7.
-    [TRAIL-4] State reset when MP <> -1 (flat) - v_Trailing_Active /
-              v_InTheMoney_Pct / v_Trailing_ATR / v_Trailing_Cand all
-              cleared between trades.
-    [TRAIL-5] New inputs: TrailingActivate_Pct (0.5) / TrailingATR_Mult (2.0).
-              New variables: v_InTheMoney_Pct, v_Trailing_Active,
-              v_Trailing_ATR, v_Trailing_Cand.
-    [TRAIL-6] Solves Q5 "earn-then-give-back" risk identified by user
-              backtest analysis (74-trade baseline showed MFE walks
-              followed by reversal into TimeStop or Frozen SL).
+  v2.1 -> v2.0.2 ROLLBACK (Trailing SL retired, 2026-06-20):
+    BACKTEST EVIDENCE (4-version comparison, all 100% day-session):
+      - Baseline (74 trades, v1.1-exit + 60M-tier1): PF 1.12 / Sharpe -0.09 / MDD 21%
+      - v2.0.1 opt   (27 trades, no trailing):       PF 3.17 / Sharpe 0.26 / MDD 7.8%  ★ BEST
+      - v2.1 trail-ON (24 trades, trail active):     PF 2.82 / Sharpe 0.16 / MDD 9.4%
+      - v2.1 trail-OFF (83 trades, trail disarmed):  PF 1.33 / Sharpe 0.13 / MDD 21%
+    DECISION: v2.0.1 opt wins on every risk-adjusted dimension
+      (Sharpe / Sortino / Calmar / MaxDD / adj PF). Trailing structure
+      does NOT improve short-cycle counter-trend strategy. Retire.
+    PATCH ACTIONS:
+      [ROLLBACK-1] Section 5c (ATR Trailing) DELETED in full.
+      [ROLLBACK-2] Inputs TrailingActivate_Pct + TrailingATR_Mult DELETED.
+      [ROLLBACK-3] Variables v_InTheMoney_Pct, v_Trailing_Active,
+                   v_Trailing_ATR, v_Trailing_Cand DELETED.
+      [LOCK-1] v2.0.1 27-trade BEST PARAMS hard-locked into defaults:
+                   H60_RSI_Threshold 65 -> 70
+                   H60_Dist_MA20_Pct  1.5 -> 2.5
+                   ATR_Spike_Mult     1.3 -> 1.1
+                   Pullback_Min_Pct   0.3 -> 0.6
+                   TP_Pct             0.6 -> 1.0
+                   Max_Bars_TimeStop  18 -> 12 (60 min)
+                   Entry_Cutoff_Time  1325 -> 1230 (per entry-hour WR data:
+                                                    11:xx WR 20% poor)
+                   HighConv_Threshold 2.5 -> 5
+    v2.0.2 = v2.0.1 STRUCTURE + opt-locked defaults. No layer changes.
 
   v2.0 -> v2.0.1 PATCH (MC12 compliance, 2026-06-20):
     [MC12-1] Section 4 boundary detection: Hour(Time) -> ( Date of Data2,

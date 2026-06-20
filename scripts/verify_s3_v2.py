@@ -64,34 +64,34 @@ def main():
           re.search(r"H60_SlowMA_Len\s*\(\s*60\s*\)", src))
     check("I03 H60_RSI_Len exists",
           re.search(r"H60_RSI_Len\s*\(\s*14\s*\)", src))
-    check("I04 H60_RSI_Threshold default 65 (v2.0 loosened from 70)",
-          re.search(r"H60_RSI_Threshold\s*\(\s*65\s*\)", src))
+    check("I04 H60_RSI_Threshold default 70 (v2.0.2 LOCKED from 27-trade opt)",
+          re.search(r"H60_RSI_Threshold\s*\(\s*70\s*\)", src))
     check("I05 H60_RSI_Sustained_Bars default 2",
           re.search(r"H60_RSI_Sustained_Bars\s*\(\s*2\s*\)", src))
-    check("I06 H60_Dist_MA20_Pct default 1.5 (v2.0 loosened from 3.0)",
-          re.search(r"H60_Dist_MA20_Pct\s*\(\s*1\.5\s*\)", src))
+    check("I06 H60_Dist_MA20_Pct default 2.5 (v2.0.2 LOCKED from 27-trade opt)",
+          re.search(r"H60_Dist_MA20_Pct\s*\(\s*2\.5\s*\)", src))
 
-    check("I07 Consec_Red_Bars preserved",
+    check("I07 Consec_Red_Bars LOCKED 3",
           re.search(r"Consec_Red_Bars\s*\(\s*3\s*\)", src))
     check("I08 EMA_Fast_Len preserved",
           re.search(r"EMA_Fast_Len\s*\(\s*5\s*\)", src))
-    check("I09 ATR_Spike_Mult preserved",
-          re.search(r"ATR_Spike_Mult\s*\(\s*1\.3\s*\)", src))
-    check("I10 Pullback_Min_Pct default 0.3 (v2.0 loosened from 0.5)",
-          re.search(r"Pullback_Min_Pct\s*\(\s*0\.3\s*\)", src))
+    check("I09 ATR_Spike_Mult default 1.1 (v2.0.2 LOCKED from 27-trade opt)",
+          re.search(r"ATR_Spike_Mult\s*\(\s*1\.1\s*\)", src))
+    check("I10 Pullback_Min_Pct default 0.6 (v2.0.2 LOCKED from 27-trade opt)",
+          re.search(r"Pullback_Min_Pct\s*\(\s*0\.6\s*\)", src))
     check("I11 Pullback_Max_Pct preserved",
           re.search(r"Pullback_Max_Pct\s*\(\s*1\.5\s*\)", src))
 
-    check("I12 TP_Pct default 0.6 (v2.0 tightened from 0.7)",
-          re.search(r"TP_Pct\s*\(\s*0\.6\s*\)", src))
-    check("I13 SL_ATR_Mult default 3 (v2.0 tightened from 4)",
+    check("I12 TP_Pct default 1.0 (v2.0.2 LOCKED from 27-trade opt)",
+          re.search(r"TP_Pct\s*\(\s*1(\.0)?\s*\)", src))
+    check("I13 SL_ATR_Mult default 3 LOCKED",
           re.search(r"SL_ATR_Mult\s*\(\s*3\s*\)", src))
-    check("I14 Max_Bars_TimeStop default 18 (v2.0 tightened from 24)",
-          re.search(r"Max_Bars_TimeStop\s*\(\s*18\s*\)", src))
+    check("I14 Max_Bars_TimeStop default 12 (v2.0.2 LOCKED 60 min from opt)",
+          re.search(r"Max_Bars_TimeStop\s*\(\s*12\s*\)", src))
     check("I15 Entry_Open_Time = 850",
           re.search(r"Entry_Open_Time\s*\(\s*850\s*\)", src))
-    check("I16 Entry_Cutoff_Time = 1325 (v2.0 widened from 1230)",
-          re.search(r"Entry_Cutoff_Time\s*\(\s*1325\s*\)", src))
+    check("I16 Entry_Cutoff_Time = 1230 (v2.0.2 LOCKED per 11:xx WR=20% data)",
+          re.search(r"Entry_Cutoff_Time\s*\(\s*1230\s*\)", src))
     check("I17 Daily_Flat_Time = 1325",
           re.search(r"Daily_Flat_Time\s*\(\s*1325\s*\)", src))
 
@@ -101,8 +101,8 @@ def main():
           re.search(r"Registry_Valid_Until\s*\(\s*1270101\s*\)", src))
     check("I20 Settlement_Flat_Time = 1230",
           re.search(r"Settlement_Flat_Time\s*\(\s*1230\s*\)", src))
-    check("I21 HighConv_Threshold_Pct = 2.5 (v2.0 60M scale)",
-          re.search(r"HighConv_Threshold_Pct\s*\(\s*2\.5\s*\)", src))
+    check("I21 HighConv_Threshold_Pct = 5 (v2.0.2 LOCKED, align with backtest setting)",
+          re.search(r"HighConv_Threshold_Pct\s*\(\s*5\s*\)", src))
 
     # I22: check only DECLARED inputs (pattern: name followed by paren+default),
     # not bare references inside comment/changelog text.
@@ -249,47 +249,24 @@ def main():
     check("S5-4 SetStopLoss called exactly once with v_ argument (Rule #12)",
           sl_count == 1, f"count={sl_count}")
 
-    # === v2.1 Inputs (ATR Trailing SL) ===
-    check("I23 TrailingActivate_Pct input declared (default 0.5, v2.1)",
-          re.search(r"TrailingActivate_Pct\s*\(\s*0\.5\s*\)", src))
-    check("I24 TrailingATR_Mult input declared (default 2.0, v2.1)",
-          re.search(r"TrailingATR_Mult\s*\(\s*2(\.0)?\s*\)", src))
-
-    # === v2.1 Variables (trailing state) ===
-    check("V13 v_InTheMoney_Pct declared (v2.1)",
-          re.search(r"v_InTheMoney_Pct\s*\(", src))
-    check("V14 v_Trailing_Active declared (v2.1)",
-          re.search(r"v_Trailing_Active\s*\(\s*False\s*\)", src))
-    check("V15 v_Trailing_ATR declared (v2.1)",
-          re.search(r"v_Trailing_ATR\s*\(", src))
-    check("V16 v_Trailing_Cand declared (v2.1)",
-          re.search(r"v_Trailing_Cand\s*\(", src))
-
-    # === Section 5c: ATR Trailing SL (v2.1) ===
-    check("S5c-1 Section 5c trail gated by MP=-1 AND v_SL_Locked=True",
-          re.search(r"if\s*\(\s*MarketPosition\s*=\s*-1\s*\)\s*and\s*"
-                    r"\(\s*v_SL_Locked\s*=\s*True\s*\)\s*then begin", src))
-    check("S5c-2 in-the-money formula (SHORT variant: EntryPrice - Close)",
-          re.search(r"v_InTheMoney_Pct\s*=\s*\(\s*EntryPrice\s*-\s*Close\s*\)"
-                    r"\s*/\s*EntryPrice\s*\*\s*100", src))
-    check("S5c-3 Activate condition: v_InTheMoney_Pct >= TrailingActivate_Pct",
-          re.search(r"v_InTheMoney_Pct\s*>=\s*TrailingActivate_Pct", src))
-    check("S5c-4 Trail candidate = Close + ATR * TrailingATR_Mult",
-          re.search(r"v_Trailing_Cand\s*=\s*Close\s*\+\s*v_Trailing_ATR"
-                    r"\s*\*\s*TrailingATR_Mult", src))
-    check("S5c-5 ONE-WAY tighten (SHORT variant: candidate < current SL)",
-          re.search(r"if\s+v_Trailing_Cand\s*<\s*v_SL_Level\s+then\s+"
-                    r"v_SL_Level\s*=\s*v_Trailing_Cand", src))
-    check("S5c-6 Trail state reset on flat (MP <> -1)",
-          re.search(r"else begin\s+v_Trailing_Active\s*=\s*False", src))
-    check("S5c-7 Engine SetStopLoss NOT trailed (5b still uses v_SL_ATR)",
-          re.search(r"SetStopLoss\(\s*v_SL_ATR\s*\*\s*SL_ATR_Mult\s*\*\s*BigPointValue\s*\)", src))
-    check("S5c-8 ATR for trail uses AvgTrueRange(SL_ATR_Len)",
-          re.search(r"v_Trailing_ATR\s*=\s*AvgTrueRange\(\s*SL_ATR_Len\s*\)", src))
-
-    # === D03 v2.1 patch note in header ===
-    check("D03 v2.1 patch note present in header",
-          "v2.0.1 -> v2.1 PATCH" in src or "ATR Trailing SL" in src)
+    # === v2.0.2: Trailing layer REMOVED (rollback from v2.1) ===
+    check("R01 TrailingActivate_Pct input REMOVED (v2.0.2 rollback)",
+          not re.search(r"TrailingActivate_Pct\s*\(", src))
+    check("R02 TrailingATR_Mult input REMOVED (v2.0.2 rollback)",
+          not re.search(r"TrailingATR_Mult\s*\(", src))
+    check("R03 v_InTheMoney_Pct variable REMOVED",
+          not re.search(r"v_InTheMoney_Pct\s*\(", src))
+    check("R04 v_Trailing_Active variable REMOVED",
+          not re.search(r"v_Trailing_Active\s*\(", src))
+    check("R05 v_Trailing_ATR variable REMOVED",
+          not re.search(r"v_Trailing_ATR\s*\(", src))
+    check("R06 v_Trailing_Cand variable REMOVED",
+          not re.search(r"v_Trailing_Cand\s*\(", src))
+    check("R07 Section 5c label REMOVED from active code",
+          not re.search(r"^\s*\{\s*=+\s*\n\s*SECTION 5c",
+                        src, re.M))
+    check("R08 v2.0.2 ROLLBACK note present in header",
+          "v2.1 -> v2.0.2 ROLLBACK" in src)
 
     # === Section 6: Entry logic ===
     check("S6-1 Entry SellShort label SE_RPS_v2_Entry",
