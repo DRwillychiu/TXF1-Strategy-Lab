@@ -102,16 +102,18 @@ Stage 2: Refine Sweep
 
 ---
 
-### 2.3 Exit Tier  **★ v2.0 三個變動**
+### 2.3 Exit Tier  **★ v2.0 三個變動 + v2.1 trailing 兩個新增**
 
-| Input | v1.1 Default | v2.0 Default | Coarse Range | Refine Step | Sens | 備註 |
-|-------|-------------|--------------|--------------|-------------|------|------|
+| Input | v1.1 Default | v2.0 / v2.1 Default | Coarse Range | Refine Step | Sens | 備註 |
+|-------|-------------|---------------------|--------------|-------------|------|------|
 | `TP_Pct` | 0.7 | **0.6** ⚠️ | [0.4, 0.5, 0.6, 0.7, 0.9] | ±0.1 around best | **HIGH** | **v2.0 收緊**：90 min hold 內較難打到 0.7% |
 | `TP_MA_Len` | 20 | **20** | [10, 20, 30, 50] | ±5 around best | **MED** | EMA20 結構觸碰備援 TP |
 | `TP_EMA20_MinBars` | 3 | **3** | [2, 3, 4, 6] | ±1 | **MED** | EMA20 backup 最少持倉 bar；防 fill-bar trap |
-| `SL_ATR_Len` | 14 | **14** | [10, 14, 20] | — | LOW | ATR 計算基準 |
+| `SL_ATR_Len` | 14 | **14** | [10, 14, 20] | — | LOW | ATR 計算基準（trailing 也用此 ATR） |
 | `SL_ATR_Mult` | 4 | **3** ⚠️ | [2.5, 3, 3.5, 4, 4.5] | ±0.5 around best | **HIGH** | **v2.0 收緊**：90 min hold 不允許 ATR×4 寬停損 |
 | `Max_Bars_TimeStop` | 24 | **18** ⚠️ | [12, 15, 18, 21, 24] | ±3 around best | **MED** | **v2.0 收緊**：18 bar = 90 min（v1.1 = 24 bar = 120 min） |
+| `TrailingActivate_Pct` ⭐ v2.1 | — | **0.5** | [0.3, 0.4, 0.5, 0.6, 0.8] | ±0.1 around best | **HIGH** | **v2.1 NEW**：浮盈 % 啟動 trail；過低噪音多、過高失效 |
+| `TrailingATR_Mult` ⭐ v2.1 | — | **2.0** | [1.5, 2.0, 2.5, 3.0] | ±0.5 around best | **HIGH** | **v2.1 NEW**：trail 距離 = ATR × 倍數；過緊易甩、過寬等於沒 trail |
 
 **Exit Tier 配套邏輯**：
 - TP 0.6% + SL ATR×3 (~0.44%) = R:R ≈ 1.36

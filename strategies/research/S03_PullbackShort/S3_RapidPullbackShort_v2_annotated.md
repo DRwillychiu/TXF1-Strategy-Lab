@@ -254,6 +254,85 @@ end;
 
 ---
 
+## 5.5 Section 5c — ATR TRAILING SL（v2.1 NEW LAYER）★
+
+### 5.5.1 完整 code
+
+```pla
+if ( MarketPosition = -1 ) and ( v_SL_Locked = True ) then begin
+    v_InTheMoney_Pct = ( EntryPrice - Close ) / EntryPrice * 100;
+    if v_InTheMoney_Pct >= TrailingActivate_Pct then begin
+        v_Trailing_Active = True;
+        v_Trailing_ATR    = AvgTrueRange( SL_ATR_Len );
+        v_Trailing_Cand   = Close + v_Trailing_ATR * TrailingATR_Mult;
+        if v_Trailing_Cand < v_SL_Level then
+            v_SL_Level = v_Trailing_Cand;
+    end;
+end
+else begin
+    v_Trailing_Active = False;
+    v_InTheMoney_Pct  = 0;
+    v_Trailing_ATR    = 0;
+    v_Trailing_Cand   = 0;
+end;
+```
+
+### 5.5.2 設計重點
+
+| 設計 | 邏輯 |
+|------|------|
+| **進場 gate** | `MP=-1 AND v_SL_Locked=True` — 只在持倉短頭 + Frozen SL 已 lock 後運作 |
+| **In-the-money 公式** | `(EntryPrice - Close) / EntryPrice × 100` — short 變體：Close 跌即浮盈 |
+| **Activate trigger** | 浮盈 >= `TrailingActivate_Pct` (default 0.5%) |
+| **Trail candidate** | `Close + ATR(14) × TrailingATR_Mult` — short SL 在 Close 上方 |
+| **單向縮緊** | `if Cand < v_SL_Level then v_SL_Level = Cand` — 只允許更緊（MIN 邏輯）|
+| **Engine SL 不動** | Section 5b 的 SetStopLoss 在 `MP >= 0` 才呼叫，進場後 `MP=-1` 跳過 → engine SL 固定 |
+| **State reset** | else branch（MP <> -1 或 SL 未 lock）→ 全部 trail state 歸零 |
+
+### 5.5.3 為什麼是 MIN 而非 MAX
+
+**Long trailing**（其他策略 L1 / L5 用）：
+- SL 在進場價下方
+- Trail 往上 = 更靠 Close = 鎖盈
+- `new_SL = MAX(old_SL, Close - ATR×N)`
+
+**Short trailing（S3 v2.1 用）**：
+- SL 在進場價**上方**
+- Trail 往下 = 更靠 Close = 鎖盈
+- `new_SL = MIN(old_SL, Close + ATR×N)` ← 我們用這個
+
+公式對偶：方向相反，邏輯一致（一律「往對部位有利的方向縮」）。
+
+### 5.5.4 Engine SetStopLoss 為何不 trail
+
+用戶 mandate 2026-06-20：**初始停損維持進場後固定不變**，變動的是 trailing。
+
+實作上：
+- Section 5b: `if MarketPosition >= 0 then SetStopLoss(...)` — 進場前 (`MP=0`) 設定，進場後 (`MP=-1`) 跳過
+- 因此 Engine SL 在進場成交瞬間 lock 用 entry-bar ATR
+- 持倉中 5b 不再呼叫，Engine SL **永久固定**
+- Trailing 透過 Section 5c update `v_SL_Level`，由 Section 7 S-3 `BuyToCover at v_SL_Level Stop` 觸發
+
+**雙層保護結構**：
+1. Engine SL = 進場 ATR × 3 = **絕對 max loss cap**（永不放鬆）
+2. Frozen SL backup (5a) + Trailing (5c) = `v_SL_Level` = 動態縮緊 = **執行 trailing 用**
+3. 任一觸發即出場（first hit wins）
+
+### 5.5.5 Trail 觸發實例（entry @ 17,500，ATR=20pt）
+
+| 5M K | Close | 浮盈% | Trail Cand | v_SL_Level | 觸發？ |
+|------|-------|------|-----------|-----------|--------|
+| 進場 | 17,500 | 0% | — | 17,560 (initial Frozen) | — |
+| K+1 | 17,450 | 0.29% | — | 17,560 | 浮盈未到 0.5% |
+| K+2 | 17,410 | 0.51% ★ | 17,454 | **17,454** | trail 啟動 |
+| K+3 | 17,400 | 0.57% | 17,444 | **17,444** | 繼續縮緊 |
+| K+4 | 17,420（反彈）| 0.46% | 17,464 | **17,444** | Cand > current 不動 |
+| K+5 | 17,448（觸停）| — | — | — | **觸停 → 出場 @ 17,444** |
+
+**結果**：原本若無 trailing 會走到 Frozen SL 17,560 = 倒虧 60pt = -12,000；v2.1 trailing 17,444 = **鎖 56pt 獲利 = +11,200**。
+
+---
+
 ## 6. Section 9 — DIAGNOSTIC LOGGING（line 765-787）
 
 ```pla

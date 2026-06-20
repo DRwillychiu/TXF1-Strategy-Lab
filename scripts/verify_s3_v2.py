@@ -46,8 +46,8 @@ def main():
     src = PLA.read_text(encoding="utf-8")
 
     # === Header ===
-    check("H01 version v2.0.x in header",
-          re.search(r"Version\s*:\s*v2\.0(\.\d+)?", src))
+    check("H01 version v2.x in header",
+          re.search(r"Version\s*:\s*v2\.\d+(\.\d+)?", src))
     check("H02 Data2 = 60M active regime gate",
           "Data2 = 60M (regime gate" in src)
     check("H03 Data3 removed in v2.0",
@@ -242,10 +242,54 @@ def main():
                     src, re.S))
     check("S5-3 SetStopLoss called once, guarded by MP >= 0 (short variant)",
           re.search(r"if MarketPosition >= 0 then\s+SetStopLoss\(", src))
-    # SetStopLoss count check (Rule #12: exactly ONE call)
-    sl_count = len(re.findall(r"\bSetStopLoss\s*\(", src))
-    check("S5-4 SetStopLoss called exactly once (Rule #12)",
+    # SetStopLoss count check (Rule #12: exactly ONE call).
+    # Match only true calls: SetStopLoss( v_... ) - excludes comment mentions
+    # like "Engine SetStopLoss (5b)" which the v2.1 patch adds.
+    sl_count = len(re.findall(r"\bSetStopLoss\s*\(\s*v_", src))
+    check("S5-4 SetStopLoss called exactly once with v_ argument (Rule #12)",
           sl_count == 1, f"count={sl_count}")
+
+    # === v2.1 Inputs (ATR Trailing SL) ===
+    check("I23 TrailingActivate_Pct input declared (default 0.5, v2.1)",
+          re.search(r"TrailingActivate_Pct\s*\(\s*0\.5\s*\)", src))
+    check("I24 TrailingATR_Mult input declared (default 2.0, v2.1)",
+          re.search(r"TrailingATR_Mult\s*\(\s*2(\.0)?\s*\)", src))
+
+    # === v2.1 Variables (trailing state) ===
+    check("V13 v_InTheMoney_Pct declared (v2.1)",
+          re.search(r"v_InTheMoney_Pct\s*\(", src))
+    check("V14 v_Trailing_Active declared (v2.1)",
+          re.search(r"v_Trailing_Active\s*\(\s*False\s*\)", src))
+    check("V15 v_Trailing_ATR declared (v2.1)",
+          re.search(r"v_Trailing_ATR\s*\(", src))
+    check("V16 v_Trailing_Cand declared (v2.1)",
+          re.search(r"v_Trailing_Cand\s*\(", src))
+
+    # === Section 5c: ATR Trailing SL (v2.1) ===
+    check("S5c-1 Section 5c trail gated by MP=-1 AND v_SL_Locked=True",
+          re.search(r"if\s*\(\s*MarketPosition\s*=\s*-1\s*\)\s*and\s*"
+                    r"\(\s*v_SL_Locked\s*=\s*True\s*\)\s*then begin", src))
+    check("S5c-2 in-the-money formula (SHORT variant: EntryPrice - Close)",
+          re.search(r"v_InTheMoney_Pct\s*=\s*\(\s*EntryPrice\s*-\s*Close\s*\)"
+                    r"\s*/\s*EntryPrice\s*\*\s*100", src))
+    check("S5c-3 Activate condition: v_InTheMoney_Pct >= TrailingActivate_Pct",
+          re.search(r"v_InTheMoney_Pct\s*>=\s*TrailingActivate_Pct", src))
+    check("S5c-4 Trail candidate = Close + ATR * TrailingATR_Mult",
+          re.search(r"v_Trailing_Cand\s*=\s*Close\s*\+\s*v_Trailing_ATR"
+                    r"\s*\*\s*TrailingATR_Mult", src))
+    check("S5c-5 ONE-WAY tighten (SHORT variant: candidate < current SL)",
+          re.search(r"if\s+v_Trailing_Cand\s*<\s*v_SL_Level\s+then\s+"
+                    r"v_SL_Level\s*=\s*v_Trailing_Cand", src))
+    check("S5c-6 Trail state reset on flat (MP <> -1)",
+          re.search(r"else begin\s+v_Trailing_Active\s*=\s*False", src))
+    check("S5c-7 Engine SetStopLoss NOT trailed (5b still uses v_SL_ATR)",
+          re.search(r"SetStopLoss\(\s*v_SL_ATR\s*\*\s*SL_ATR_Mult\s*\*\s*BigPointValue\s*\)", src))
+    check("S5c-8 ATR for trail uses AvgTrueRange(SL_ATR_Len)",
+          re.search(r"v_Trailing_ATR\s*=\s*AvgTrueRange\(\s*SL_ATR_Len\s*\)", src))
+
+    # === D03 v2.1 patch note in header ===
+    check("D03 v2.1 patch note present in header",
+          "v2.0.1 -> v2.1 PATCH" in src or "ATR Trailing SL" in src)
 
     # === Section 6: Entry logic ===
     check("S6-1 Entry SellShort label SE_RPS_v2_Entry",
