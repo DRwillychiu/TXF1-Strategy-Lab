@@ -19,7 +19,7 @@
 | Section 1B HOLIDAY/REGISTRY/SETTLEMENT (line 322-360) | 不變 | reference v1.1 §1B |
 | Section 2 60M TIER 1 (line 363-443) | **大幅變動**（Daily → 60M） | 本檔 §4 |
 | Section 3 5M TIER 2 (line 446-518) | 不變（M4 default 微調） | reference v1.1 §3 |
-| Section 4 HOURLY SNAP + COOLDOWN (line 521-547) | **大幅變動**（cadence 改） | 本檔 §5 |
+| Section 4 60M SNAP + COOLDOWN (line 530-580) | **大幅變動**（cadence 改，v2.0.1 MC12 patch） | 本檔 §5 |
 | Section 5 SetStopLoss + Frozen SL (line 550-592) | 不變 | reference v1.1 §5 |
 | Section 6 ENTRY (line 595-624) | 不變（label SE_RPS_v2_Entry） | reference v1.1 §6 |
 | Section 7 EXIT (line 627-750) | 不變（label SX_RPS_v2_*） | reference v1.1 §7 |
@@ -119,13 +119,16 @@ v_Daily_Dist_Pct          ── 改名 v_H60_Dist_Pct
 v_Daily_RSI_Snap0..Snap3  ── 改名 v_H60_RSI_Snap0..Snap3
 ```
 
-### 3.2 新增（v2.0 特有）
+### 3.2 新增（v2.0.1 特有）
 
 ```pla
-v_LastSeenHour           ( -1    ),  // 用於 hourly snap shift boundary detection
+v_LastSeenData2Date      ( -1    ),
+v_LastSeenData2Time      ( -1    ),
 ```
 
-**用法**：Section 4 在每個小時邊界（`Hour(Time) <> v_LastSeenHour`）shift snapshot。預設 -1 確保第一根 bar 必觸發 shift（初始化）。
+**用法**：Section 4 用 `(Date of Data2, Time of Data2)` tuple 偵測 Data2 60M bar advance；只在真正 advance 時 shift snapshot。預設 -1 確保第一根 bar 走 init branch（從歷史 `[1]..[4]` 直接 bootstrap 4 個 snap，避免 4 小時 warmup 全 zero）。
+
+**為什麼不用 `v_LastSeenHour` + `Hour(Time)`**：原 v2.0 用這個做法，但 `Hour(Time)` 假設 60M align hour（09:00, 10:00, ...）對 TXF1 不成立 — session-aligned 60M 邊界在 09:45 / 10:45 / ...，hour-based 偵測會在錯誤時點 snap 到 partial bar RSI。v2.0.1 改用 Data2 自身時間戳。詳見 §5。
 
 ### 3.3 其他變數（不變）
 
@@ -135,16 +138,18 @@ v_LastSeenHour           ( -1    ),  // 用於 hourly snap shift boundary detect
 
 ## 4. Section 2 — 60M TIER 1 CALCULATIONS（line 363-443）★ v2.0 核心變動
 
-### 4.1 60M MA（取代 Daily MA）
+### 4.1 60M MA（取代 Daily MA）— v2.0.1 explicit parens
 
 ```pla
-v_H60_FastMA = Average( Close, H60_FastMA_Len )[1] of Data2;
-v_H60_SlowMA = Average( Close, H60_SlowMA_Len )[1] of Data2;
+v_H60_FastMA = ( Average( Close, H60_FastMA_Len ) of Data2 )[1];
+v_H60_SlowMA = ( Average( Close, H60_SlowMA_Len ) of Data2 )[1];
 ```
 
 **重點**：
-- `[1] of Data2` 確保使用「已收盤」的 60M bar（CLAUDE.md Rule #3）
-- 同一個寫法但 reference 從 Data3 (Daily) 改為 Data2 (60M)
+- v2.0.1 加 explicit parens：`( ... of Data2 )[1]` 而非 `Average(...)[1] of Data2`
+- 原寫法 `[1]` binding 在 Data1/Data2 之間 ambiguous across PowerLanguage parser versions（mirrors v1.1 BUG FIX #7 對 Close 的修正 idiom）
+- `[1]` 確保使用「已收盤」的 60M bar（CLAUDE.md Rule #3）
+- 同一個 thesis 但 reference 從 Data3 (Daily) 改為 Data2 (60M)
 - 60M MA20 = 20 hours = 約 1 trading day 的 hourly 趨勢
 - 60M MA60 = 60 hours = 約 3 trading days 的 hourly 趨勢
 
@@ -194,28 +199,45 @@ else
 
 ---
 
-## 5. Section 4 — HOURLY SNAP + COOLDOWN（line 521-547）★ v2.0 核心變動
+## 5. Section 4 — 60M SNAP + COOLDOWN（line 530-580）★ v2.0 核心變動 + v2.0.1 MC12 patch
 
-### 5.1 Hourly snapshot shift
+### 5.1 60M boundary 偵測 + snapshot shift（v2.0.1 MC12-safe）
 
 ```pla
-if Hour( Time ) <> v_LastSeenHour then begin
-    v_H60_RSI_Snap3 = v_H60_RSI_Snap2;
-    v_H60_RSI_Snap2 = v_H60_RSI_Snap1;
-    v_H60_RSI_Snap1 = v_H60_RSI_Snap0;
-    v_H60_RSI_Snap0 = RSI( Close, H60_RSI_Len ) of Data2;
-    v_LastSeenHour  = Hour( Time );
+if ( Date of Data2 <> v_LastSeenData2Date ) or
+   ( Time of Data2 <> v_LastSeenData2Time ) then begin
+    if v_LastSeenData2Date >= 0 then begin
+        { Normal shift: Data2 just advanced to a new 60M bar }
+        v_H60_RSI_Snap3 = v_H60_RSI_Snap2;
+        v_H60_RSI_Snap2 = v_H60_RSI_Snap1;
+        v_H60_RSI_Snap1 = v_H60_RSI_Snap0;
+        v_H60_RSI_Snap0 = ( RSI( Close, H60_RSI_Len ) of Data2 )[1];
+    end
+    else begin
+        { First-bar init: bootstrap from historical Data2 }
+        v_H60_RSI_Snap0 = ( RSI( Close, H60_RSI_Len ) of Data2 )[1];
+        v_H60_RSI_Snap1 = ( RSI( Close, H60_RSI_Len ) of Data2 )[2];
+        v_H60_RSI_Snap2 = ( RSI( Close, H60_RSI_Len ) of Data2 )[3];
+        v_H60_RSI_Snap3 = ( RSI( Close, H60_RSI_Len ) of Data2 )[4];
+    end;
+    v_LastSeenData2Date = Date of Data2;
+    v_LastSeenData2Time = Time of Data2;
 end;
 ```
 
-**運作機制**：
-- 在 5M 級別執行，每根 5M bar 都檢查 `Hour(Time)` 是否變更
-- TXF1 5M bar 時間：08:50, 08:55, 09:00, 09:05, ...
-- 從 08:55 → 09:00 時 `Hour(Time)` 從 8 變 9，觸發 shift
-- Shift 時 Snap0 抓最新的 `RSI(Close, 14) of Data2` 值
-- 此時 09:00 的 60M bar 剛 close（top of hour），所以 Snap0 是該 closed 60M 的 RSI
+**為什麼用 Data2 自身時間戳而不是 `Hour(Time)`**：
 
-**對比 v1.1**：v1.1 用 `Date <> v_LastSeenDate` 在 calendar-date 邊界 shift（一天 1 次）；v2.0 用 `Hour(Time) <> v_LastSeenHour` 在 hour 邊界 shift（一天 ~24 次）。Snap0..Snap3 因此覆蓋過去 4 hours，不是 4 days。
+原 v2.0 用 `Hour(Time) <> v_LastSeenHour` 偵測 boundary。**這假設 60M bar 邊界在整點 (09:00, 10:00, ...)**。對 TXF1 不成立：
+- TXF1 日盤 08:45-13:45，session-aligned 60M 邊界在 **09:45 / 10:45 / 11:45 / 12:45 / 13:45**
+- 從 08:55 → 09:00（hour 從 8 變 9）會錯誤觸發 snap，但這時 60M (08:45-09:45) 還沒 close
+- 跨夜盤 13:45 → 15:05 時 Hour 從 13 → 15，跳過 14，邏輯破洞
+
+**正確 idiom**：
+1. **Boundary detection**：用 `(Date of Data2, Time of Data2)` tuple — Data2 自身的時間戳。在 5M context 內，同一個 60M bar 內所有 5M bar 看到同樣的 `Time of Data2`，**只有當 Data2 真的 advance 到下一根時才會變更**。
+2. **Snap0 讀值**：用 `( RSI(...) of Data2 )[1]` 而非 `RSI(...) of Data2`。當 boundary 剛切換時，current Data2 已經是「新開的 partial bar」；`[1]` 才是「剛 closed 的上一根」。
+3. **Init branch**：第一根 bar (`v_LastSeenData2Date = -1`) 直接從歷史 `[1]..[4]` bootstrap 4 個 snap，避免 4 小時 warmup 全 zero。
+
+**對比 v1.1**：v1.1 用 `Date <> v_LastSeenDate` 在 calendar-date 邊界 shift（一天 1 次 = Data3 Daily bar advance）。對應到 v2.0，正確類比是「Data2 advance」而非「clock hour change」。
 
 ### 5.2 Cooldown reset（不變）
 

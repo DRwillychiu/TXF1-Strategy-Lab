@@ -46,8 +46,8 @@ def main():
     src = PLA.read_text(encoding="utf-8")
 
     # === Header ===
-    check("H01 version v2.0 in header",
-          "Version     : v2.0" in src)
+    check("H01 version v2.0.x in header",
+          re.search(r"Version\s*:\s*v2\.0(\.\d+)?", src))
     check("H02 Data2 = 60M active regime gate",
           "Data2 = 60M (regime gate" in src)
     check("H03 Data3 removed in v2.0",
@@ -115,8 +115,11 @@ def main():
           re.search(r"v_H60_FastMA\s*\(", src))
     check("V02 v_H60_RSI_Snap0..Snap3 declared",
           all(re.search(rf"v_H60_RSI_Snap{i}\s*\(", src) for i in range(4)))
-    check("V03 v_LastSeenHour declared (for hourly snap shift)",
-          re.search(r"v_LastSeenHour\s*\(\s*-1\s*\)", src))
+    check("V03 v_LastSeenData2Date / v_LastSeenData2Time declared (v2.0.1 MC12 fix)",
+          re.search(r"v_LastSeenData2Date\s*\(\s*-1\s*\)", src) and
+          re.search(r"v_LastSeenData2Time\s*\(\s*-1\s*\)", src))
+    check("V03b v_LastSeenHour NOT declared (removed in v2.0.1)",
+          not re.search(r"v_LastSeenHour\s*\(", src))
     check("V04 v_Regime_Watch declared",
           re.search(r"v_Regime_Watch\s*\(", src))
     check("V05 v_Trigger_Fired declared",
@@ -157,12 +160,14 @@ def main():
           "HOLIDAY REGISTRY EXPIRES" in src)
 
     # === Section 2: 60M Tier 1 calculations ===
-    check("S2-1 v_H60_FastMA from Average(...)[1] of Data2",
-          re.search(r"v_H60_FastMA\s*=\s*Average\(\s*Close\s*,\s*"
-                    r"H60_FastMA_Len\s*\)\[1\]\s*of Data2", src))
-    check("S2-2 v_H60_SlowMA from Average(...)[1] of Data2",
-          re.search(r"v_H60_SlowMA\s*=\s*Average\(\s*Close\s*,\s*"
-                    r"H60_SlowMA_Len\s*\)\[1\]\s*of Data2", src))
+    check("S2-1 v_H60_FastMA from ( Average(...) of Data2 )[1] (v2.0.1 explicit parens)",
+          re.search(r"v_H60_FastMA\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"H60_FastMA_Len\s*\)\s*of Data2\s*\)\[1\]", src))
+    check("S2-2 v_H60_SlowMA from ( Average(...) of Data2 )[1] (v2.0.1 explicit parens)",
+          re.search(r"v_H60_SlowMA\s*=\s*\(\s*Average\(\s*Close\s*,\s*"
+                    r"H60_SlowMA_Len\s*\)\s*of Data2\s*\)\[1\]", src))
+    check("S2-1b NO bare Average(...)[1] of Data2 (regression check)",
+          not re.search(r"Average\(\s*Close\s*,\s*H60_(Fast|Slow)MA_Len\s*\)\[1\]\s*of Data2", src))
     check("S2-3 v_H60_RSI sourced from snapshot Snap0 (not direct RSI call)",
           re.search(r"v_H60_RSI\s*=\s*v_H60_RSI_Snap0", src))
     check("S2-4 v_H60_Dist_Pct uses ( Close of Data2 )[1] explicit parens",
@@ -195,18 +200,33 @@ def main():
     check("S3-8 v_5M_EMA20 = XAverage(Close, TP_MA_Len)",
           re.search(r"v_5M_EMA20\s*=\s*XAverage\(\s*Close\s*,\s*TP_MA_Len\s*\)", src))
 
-    # === Section 4: Hourly RSI snapshot + Daily cooldown reset ===
-    check("S4-1 Hourly snapshot shift (hour boundary detection)",
-          re.search(r"if Hour\(\s*Time\s*\) <> v_LastSeenHour then begin", src))
+    # === Section 4: Data2 boundary RSI snapshot + Daily cooldown reset ===
+    check("S4-1 Data2 boundary detection via ( Date of Data2, Time of Data2 ) tuple (v2.0.1)",
+          re.search(r"Date of Data2 <> v_LastSeenData2Date", src) and
+          re.search(r"Time of Data2 <> v_LastSeenData2Time", src))
+    # S4-1b: only flag if Hour(Time) is in active code (not comments). Active
+    # comparison would be `if Hour(Time) <> v_LastSeenHour then`. Mentions in
+    # { ... } documentation comments are intentional (explain the v2.0.1 fix).
+    check("S4-1b NO active Hour(Time) <> v_LastSeenHour conditional (v2.0.1 removed)",
+          not re.search(r"^\s*if\s+Hour\(\s*Time\s*\)\s*<>\s*v_LastSeenHour\s+then",
+                        src, re.M))
     check("S4-2 Snapshot shift: Snap3=Snap2, Snap2=Snap1, Snap1=Snap0",
           re.search(r"v_H60_RSI_Snap3\s*=\s*v_H60_RSI_Snap2", src) and
           re.search(r"v_H60_RSI_Snap2\s*=\s*v_H60_RSI_Snap1", src) and
           re.search(r"v_H60_RSI_Snap1\s*=\s*v_H60_RSI_Snap0", src))
-    check("S4-3 Snap0 refreshed from RSI(Close, H60_RSI_Len) of Data2",
-          re.search(r"v_H60_RSI_Snap0\s*=\s*RSI\(\s*Close\s*,\s*"
-                    r"H60_RSI_Len\s*\)\s*of Data2", src))
-    check("S4-4 v_LastSeenHour updated after snap shift",
-          re.search(r"v_LastSeenHour\s*=\s*Hour\(\s*Time\s*\)", src))
+    check("S4-3 Snap0 reads ( RSI(...) of Data2 )[1] = JUST-CLOSED 60M bar (v2.0.1)",
+          re.search(r"v_H60_RSI_Snap0\s*=\s*\(\s*RSI\(\s*Close\s*,\s*"
+                    r"H60_RSI_Len\s*\)\s*of Data2\s*\)\[1\]", src))
+    check("S4-3b NO bare RSI(...) of Data2 assigned to Snap0 (regression check)",
+          not re.search(r"v_H60_RSI_Snap0\s*=\s*RSI\(\s*Close\s*,\s*"
+                        r"H60_RSI_Len\s*\)\s*of Data2\s*;", src))
+    check("S4-4 v_LastSeenData2Date / Time updated after snap shift",
+          re.search(r"v_LastSeenData2Date\s*=\s*Date of Data2", src) and
+          re.search(r"v_LastSeenData2Time\s*=\s*Time of Data2", src))
+    check("S4-4b Init branch bootstrap Snap0..Snap3 from ( RSI ... )[1..4] historical",
+          re.search(r"v_LastSeenData2Date\s*>=\s*0", src) and
+          all(re.search(rf"\(\s*RSI\(\s*Close\s*,\s*H60_RSI_Len\s*\)\s*of Data2\s*\)\[{i}\]", src)
+              for i in range(1, 5)))
     check("S4-5 Daily cooldown reset gated by Time >= Entry_Open_Time",
           re.search(r"Date <> v_LastSeenDate.*Time >= Entry_Open_Time.*"
                     r"v_DailyCooldown_Active\s*=\s*False", src, re.S))

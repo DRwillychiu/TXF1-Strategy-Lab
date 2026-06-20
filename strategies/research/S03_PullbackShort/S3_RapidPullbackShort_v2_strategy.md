@@ -227,6 +227,7 @@ v2.0 角色不變於 v1.1：**反趨勢空頭組件**，填補 L1-L5+S1 大多�
 
 | 日期 | 決策 | 來源 |
 |------|------|------|
+| 2026-06-20 | **v2.0.1 MC12 patch**: Section 4 boundary detection `Hour(Time) <> v_LastSeenHour` (assumed 60M align hour, FALSE for TXF1 session-aligned 60M) → `(Date of Data2, Time of Data2)` tuple. Snap0 reads `( RSI(...) of Data2 )[1]` (just-closed, not partial). Section 2 60M MA: `Average(...)[1] of Data2` → `( Average(...) of Data2 )[1]` (explicit parens). | 本 session（用戶 audit） |
 | 2026-06-20 | User selects Option B: preserve thesis, shorten regime TF Daily → 60M | 本 session |
 | 2026-06-20 | User rejects: v2.0 雙路徑 (Path C+D) draft (Path C alpha 驗為負) | 本 session |
 | 2026-06-20 | User defers: 夜盤至 v2.1 | 本 session（隱含於 Option B） |

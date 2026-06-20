@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0  (2026-06-20)
+  Version     : v2.0.1 (2026-06-20)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M  (entry trigger / exit chain)
@@ -33,9 +33,14 @@
              Daily_Dist_MA20_Pct 3.0 -> H60_Dist_MA20_Pct 1.5
                                         (60M dist is intrinsically smaller)
     [RSI_SNAP] Removed Daily snapshot trick (Snap0..Snap3).
-               60M K updates hourly; v_H60_RSI_Hist tracks last 4 hourly
-               closed-bar RSI values via hour-boundary detection in
-               Data1 context. (Same anti-stale principle, faster cadence.)
+               60M K updates hourly; v_H60_RSI_Snap0..Snap3 tracks
+               last 4 closed 60M bars' RSI via Data2-bar-boundary
+               detection. (Same anti-stale principle, faster cadence.)
+               ★ v2.0.1 MC12 PATCH: boundary detection changed from
+                 Hour(Time) (assumed 60M align hour, FALSE for TXF1
+                 session-aligned 60M) to ( Date of Data2, Time of Data2 )
+                 tuple. Snap0 reads ( RSI(...) of Data2 )[1] = previous
+                 just-CLOSED 60M bar (not partial current). See Section 4.
     [EXIT]   TP_Pct       0.7 -> 0.6
              SL_ATR_Mult  4   -> 3
              Max_Bars_TimeStop 24 -> 18   (24 * 5M = 120min -> 18 * 5M = 90min)
@@ -144,17 +149,19 @@ variables:
     v_Dist_OK                ( False ),
     v_Regime_Watch           ( False ),
 
-    { ===== 60M RSI hourly snapshots (anti-stale, cadence = hour change) =====
-      Same anti-stale principle as v1.1 Daily snapshots, but cadence is
-      hour-boundary in Data1 context (each new hour = a fresh closed 60M bar).
-      Snap0 = most recent CLOSED 60M RSI
-      Snap1 = 1 hour ago; Snap2 = 2 hours ago; Snap3 = 3 hours ago
-      Shifts in Section 4 when hour rolls over. }
+    { ===== 60M RSI snapshots (anti-stale, cadence = Data2 bar boundary) =====
+      v2.0.1: Boundary detection uses Data2's own ( Date, Time ) timestamp -
+      NOT Hour(Time) which would assume 60M align hour (FALSE for TXF1
+      session-aligned 60M on 0845-1345 / 1500-0500 sessions).
+      Snap0 = most recent CLOSED 60M RSI (from [1] of Data2 = previous bar)
+      Snap1 = 1 bar ago; Snap2 = 2 bars ago; Snap3 = 3 bars ago.
+      Shifts in Section 4 when Data2 advances to a new bar. }
     v_H60_RSI_Snap0          ( 0     ),
     v_H60_RSI_Snap1          ( 0     ),
     v_H60_RSI_Snap2          ( 0     ),
     v_H60_RSI_Snap3          ( 0     ),
-    v_LastSeenHour           ( -1    ),
+    v_LastSeenData2Date      ( -1    ),
+    v_LastSeenData2Time      ( -1    ),
 
     { ===== 5M Tier 2 (Data1) - preserved from v1.1 ===== }
     v_M1_Consec              ( False ),
@@ -355,8 +362,12 @@ end;
   reference [1] of Data2 for stability.
   ============================================================ }
 
-v_H60_FastMA = Average( Close, H60_FastMA_Len )[1] of Data2;
-v_H60_SlowMA = Average( Close, H60_SlowMA_Len )[1] of Data2;
+{ v2.0.1 MC12 PATCH: explicit parens force ( ... of Data2 ) binding
+  before applying [1] history. Removes Data1/Data2 binding ambiguity
+  across PowerLanguage parser versions. Same idiom as v1.1 BUG FIX #7
+  for Close, now applied to Average. }
+v_H60_FastMA = ( Average( Close, H60_FastMA_Len ) of Data2 )[1];
+v_H60_SlowMA = ( Average( Close, H60_SlowMA_Len ) of Data2 )[1];
 
 { Current 60M RSI from snapshot (Section 4 maintains the snap shift
   at each hour-boundary in Data1 context). Snap0 = most recent
@@ -496,23 +507,49 @@ v_5M_EMA20 = XAverage( Close, TP_MA_Len );
 
 
 { ============================================================
-  SECTION 4 - HOURLY RSI SNAPSHOT + DAILY COOLDOWN RESET
+  SECTION 4 - 60M RSI SNAPSHOT + DAILY COOLDOWN RESET
 
-  v2.0: snapshot cadence changed from daily (v1.1) to hourly.
-  Each new hour in Data1 context = a newly-closed 60M bar
-  (because Data2 60M bars close at top of every hour).
+  v2.0.1: snapshot cadence detected via Data2 own (Date, Time) timestamp.
 
-  Snapshot shifts on hour-boundary; cooldown resets on date-boundary
-  (gated by day-session open).
+  WHY NOT Hour(Time):
+    Original v2.0 used `Hour(Time) <> v_LastSeenHour`. That assumes
+    60M bars align to clock hours (09:00, 10:00, ...). FALSE for TXF1:
+    session-aligned 60M boundaries land at 09:45 / 10:45 / ... when
+    day session starts 08:45 (the typical MC12 default for TXF1).
+    Hour-based detection would snap at wrong moments and possibly
+    capture partial-bar RSI values.
+
+  CORRECT IDIOM:
+    1. Detect Data2 advance via its OWN timestamp tuple
+       ( Date of Data2, Time of Data2 ).
+    2. When advanced, read ( RSI(...) of Data2 )[1] = the JUST-CLOSED
+       60M bar (current Data2 is the new partial bar).
+    3. Explicit parens force ( ... of Data2 ) binding before [1] history
+       (mirrors v1.1 BUG FIX #7 idiom for Close).
+
+  Cooldown reset (unchanged from v1.1) still on calendar-date boundary,
+  gated by day-session open.
   ============================================================ }
 
-{ Hourly RSI snapshot (v2.0 replaces v1.1's daily snapshot trick) }
-if Hour( Time ) <> v_LastSeenHour then begin
-    v_H60_RSI_Snap3 = v_H60_RSI_Snap2;
-    v_H60_RSI_Snap2 = v_H60_RSI_Snap1;
-    v_H60_RSI_Snap1 = v_H60_RSI_Snap0;
-    v_H60_RSI_Snap0 = RSI( Close, H60_RSI_Len ) of Data2;
-    v_LastSeenHour  = Hour( Time );
+{ 60M RSI snapshot (v2.0.1 MC12-safe) }
+if ( Date of Data2 <> v_LastSeenData2Date ) or
+   ( Time of Data2 <> v_LastSeenData2Time ) then begin
+    if v_LastSeenData2Date >= 0 then begin
+        { Normal shift: Data2 just advanced to a new 60M bar }
+        v_H60_RSI_Snap3 = v_H60_RSI_Snap2;
+        v_H60_RSI_Snap2 = v_H60_RSI_Snap1;
+        v_H60_RSI_Snap1 = v_H60_RSI_Snap0;
+        v_H60_RSI_Snap0 = ( RSI( Close, H60_RSI_Len ) of Data2 )[1];
+    end
+    else begin
+        { First-bar init: bootstrap from historical Data2 }
+        v_H60_RSI_Snap0 = ( RSI( Close, H60_RSI_Len ) of Data2 )[1];
+        v_H60_RSI_Snap1 = ( RSI( Close, H60_RSI_Len ) of Data2 )[2];
+        v_H60_RSI_Snap2 = ( RSI( Close, H60_RSI_Len ) of Data2 )[3];
+        v_H60_RSI_Snap3 = ( RSI( Close, H60_RSI_Len ) of Data2 )[4];
+    end;
+    v_LastSeenData2Date = Date of Data2;
+    v_LastSeenData2Time = Time of Data2;
 end;
 
 { Daily cooldown reset (v1.1 BUG FIX #8 preserved) -
@@ -733,13 +770,32 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
 
   v2.0 DIFFS vs v1.1 (summary):
     REGIME GATE   : Daily Tier 1 (Data3) -> 60M Tier 1 (Data2)
-    RSI SNAPSHOT  : Daily cadence -> Hourly cadence (Section 4)
+    RSI SNAPSHOT  : Daily cadence -> Data2-bar-boundary cadence (Section 4)
     EXIT          : TP 0.7->0.6 / SL ATR x4->x3 / TimeStop 24->18
     ENTRY WINDOW  : Cutoff 1230 -> 1325 (widened day window)
     SESSIONS      : Day-only preserved (Night deferred to v2.1)
     STRUCT        : Holiday/Settlement/Kill/Frozen SL identical to v1.1
     LABELS        : SE/SX_RPS_v2_* (distinct from v1.1 for MC coexistence)
 
+  v2.0 -> v2.0.1 PATCH (MC12 compliance, 2026-06-20):
+    [MC12-1] Section 4 boundary detection: Hour(Time) -> ( Date of Data2,
+             Time of Data2 ) tuple. Hour() assumed 60M align hour, FALSE
+             for TXF1 session-aligned 60M (typical close at 09:45 /
+             10:45 / ... not 09:00 / 10:00 / ...).
+    [MC12-2] Section 4 Snap0 reads ( RSI(...) of Data2 )[1] not
+             RSI(...) of Data2 - the latter is current Data2 partial
+             bar at moment of boundary advance; [1] is just-closed.
+    [MC12-3] Section 4 init branch bootstrap Snap0..Snap3 from
+             ( RSI(...) of Data2 )[1..4] historical, avoids 4-hour
+             warmup with all-zeros.
+    [MC12-4] Section 2 60M MA reads ( Average(...) of Data2 )[1]
+             with explicit parens (was Average(...)[1] of Data2 -
+             [1] binding ambiguous between Data1/Data2 offset across
+             PowerLanguage parser versions). Mirrors v1.1 BUG FIX #7
+             idiom for Close.
+    [MC12-5] Variables: v_LastSeenHour removed; v_LastSeenData2Date +
+             v_LastSeenData2Time added.
+
   v1.1 -> v2.0 is REGIME-FRAME shortened. Same thesis, faster cadence,
-  more trades expected per year.
+  more trades expected per year. v2.0.1 makes the Data2 reads MC12-safe.
 ============================================================ }
