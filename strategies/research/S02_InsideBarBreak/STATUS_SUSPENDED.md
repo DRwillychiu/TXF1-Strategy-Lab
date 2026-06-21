@@ -1,9 +1,17 @@
-# S2 InsideBarBreak — Research Suspended
+# S2 InsideBarBreak — Research Suspended (HISTORICAL)
 
-**狀態變更日**：2026-06-20
-**狀態**：⏸️ **RESEARCH SUSPENDED**（暫緩，**不是 archive**）
-**用戶決策**：2026-06-20 ultracode session
+> ⚠️ **2026-06-21 STATUS UPDATE**：本檔從 SUSPENDED 升級為 **ARCHIVED FINAL**。
+> 詳見：[S2_FINAL_VERDICT.md](S2_FINAL_VERDICT.md)
+>
+> 觸發事件：用戶在 30M timeframe 重測 → PF 1.057（與 5M 一致）→ 證實 alpha 死亡。
+> 「重啟條件」已收緊到僅限新研究證明 alpha 復活。
+
+---
+
+**狀態變更日**：2026-06-20（SUSPENDED）→ 2026-06-21（ARCHIVED FINAL）
+**狀態**：📁 **ARCHIVED FINAL**（已正式結案）
 **最後版本**：v0.6（仍在原處未修改）
+**結案證據**：30M Naive Long-only PF 1.057 / 含滑價 -0.77 / 落後 B&H 59×
 
 ---
 
