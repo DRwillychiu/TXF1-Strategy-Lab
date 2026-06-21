@@ -61,7 +61,58 @@ W7+: Live_simulation observation → eventually promote to live/
 
 ---
 
-# 二、Pre-W0 Gates（**新增，本 SOP 核心貢獻**）
+# 二、Stage -1: 策略內容說明（**MANDATORY，2026-06-21 user-mandated rule**）
+
+**用戶 2026-06-21 sharp 反饋**：「你又忘記 SOP 流程。我根本不知道 S9 到底是甚麼策略」
+
+**問題**：S7 / S8 / S9 我都直接跑 pre-verify 就 KILL，**用戶根本沒理解策略是什麼**就被 KILL 了。這違反「用戶必須能 informed-decision」原則。
+
+## 新規則：任何 pre-verify 之前必先給用戶這 4 段話
+
+```
+1. 策略內容（用戶可理解語言）
+   - 進場規則 (specific values)
+   - 出場規則
+   - 持倉時間
+   - 商品 / data feeds
+
+2. 優點清單（為什麼可能值得做）
+   - 邏輯直觀性
+   - 跟既有 sleeves 的互補性
+   - Operational ease
+   - 預期 alpha source
+
+3. 缺點清單（潛在風險）
+   - 設計上的 ambiguity
+   - 已知的失效模式
+   - Operational concerns
+
+4. 為什麼合適 / 不合適（一段話，integrative）
+   - 不是 bullet point，是 narrative
+   - 必須 explicit 點出 KILL/GO 的關鍵 trade-off
+```
+
+## 順序：必須在 Pre-W0 Gate 1 之前
+
+```
+Stage -1: 策略內容說明（給用戶 informed-decision）  ← NEW
+   ↓
+Pre-W0 Gate 1: MC12 execution feasibility
+   ↓
+Pre-W0 Gate 2: Operational coherence
+   ↓
+W0 Alpha Pre-verification
+   ↓
+W1 Spec
+```
+
+## 案例：S5 / S6 我有做，S7 / S8 / S9 我跳過 = 違反規則
+
+→ **永久規則**：未來任何策略嘗試必先給 Stage -1 4 段，不可跳過。
+
+---
+
+# 三、Pre-W0 Gates（**原核心貢獻**）
 
 ## Gate 1: MC12 Execution Feasibility（**L21**）
 
