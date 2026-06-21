@@ -1,9 +1,20 @@
 # S4 TurnOfMonth_Long — Calendar Effect Positional Long
 
-**建立日**：2026-06-21（S2 結案同日啟動）
-**狀態**：📋 **設計討論階段**（Phase 0 / W1）
-**Q1 優先序**：**#2**（roadmap C06 / S4，僅次於 S3）
-**前置策略**：S2 InsideBarBreak（已 ARCHIVED FINAL）→ 資源轉入 S4
+> ⚠️ **2026-06-21 STATUS UPDATE**：本策略已於 W1 完成當日 **KILLED**。
+> 詳見：[S4_FINAL_VERDICT.md](S4_FINAL_VERDICT.md)
+>
+> KILL 理由（一句話）：28-year robustness test 顯示 alpha cyclical decay，
+> 6 個 macro regime 中只有 3 個有正 Sharpe，2010-2018 連續 8 年負 Sharpe，
+> 28-year overall Sharpe 0.33 / Max DD -32% 超過機構警戒。
+> 我之前的 6.4-year Sharpe 0.87 是 over-optimistic recent-bias snapshot。
+
+---
+
+**建立日**：2026-06-21
+**結案日**：2026-06-21（同日 KILL，W2 .pla 未寫）
+**狀態**：💀 **KILLED — NOT FEASIBLE**
+**最終版本**：v0.2 (TXF1-empirics-corrected，已棄用)
+**KILL 速度**：1 天（vs S2 5 版本多週）→ S2 lessons 發揮作用
 
 ---
 

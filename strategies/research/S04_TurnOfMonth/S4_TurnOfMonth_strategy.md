@@ -1,9 +1,20 @@
-# S4 TurnOfMonth_Long — Strategy Specification
+# S4 TurnOfMonth_Long — Strategy Specification (KILLED)
 
-**版本**：**v0.2 (TXF1-empirics-corrected)** ⭐ 從學術 baseline → 實證 best
-**建立日**：2026-06-21（v0.1 → v0.2 同日，用戶質疑後修正）
-**狀態**：📋 W1 完成（已實證 + spec 校正）→ 等用戶確認進 W2 寫 .pla
-**作者**：Claude（基於 TWII 6.4 年實證 + 用戶 4 個質疑校正）
+> 💀 **2026-06-21 KILLED — DO NOT IMPLEMENT**
+> 詳見：[S4_FINAL_VERDICT.md](S4_FINAL_VERDICT.md)
+>
+> 本 spec v0.2 基於 6.4-year empirics 看起來通過，但 28-year robustness test
+> 揭露這是 cyclical alpha decay：2010-2018 連 8 年負 Sharpe，28y overall
+> Sharpe 0.33（recent 6.4y Sharpe 0.87 是 over-optimistic snapshot）。
+>
+> 本檔保留作 audit trail + 5 個新 lessons (L14-L18) 教材，**不可作為 .pla 實作依據**。
+
+---
+
+**版本**：v0.2 (TXF1-empirics-corrected) → **KILLED 2026-06-21**
+**建立日**：2026-06-21（v0.1 → v0.2 → KILLED 同日）
+**狀態**：💀 KILLED — DO NOT IMPLEMENT
+**作者**：Claude
 
 ---
 
