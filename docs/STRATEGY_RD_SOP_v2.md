@@ -110,6 +110,48 @@ W1 Spec
 
 → **永久規則**：未來任何策略嘗試必先給 Stage -1 4 段，不可跳過。
 
+## 2026-06-21 二次強化：用戶兩次 prompt 同一指令 = 系統性失誤
+
+用戶 2026-06-21 兩次 prompt「我都不知道策略在幹嘛，你就否決」說明：
+- 第一次提醒後我修了 SOP 但只補 S7/S8/S9 (reactive)
+- 第二次 prompt = 提醒我這不只是 retroactive patch 問題
+- 需要 systemic enforcement mechanism
+
+### Enforcement Checklist（每次新策略嘗試必走）
+
+**Pre-conversation checklist（在 chat 給用戶任何訊息之前）**：
+```
+[ ] 我有沒有先給用戶 4 段策略內容說明？
+[ ] 是否有跳過任何一段（內容 / 優點 / 缺點 / 為什麼合適）？
+[ ] Pre-W0 Gate 1 / 2 是否在 Stage -1 之後才做？
+[ ] 任何 W0 Python pre-verify 是否在 Stage -1 之後才做？
+[ ] commit message 是否 explicitly 標註 Stage -1 完成？
+```
+
+**如果任一 ❌ → STOP**，回頭補。**不能繼續往下做。**
+
+### Anti-pattern 識別
+
+❌ "為了效率跳過 user explanation"
+❌ "用戶會自己看 verdict 文件"
+❌ "策略已經 KILL 了，補 explanation 不重要"
+❌ "SOP v2 自動化證明可以快速 KILL，所以省 user-facing layer"
+
+✅ "Stage -1 是用戶 informed-decision 權，不可省略"
+✅ "效率提升不能以犧牲 user accountability 為代價"
+✅ "KILL 之前用戶必須完整理解策略"
+✅ "Verdict 文件是 audit trail，不是 user explanation 的替代品"
+
+### 文化層面的核心原則
+
+**Institutional 級量化研究**有個鐵律：
+> "Never make a decision the user couldn't explain to their board."
+
+用戶不知道策略內容就 KILL → 等於 board 問起時用戶答不出來。  
+這是 institutional malpractice，比 alpha 死亡更嚴重。
+
+---
+
 ---
 
 # 三、Pre-W0 Gates（**原核心貢獻**）
