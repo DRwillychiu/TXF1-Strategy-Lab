@@ -7,6 +7,53 @@
 
 ---
 
+## Stage -1: 策略內容說明（**2026-06-21 retroactively added per user instruction**）
+
+> 用戶 2026-06-21 sharp 反饋：「我都不知道策略在幹嘛，你就否決」
+> SOP v2 已加入 Stage -1 必走規則。本 verdict 補上 Stage -1。
+
+### 策略內容（roadmap §9.3 S8）
+```
+類型: Event-driven cross-asset fade
+
+前置:
+  - 建立 FOMC + ECB + BoJ 公布日曆 CSV (每年 ~24 events)
+
+進場規則:
+  - FOMC 公布日 (台灣時間 02:00 ET = 02:00 TW)
+  - 在 02:30 偵測 02:00-02:15 bar 變動
+  - 若 |變動| > 0.5% → fade direction (反向進場)
+    - bar 漲 → TXF1 夜盤 short
+    - bar 跌 → TXF1 夜盤 long
+
+出場規則:
+  - 1×ATR target (profit)
+  - 1.5×ATR stop (loss)
+  - 05:00 強制平倉
+
+樣本: 8 FOMC/yr × 28y = ~225 trades (邊際但充足)
+```
+
+### 優點
+- Event-driven 邏輯清楚 (FOMC 大事件必有 over-reaction)
+- Fade 方向 (修正 S5 follow microstructure 錯誤)
+- 純 TXF1 夜盤 native, MC12 PASS
+- Portfolio 缺口 (既有無 event-driven sleeve)
+- 跟 S1 night session ρ 低 (S1 動量 long / S8 event fade)
+- 1997-2014 alpha 真的存在 (Sharpe +0.32 to +3.35)
+
+### 缺點
+- 樣本邊際 (8/yr × 28y = 225)
+- 跨資產 microstructure (TWII 開盤已吸收 FOMC)
+- **2015 後 alpha 完全反向** (Sharpe -1.241, -1.962)
+- FOMC 排程需手動維護 (operational layer)
+- 夜盤流動性差，滑價可能 2-3× 日盤
+
+### 為什麼不合適（**一段話**）
+**S8 是今天 7 個 KILL 中最複雜也最危險的失效模式：alpha 在 1997-2014 期間真實存在且極強（Dot-com Sharpe +2.20 / China bull +1.23 / GFC +3.35 / Post-GFC +0.32），28-year aggregated Sharpe +0.686 / PF 1.368 看起來輕鬆通過 institutional gates；但 2015 後 alpha 完全 sign-flip 反向（2015-2019 Sharpe -1.241, 2020-2026 Sharpe -1.962），recent / long ratio = 負 2.99 倍，按 28y 數字部署將連虧 11 年並越虧越多。失效機制：HFT/algo 成熟後 fade trade 已被套利消化、TWII 機構化後反應 efficient、Fed 政策可預測性提高 → 散戶情緒化 over-reaction 消失。這個案例催生最重要的 L23：「Sign flip 比 magnitude decay 更危險」— 不能只看 28y aggregated number，必須 sub-period sign check，因為 aggregated 平均能掩蓋早期巨大 alpha 與近期完全反向的真相。**
+
+---
+
 ## 一、為什麼 KILL — 一句話總結
 
 > **S8 fade 邏輯在 1997-2014 是強 alpha（Sharpe 1.23-3.35），但 2015 之後**完全反向**

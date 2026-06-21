@@ -7,6 +7,50 @@
 
 ---
 
+## Stage -1: 策略內容說明（**2026-06-21 retroactively added per user instruction**）
+
+> 用戶 2026-06-21 sharp 反饋：「我都不知道策略在幹嘛，你就否決」
+> SOP v2 已加入 Stage -1 必走規則。本 verdict 補上 Stage -1。
+
+### 策略內容（roadmap §9.3 S7）
+```
+類型: 純 calendar / event-driven Long-only
+
+進場規則:
+  - 偵測月份的第 3 個週三 (期貨結算日)
+  - 該日 08:50 進場做多 (TXF1 day-session 開盤後 5 分鐘)
+  - Filter: 前一日 close > 過去 5 日 SMA (uptrend confirmation)
+
+出場規則:
+  - 10:00 強制平倉 (持倉約 1 小時 10 分)
+  - 或 1×ATR stop loss
+  - 不持夜，不持隔日
+
+樣本: 12 trades/year × 28y = ~340 trades
+TAG: EVENT_DRIVEN_EXEMPT (需 Constitution amendment)
+```
+
+### 優點
+- 純 calendar 邏輯，~80 LOC
+- 純 TXF1 native, MC12 PASS
+- 樣本充足 12/yr × 28y = 340 trades
+- Operational coherence (標準 day-session)
+- 學術文獻支持「結算前主力推升」現象
+- 邏輯直觀，散戶都聽過
+
+### 缺點
+- 教科書級公開效應 (流傳 ≥ 10 年, algo 套利)
+- 08:50 即進場無法判斷當日 regime
+- 大空頭日 + uptrend filter 仍可能 long-trapped
+- 持倉 1hr 10min 滑價佔比高
+- 類似 L4 retire 證明 single-event 多單 hedge 也不必要
+- EVENT_DRIVEN_EXEMPT amendment 需 user sign-off
+
+### 為什麼不合適（**一段話**）
+**「結算日多單」是台股期貨教科書級眾所周知的公開 anomaly（流傳 ≥ 10 年），TXF1 28 年 (1997-2026) 實證直接打臉這個直覺：6/6 macro regime **全部 Sharpe < 0.3**（最佳 1997-2002 +0.007，最差 2008-2009 GFC -0.924），整體 28y Sharpe -0.308 / PF 0.749 / WR 45.6% / Cum -8.13%。180 個 trades 樣本充足，不是樣本量問題；是「alpha 已被市場效率徹底消化」的結構性死亡。這精準驗證 L16 預警「教科書策略 default 視為 alpha 已衰減」。L22 lesson 由此誕生：calendar effects (S4 月末 + S7 結算日) 在 TWII/TXF1 系統性失效，未來不再追 calendar 類策略。**
+
+---
+
 ## 一、為什麼 KILL — 一句話總結
 
 > **「3rd Wed 結算日 08:50 進場做多 + uptrend filter」在 TWII 28 年 (1997-2026) 實證
