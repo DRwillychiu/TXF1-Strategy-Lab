@@ -113,6 +113,16 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
       成本分析、Operational risk、法規 / 帳戶限制
     - 任一維度 fail → 不可上 live_simulation
     - 即使是 1-line input 改動，也須評估這 10 維度的變化
+14. **★ 強制規範**：策略開發必須嚴格按照 OFFICIAL_ROADMAP.md 排程，不可發明新策略名稱
+    - 詳見 [docs/OFFICIAL_ROADMAP.md](docs/OFFICIAL_ROADMAP.md)
+    - 原始排程：S2 InsideBarBreak / **S3 VolSqueeze** / S4 MACDDivergence / S5 SettlementWeek /
+      S6 FlashCrashMomentum / S7 BullPullbackLong / S8 BearBounceSell / S9 VolExplosion /
+      S10 AdaptiveBreakout / S11-S15
+    - **不允許**：發明新策略名稱（如 RapidPullbackShort / TurnOfMonth / SPX_Overnight 等）
+    - **不允許**：跳號（S3 完成必直接進 S4 MACDDivergence）
+    - **不允許**：平行開發（一次只開發一隻 S）
+    - 每隻策略必有 W0 Alpha Pre-verify (Python 真實資料) → 才寫 .pla
+    - 違反本規則 = 違反用戶 2026-06-22 明確指示
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
