@@ -27,19 +27,27 @@
 |------|------|---------|------|------|---------|--------|---------|---------|---------|-------|------|--------|
 | B01 | S1 | NightMomentum | ★純做多 | 15M | +1,997,000 | 1.448 | -278,800 | ~12.4 | 🟢 **live_sim** | 4/4 | **MC12 部署，模擬中** | 🥇 高 |
 | B01 | S2 | InsideBarBreak | ★雙向(MA) | 30M+D | +791,754 | 4.61 | -63,879 | 0.5 | ⛔ **KILLED 2026-06-22** | 2/4 | **alpha 已死，archive 歸檔** | — |
-| B01 | S3 | VolSqueeze | ★雙向 | 60M | -115,622 | 0.88 | -645,467 | 0.5 | 🔵 **CURRENT — W0 Pre-verify 開始** | 0/4 | **2026-06-22 啟動原始排程** | 🥇 當前 |
-| B01 | S4 | MACDDivergence | ★雙向逆勢 | 60M | +38,000 | — | 0 | 0.03 | ⏳ Queue（S3 後） | 0/4 | — | 🥈 next |
-| B01 | S5 | SettlementWeek | ★空/多 | 日線 | -367,000 | 0.60 | -451,000 | 1.2 | ⏳ Queue | 0/4 | — | ⚠️ 高風險 |
-| B02 | S6 | FlashCrashMomentum | ★做空 | 5M | -1,674,550 | 0.73 | -2,211,835 | 2.5 | 🔴 未開始 | 0/4 | — | 🥈 中(需5M) |
-| B02 | S7 | BullPullbackLong | ★做多 | 15M+D | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | 🥉 低(需15M) |
-| B02 | S8 | BearBounceSell | ★做空 | 15M+D | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | 🥉 低(需15M) |
-| B02 | S9 | VolExplosion | ★雙向 | 5M | 0 | — | 0 | — | 🔴 未開始 | 0/4 | — | ⚠️ 需5M |
-| B02 | S10 | AdaptiveBreakout | ★雙向 | 30M | +5,533,942 | 1.66 | -943,544 | 4.0 | 🔴 未開始 | 0/4 | — | 🥇 高 |
-| B03 | S11 | MiddayCompression | ★做多 | 45M | +639,782 | 2.28 | -195,541 | 0.4 | 🔴 未開始 | 0/4 | — | 🥈 中 |
-| B03 | S12 | WeekdayMomentum | ★雙向 | 日線 | -115,128 | 0.90 | -381,827 | 1.1 | 🔴 未開始 | 0/4 | — | 🥉 低(基線虧損) |
-| B03 | S13 | VolCollapseShort | ★做空 | 30M | +65,070 | 1.58 | -86,798 | 0.1 | 🔴 未開始 | 0/4 | — | ⚠️ 低頻 |
-| B03 | S14 | TripleTFTrend | ★雙向 | 15M | +2,457,619 | 1.86 | -820,336 | 1.2 | 🔴 未開始 | 0/4 | — | 🥇 高 |
-| B03 | S15 | BBReversion | ★雙向 | 60M | +934,134 | 9.03 | -67,642 | 0.2 | 🔴 未開始 | 0/4 | — | ⚠️ PF異常高 |
+| B01 | **S3_L** | **VolSqueezeLong** | **★純多** | **60M** | -115,622 | 0.88 | -645,467 | 0.5 | 🔵 **CURRENT — W0 Pre-verify** | 0/4 | **2026-06-22 啟動 Sx_L/Sx_S 拆解** | 🥇 當前 |
+| B01 | S3_S | VolSqueezeShort | ★純空 | 60M | — | — | — | — | ⏳ Queue（S3_L 後） | 0/4 | — | 🥈 next |
+| B01 | S4_L | MACDDivergenceLong | ★純多逆勢 | 60M | +38,000 | — | 0 | 0.03 | ⏳ Queue | 0/4 | — | 🥉 後 |
+| B01 | S4_S | MACDDivergenceShort | ★純空逆勢 | 60M | — | — | — | — | ⏳ Queue | 0/4 | — | 🥉 後 |
+| B01 | S5_L | SettlementWeekLong | ★結算後多 | 日線 | — | — | — | — | ⏳ Queue | 0/4 | — | ⚠️ 高風險 |
+| B01 | S5_S | SettlementWeekShort | ★結算前空 | 日線 | — | — | — | — | ⏳ Queue | 0/4 | — | ⚠️ 高風險 |
+| B02 | S6 | FlashCrashMomentum | ★純空 | 5M | -1,674,550 | 0.73 | -2,211,835 | 2.5 | ⏳ Queue | 0/4 | 不拆（原已純空） | 🥈 中(需5M) |
+| B02 | S7 | BullPullbackLong | ★純多 | 15M+D | 0 | — | 0 | — | ⏳ Queue | 0/4 | 不拆（原已純多） | 🥉 低(需15M) |
+| B02 | S8 | BearBounceSell | ★純空 | 15M+D | 0 | — | 0 | — | ⏳ Queue | 0/4 | 不拆（原已純空） | 🥉 低(需15M) |
+| B02 | S9_L | VolExplosionLong | ★純多 | 5M | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | ⚠️ 需5M |
+| B02 | S9_S | VolExplosionShort | ★純空 | 5M | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | ⚠️ 需5M |
+| B02 | S10_L | AdaptiveBreakoutLong | ★純多 | 30M | +5,533,942 | 1.66 | -943,544 | 4.0 | ⏳ Queue | 0/4 | 拆解 | 🥇 高 |
+| B02 | S10_S | AdaptiveBreakoutShort | ★純空 | 30M | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | 🥇 高 |
+| B03 | S11 | MiddayCompression | ★純多 | 45M | +639,782 | 2.28 | -195,541 | 0.4 | ⏳ Queue | 0/4 | 不拆（原已純多） | 🥈 中 |
+| B03 | S12_L | WeekdayMomentumLong | ★純多 | 日線 | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | 🥉 低 |
+| B03 | S12_S | WeekdayMomentumShort | ★純空 | 日線 | -115,128 | 0.90 | -381,827 | 1.1 | ⏳ Queue | 0/4 | 拆解（基線虧損） | 🥉 低 |
+| B03 | S13 | VolCollapseShort | ★純空 | 30M | +65,070 | 1.58 | -86,798 | 0.1 | ⏳ Queue | 0/4 | 不拆（原已純空） | ⚠️ 低頻 |
+| B03 | S14_L | TripleTFTrendLong | ★純多 | 15M | +2,457,619 | 1.86 | -820,336 | 1.2 | ⏳ Queue | 0/4 | 拆解 | 🥇 高 |
+| B03 | S14_S | TripleTFTrendShort | ★純空 | 15M | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | 🥇 高 |
+| B03 | S15_L | BBReversionLong | ★純多 | 60M | +934,134 | 9.03 | -67,642 | 0.2 | ⏳ Queue | 0/4 | 拆解 | ⚠️ PF異常 |
+| B03 | S15_S | BBReversionShort | ★純空 | 60M | — | — | — | — | ⏳ Queue | 0/4 | 拆解 | ⚠️ PF異常 |
 
 ### 狀態圖例
 - 🔴 未開始
@@ -169,3 +177,5 @@
 | 2026-06-20 | 部署 | S3 RapidPullbackShort | v2.0.4 部署 live_simulation（off-roadmap 但保留） |
 | 2026-06-22 | KILLED | S2 InsideBarBreak | alpha 已死，archive 歸檔 |
 | 2026-06-22 | 🔵啟動 | S3 VolSqueeze | **回歸原始 batch01 排程，W0 Pre-verify 待開始** |
+| 2026-06-22 | 拆解規則生效 | S3-S15 雙向策略 | **Rule R-6：Sx_L / Sx_S 命名，先 L 後 S。Queue 從 13 隻擴為 21 隻** |
+| 2026-06-22 | 改名 | S3 → **S3_L VolSqueezeLong** | 純多單，短邊由 S3_S 接續 |

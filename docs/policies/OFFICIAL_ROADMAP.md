@@ -25,33 +25,65 @@
 
 ---
 
-## 二、原始排程（不可變更）
+## 二、原始排程（拆解後，2026-06-22 用戶決策 Sx_L / Sx_S）
 
-### Batch 01 — S2-S5（已遷移）
+### 拆解規則
+
+| 原始策略方向 | 拆解 | 命名 |
+|-------------|------|------|
+| 雙向（多+空） | 拆 2 隻 | `Sx_L`（純多）+ `Sx_S`（純空） |
+| 純多 | 不拆 | `Sx`（保持原名） |
+| 純空 | 不拆 | `Sx`（保持原名） |
+| 結算/日曆雙向 | 拆 2 隻 | `Sx_L` + `Sx_S` |
+
+**開發順序鐵則**：**一律 L 先、S 後**（TXF1 2020-2026 偏多 regime，Long 驗證較快）。
+
+### Batch 01 — S2-S5（拆解後）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| S2 | InsideBarBreak | B 價格結構 | 30M + 日線 | 雙向 | ⚰️ KILLED in research (alpha 已死) |
-| **S3** | **VolSqueeze** | **C 波動率** | **60M** | **雙向** | 🔵 **CURRENT — 開發中** |
-| S4 | MACDDivergence | D 動量逆勢 | 60M | 雙向 | ⏳ NEXT after S3 |
-| S5 | SettlementWeek | E 統計 | 日線 | 結算前空/後多 | ⏳ Queue |
+| ~~S2~~ | ~~InsideBarBreak~~ | B 價格結構 | 30M + 日線 | 雙向 | ⚰️ KILLED 2026-06-22 |
+| **S3_L** | **VolSqueezeLong** | **C 波動率** | **60M** | **純多** | 🔵 **CURRENT — W0 Pre-verify** |
+| S3_S | VolSqueezeShort | C 波動率 | 60M | 純空 | ⏳ Next after S3_L |
+| S4_L | MACDDivergenceLong | D 動量逆勢 | 60M | 純多 | ⏳ Queue |
+| S4_S | MACDDivergenceShort | D 動量逆勢 | 60M | 純空 | ⏳ Queue |
+| S5_L | SettlementWeekLong | E 統計 | 日線 | 結算後做多 | ⏳ Queue |
+| S5_S | SettlementWeekShort | E 統計 | 日線 | 結算前做空 | ⏳ Queue |
 
-### Batch 02 — S6-S10（指數位階論系列，2026-06-07）
-| # | 策略名稱 | 動機 | 狀態 |
-|---|---------|------|------|
-| S6 | FlashCrashMomentum | 閃崩動量做空 | ⏳ Queue |
-| S7 | BullPullbackLong | 多頭回檔抄底 | ⏳ Queue |
-| S8 | BearBounceSell | 空頭反彈放空 | ⏳ Queue |
-| S9 | VolExplosion | 波動爆發 | ⏳ Queue |
-| S10 | AdaptiveBreakout | 自適應突破 | ⏳ Queue |
+### Batch 02 — S6-S10（拆解後）
+| # | 策略名稱 | 主週期 | 方向 | 狀態 |
+|---|---------|--------|------|------|
+| S6 | FlashCrashMomentum | 5M | 純空（原已是） | ⏳ Queue |
+| S7 | BullPullbackLong | 15M + 日線 | 純多（原已是） | ⏳ Queue |
+| S8 | BearBounceSell | 15M + 日線 | 純空（原已是） | ⏳ Queue |
+| S9_L | VolExplosionLong | 5M | 純多 | ⏳ Queue |
+| S9_S | VolExplosionShort | 5M | 純空 | ⏳ Queue |
+| S10_L | AdaptiveBreakoutLong | 30M | 純多 | ⏳ Queue |
+| S10_S | AdaptiveBreakoutShort | 30M | 純空 | ⏳ Queue |
 
-### Batch 03 — S11-S15（2026-06-07，多策略類型擴展）
+### Batch 03 — S11-S15（拆解後）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| S11 | MiddayCompression | A 時段型 | 45M | 多 | ⏳ Queue |
-| S12 | WeekdayMomentum | E 統計型 | 日線 | 雙向 | ⏳ Queue |
-| S13 | VolCollapseShort | C 波動率型 | 30M | 空 | ⏳ Queue |
-| S14 | TripleTFTrend | F 多時間框架 | 15M | 雙向 | ⏳ Queue |
-| S15 | BBReversion | B 價格結構 | 60M | 雙向 | ⏳ Queue |
+| S11 | MiddayCompression | A 時段型 | 45M | 純多（原已是） | ⏳ Queue |
+| S12_L | WeekdayMomentumLong | E 統計型 | 日線 | 純多 | ⏳ Queue |
+| S12_S | WeekdayMomentumShort | E 統計型 | 日線 | 純空 | ⏳ Queue |
+| S13 | VolCollapseShort | C 波動率型 | 30M | 純空（原已是） | ⏳ Queue |
+| S14_L | TripleTFTrendLong | F 多時間框架 | 15M | 純多 | ⏳ Queue |
+| S14_S | TripleTFTrendShort | F 多時間框架 | 15M | 純空 | ⏳ Queue |
+| S15_L | BBReversionLong | B 價格結構 | 60M | 純多 | ⏳ Queue |
+| S15_S | BBReversionShort | B 價格結構 | 60M | 純空 | ⏳ Queue |
+
+### 總計
+
+- **原始排程**：13 隻策略（部分雙向）
+- **拆解後**：**21 個開發單位**（不含已 KILLED 的 S2）
+- **預估完成時程**：每隻 5-7 工作日 → 約 4-5 個月（KILL 加速時程縮短）
+
+### 完整開發順序（嚴守，不跳號）
+
+```
+S3_L → S3_S → S4_L → S4_S → S5_L → S5_S → S6 → S7 → S8 → S9_L → S9_S
+  → S10_L → S10_S → S11 → S12_L → S12_S → S13 → S14_L → S14_S → S15_L → S15_S
+```
 
 ---
 
@@ -100,7 +132,13 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 - 此規則防止 S3 RapidPullbackShort 失敗模式（設計超前實證）
 
 ### 規則 R-5：完成一隻才進下一隻
-不平行開發。S3 沒結束（晉升 OR KILL）不能碰 S4。
+不平行開發。S3_L 沒結束（晉升 OR KILL）不能碰 S3_S。S3_S 沒結束不能碰 S4_L。
+
+### 規則 R-6：雙向策略必拆解為 Sx_L / Sx_S（2026-06-22 用戶決策）
+- 原始排程屬於雙向（多+空）的策略，**必須**拆解為純多 (`Sx_L`) 與純空 (`Sx_S`) 兩隻獨立策略
+- 開發順序：**先 L 後 S**（不可顛倒）
+- 每隻獨立走完 W0-W6，獨立 FINAL_VERDICT.md
+- 已預先拆解列表見上方第二節 21 個單位
 
 ---
 
@@ -108,11 +146,22 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 
 | 階段 | 狀態 |
 |------|------|
-| S3 VolSqueeze | 📋 W0 Pre-verify 待開始 |
-| S4 MACDDivergence | ⏳ Queue（S3 結束後） |
-| S5 SettlementWeek | ⏳ Queue |
-| S6-S10 | ⏳ Queue |
-| S11-S15 | ⏳ Queue |
+| **S3_L VolSqueezeLong** | 🔵 **W0 Pre-verify 啟動中** |
+| S3_S VolSqueezeShort | ⏳ Queue (S3_L 結束後) |
+| S4_L MACDDivergenceLong | ⏳ Queue |
+| S4_S MACDDivergenceShort | ⏳ Queue |
+| S5_L SettlementWeekLong | ⏳ Queue |
+| S5_S SettlementWeekShort | ⏳ Queue |
+| S6, S7, S8 (純向，不拆) | ⏳ Queue |
+| S9_L, S9_S | ⏳ Queue |
+| S10_L, S10_S | ⏳ Queue |
+| S11 (純多，不拆) | ⏳ Queue |
+| S12_L, S12_S | ⏳ Queue |
+| S13 (純空，不拆) | ⏳ Queue |
+| S14_L, S14_S | ⏳ Queue |
+| S15_L, S15_S | ⏳ Queue |
+
+**剩餘開發單位**：21 隻（含當前 S3_L）
 
 ---
 
@@ -123,3 +172,6 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 | 2026-06-22 | 鎖定原始 batch01-03 排程 | 桌機端偏離排程造成 100% kill rate 假象，必須回正 |
 | 2026-06-22 | S3 RapidPullbackShort 視為「歪打正著」生產品保留 live_simulation | 已部署成功，不重做，但編號歸還 VolSqueeze |
 | 2026-06-22 | S2 InsideBarBreak KILL 永久成立 | alpha 已死，無需重做 |
+| 2026-06-22 | **Sx_L / Sx_S 拆解規則生效**（R-6） | 用戶偏好純多 / 純空分開規劃，避免互相干擾統計 |
+| 2026-06-22 | **開發順序鐵則：先 L 後 S** | TXF1 2020-2026 偏多 regime，Long 驗證較快 |
+| 2026-06-22 | S3 改為 **S3_L VolSqueezeLong**，短邊由 S3_S 接續 | 對應 Sx_L / Sx_S 新規則 |
