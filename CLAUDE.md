@@ -11,63 +11,92 @@
 - 回測區間：2020/01/01 ~ 今天
 - 交易時段：日盤 08:45-13:45 / 夜盤 15:00-05:00
 
-## 目錄結構（三層分類，2026-06-13 重組）
+## 目錄結構（2026-06-22 深度整理）
 ```
-CLAUDE.md                          # 本檔案 - Claude Code 的專案指引
-strategies/
-  live/                            # 實盤上架（真金白銀）— L1-L5
-    README.md                      # 上架策略清單 + 共通保護模組
-    L1_TrendLong.pla
-    L2_TrendShort.pla
-    L3_ConsolidationLong.pla
-    L4_ConsolidationShort.pla
-    L5_BreakoutLong.pla
-    L*_annotated.md
-    L*_review.md
-  live_simulation/                 # 上架但模擬中（MC12 模擬帳戶）— S1
-    README.md                      # 模擬中策略 + 晉升 live 條件
-    S1_NightMomentum.pla
-    S1_NightMomentum_annotated.md
-  research/                        # 研究中（未通過 P1-P3）— S2-S15
-    README.md                      # 研究流程 + 晉升模擬條件
-    batch01/                       # 第一批：S2-S5
-    S06_FlashCrashMomentum/        # 各自獨立資料夾
-    ... (S07-S15)
-    _batch_summaries/
-backtest/
-  fetch_data.py                    # 資料抓取（yfinance ^TWII）
-  run_backtest.py                  # 批次回測腳本
-  twii_daily.csv                   # TAIEX 日線資料快取
-  optimize/                        # 參數優化腳本
-    walk_forward.py                # Walk-Forward 優化框架
-    monte_carlo.py                 # Monte Carlo 模擬
-    param_sensitivity.py           # 參數敏感度分析
-  results/                         # 優化結果
-optimization/
-  configs/                         # 各策略的優化設定 YAML
-  reports/                         # 優化報告輸出
-scripts/
-  verify_all_live.py               # ★ Master 跨策略驗證（L1-L5）110 項
-  verify_l4_v142.py                # L4 深度驗證 67 項
-  verify_s1_v22.py                 # S1 模擬上架驗證 26 項
-  analyze_l5_v198_variants.py      # L5 v19.8 A/B 分析
-  export_to_mc.py                  # 匯出 PowerLanguage 原始碼供 MC 載入
-  strategy_comparison.py           # 策略組合分析
-docs/
-  SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # ★ 結算日策略設計憲法 v1.1（強制位階）
-  settlement_flat_module_20260617.md     # Settlement_Flat 模組詳細設計
-  settlement_flat_flow_diagram.svg       # 結算日完整決策流程圖
-  settlement_flat_backtest_validation_20260617.md  # 6 隻策略真實回測深度驗證
-  strategy_classification_decision_matrix.svg      # ★ 策略分類×Settlement 角色決策矩陣
-  entry_exit_sop.md                # 9 層出場架構標準
-  position_sizing_and_capacity.md  # 口數配置框架
-  L4_v142_pathA_entry_diagnostic.md   # L4 A/B Path A 完整診斷
-  L4_v142_pathB_variant_matrix.md     # L4 A/B Path B 變體設計
-  L4_v142_variant_results.md          # L4 A/B 七變體實證結果
-  L5_v198_pretrail_sp_design.md       # L5 SP 模組設計
-  L5_v198_variant_results.md          # L5 A/B 六變體實證結果
-  optimization_opportunities_2026Q2.md  # 優化空間清單
-  optimization_guide.md            # 優化方法論文件
+CLAUDE.md                          # 本檔（14 條強制規範）
+README.md                          # 專案總覽
+.gitignore
+
+strategies/                        # 策略原始碼三層分類
+├── live/                          # MC9 實盤（真金白銀）
+│   ├── README.md
+│   ├── L1_TrendLong.pla / _annotated.md / _review.md
+│   ├── L2_TrendShort.pla / _annotated.md / _review.md
+│   ├── L3_ConsolidationLong.pla / _annotated.md / _review.md
+│   ├── L4_ConsolidationShort.pla / _annotated.md
+│   └── L5_BreakoutLong.pla / _annotated.md / _review.md
+├── live_simulation/               # MC12 模擬中
+│   ├── README.md
+│   ├── S1_NightMomentum.pla / _annotated.md
+│   └── S3_RapidPullbackShort.pla / _annotated.md   # 2026-06-20 部署
+└── research/                      # 研究中（雙軌）
+    ├── README.md
+    ├── S03_VolSqueeze/            # ★ CURRENT — 原始排程
+    ├── 2026-W24/                  # 軌道 B：每週批次（Cowork 自動）
+    └── archive/                   # 歷史與 off-roadmap
+        ├── batch01_S2-S5/         # 原始排程雛形
+        ├── batch02_S6-S10/
+        ├── batch03_S11-S15/
+        ├── S02_InsideBarBreak_killed_20260622/
+        ├── S03_RapidPullbackShort_archived_20260622/
+        ├── offRoadmap_2026Q2_killed/    # S4-S9 偏離排程
+        └── _temp_offRoadmap_2026Q2/
+
+docs/                              # 機構級文件分類（data-analyst 規範）
+├── README.md                      # 文件索引
+├── policies/                      # ★ 強制規範（合規層）
+│   ├── OFFICIAL_ROADMAP.md        # Rule #14 排程鎖定
+│   ├── SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # Rule #11
+│   ├── P3b_immediate_stop_guard_design_20260618.md  # Rule #12
+│   ├── institutional_risk_framework_20260619.md  # Rule #13
+│   ├── settlement_flat_module_20260617.md
+│   ├── settlement_flat_flow_diagram.svg
+│   ├── settlement_flat_backtest_validation_20260617.md
+│   └── strategy_classification_decision_matrix.svg
+├── methodology/                   # 流程 SOP
+│   ├── entry_exit_sop.md
+│   ├── claude_code_workflow.md
+│   ├── cowork_sync_prompt.md
+│   └── position_sizing_and_capacity.md
+├── research/                      # 主題研究 / theses
+│   ├── index_level_thesis.md
+│   ├── structural_issues_review_20260618.md
+│   └── optimization_opportunities_2026Q2.md
+├── strategy_archive/              # 既有策略歷史演進
+│   ├── L4_v142_*.md
+│   ├── L5_v198_*.md
+│   ├── S1_v23_*.md / v24_*.md
+│   └── range_force_exit_*.md
+└── archive/                       # 歸檔（off-roadmap、舊 handoffs）
+    ├── handoffs/
+    └── offRoadmap_2026Q2/         # 22 個偏離排程文件
+
+optimization/                      # 原始 ROADMAP 追蹤系統
+├── README.md
+├── TRACKER.md                     # S1-S15 master 進度表
+└── logs/                          # 每隻策略 Phase 1-4 詳細紀錄
+    ├── B01_S1_NightMomentum.md   # 🟢 已部署
+    ├── B01_S3_VolSqueeze.md      # 🔵 CURRENT
+    ├── B01_S4_MACDDivergence.md  # ⏳ next
+    └── ... (共 16 個 log)
+
+scripts/                           # 驗證 / 分析腳本
+├── README.md
+├── verify_all_live.py             # ★ Master 跨策略驗證 110 項
+├── verify_l1-l5_immediate_stop.py # Rule #12 驗證
+├── verify_settlement_*.py         # Rule #11 驗證
+├── verify_s1_v22-v26.py
+└── analyze_l5_v198_variants.py
+
+backtest/                          # ⚠️ Python 日線代理（DEPRECATED）
+├── README.md
+├── run_backtest.py                # ⚠️ DEPRECATED
+├── fetch_data.py
+├── twii_daily.csv
+├── results_batch01.json           # 原始基線證據
+├── results_batch02.json
+├── optimize/                      # Walk-Forward / Monte Carlo 框架
+└── results/s1_optimization/       # S1 視覺化結果
 ```
 
 ## 三層晉升流程

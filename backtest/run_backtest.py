@@ -1,8 +1,29 @@
 """
+=============================================================
+  DEPRECATED — DO NOT USE FOR NEW STRATEGY DECISIONS.
+=============================================================
+
+  Reason: This script uses ^TWII daily proxy (not real TXF1
+  tick data), hard-coded /tmp/ path, and skips MC engine
+  semantics (IOG, SetStopLoss, etc).
+
+  Kept as HISTORICAL RECORD of the original 2026-06-07
+  S1-S5 baseline. Real backtests run on MultiCharts 12.
+
+  Replacement workflow: see optimization/TRACKER.md
+  and docs/methodology/entry_exit_sop.md
+
+  Last meaningful use: 2026-06-07 baseline generation
+=============================================================
+
 Simplified backtester for 5 TXF1 strategies using daily TAIEX data.
 Simulates core logic of each strategy on daily bars.
 Contract multiplier: 200 NTD/pt, Slippage: 1000 NTD round-trip, 1 lot.
 """
+import sys
+print("ERROR: run_backtest.py is DEPRECATED. See backtest/README.md")
+print("       Use MultiCharts 12 for real backtests, not Python daily proxy.")
+sys.exit(2)
 import pandas as pd
 import numpy as np
 import json

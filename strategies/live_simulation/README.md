@@ -5,11 +5,12 @@
 
 ---
 
-## 模擬中策略清單（截至 2026-06-13）
+## 模擬中策略清單（截至 2026-06-22）
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 模擬起始 |
 |------|------|------|------|----------|----------|
-| **S1** NightMomentum | A 類時段型 | 純多 | **v2.2 + HolidayFlat_v3 + ExitTime BugFix** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
+| **S1** NightMomentum | A 類時段型 | 純多 | **v2.6 + Settlement + ImmediateStop + HolidayFlat_v3** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
+| **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 
 ---
 
