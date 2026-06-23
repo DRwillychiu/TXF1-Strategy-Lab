@@ -13,8 +13,8 @@
   CREATED 2026-06-22
     From OFFICIAL_ROADMAP.md (docs/policies/OFFICIAL_ROADMAP.md)
     Source spec: strategies/research/archive/batch01_S2-S5/TXF1_Strategies_Batch01.md S3 VolSqueeze
-    R-6 split (2026-06-22): original bi-directional → Sx_L pure long + Sx_S pure short
-    Order rule: L first, S second (TXF1 2020-2026 偏多 regime)
+    R-6 split (2026-06-22): original bi-directional -> Sx_L pure long + Sx_S pure short
+    Order rule: L first, S second (TXF1 2020-2026 bullish regime)
     This file is the L (long) version; S3_S VolSqueezeShort follows in next phase.
 
   CHANGELOG:
@@ -41,9 +41,9 @@
     Bollinger BandWidth (BBW) compressed to 20-percentile of past 120 periods
     = volatility squeeze, statistically anticipates expansion.
     Long entry: Squeeze condition + Close > Upper Band (upward breakout).
-    Theory: vol cycle expansion → directional follow-through.
+    Theory: vol cycle expansion -> directional follow-through.
 
-    Archive 雙向 PF 0.88 in daily proxy (not 60M); archive note explicitly
+    Archive bi-directional PF 0.88 in daily proxy (not 60M); archive note explicitly
     warns "60M behavior differs". MC12 60M backtest is the truth gate.
 
   PARAMETERIZATION:
@@ -95,13 +95,13 @@
   ============================================================ }
 
 inputs:
-    { ===== Bollinger Bands (核心 squeeze 偵測) ===== }
+    { ===== Bollinger Bands (core squeeze detection) ===== }
     BBLen                     ( 45    ),   { Phase 3 best; range 35..55 plateau confirmed }
     BBStd                     ( 2.0   ),   { Locked; not optimized this run }
     BWLookback                ( 120   ),   { Locked; not optimized this run }
     BWPctile                  ( 30    ),   { Phase 3 best; range 20..35 plateau confirmed }
 
-    { ===== ATR (停損 / 停利 anchor) ===== }
+    { ===== ATR (stop / target anchor) ===== }
     ATR_Len                   ( 14    ),   { Locked; not optimized this run }
     StopATRMult               ( 2.75  ),   { Phase 2 best plateau (P2 confirmed) }
     TargetATRMult             ( 8.0   ),   { Phase 3 best; UPPER EDGE (range 5.5..8.0), Mid exit 37% }
@@ -432,8 +432,8 @@ end;
     P0-2  LX_VS_RegistryEnd   (registry expired)
     P0-3  LX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
     P0-4  LX_VS_Settlement    (settlement day + Settlement_Flat_Time)
-    S-1   LX_VS_TP            (ATR × 3 target, limit)
-    S-2   LX_VS_Mid           (mid-band exit, ≥3 bars after entry)
+    S-1   LX_VS_TP            (ATR x 3 target, limit)
+    S-2   LX_VS_Mid           (mid-band exit, >=3 bars after entry)
     S-3   LX_VS_TimeStop      (40 bars max hold)
     S-4   LX_VS_SL            (Frozen SL backup, BuyToCover at v_SL_Level Stop)
     (SL primary handled by SetStopLoss engine in Section 9)
@@ -480,7 +480,7 @@ if MarketPosition = 1 then begin
     { ---- Strategy exits ---- }
     if ExitFired = 0 then begin
 
-        { S-1: TP at ATR × 3 (limit, favorable to long = higher price) }
+        { S-1: TP at ATR x 3 (limit, favorable to long = higher price) }
         sell( "LX_VS_TP" ) next bar at EntryPrice + v_TargetDist limit;
 
         { S-2: Mid-band exit (only after MidExit_MinBars bars) }
