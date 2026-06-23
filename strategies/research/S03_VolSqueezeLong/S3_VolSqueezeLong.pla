@@ -2,7 +2,7 @@
   S3_L - VOLATILITY SQUEEZE LONG STRATEGY
   Signal Name : S3_VolSqueezeLong
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeLong
-  Version     : v1.1  (2026-06-22 evening — Phase 3 best params locked in)
+  Version     : v1.1  (2026-06-22 evening - Phase 3 best params locked in)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,7 +31,7 @@
            Sharpe      1.02  /  Sortino  0.84
            Max DD %    13.1%  /  Win Rate  53.0%
            Sample      134 trades
-           vs B&H      1.07x (OVERTAKE — institutional diversifier ✅)
+           vs B&H      1.07x (OVERTAKE - institutional diversifier [PASS])
          7/7 institutional gates PASS.
          TargetATRMult still at upper edge (range 5.5-8.0); Mid exit 37%.
          Decision: B (Walk-Forward W4) chosen over A (push further) to avoid overfit.
@@ -50,7 +50,7 @@
     All numeric thresholds are PowerLanguage inputs - none hardcoded.
     v1.0 defaults aligned archive batch01 spec.
     v1.1 defaults = Phase 3 GA best (5 inputs locked, see CHANGELOG).
-    Further sweep (Phase 4) deferred — choice was Walk-Forward W4 instead
+    Further sweep (Phase 4) deferred - choice was Walk-Forward W4 instead
     to validate IS-fit before pushing more params.
 
   LESSON CHECK (mandatory header reminders):
