@@ -1,7 +1,9 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：📋 **Stage -1 策略討論階段**（pre-W0）
+**狀態**：🔵 **W2 .pla v1.0 寫好，等用戶 MC12 baseline backtest**
+**.pla**：[S3_VolSqueezeShort.pla](S3_VolSqueezeShort.pla) (532 LOC, ASCII clean, Rule #11/#12/#14 PASS)
+**Stage -1 + 用戶 ruling**: 2026-06-23 完成（4 段討論 + 4 follow-up Q&A）
 **前置**：[S3_L VolSqueezeLong](../S03_VolSqueezeLong/) 已 W5 PASS + Promoted (2026-06-23)
 **R-6 對手**：S3_S 是 S3_L 的鏡像，補完 vol expansion 雙向 capture
 **Roadmap 依據**：[../../../docs/policies/OFFICIAL_ROADMAP.md](../../../docs/policies/OFFICIAL_ROADMAP.md) batch01 — S3_S
