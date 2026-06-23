@@ -1,10 +1,22 @@
-# S3 VolSqueeze — Bollinger BandWidth Squeeze Breakout (原始排程)
+# S3_L VolSqueezeLong — Bollinger BandWidth Squeeze Breakout (R-6 Long half)
 
 **啟動日**：2026-06-22
-**狀態**：📋 **W0 Pre-verify 階段**（pre-code）
+**狀態**：✅ **W5 PASS → Promoted to live_simulation/ (2026-06-23)**
+**Live copy**：[../../live_simulation/S3_VolSqueezeLong.pla](../../live_simulation/S3_VolSqueezeLong.pla)
+**Deployment manifest**：[../../live_simulation/S3_VolSqueezeLong_DEPLOYMENT.md](../../live_simulation/S3_VolSqueezeLong_DEPLOYMENT.md)
+**W5 evaluation**：[W5_10dim_evaluation.md](W5_10dim_evaluation.md)
 **Roadmap 依據**：[../archive/README.md](../archive/README.md) batch01_S2-S5 — S3 = VolSqueeze
 **原始概念檔**：[../archive/batch01_S2-S5/S3_VolSqueeze.pla](../archive/batch01_S2-S5/S3_VolSqueeze.pla)
 **原始說明**：[../archive/batch01_S2-S5/TXF1_Strategies_Batch01.md §策略3](../archive/batch01_S2-S5/TXF1_Strategies_Batch01.md)
+
+---
+
+## 🎯 Promotion Summary (2026-06-23)
+
+- **W4 WFA**：6/9 windows pass 3 gates (66.7%), Mean WFE 82.5%
+- **W5 10-dim**：7/10 PASS, 2 ⚠️ explainable, 1 ❌ event-level acceptable
+- **Verdict**：CONDITIONAL PROMOTE with portfolio caveats (5% cap, 等 S3_S 配對)
+- **Lesson L24**：Risk overlay 不可削 alpha source (codified during S3_L W5)
 
 ---
 

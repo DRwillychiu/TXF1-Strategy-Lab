@@ -1,0 +1,529 @@
+{ ================================================================================
+  S3_L - VOLATILITY SQUEEZE LONG STRATEGY
+  Signal Name : S3_VolSqueezeLong
+  MC Load Name: STRATEGY_GEN_S3_VolSqueezeLong
+  Version     : v1.0  (2026-06-22)
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 12 PowerLanguage x64
+  Timeframe   : Data1 = 60M (sole feed, no multi-TF)
+  Class       : Volatility Regime (C class) - Long only (Rule R-6 split)
+  Direction   : Long only
+  Allocation  : TBD (post W3 backtest)
+
+  CREATED 2026-06-22
+    From OFFICIAL_ROADMAP.md (docs/policies/OFFICIAL_ROADMAP.md)
+    Source spec: strategies/research/archive/batch01_S2-S5/TXF1_Strategies_Batch01.md S3 VolSqueeze
+    R-6 split (2026-06-22): original bi-directional → Sx_L pure long + Sx_S pure short
+    Order rule: L first, S second (TXF1 2020-2026 偏多 regime)
+    This file is the L (long) version; S3_S VolSqueezeShort follows in next phase.
+
+  ALPHA THESIS:
+    Bollinger BandWidth (BBW) compressed to 20-percentile of past 120 periods
+    = volatility squeeze, statistically anticipates expansion.
+    Long entry: Squeeze condition + Close > Upper Band (upward breakout).
+    Theory: vol cycle expansion → directional follow-through.
+
+    Archive 雙向 PF 0.88 in daily proxy (not 60M); archive note explicitly
+    warns "60M behavior differs". MC12 60M backtest is the truth gate.
+
+  PARAMETERIZATION:
+    All numeric thresholds are PowerLanguage inputs - none hardcoded.
+    Defaults align archive batch01 spec.
+    MC12 GA optimization to be done W3 if W0 baseline shows alpha.
+
+  LESSON CHECK (mandatory header reminders):
+    1. CLOSED TIME INTERVALS (Rule MC_Time_24hr):
+       60M bars - holiday tail detection at Time<=500 within day boundary;
+       all Time>=X conditions paired with state guards OR explicit Time<=Y.
+    2. FILTER REDUNDANCY CHECK (Rule Filter_Redundancy):
+       BBW + Close>Upper = 2 conditions, orthogonal. Squeeze = state, Close = trigger.
+    3. VOLUME SIGNAL: not used (S2 v0.4 lesson; archive S3 also didn't use volume).
+
+  CONSTITUTION COMPLIANCE (mandatory per CLAUDE.md Rule #11/#12/#13/#14):
+    Rule #11 Settlement_Flat (7 elements): present in Priority 0.
+    Rule #12 P3b SetStopLoss: single call before entry block,
+             guarded by MarketPosition <= 0 (long variant).
+    Rule #13 10-dim eval before live_simulation: deferred to W5 gate.
+    Rule #14 OFFICIAL_ROADMAP alignment: S3_L is next per official sequence.
+
+  LABEL CONVENTIONS (Long-only):
+    LE_VS_*  long entry labels
+    LX_VS_*  long exit labels (one per exit reason)
+    No Short labels (R-6 split produced separate S3_S file).
+
+  PERFORMANCE: NO BACKTEST YET. v1.0 is research-tier only.
+================================================================================ }
+
+[IntrabarOrderGeneration = false]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  Defaults align archive S3 VolSqueeze (batch01).
+  All inputs MC12-optimizable.
+  ============================================================ }
+
+inputs:
+    { ===== Bollinger Bands (核心 squeeze 偵測) ===== }
+    BBLen                     ( 20    ),   { BB period, opt 15..30 step 5 }
+    BBStd                     ( 2.0   ),   { BB std dev, opt 1.5..2.5 step 0.5 }
+    BWLookback                ( 120   ),   { BWW percentile lookback, opt 60..180 step 30 }
+    BWPctile                  ( 20    ),   { Squeeze threshold percentile, opt 10..30 step 5 }
+
+    { ===== ATR (停損 / 停利 anchor) ===== }
+    ATR_Len                   ( 14    ),   { ATR period, opt 10..21 step 1 }
+    StopATRMult               ( 1.5   ),   { SL distance multiplier, opt 1.0..2.5 step 0.5 }
+    TargetATRMult             ( 3.0   ),   { TP distance multiplier, opt 2.0..4.0 step 0.5 }
+
+    { ===== Exit timing ===== }
+    MaxBars                   ( 40    ),   { time stop bar count (60M), opt 20..60 step 10 }
+    UseMidExit                ( True  ),   { mid-band exit on/off, A/B test }
+    MidExit_MinBars           ( 3     ),   { min bars held before mid exit arms }
+
+    { ===== Same-day cooldown ===== }
+    Cooldown_Days             ( 1     ),   { cooldown days after exit, opt 0..3 }
+
+    { ===== Priority 0 Protection (Rule #11 / #12) ===== }
+    Holiday_Flat_Time         ( 415   ),   { 60M grid -> fire 04:15 holiday tail }
+    Registry_Valid_Until      ( 1270101 ), { TAIFEX-verified horizon; bump each Q4 }
+    Manual_Kill_Switch        ( False ),
+    Settlement_Flat_Time      ( 1230  );   { 1hr buffer before 13:30 settlement }
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+variables:
+    { ===== Bollinger Bands ===== }
+    v_MidBand                ( 0     ),
+    v_UpperBand              ( 0     ),
+    v_LowerBand              ( 0     ),
+    v_BandWidth              ( 0     ),
+    v_BWRank                 ( 0     ),
+    v_BWCount                ( 0     ),
+    v_Squeeze                ( False ),
+
+    { ===== ATR ===== }
+    v_ATR                    ( 0     ),
+    v_StopDist               ( 0     ),
+    v_TargetDist             ( 0     ),
+
+    { ===== Trade state ===== }
+    v_EntryBar               ( 0     ),
+    v_Prev_MP                ( 0     ),
+
+    { ===== Frozen SL (belt-and-suspenders Rule #12 backup) ===== }
+    v_SL_Locked              ( False ),
+    v_Frozen_ATR             ( 0     ),
+    v_Frozen_SL_Dist         ( 0     ),
+    v_SL_Level               ( 0     ),
+
+    { ===== Cooldown ===== }
+    v_LastExit_Date          ( 0     ),
+    v_Cooldown_Active        ( False ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block          ( False ),
+    v_Registry_Expired       ( False ),
+    v_Settlement_Day         ( False ),
+    Registry_Warn_ID         ( -1    ),
+    hidx                     ( 0     ),
+    v_i                      ( 0     ),
+    ExitFired                ( 0     );
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  Holiday_Tail: shared 63-entry TAIFEX registry (byte-identical to L1-L5/S1/S3).
+  ============================================================ }
+
+arrays:
+    Holiday_Tail[80]( 0 );
+
+
+{ ============================================================
+  SECTION 4 - HOLIDAY TAIL REGISTRY (TAIFEX-verified)
+  Copied verbatim from L2_TrendShort.pla.
+  Holiday_Tail = last trading day + 1 calendar day = the date stamped on
+  the 00:00-05:00 tail bars of the final night session before each closure.
+  ============================================================ }
+
+if CurrentBar = 1 then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;  { CNY }
+    Holiday_Tail[5]  = 1200228;  { 228 }
+    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+    Holiday_Tail[7]  = 1200501;  { * Labor Day }
+    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+    Holiday_Tail[10] = 1201009;  { National Day }
+    Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;  { CNY }
+    Holiday_Tail[13] = 1210227;  { 228 }
+    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+    Holiday_Tail[17] = 1211009;  { National Day }
+    Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;  { CNY }
+    Holiday_Tail[20] = 1220226;  { 228 }
+    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+    Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+    Holiday_Tail[25] = 1221008;  { National Day }
+    Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;  { CNY }
+    Holiday_Tail[28] = 1230225;  { 228 }
+    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+    Holiday_Tail[30] = 1230429;  { * Labor Day }
+    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+    Holiday_Tail[33] = 1231007;  { National Day }
+    Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;  { CNY }
+    Holiday_Tail[36] = 1240228;  { 228 }
+    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+    Holiday_Tail[38] = 1240501;  { * Labor Day }
+    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+    Holiday_Tail[41] = 1241010;  { National Day }
+    Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+    { --- 2025 --- }
+    Holiday_Tail[43] = 1250123;  { CNY }
+    Holiday_Tail[44] = 1250228;  { 228 }
+    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+    Holiday_Tail[46] = 1250501;  { * Labor Day }
+    Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+    Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+    Holiday_Tail[50] = 1251010;  { * National Day }
+    Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+    Holiday_Tail[52] = 1251225;  { * Constitution Day }
+    Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+    Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+
+{ ============================================================
+  SECTION 5 - HOLIDAY / REGISTRY / SETTLEMENT DETECTION
+  Closed time interval: tail-bar scan bounded by Time < 500 (strict <
+  per S1 v2.3 architectural rule, avoid Time=500 cross-holiday fill).
+  Other Time>=X usages later are guarded by these state flags.
+  ============================================================ }
+
+v_Holiday_Block = False;
+
+if Time < 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+v_Registry_Expired = False;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
+end;
+
+{ Monthly Settlement detection (3rd Wed of month) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+{ Registry-expiry red warning, 30 days out }
+if LastBarOnChart and
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New( Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr( Registry_Valid_Until, 0 ) +
+            " - REBUILD FROM TAIFEX CALENDAR" );
+        Text_SetColor( Registry_Warn_ID, Red );
+        Text_SetSize( Registry_Warn_ID, 14 );
+        Text_SetAttribute( Registry_Warn_ID, 1, True );
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 6 - BOLLINGER BANDS + SQUEEZE DETECTION
+
+  BBW = (Upper - Lower) / Mid * 100 (percent of price level)
+  BWRank = % of past BWLookback bars where BBW > current BBW
+         (low rank = current BBW is historically low = squeeze)
+  Squeeze = BWRank <= BWPctile
+  ============================================================ }
+
+v_MidBand   = Average( Close, BBLen );
+v_UpperBand = v_MidBand + BBStd * StandardDev( Close, BBLen, 1 );
+v_LowerBand = v_MidBand - BBStd * StandardDev( Close, BBLen, 1 );
+
+if v_MidBand > 0 then
+    v_BandWidth = ( v_UpperBand - v_LowerBand ) / v_MidBand * 100
+else
+    v_BandWidth = 0;
+
+{ Compute BWRank: count how many past BWLookback bars had wider BBW }
+v_BWCount = 0;
+for v_i = 1 to BWLookback begin
+    if v_BandWidth[v_i] > v_BandWidth then
+        v_BWCount = v_BWCount + 1;
+end;
+if BWLookback > 0 then
+    v_BWRank = v_BWCount / BWLookback * 100
+else
+    v_BWRank = 100;
+
+v_Squeeze = ( v_BWRank <= BWPctile );
+
+
+{ ============================================================
+  SECTION 7 - ATR + STOP / TARGET DISTANCES
+  ============================================================ }
+
+v_ATR        = AvgTrueRange( ATR_Len );
+v_StopDist   = v_ATR * StopATRMult;
+v_TargetDist = v_ATR * TargetATRMult;
+
+
+{ ============================================================
+  SECTION 8 - SAME-DAY COOLDOWN RESET
+  Cooldown after exit prevents intra-day re-entry.
+  Cleared when crossing a new trading day boundary.
+  ============================================================ }
+
+if Date <> v_LastExit_Date and
+   v_LastExit_Date > 0 and
+   DateToJulian( Date ) - DateToJulian( v_LastExit_Date ) >= Cooldown_Days then
+    v_Cooldown_Active = False;
+
+
+{ ============================================================
+  SECTION 9 - FROZEN SL SETUP + SetStopLoss (Rule #12)
+
+  Frozen SL: lock ATR + SL level on entry bar (belt-and-suspenders).
+  SetStopLoss: MC engine guard, fires on entry bar without IOG dependency.
+  Both use same ATR anchor (frozen on entry).
+
+  Long variant: gate SetStopLoss on MP <= 0 (when flat or short).
+  Freezes at signal-bar ATR once the long opens.
+  ============================================================ }
+
+{ Frozen SL setup (locks once per trade on entry bar) }
+if MarketPosition = 1 then begin
+    if v_SL_Locked = False then begin
+        v_Frozen_ATR     = v_ATR;
+        v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
+        v_SL_Level       = EntryPrice - v_Frozen_SL_Dist;
+        v_SL_Locked      = True;
+    end;
+end
+else begin
+    v_SL_Locked      = False;
+    v_Frozen_ATR     = 0;
+    v_Frozen_SL_Dist = 0;
+    v_SL_Level       = 0;
+end;
+
+{ SetStopLoss engine guard (shares frozen ATR once locked) }
+if v_SL_Locked = True then
+    v_StopDist = v_Frozen_SL_Dist;
+
+if MarketPosition <= 0 then
+    SetStopLoss( v_StopDist * BigPointValue );
+
+
+{ ============================================================
+  SECTION 10 - ENTRY LOGIC (Long-only per R-6 split)
+
+  Gates (all must be true):
+    - Flat (MP = 0)
+    - v_Squeeze = True              (BBW historically compressed)
+    - Close > v_UpperBand           (upward breakout confirmation)
+    - Not on cooldown
+    - Not on a holiday tail bar
+    - Not on a settlement day
+    - Not registry expired
+
+  Closed-interval safety: no isolated Time>=X conditions in entry block.
+  All time-related gates are state-flag based (v_Holiday_Block / v_Settlement_Day).
+  ============================================================ }
+
+if ( MarketPosition = 0 ) and
+   ( v_Squeeze = True ) and
+   ( Close > v_UpperBand ) and
+   ( v_Cooldown_Active = False ) and
+   ( v_Holiday_Block = False ) and
+   ( v_Settlement_Day = False ) and
+   ( v_Registry_Expired = False ) then begin
+    buy( "LE_VS_Entry" ) next bar at Market;
+    v_EntryBar = BarNumber;
+end;
+
+
+{ ============================================================
+  SECTION 11 - EXIT CHAIN (Priority 0 first)
+
+  PRIORITY ORDER (per CLAUDE.md Rule #11 Settlement_Flat):
+    P0-1  LX_VS_Kill          (Manual_Kill_Switch)
+    P0-2  LX_VS_RegistryEnd   (registry expired)
+    P0-3  LX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
+    P0-4  LX_VS_Settlement    (settlement day + Settlement_Flat_Time)
+    S-1   LX_VS_TP            (ATR × 3 target, limit)
+    S-2   LX_VS_Mid           (mid-band exit, ≥3 bars after entry)
+    S-3   LX_VS_TimeStop      (40 bars max hold)
+    S-4   LX_VS_SL            (Frozen SL backup, BuyToCover at v_SL_Level Stop)
+    (SL primary handled by SetStopLoss engine in Section 9)
+
+  CLOSED-INTERVAL AUDIT:
+    Holiday_Flat_Time : guarded by v_Holiday_Block + explicit Time <= 455
+    Settlement_Flat_Time : guarded by v_Settlement_Day + bounded by day session
+    No isolated Time>=X without pair or state-guard.
+  ============================================================ }
+
+ExitFired = 0;
+
+if MarketPosition = 1 then begin
+
+    { ---- P0-1 Manual kill switch ---- }
+    if ( ExitFired = 0 ) and ( Manual_Kill_Switch = True ) then begin
+        sell( "LX_VS_Kill" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-2 Registry fail-safe ---- }
+    if ( ExitFired = 0 ) and ( v_Registry_Expired = True ) then begin
+        sell( "LX_VS_RegistryEnd" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-3 Holiday iron rule (state-guarded + closed interval) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Holiday_Block = True ) and
+       ( Time >= Holiday_Flat_Time ) and
+       ( Time <= 455 ) then begin
+        sell( "LX_VS_HolFlat" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-4 Settlement flat (state-guarded) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Settlement_Day = True ) and
+       ( Time >= Settlement_Flat_Time ) then begin
+        sell( "LX_VS_Settlement" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- Strategy exits ---- }
+    if ExitFired = 0 then begin
+
+        { S-1: TP at ATR × 3 (limit, favorable to long = higher price) }
+        sell( "LX_VS_TP" ) next bar at EntryPrice + v_TargetDist limit;
+
+        { S-2: Mid-band exit (only after MidExit_MinBars bars) }
+        if UseMidExit = True and
+           BarNumber - v_EntryBar >= MidExit_MinBars and
+           Close < v_MidBand then begin
+            sell( "LX_VS_Mid" ) next bar at Market;
+            ExitFired = 1;
+        end;
+
+        { S-3: Time stop }
+        if ExitFired = 0 and
+           BarNumber - v_EntryBar >= MaxBars then begin
+            sell( "LX_VS_TimeStop" ) next bar at Market;
+            ExitFired = 1;
+        end;
+
+        { S-4: Frozen SL backup (belt+suspenders with Section 9 SetStopLoss) }
+        if ExitFired = 0 and v_SL_Locked = True then
+            sell( "LX_VS_SL" ) next bar at v_SL_Level Stop;
+
+    end;
+
+end;
+
+
+{ ============================================================
+  SECTION 12 - COOLDOWN SET ON EXIT
+  Any exit fired this bar -> cooldown until cooldown_days elapsed.
+  Tracked via v_LastExit_Date and Section 8 reset logic.
+  ============================================================ }
+
+if v_Prev_MP = 1 and MarketPosition <> 1 then begin
+    v_Cooldown_Active = True;
+    v_LastExit_Date   = Date;
+end;
+
+
+{ ============================================================
+  SECTION 13 - PREV_MP TRACKING (last line, per Rule #8)
+  ============================================================ }
+
+v_Prev_MP = MarketPosition;
+
+
+{ ============================================================
+  END OF FILE - S3_VolSqueezeLong.pla  v1.0
+
+  TIME-SAFETY VERIFICATION (closed-interval audit):
+    Section 5  if Time < 500           OK upper-bounded (strict <)
+    Section 11 Holiday_Flat_Time       guarded by v_Holiday_Block AND
+                                       paired with Time <= 455  OK
+    Section 11 Settlement_Flat_Time    guarded by v_Settlement_Day
+                                       (date-scoped, day session bounded) OK
+    No bare Time >= X without a pair or state-guard.
+
+  RULE COMPLIANCE CHECKLIST:
+    [X] Rule #11 Settlement_Flat 7 elements (v_Settlement_Day, DayOfWeek=3,
+        DayOfMonth 15-21, Settlement_Flat_Time input, Priority 0 chain,
+        entry gate, label LX_VS_Settlement)
+    [X] Rule #12 P3b SetStopLoss (single call, MP<=0 guard, ATR anchor,
+        called before entry block, BigPointValue formula)
+    [X] Rule #13 10-dim eval: deferred to W5 (post backtest)
+    [X] Rule #14 OFFICIAL_ROADMAP alignment: S3_L is next in sequence
+    [X] HolidayFlat_v3: 63-entry registry + Holiday_Flat_Time + state guard
+    [X] IntrabarOrderGeneration = false (declared at top)
+    [X] Manual_Kill_Switch + Registry_Valid_Until inputs present
+    [X] MC Time 24-hour closed-interval (Time < 500 strict + paired bounds)
+    [X] R-6 split: Long-only (no Short labels, no sell short, no buy to cover)
+    [X] Label convention LE_VS_/LX_VS_
+
+  R-6 SPLIT NOTE:
+    Original archive S3 VolSqueeze was bi-directional.
+    This file is the LONG version (Sx_L per OFFICIAL_ROADMAP).
+    Short version (S3_S VolSqueezeShort) to be created after S3_L complete
+    (W6 promotion or FINAL_VERDICT KILL).
+============================================================ }

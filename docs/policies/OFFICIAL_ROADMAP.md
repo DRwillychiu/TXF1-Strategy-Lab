@@ -42,8 +42,8 @@
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
 | ~~S2~~ | ~~InsideBarBreak~~ | B 價格結構 | 30M + 日線 | 雙向 | ⚰️ KILLED 2026-06-22 |
-| **S3_L** | **VolSqueezeLong** | **C 波動率** | **60M** | **純多** | 🔵 **CURRENT — W0 Pre-verify** |
-| S3_S | VolSqueezeShort | C 波動率 | 60M | 純空 | ⏳ Next after S3_L |
+| S3_L | VolSqueezeLong | C 波動率 | 60M | 純多 | ✅ **PROMOTED to live_simulation/ (2026-06-23, W5 PASS)** |
+| **S3_S** | **VolSqueezeShort** | **C 波動率** | **60M** | **純空** | 🔵 **CURRENT — Stage -1 開始** |
 | S4_L | MACDDivergenceLong | D 動量逆勢 | 60M | 純多 | ⏳ Queue |
 | S4_S | MACDDivergenceShort | D 動量逆勢 | 60M | 純空 | ⏳ Queue |
 | S5_L | SettlementWeekLong | E 統計 | 日線 | 結算後做多 | ⏳ Queue |
