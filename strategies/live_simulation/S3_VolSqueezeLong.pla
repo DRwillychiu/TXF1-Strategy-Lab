@@ -2,34 +2,56 @@
   S3_L - VOLATILITY SQUEEZE LONG STRATEGY
   Signal Name : S3_VolSqueezeLong
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeLong
-  Version     : v1.0  (2026-06-22)
+  Version     : v1.1  (2026-06-22 evening - Phase 3 best params locked in)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
   Class       : Volatility Regime (C class) - Long only (Rule R-6 split)
   Direction   : Long only
-  Allocation  : TBD (post W3 backtest)
+  Allocation  : TBD (post W4 Walk-Forward)
 
   CREATED 2026-06-22
     From OFFICIAL_ROADMAP.md (docs/policies/OFFICIAL_ROADMAP.md)
     Source spec: strategies/research/archive/batch01_S2-S5/TXF1_Strategies_Batch01.md S3 VolSqueeze
-    R-6 split (2026-06-22): original bi-directional → Sx_L pure long + Sx_S pure short
-    Order rule: L first, S second (TXF1 2020-2026 偏多 regime)
+    R-6 split (2026-06-22): original bi-directional -> Sx_L pure long + Sx_S pure short
+    Order rule: L first, S second (TXF1 2020-2026 bullish regime)
     This file is the L (long) version; S3_S VolSqueezeShort follows in next phase.
+
+  CHANGELOG:
+    v1.0 (2026-06-22 morning): initial MC12-ready .pla, archive defaults
+    v1.1 (2026-06-22 evening): Phase 3 best params locked in (5 inputs updated)
+         - BBLen          20 -> 45
+         - BWPctile       20 -> 30
+         - StopATRMult    1.5 -> 2.75
+         - TargetATRMult  3.0 -> 8.0
+         - MaxBars        40 -> 70
+         Backtest results @ Phase 3 (1M account, 1000 NTD slippage RT):
+           Net Profit  2,654,000 NTD
+           PF gross    2.55  /  PF with slippage  2.00
+           Sharpe      1.02  /  Sortino  0.84
+           Max DD %    13.1%  /  Win Rate  53.0%
+           Sample      134 trades
+           vs B&H      1.07x (OVERTAKE - institutional diversifier [PASS])
+         7/7 institutional gates PASS.
+         TargetATRMult still at upper edge (range 5.5-8.0); Mid exit 37%.
+         Decision: B (Walk-Forward W4) chosen over A (push further) to avoid overfit.
+         Next step: MC12 Walk-Forward Analysis (IS 2020-2024 / OOS 2025-2026).
 
   ALPHA THESIS:
     Bollinger BandWidth (BBW) compressed to 20-percentile of past 120 periods
     = volatility squeeze, statistically anticipates expansion.
     Long entry: Squeeze condition + Close > Upper Band (upward breakout).
-    Theory: vol cycle expansion → directional follow-through.
+    Theory: vol cycle expansion -> directional follow-through.
 
-    Archive 雙向 PF 0.88 in daily proxy (not 60M); archive note explicitly
+    Archive bi-directional PF 0.88 in daily proxy (not 60M); archive note explicitly
     warns "60M behavior differs". MC12 60M backtest is the truth gate.
 
   PARAMETERIZATION:
     All numeric thresholds are PowerLanguage inputs - none hardcoded.
-    Defaults align archive batch01 spec.
-    MC12 GA optimization to be done W3 if W0 baseline shows alpha.
+    v1.0 defaults aligned archive batch01 spec.
+    v1.1 defaults = Phase 3 GA best (5 inputs locked, see CHANGELOG).
+    Further sweep (Phase 4) deferred - choice was Walk-Forward W4 instead
+    to validate IS-fit before pushing more params.
 
   LESSON CHECK (mandatory header reminders):
     1. CLOSED TIME INTERVALS (Rule MC_Time_24hr):
@@ -51,7 +73,16 @@
     LX_VS_*  long exit labels (one per exit reason)
     No Short labels (R-6 split produced separate S3_S file).
 
-  PERFORMANCE: NO BACKTEST YET. v1.0 is research-tier only.
+  PERFORMANCE (v1.1 Phase 3 best, 2020-01-20 to 2026-06-06, MC12 60M backtest):
+    Net Profit  : 2,654,000 NTD  (1M starting capital)
+    PF gross    : 2.55           (PF with 1000 NTD slippage RT: 2.00)
+    Sharpe(yr)  : 1.02           (Sortino: 0.84)
+    Max DD %    : 13.1%
+    Win Rate    : 53.0%
+    Trades      : 134
+    vs B&H      : 1.07x (OVERTAKE)
+    Annual ret  : 41.6%
+  Status: 7/7 institutional gates PASS. W4 WFO pending before live_sim.
 ================================================================================ }
 
 [IntrabarOrderGeneration = false]
@@ -59,24 +90,24 @@
 
 { ============================================================
   SECTION 1 - INPUTS
-  Defaults align archive S3 VolSqueeze (batch01).
-  All inputs MC12-optimizable.
+  v1.1 defaults = Phase 3 GA best (5 inputs locked, see CHANGELOG).
+  All inputs MC12-optimizable; W4 Walk-Forward next, not parameter sweep.
   ============================================================ }
 
 inputs:
-    { ===== Bollinger Bands (核心 squeeze 偵測) ===== }
-    BBLen                     ( 20    ),   { BB period, opt 15..30 step 5 }
-    BBStd                     ( 2.0   ),   { BB std dev, opt 1.5..2.5 step 0.5 }
-    BWLookback                ( 120   ),   { BWW percentile lookback, opt 60..180 step 30 }
-    BWPctile                  ( 20    ),   { Squeeze threshold percentile, opt 10..30 step 5 }
+    { ===== Bollinger Bands (core squeeze detection) ===== }
+    BBLen                     ( 45    ),   { Phase 3 best; range 35..55 plateau confirmed }
+    BBStd                     ( 2.0   ),   { Locked; not optimized this run }
+    BWLookback                ( 120   ),   { Locked; not optimized this run }
+    BWPctile                  ( 30    ),   { Phase 3 best; range 20..35 plateau confirmed }
 
-    { ===== ATR (停損 / 停利 anchor) ===== }
-    ATR_Len                   ( 14    ),   { ATR period, opt 10..21 step 1 }
-    StopATRMult               ( 1.5   ),   { SL distance multiplier, opt 1.0..2.5 step 0.5 }
-    TargetATRMult             ( 3.0   ),   { TP distance multiplier, opt 2.0..4.0 step 0.5 }
+    { ===== ATR (stop / target anchor) ===== }
+    ATR_Len                   ( 14    ),   { Locked; not optimized this run }
+    StopATRMult               ( 2.75  ),   { Phase 2 best plateau (P2 confirmed) }
+    TargetATRMult             ( 8.0   ),   { Phase 3 best; UPPER EDGE (range 5.5..8.0), Mid exit 37% }
 
     { ===== Exit timing ===== }
-    MaxBars                   ( 40    ),   { time stop bar count (60M), opt 20..60 step 10 }
+    MaxBars                   ( 70    ),   { Phase 2 best plateau (P2 confirmed); 60M => 70hr cap }
     UseMidExit                ( True  ),   { mid-band exit on/off, A/B test }
     MidExit_MinBars           ( 3     ),   { min bars held before mid exit arms }
 
@@ -401,8 +432,8 @@ end;
     P0-2  LX_VS_RegistryEnd   (registry expired)
     P0-3  LX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
     P0-4  LX_VS_Settlement    (settlement day + Settlement_Flat_Time)
-    S-1   LX_VS_TP            (ATR × 3 target, limit)
-    S-2   LX_VS_Mid           (mid-band exit, ≥3 bars after entry)
+    S-1   LX_VS_TP            (ATR x 3 target, limit)
+    S-2   LX_VS_Mid           (mid-band exit, >=3 bars after entry)
     S-3   LX_VS_TimeStop      (40 bars max hold)
     S-4   LX_VS_SL            (Frozen SL backup, BuyToCover at v_SL_Level Stop)
     (SL primary handled by SetStopLoss engine in Section 9)
@@ -449,7 +480,7 @@ if MarketPosition = 1 then begin
     { ---- Strategy exits ---- }
     if ExitFired = 0 then begin
 
-        { S-1: TP at ATR × 3 (limit, favorable to long = higher price) }
+        { S-1: TP at ATR x 3 (limit, favorable to long = higher price) }
         sell( "LX_VS_TP" ) next bar at EntryPrice + v_TargetDist limit;
 
         { S-2: Mid-band exit (only after MidExit_MinBars bars) }
@@ -493,37 +524,3 @@ end;
   ============================================================ }
 
 v_Prev_MP = MarketPosition;
-
-
-{ ============================================================
-  END OF FILE - S3_VolSqueezeLong.pla  v1.0
-
-  TIME-SAFETY VERIFICATION (closed-interval audit):
-    Section 5  if Time < 500           OK upper-bounded (strict <)
-    Section 11 Holiday_Flat_Time       guarded by v_Holiday_Block AND
-                                       paired with Time <= 455  OK
-    Section 11 Settlement_Flat_Time    guarded by v_Settlement_Day
-                                       (date-scoped, day session bounded) OK
-    No bare Time >= X without a pair or state-guard.
-
-  RULE COMPLIANCE CHECKLIST:
-    [X] Rule #11 Settlement_Flat 7 elements (v_Settlement_Day, DayOfWeek=3,
-        DayOfMonth 15-21, Settlement_Flat_Time input, Priority 0 chain,
-        entry gate, label LX_VS_Settlement)
-    [X] Rule #12 P3b SetStopLoss (single call, MP<=0 guard, ATR anchor,
-        called before entry block, BigPointValue formula)
-    [X] Rule #13 10-dim eval: deferred to W5 (post backtest)
-    [X] Rule #14 OFFICIAL_ROADMAP alignment: S3_L is next in sequence
-    [X] HolidayFlat_v3: 63-entry registry + Holiday_Flat_Time + state guard
-    [X] IntrabarOrderGeneration = false (declared at top)
-    [X] Manual_Kill_Switch + Registry_Valid_Until inputs present
-    [X] MC Time 24-hour closed-interval (Time < 500 strict + paired bounds)
-    [X] R-6 split: Long-only (no Short labels, no sell short, no buy to cover)
-    [X] Label convention LE_VS_/LX_VS_
-
-  R-6 SPLIT NOTE:
-    Original archive S3 VolSqueeze was bi-directional.
-    This file is the LONG version (Sx_L per OFFICIAL_ROADMAP).
-    Short version (S3_S VolSqueezeShort) to be created after S3_L complete
-    (W6 promotion or FINAL_VERDICT KILL).
-============================================================ }
