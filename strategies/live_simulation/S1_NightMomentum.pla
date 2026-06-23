@@ -6,7 +6,7 @@
 
 { v2.5 CHANGELOG (2026-06-13):
 
-  USER REQUEST: "立即處理優化 A 修活 Trail + B 真移動停損"
+  USER REQUEST: "immediately optimize A revive Trail + B real ratcheting stop"
 
   ROOT CAUSE OF v2.4 DEAD TRAIL:
     v2.4 (and v2.1 original) had a Trail mechanism with:
@@ -18,23 +18,23 @@
     fired 0 times in 6.5 years / 783 trades. Pure dead code.
 
     Principal protection was effectively ONLY initial SL
-    (Entry - 2.75 × ATR). MFE peaks would round-trip with
+    (Entry - 2.75 x ATR). MFE peaks would round-trip with
     no protection.
 
   v2.5 TWO-PRONGED FIX (A/B input-switched engine):
 
-  ★ Variant A — "Fixed Lock" (resurrect old Trail mechanism):
-    - Activation: MaxContractProfit >= TrailActATR × ATR
-    - Stop: EntryPrice + (TrailActATR - TrailOffATR) × ATR
+  [*]Variant A - "Fixed Lock" (resurrect old Trail mechanism):
+    - Activation: MaxContractProfit >= TrailActATR x ATR
+    - Stop: EntryPrice + (TrailActATR - TrailOffATR) x ATR
     - Same calc as v2.4 but with TrailActATR lowered to 1.5
       (below TP 2.0) so it CAN activate
     - One-shot lock (stop doesn't move once set)
     - Label: LX_NM_Trail_A
 
-  ★ Variant B — "True Ratcheting Trail" (NEW mechanism):
+  [*]Variant B - "True Ratcheting Trail" (NEW mechanism):
     - Track v_HighestClose during position
-    - Activation: MaxContractProfit >= TrailActATR × ATR
-    - Stop: v_HighestClose - TrailOffATR × ATR
+    - Activation: MaxContractProfit >= TrailActATR x ATR
+    - Stop: v_HighestClose - TrailOffATR x ATR
     - DYNAMICALLY moves up as new highs are made
     - Captures MFE peaks (e.g. 200pt peaks that would otherwise
       round-trip to 0)
@@ -56,17 +56,17 @@
 
   DEAD-CONFIG WARNING:
     If TrailActATR >= TargetATRMult AND Trail_Mode > 0:
-      → Trail will be unable to activate (TP fires first)
-      → Red text on chart warns user
-      → Prevents silent dead-code reincarnation
+      -> Trail will be unable to activate (TP fires first)
+      -> Red text on chart warns user
+      -> Prevents silent dead-code reincarnation
 
   WHAT v2.5 PRESERVES FROM v2.4:
     All other logic intact:
       ExitTime(500) - v2.1 original gap capture
       Entry condition Time < ExitTime
       LX_NM_Time at 09:00 (overnight gap capture)
-      Initial SL at Entry - 2.75 × ATR (principal protection)
-      TP at Entry + 2.0 × ATR
+      Initial SL at Entry - 2.75 x ATR (principal protection)
+      TP at Entry + 2.0 x ATR
       Holiday safety module (LX_NM_Holiday at 04:15)
       Manual_Kill_Switch / Registry_Valid_Until
       v_Holiday_Block entry gate
@@ -108,7 +108,7 @@
     Trail_Mode defaulted to 0 (permanently off after v2.5 failure).
 
   TREND FILTER MODES (TrendFilterMode, stacked additive):
-    0 = OFF — exact v2.4 baseline (TrendPass always true)
+    0 = OFF - exact v2.4 baseline (TrendPass always true)
     1 = Stricter VolRatio (>= TF_VolRatioMin, default 1.00)
     2 = Mode 1 + Daily MA uptrend (Close[1] > MA, data2 required)
     3 = Mode 2 + Weekly MA uptrend (Close[1] > MA, data3 required)
@@ -182,7 +182,7 @@ inputs:
     Registry_Valid_Until(1270101),
     Manual_Kill_Switch(false),
 
-    { v2.6: Trend Filter — entry-side quality gate }
+    { v2.6: Trend Filter - entry-side quality gate }
     TrendFilterMode(0),             { 0=off(v2.4), 1=Vol, 2=Vol+Daily, 3=Vol+Daily+Weekly }
     TF_VolRatioMin(1.00),           { stricter vol ratio (v2.4 base uses 0.80) }
     TF_DailyMALen(20),              { daily MA period (data2, ~1 month) }
@@ -331,7 +331,7 @@ else
     v_VolRatio = 1;
 v_VolPass = (v_VolRatio >= VolRatioMin);
 
-{ v2.6 Trend Filter — entry quality gate }
+{ v2.6 Trend Filter - entry quality gate }
 { Mode 0: TrendPass=true (exact v2.4 baseline, no filtering) }
 { Mode 1: stricter VolRatio (TF_VolRatioMin=1.00 vs base 0.80) }
 { Mode 2: Mode 1 + daily MA uptrend (data2[1] for completed bar) }
@@ -438,11 +438,11 @@ if MarketPosition = 1 and v_EntryATR > 0 and Trail_Mode > 0 then begin
 
     if v_TrailArmed then begin
         if Trail_Mode = 1 then
-            { Variant A: fixed lock at Entry + (TrailAct - TrailOff) × ATR }
+            { Variant A: fixed lock at Entry + (TrailAct - TrailOff) x ATR }
             sell ("LX_NM_Trail_A") next bar at
                 EntryPrice + v_EntryATR * (TrailActATR - TrailOffATR) stop;
         if Trail_Mode = 2 then
-            { Variant B: true ratcheting trail at HighestClose - TrailOff × ATR }
+            { Variant B: true ratcheting trail at HighestClose - TrailOff x ATR }
             sell ("LX_NM_Trail_B") next bar at
                 v_HighestClose - v_EntryATR * TrailOffATR stop;
     end;

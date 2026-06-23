@@ -7,9 +7,9 @@
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M    (entry trigger / exit chain)
                 Data2 = 60M   (regime gate: MA20/MA60/RSI14/dist%)
-                            ★ v2.0: previously reserved in v1.1, now ACTIVE
+                            [*] v2.0: previously reserved in v1.1, now ACTIVE
                 Data3 = Daily (Secular Bull Filter MA60/MA200)
-                            ★ v2.0.3: re-added Daily (was removed in v2.0,
+                            [*] v2.0.3: re-added Daily (was removed in v2.0,
                               re-introduced for Secular Bull Filter on
                               standard 60/200 day MA - shorter Max Bars
                               requirement than 60M MA3800 alternative)
@@ -40,7 +40,7 @@
                60M K updates hourly; v_H60_RSI_Snap0..Snap3 tracks
                last 4 closed 60M bars' RSI via Data2-bar-boundary
                detection. (Same anti-stale principle, faster cadence.)
-               ★ v2.0.1 MC12 PATCH: boundary detection changed from
+               [*] v2.0.1 MC12 PATCH: boundary detection changed from
                  Hour(Time) (assumed 60M align hour, FALSE for TXF1
                  session-aligned 60M) to ( Date of Data2, Time of Data2 )
                  tuple. Snap0 reads ( RSI(...) of Data2 )[1] = previous
@@ -96,7 +96,7 @@ inputs:
     { ===== Tier 1 : Regime Gate Parameters (60M, Data2) =====
       v2.0: time-frame shortened from Daily to 60M.
       Same A AND (B OR C) structure; thresholds recalibrated.
-      ★ v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt (2026-06-20). }
+      [*] v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt (2026-06-20). }
     H60_FastMA_Len            ( 20    ),   { opt 10..30 step 5  ; ~20hr trend }
     H60_SlowMA_Len            ( 60    ),   { opt 40..120 step 10; ~60hr trend }
     H60_RSI_Len               ( 14    ),   { opt 7..21 step 7   ; 14hr RSI }
@@ -107,7 +107,7 @@ inputs:
     { ===== Tier 2 : Momentum Trigger Parameters (5M, Data1) =====
       Preserved identically from v1.1 - momentum micro-structure
       is regime-independent.
-      ★ v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt. }
+      [*] v2.0.4: USER-MANDATED LOCK-IN from 17-trade MC opt. }
     Consec_Red_Bars           ( 3     ),   { LOCKED 3; opt 2..5 step 1 }
     EMA_Fast_Len              ( 5     ),   { opt 5..10 step 1 }
     ATR_Short_Len             ( 5     ),   { opt 3..7 step 1 }
@@ -139,13 +139,13 @@ inputs:
       3 conditions AND: Close > MA_Fast AND Close > MA_Slow AND MA_Fast > MA_Slow.
       Prevents counter-trend short entries during bear regime OR weak-rally periods.
       Default ON; can disable via input.
-      v2.0.3 改用 Daily Data3 (取代 v2.0.2 的 60M MA1140/MA3800):
-        - Max Bars 從 5000 縮回 300 (Daily MA200 + buffer)
-        - Input 數字回到金融標準 60/200 day MA
-        - Warmup 仍 ~200 day (差不多)，但 chart load 變單純 }
+      v2.0.3  Daily Data3 ( v2.0.2  60M MA1140/MA3800):
+        - Max Bars  5000  300 (Daily MA200 + buffer)
+        - Input  60/200 day MA
+        - Warmup  ~200 day (), chart load  }
     Enable_Secular_Bull_Filter ( True ),   { v2.0.3: default ON }
-    Daily_SecularMA_Fast       ( 60   ),   { Daily MA60 (季線) }
-    Daily_SecularMA_Slow       ( 200  ),   { Daily MA200 (年線) }
+    Daily_SecularMA_Fast       ( 60   ),   { Daily MA60 () }
+    Daily_SecularMA_Slow       ( 200  ),   { Daily MA200 () }
 
     { ===== Diagnostic (logging-only) ===== }
     Log_HighConviction        ( True  ),
@@ -468,23 +468,23 @@ else
   3 CONDITIONS ALL AND (stricter than L1's OR because S3 is
   counter-trend; OR would let weak rallies pass and we'd be
   shorting fake bulls):
-    1. Close (Daily, [1] closed bar) > SecularMA_Fast  (=60 day, 季線)
-    2. Close (Daily, [1] closed bar) > SecularMA_Slow  (=200 day, 年線)
+    1. Close (Daily, [1] closed bar) > SecularMA_Fast  (=60 day, )
+    2. Close (Daily, [1] closed bar) > SecularMA_Slow  (=200 day, )
     3. SecularMA_Fast > SecularMA_Slow                 (MA structure bull)
 
   WHY DAILY (v2.0.3) vs 60M (v2.0.2 retired):
-    - Daily MA60/MA200 是金融標準格局判定指標 (vs 60M MA1140/MA3800 數字奇怪)
-    - Max Bars Strategy Reference 從 5000 縮回 300 (Daily MA200 + buffer)
-    - Warmup ~200 trading day (跟 60M MA3800 大致相同)
-    - Chart 多掛 Data3 Daily 是 L1/v1.1 慣例
+    - Daily MA60/MA200  (vs 60M MA1140/MA3800 )
+    - Max Bars Strategy Reference  5000  300 (Daily MA200 + buffer)
+    - Warmup ~200 trading day ( 60M MA3800 )
+    - Chart  Data3 Daily  L1/v1.1 
 
   Historical backtest (15 trades) blocking effect:
-    - 2022 bear regime trades #8/#9/#10 (-21.8k) → all blocked ✓
-      (Daily MA60 在 2022 全年都 < MA200，條件 3 fail)
-    - 2025 H1 weak rally trade #12 (-10.8k) → blocked by condition 3
+    - 2022 bear regime trades #8/#9/#10 (-21.8k) -> all blocked [v]
+      (Daily MA60  2022  < MA200, 3 fail)
+    - 2025 H1 weak rally trade #12 (-10.8k) -> blocked by condition 3
       (Daily MA60 < MA200 at 2025-07-01, structure bear)
-    - 2026 H1 trades #13/#14/#15 (+274k) → all 3 conditions pass ✓
-    - Other ✅ bull trades → all pass (no false skip)
+    - 2026 H1 trades #13/#14/#15 (+274k) -> all 3 conditions pass [v]
+    - Other [OK] bull trades -> all pass (no false skip)
 
   Per CLAUDE.md Rule #3: ( ... of Data3 )[1] explicit parens for
   Data3-binding-before-history idiom (mirrors v1.1 BUG FIX #7).
@@ -850,25 +850,25 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
 
   v2.0.3 -> v2.0.4 PATCH (USER-MANDATED params lock-in, 2026-06-20):
     USER DIRECTIVE 2026-06-20 (DELIBERATE shift from prior "no lock-in" stance):
-      經過 SL_ATR_Mult 三組 backtest 對照 (1.5/2.0/2.5)，SL=2.5 全面勝出
+       SL_ATR_Mult  backtest  (1.5/2.0/2.5),SL=2.5 
       (PF 9.43 / Sharpe 0.49 / Sortino 0.91 / MaxDD -6.74% / WR 76.5%
-       risk-adjusted 全勝)。User 改變先前「.pla 維持 neutral framework」
-      directive，明確要求把 17-trade backtest best params lock 進 .pla。
+       risk-adjusted ).User ".pla  neutral framework"
+      directive, 17-trade backtest best params lock  .pla.
 
-    ⚠️ DISTINGUISH FROM RETIRED v2.0.2 LOCK-IN (commit 68f26e1, reverted):
-      那次是「v2.0.1 結構 + 27-trade lock-in」沒有 Secular Filter，
-      user 反對是因 .pla 應保留 neutrality。
-      v2.0.4 = v2.0.3 結構（含 Secular Bull Filter）+ 17-trade lock-in，
-      user explicit mandate 接受。
+    [!] DISTINGUISH FROM RETIRED v2.0.2 LOCK-IN (commit 68f26e1, reverted):
+      "v2.0.1  + 27-trade lock-in" Secular Filter,
+      user  .pla  neutrality.
+      v2.0.4 = v2.0.3 ( Secular Bull Filter)+ 17-trade lock-in,
+      user explicit mandate .
 
-    LOCKED DEFAULTS (v2.0.3 default → v2.0.4 LOCKED):
-      H60_RSI_Threshold       65   -> 70    (Tier 1 RSI 提高)
-      ATR_Spike_Mult          1.3  -> 1.0   (Tier 2 鬆綁，更多訊號)
-      Pullback_Min_Pct        0.3  -> 0.5   (Tier 2 略嚴)
-      TP_Pct                  0.6  -> 1.0   (拉高 winner target)
-      SL_ATR_Mult             3    -> 2.5   (略鬆，給空間等真回檔)
-      Max_Bars_TimeStop       18   -> 27    (放寬到 135 min hold，讓 winner 走)
-      Entry_Cutoff_Time       1325 -> 1230  (砍 11:xx WR 20% 時段)
+    LOCKED DEFAULTS (v2.0.3 default -> v2.0.4 LOCKED):
+      H60_RSI_Threshold       65   -> 70    (Tier 1 RSI )
+      ATR_Spike_Mult          1.3  -> 1.0   (Tier 2 ,)
+      Pullback_Min_Pct        0.3  -> 0.5   (Tier 2 )
+      TP_Pct                  0.6  -> 1.0   ( winner target)
+      SL_ATR_Mult             3    -> 2.5   (,)
+      Max_Bars_TimeStop       18   -> 27    ( 135 min hold, winner )
+      Entry_Cutoff_Time       1325 -> 1230  ( 11:xx WR 20% )
       HighConv_Threshold_Pct  2.5  -> 5.0   (log only, align with backtest)
 
     UNCHANGED:
@@ -878,56 +878,56 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
       SL_ATR_Len, Entry_Open_Time, Daily_Flat_Time, Holiday/Settlement/
       Registry/Kill, Enable_Secular_Bull_Filter, Daily_SecularMA_Fast/Slow
 
-    STRUCTURE PRESERVED (v2.0.3 完整不動):
+    STRUCTURE PRESERVED (v2.0.3 ):
       - Tier 1 60M regime (A AND (B OR C))
       - Tier 2 5M 4-AND momentum (M1-M4)
       - Engine SetStopLoss + Frozen SL (no trailing)
       - Holiday(63) + Settlement + Kill + Daily flat 13:25
-      - Same-day cooldown (但有 edge case bug 待 audit, v2.0.5 candidate)
+      - Same-day cooldown ( edge case bug  audit, v2.0.5 candidate)
       - Daily Data3 Secular Bull Filter (Section 2b)
 
-    BACKTEST 結果 (17 trades, 2020-12 ~ 2026-06):
+    BACKTEST  (17 trades, 2020-12 ~ 2026-06):
       PF 9.43 / Sharpe 0.49 / Sortino 0.91 / MaxDD -6.74% / WR 76.5%
-      Net Profit +354,000 NTD / 帳戶報酬 942%+
-      Caveat: 樣本 17 仍不到 Rule #13 標準 (100+)；2026 H1 集中度 89%
+      Net Profit +354,000 NTD /  942%+
+      Caveat:  17  Rule #13  (100+);2026 H1  89%
 
   v2.0.2 -> v2.0.3 PATCH (Secular Filter switched 60M -> Daily, 2026-06-20):
-    REASON: 用戶發現 60M MA3800 需要 Max Bars = 5000 setting，等同
-            chart 需 load 1 年 60M historical 才能 backtest。改用 Daily
-            Data3 + MA60/MA200 同樣 warmup ~200 day 但 Max Bars 縮到 300。
+    REASON:  60M MA3800  Max Bars = 5000 setting,
+            chart  load 1  60M historical  backtest. Daily
+            Data3 + MA60/MA200  warmup ~200 day  Max Bars  300.
     CHANGES:
-      [DATA] Data3 從 v2.0 移除狀態恢復 → Daily (Secular Bull Filter)
-      [INPUTS] H60_SecularMA_Fast/Slow (1140/3800) → Daily_SecularMA_Fast/Slow (60/200)
-      [VARS]   v_H60_SecularMA_Fast/Slow → v_Daily_SecularMA_Fast/Slow
-      [SECT 2b] of Data2 → of Data3 (其他邏輯不變，仍 3 條件 AND)
-      [MC CHART] 改為 Data1=5M + Data2=60M + Data3=Daily
-      [MAX BARS Strategy Reference] 5000 → 300
+      [DATA] Data3  v2.0  -> Daily (Secular Bull Filter)
+      [INPUTS] H60_SecularMA_Fast/Slow (1140/3800) -> Daily_SecularMA_Fast/Slow (60/200)
+      [VARS]   v_H60_SecularMA_Fast/Slow -> v_Daily_SecularMA_Fast/Slow
+      [SECT 2b] of Data2 -> of Data3 (, 3  AND)
+      [MC CHART]  Data1=5M + Data2=60M + Data3=Daily
+      [MAX BARS Strategy Reference] 5000 -> 300
 
   v2.0.1 -> v2.0.2 PATCH (Secular Bull Filter, 2026-06-20, RETIRED in v2.0.3):
-    NOTE: 此 v2.0.2 跟先前 retired 的 v2.0.2 (params lock-in) 不同。
-    這個是 thesis-driven 新 filter module，不是 opt-fitted params 寫死。
-    既有 defaults 維持 v2.0.1 原始值不動，新 filter default ON 但可關閉。
+    NOTE:  v2.0.2  retired  v2.0.2 (params lock-in) .
+     thesis-driven  filter module, opt-fitted params .
+     defaults  v2.0.1 , filter default ON .
 
-    BACKGROUND: 用戶 2026-06-20 audit 15-trade 歷史數據發現：
-      - 4 筆 trade 在「不適合格局」進場（2022 trend bear / 2025 weak rally）
-      - 累積虧損 -32.6k，違反策略 thesis 「只在過熱多頭做空回檔」
-      - 現有 Tier 1 A 條件 (60M MA20>MA60) 只看短中期，沒擋長期 bear 反彈
+    BACKGROUND:  2026-06-20 audit 15-trade :
+      - 4  trade ""(2022 trend bear / 2025 weak rally)
+      -  -32.6k, thesis ""
+      -  Tier 1 A  (60M MA20>MA60) , bear 
 
-    SOLUTION: 加 Section 2b Secular Bull Filter (mirror L1 P6 Weekly)
-      3 條件 AND（嚴格，因為 S3 是 counter-trend）:
+    SOLUTION:  Section 2b Secular Bull Filter (mirror L1 P6 Weekly)
+      3  AND(, S3  counter-trend):
         1. Close (60M, [1]) > MA_Fast (~60 day)
         2. Close (60M, [1]) > MA_Slow (~200 day)
-        3. MA_Fast > MA_Slow (結構多頭)
-      新 inputs: Enable_Secular_Bull_Filter (True), H60_SecularMA_Fast (1140),
+        3. MA_Fast > MA_Slow ()
+       inputs: Enable_Secular_Bull_Filter (True), H60_SecularMA_Fast (1140),
                  H60_SecularMA_Slow (3800)
-      新 variables: v_H60_SecularMA_Fast/Slow, v_Secular_Bull_OK
+       variables: v_H60_SecularMA_Fast/Slow, v_Secular_Bull_OK
 
-    EXPECTED EFFECT (TWII daily proxy 模擬):
-      - 2022 #8/#9/#10 三筆 (-21.8k) → ALL BLOCKED
-      - 2025 #12 (-10.8k) → BLOCKED (條件 3 MA60<MA200)
-      - 2026 H1 #13/#14/#15 (+274k) → ALL PASS
-      - 其他多頭 trades → ALL PASS
-      - 預估 15 trades → 11 trades, 救回 ~32.6k
+    EXPECTED EFFECT (TWII daily proxy ):
+      - 2022 #8/#9/#10  (-21.8k) -> ALL BLOCKED
+      - 2025 #12 (-10.8k) -> BLOCKED ( 3 MA60<MA200)
+      - 2026 H1 #13/#14/#15 (+274k) -> ALL PASS
+      -  trades -> ALL PASS
+      -  15 trades -> 11 trades,  ~32.6k
 
   v2.0 -> v2.0.1 PATCH (MC12 compliance, 2026-06-20):
     [MC12-1] Section 4 boundary detection: Hour(Time) -> ( Date of Data2,

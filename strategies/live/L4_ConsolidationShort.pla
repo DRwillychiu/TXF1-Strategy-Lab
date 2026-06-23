@@ -165,7 +165,7 @@
             block -> freezes when short position opens.
           - Dormant backup once custom stops tighten.
 
-   v14.5  (2026-06-18) ★ TRIED + FULLY REMOVED ★
+   v14.5  (2026-06-18) [TRIED + FULLY REMOVED]
           Two filters were added to address CS_BreakExit -378K leak:
             A. Strong Long Block (Daily MA gap% > 1.0 = no short entry)
             B. Fast BreakExit (15M Close > Locked_Top + 0.5 ATR)

@@ -154,6 +154,13 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - **順序鐵則**：一律先 L 後 S（TXF1 偏多 regime，Long 驗證較快）
     - 每隻策略必有 W0 Alpha Pre-verify (Python 真實資料) → 才寫 .pla
     - 違反本規則 = 違反用戶 2026-06-22 明確指示
+15. **★ 強制規範**：所有 .pla 檔必須 100% ASCII（無中文、無 em dash、無 emoji、無全形標點）
+    - MC PowerLanguage 對非 ASCII 字元行為 build-dependent，曾發生 v1.1 因 em dash + 勾號炸 line 0 編譯錯誤
+    - 違規 = MC 編譯失敗（通常 line 0 col 0 通用錯誤，極難 debug）
+    - 強制驗證腳本：`python scripts/verify_pla_ascii.py --strict`
+    - Commit 前**必須跑驗證**通過才能 push
+    - 適用範圍：`strategies/live/`、`strategies/live_simulation/`、`strategies/research/`（排除 archive/）
+    - 違反本規則 = 違反 memory rule `feedback_mc_english_only` + 用戶 2026-06-22 明確指示
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
