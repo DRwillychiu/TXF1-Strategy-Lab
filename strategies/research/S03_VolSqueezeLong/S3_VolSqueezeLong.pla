@@ -524,37 +524,3 @@ end;
   ============================================================ }
 
 v_Prev_MP = MarketPosition;
-
-
-{ ============================================================
-  END OF FILE - S3_VolSqueezeLong.pla  v1.0
-
-  TIME-SAFETY VERIFICATION (closed-interval audit):
-    Section 5  if Time < 500           OK upper-bounded (strict <)
-    Section 11 Holiday_Flat_Time       guarded by v_Holiday_Block AND
-                                       paired with Time <= 455  OK
-    Section 11 Settlement_Flat_Time    guarded by v_Settlement_Day
-                                       (date-scoped, day session bounded) OK
-    No bare Time >= X without a pair or state-guard.
-
-  RULE COMPLIANCE CHECKLIST:
-    [X] Rule #11 Settlement_Flat 7 elements (v_Settlement_Day, DayOfWeek=3,
-        DayOfMonth 15-21, Settlement_Flat_Time input, Priority 0 chain,
-        entry gate, label LX_VS_Settlement)
-    [X] Rule #12 P3b SetStopLoss (single call, MP<=0 guard, ATR anchor,
-        called before entry block, BigPointValue formula)
-    [X] Rule #13 10-dim eval: deferred to W5 (post backtest)
-    [X] Rule #14 OFFICIAL_ROADMAP alignment: S3_L is next in sequence
-    [X] HolidayFlat_v3: 63-entry registry + Holiday_Flat_Time + state guard
-    [X] IntrabarOrderGeneration = false (declared at top)
-    [X] Manual_Kill_Switch + Registry_Valid_Until inputs present
-    [X] MC Time 24-hour closed-interval (Time < 500 strict + paired bounds)
-    [X] R-6 split: Long-only (no Short labels, no sell short, no buy to cover)
-    [X] Label convention LE_VS_/LX_VS_
-
-  R-6 SPLIT NOTE:
-    Original archive S3 VolSqueeze was bi-directional.
-    This file is the LONG version (Sx_L per OFFICIAL_ROADMAP).
-    Short version (S3_S VolSqueezeShort) to be created after S3_L complete
-    (W6 promotion or FINAL_VERDICT KILL).
-============================================================ }
