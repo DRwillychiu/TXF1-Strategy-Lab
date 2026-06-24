@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.0  (2026-06-23 - initial R-6 mirror of S3_L v1.1)
+  Version     : v1.1  (2026-06-24 - add Layer 2 StopProfit per user 5-layer exit ruling)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,6 +31,23 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
+    v1.1 (2026-06-24): add Layer 2 - Trailing StopProfit (per annotated.md 5-layer ruling)
+         Driver: user identified short-side asymmetry - short panic reverses faster
+         than long pullback, so peak-profit protection earlier (vs L1 SP) is needed.
+         New inputs:
+           SP_Trigger_ATRMult ( 1.5 )  - arm SP when peak profit >= ATR * 1.5
+           SP_Retain_Pct      ( 70  )  - retain 70% of peak (tolerate 30% giveback)
+         New label: SX_VS_SP (mutually exclusive with SX_VS_SL)
+         Logic:
+           1. Track v_Peak_Profit_Pts = max(EntryPrice - Low) over hold
+           2. Arm v_SP_Armed when peak >= ATR * SP_Trigger_ATRMult (irreversible)
+           3. Compute v_SP_Floor_Price = EntryPrice - (peak * SP_Retain_Pct / 100)
+           4. While armed: SL order replaced by SP order at floor price
+           5. Reset all SP state when flat
+         Versus L1 SP (45% retain):
+           S3_S uses 70% retain because short bounces are sharper than long pullbacks.
+         Per Lesson L24: this is ATR-based dynamic protection, NOT event filter.
+
     v1.0 (2026-06-23): initial release, R-6 short mirror with 4 params customized:
          - TargetATRMult  8.0 -> 3.5   (short panic = fast drop, near TP)
          - MaxBars        70  -> 35    (short holds shorter)
@@ -77,8 +94,16 @@
     Rule #15 ASCII-only (all .pla source): 100% ASCII.
 
   LABEL CONVENTIONS (Short-only):
-    SE_VS_*  short entry labels
-    SX_VS_*  short exit labels (one per exit reason)
+    SE_VS_Entry        short entry
+    SX_VS_Kill         manual kill switch (P0-1)
+    SX_VS_RegistryEnd  registry expired (P0-2)
+    SX_VS_HolFlat      holiday tail flat (P0-3)
+    SX_VS_Settlement   settlement day flat (P0-4)
+    SX_VS_TP           target profit (Layer 4)
+    SX_VS_Mid          mid-band exit / thesis fail (Layer 3)
+    SX_VS_TimeStop     time exit (Layer 5)
+    SX_VS_SP           trailing stop profit / breakeven floor (Layer 2, NEW v1.1)
+    SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
     No Long labels (R-6 split produced separate S3_L file).
 
   STATUS: v1.0 ready for MC12 baseline backtest (W3 phase).
@@ -110,6 +135,10 @@ inputs:
     MaxBars                   ( 35    ),   { CUSTOMIZED - short holds shorter (vs S3_L 70) }
     UseMidExit                ( True  ),   { mid-band exit on/off }
     MidExit_MinBars           ( 2     ),   { CUSTOMIZED - faster bounce reaction (vs S3_L 3) }
+
+    { ===== Layer 2: Trailing StopProfit (v1.1 NEW, short-only) ===== }
+    SP_Trigger_ATRMult        ( 1.5   ),   { NEW v1.1: arm SP when peak profit >= ATR * 1.5 }
+    SP_Retain_Pct             ( 70    ),   { NEW v1.1: retain 70 pct of peak (tolerate 30 pct giveback) }
 
     { ===== Same-day cooldown (CUSTOMIZED per user ruling) ===== }
     Cooldown_Days             ( 0     ),   { CUSTOMIZED - no daily limit (vs S3_L 1); W3 A/B }
@@ -149,6 +178,11 @@ variables:
     v_Frozen_ATR             ( 0     ),
     v_Frozen_SL_Dist         ( 0     ),
     v_SL_Level               ( 0     ),
+
+    { ===== Layer 2 SP state (v1.1 NEW) ===== }
+    v_SP_Armed               ( False ),
+    v_Peak_Profit_Pts        ( 0     ),
+    v_SP_Floor_Price         ( 0     ),
 
     { ===== Cooldown ===== }
     v_LastExit_Date          ( 0     ),
@@ -385,10 +419,13 @@ if MarketPosition = -1 then begin
     end;
 end
 else begin
-    v_SL_Locked      = False;
-    v_Frozen_ATR     = 0;
-    v_Frozen_SL_Dist = 0;
-    v_SL_Level       = 0;
+    v_SL_Locked       = False;
+    v_Frozen_ATR      = 0;
+    v_Frozen_SL_Dist  = 0;
+    v_SL_Level        = 0;
+    v_SP_Armed        = False;
+    v_Peak_Profit_Pts = 0;
+    v_SP_Floor_Price  = 0;
 end;
 
 { SetStopLoss engine guard (shares frozen ATR once locked) }
@@ -430,7 +467,7 @@ end;
 
 
 { ============================================================
-  SECTION 11 - EXIT CHAIN (Priority 0 first, SHORT variant)
+  SECTION 11 - EXIT CHAIN (5-layer architecture v1.1, SHORT variant)
 
   R-6 mirror differences vs S3_L:
     - MarketPosition = -1 (was 1)
@@ -440,15 +477,24 @@ end;
     - SL price = EntryPrice + StopDist (was -)
     - Mid trigger: Close > MidBand (was <)
 
-  PRIORITY ORDER:
+  5-LAYER EXIT (v1.1 upgrade per 2026-06-24 user ruling):
+    Layer 0 (P0)  Safety gates (Kill / Registry / Holiday / Settlement)
+    Layer 1       Initial SL    SX_VS_SL  (Entry + ATR * StopATRMult, fixed)
+    Layer 2       Trailing SP   SX_VS_SP  (NEW v1.1, arm at peak >= ATR * 1.5,
+                                          retain 70 pct of peak, irreversible)
+    Layer 3       Mid exit      SX_VS_Mid (thesis fail: Close > MidBand after N bars)
+    Layer 4       Target TP     SX_VS_TP  (Entry - ATR * TargetATRMult, limit)
+    Layer 5       Time stop     SX_VS_TimeStop (BarsHeld >= MaxBars)
+
+  PRIORITY ORDER (per CLAUDE.md Rule #11):
     P0-1  SX_VS_Kill          (Manual_Kill_Switch)
     P0-2  SX_VS_RegistryEnd   (registry expired)
     P0-3  SX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
     P0-4  SX_VS_Settlement    (settlement day + Settlement_Flat_Time)
-    S-1   SX_VS_TP            (ATR x TargetMult, limit, downward favorable)
-    S-2   SX_VS_Mid           (mid-band exit, >=MidExit_MinBars bars after entry)
-    S-3   SX_VS_TimeStop      (MaxBars max hold)
-    S-4   SX_VS_SL            (Frozen SL backup, buy to cover at v_SL_Level Stop)
+    S-1   SX_VS_TP            (limit, always set)
+    S-2   SX_VS_Mid           (market, thesis fail)
+    S-3   SX_VS_TimeStop      (market, time exit)
+    S-4   SX_VS_SP / SX_VS_SL (stop, mutually exclusive - SP when armed, SL otherwise)
   ============================================================ }
 
 ExitFired = 0;
@@ -484,13 +530,27 @@ if MarketPosition = -1 then begin
         ExitFired = 1;
     end;
 
+    { ---- Layer 2 SP tracking (v1.1 NEW): peak profit + arm + floor ---- }
+    { Peak profit for short = max(EntryPrice - Low) over hold }
+    if EntryPrice - Low > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Low;
+
+    { Arm SP once peak crosses threshold (irreversible per design) }
+    if ( v_SP_Armed = False ) and
+       ( v_Peak_Profit_Pts >= v_ATR * SP_Trigger_ATRMult ) then
+        v_SP_Armed = True;
+
+    { Compute SP floor price (retain N pct of peak profit) }
+    if v_SP_Armed = True then
+        v_SP_Floor_Price = EntryPrice - ( v_Peak_Profit_Pts * SP_Retain_Pct / 100 );
+
     { ---- Strategy exits ---- }
     if ExitFired = 0 then begin
 
         { S-1: TP at ATR x TargetMult (limit, favorable to short = lower price) }
         buy to cover ( "SX_VS_TP" ) next bar at EntryPrice - v_TargetDist limit;
 
-        { S-2: Mid-band exit (only after MidExit_MinBars bars, mean reversion failed) }
+        { S-2: Mid-band exit (thesis fail, market) }
         if UseMidExit = True and
            BarNumber - v_EntryBar >= MidExit_MinBars and
            Close > v_MidBand then begin
@@ -505,9 +565,16 @@ if MarketPosition = -1 then begin
             ExitFired = 1;
         end;
 
-        { S-4: Frozen SL backup (belt+suspenders with Section 9 SetStopLoss) }
-        if ExitFired = 0 and v_SL_Locked = True then
-            buy to cover ( "SX_VS_SL" ) next bar at v_SL_Level Stop;
+        { S-4: SP / SL stop (mutually exclusive per Layer 2 design)
+          - SP_Armed=True  : trailing stop at v_SP_Floor_Price (label SX_VS_SP)
+          - SP_Armed=False : initial stop at v_SL_Level (label SX_VS_SL, fallback)
+          Belt+suspenders with Section 9 SetStopLoss engine guard. }
+        if ExitFired = 0 then begin
+            if v_SP_Armed = True then
+                buy to cover ( "SX_VS_SP" ) next bar at v_SP_Floor_Price Stop
+            else if v_SL_Locked = True then
+                buy to cover ( "SX_VS_SL" ) next bar at v_SL_Level Stop;
+        end;
 
     end;
 
