@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.2  (2026-06-24 - BUGFIX cooldown predicate; Layer 2 SP unchanged)
+  Version     : v1.3  (2026-06-24 - BUGFIX2 Section 12 same-bar entry+exit cooldown)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,6 +31,23 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
+    v1.3 (2026-06-24): BUGFIX2 - Section 12 same-bar entry+exit cooldown set
+         Symptom: After v1.2 Section 8 fix, A/B Cool=1 still admitted 2025-04-07
+                  pair (TP +278,800 + SL -206,200, same date).
+         Root cause: Section 12 used "v_Prev_MP = -1 AND MP <> -1" to detect
+                     exit. Fails for same-bar entry+exit (fast TP):
+                       Bar X start: MP=0, v_Prev_MP=0 (carry from X-1 end)
+                       Bar X mid:   entry fill -> MP=-1
+                       Bar X mid:   TP limit hit -> MP=0
+                       Bar X end:   v_Prev_MP=0, MP=0 -> condition fails
+                     Cooldown never set -> same-day 2nd entry not blocked.
+         Fix: Section 12 changed to "MP = 0 AND EntriesToday(Date) > 0"
+                Logic: "today had an entry AND we are now flat" -> cooldown on
+                Catches both multi-bar AND same-bar exit cases
+                Idempotent (re-arms every bar until Section 8 day-rollover reset)
+         Action: re-run Cool=1 A/B, expect 2025-04-07 SL leg removed,
+                 Net should improve by +206,200 (only TP +278,800 remains).
+
     v1.2 (2026-06-24): BUGFIX - Section 8 cooldown reset predicate corrected
          Symptom: A/B test (Cool=0 vs Cool=1) returned 100 pct identical results
                   (185 trades both, same Net/PF/MDD/all metrics), proving the
@@ -607,11 +624,20 @@ end;
 
 
 { ============================================================
-  SECTION 12 - COOLDOWN SET ON EXIT
-  R-6 mirror difference: v_Prev_MP = -1 (was 1)
+  SECTION 12 - COOLDOWN SET ON EXIT (v1.3 BUGFIX)
+  Old (v1.2 and earlier): if v_Prev_MP = -1 and MP <> -1
+    Bug: same-bar entry+exit (e.g., fast TP hit on entry-fill bar) -> Section 12
+         does not fire because v_Prev_MP (from prior bar end) = 0, not -1.
+         Cooldown never gets set -> same-day re-entry permitted.
+    Evidence: 2025-04-07 TP+SL pair both passed Cool=1 in v1.2 A/B re-run.
+  New (v1.3): if MP = 0 and EntriesToday(Date) > 0
+    Logic: today already had an entry AND we are now flat -> cooldown should be on.
+           Catches both multi-bar exit AND same-bar entry+exit cases.
+           Idempotent: sets v_Cooldown_Active = True every bar after exit until
+           Section 8 resets it via DateDiff >= Cooldown_Days.
   ============================================================ }
 
-if v_Prev_MP = -1 and MarketPosition <> -1 then begin
+if MarketPosition = 0 and EntriesToday( Date ) > 0 then begin
     v_Cooldown_Active = True;
     v_LastExit_Date   = Date;
 end;
