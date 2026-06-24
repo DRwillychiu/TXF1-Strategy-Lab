@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.1  (2026-06-24 - add Layer 2 StopProfit per user 5-layer exit ruling)
+  Version     : v1.2  (2026-06-24 - BUGFIX cooldown predicate; Layer 2 SP unchanged)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,6 +31,22 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
+    v1.2 (2026-06-24): BUGFIX - Section 8 cooldown reset predicate corrected
+         Symptom: A/B test (Cool=0 vs Cool=1) returned 100 pct identical results
+                  (185 trades both, same Net/PF/MDD/all metrics), proving the
+                  cooldown gate was effectively non-functional.
+         Root cause: Section 8 reset required BOTH "Date <> v_LastExit_Date"
+                     AND "DateDiff >= Cooldown_Days" - the first clause is
+                     redundant and creates a contradiction:
+                       Cool=0 same day: diff=0 OK, but Date==LastExit fails
+                         -> cooldown stays True forever, NEVER allows reset
+                       Cool=1 same day: diff=0<1 anyway
+                       Both branches behave identically (cool effectively dead).
+         Fix: removed "Date <> v_LastExit_Date" clause; pure DateDiff>=Cooldown:
+                Cool=0 -> diff>=0 always True -> resets every bar -> same-day OK
+                Cool=1 -> diff>=1 -> next-day only -> same-day blocked
+         Action: re-run A/B (Cool=0 baseline + Cool=1 variant) to confirm fix.
+
     v1.1 (2026-06-24): add Layer 2 - Trailing StopProfit (per annotated.md 5-layer ruling)
          Driver: user identified short-side asymmetry - short panic reverses faster
          than long pullback, so peak-profit protection earlier (vs L1 SP) is needed.
@@ -387,11 +403,20 @@ v_TargetDist = v_ATR * TargetATRMult;
 { ============================================================
   SECTION 8 - SAME-DAY COOLDOWN RESET
   v1.0: Cooldown_Days default = 0 (no daily limit per user ruling).
+  v1.2 (2026-06-24 BUGFIX): removed redundant "Date <> v_LastExit_Date" predicate.
+    Previous version had: Date <> LastExit AND LastExit > 0 AND DateDiff >= Cooldown.
+    The Date<>LastExit clause caused contradiction with DateDiff>=0 logic:
+      - Cool=0 same day: diff=0 satisfies >=0, but Date==LastExit fails first clause
+        => cooldown stuck True, no same-day re-entry possible (contrary to design)
+      - Cool=1 same day: diff=0 fails >=1 anyway (correct block)
+      - A/B test 2026-06-24 showed Cool=0 == Cool=1 100% identical (185 trades both)
+        because the contradiction made cooldown effectively non-functional.
+    Fix: pure DateDiff check; Cool=0 -> diff>=0 always True -> reset every bar
+         -> same-day re-entry allowed; Cool=1 -> diff>=1 -> only next-day reset.
   Section retained for W3 A/B test (Cooldown_Days = 1 reference variant).
   ============================================================ }
 
-if Date <> v_LastExit_Date and
-   v_LastExit_Date > 0 and
+if v_LastExit_Date > 0 and
    DateToJulian( Date ) - DateToJulian( v_LastExit_Date ) >= Cooldown_Days then
     v_Cooldown_Active = False;
 
