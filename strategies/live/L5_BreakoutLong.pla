@@ -687,23 +687,22 @@ end;
   Micro-TXF 076: Buy 45732 x2 at 03:59 -> Sell 46990 x2 at 08:45
   ========================================== }
 if v_ManualAnnot_Drawn = false and Date >= 1260625 then begin
-    { Green dotted line from entry to TP (MC trade connection style) }
-    v_ManualAnnot_ID1 = TL_New(1260625, 345, 45732,
+    { Green dotted line: right edge of entry bar -> left edge of exit bar }
+    v_ManualAnnot_ID1 = TL_New(1260625, 400, 45732,
         1260625, 845, 46990);
     TL_SetColor(v_ManualAnnot_ID1, Green);
     TL_SetStyle(v_ManualAnnot_ID1, 3);
-    TL_SetSize(v_ManualAnnot_ID1, 0);
 
-    { Exit label (MC-native font size 8) }
+    { MC exit format: count above, signal name below }
     v_ManualAnnot_ID2 = Text_New(1260625, 845, 47060,
-        "BL_TP_Bot");
+        "2");
     Text_SetColor(v_ManualAnnot_ID2, White);
-    Text_SetSize(v_ManualAnnot_ID2, 8);
+    Text_SetSize(v_ManualAnnot_ID2, 7);
 
     v_ManualAnnot_ID3 = Text_New(1260625, 845, 46990,
-        "2");
+        "BL_TP_Bot");
     Text_SetColor(v_ManualAnnot_ID3, White);
-    Text_SetSize(v_ManualAnnot_ID3, 8);
+    Text_SetSize(v_ManualAnnot_ID3, 7);
 
     v_ManualAnnot_Drawn = true;
 end;
