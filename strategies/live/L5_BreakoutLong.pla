@@ -698,14 +698,10 @@ if v_ManualAnnot_Drawn = false and Date >= 1260625 then begin
     v_ManualAnnot_ID2 = Text_New(1260625, 845, 47060,
         "2");
     Text_SetColor(v_ManualAnnot_ID2, White);
-    Text_SetSize(v_ManualAnnot_ID2, 9);
-    Text_SetAttribute(v_ManualAnnot_ID2, 2, true);
 
     v_ManualAnnot_ID3 = Text_New(1260625, 845, 46990,
         "BL_TP_Bot");
     Text_SetColor(v_ManualAnnot_ID3, White);
-    Text_SetSize(v_ManualAnnot_ID3, 9);
-    Text_SetAttribute(v_ManualAnnot_ID3, 2, true);
 
     v_ManualAnnot_Drawn = true;
 end;
