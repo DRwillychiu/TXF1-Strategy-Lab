@@ -10,13 +10,14 @@
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
 
  CHANGELOG:
-   v13.5  (2026-06-25) COOLDOWN-D (same-box ban + new-box delay):
-          Same entry-churn fix proven in L5 v19.9.
+   v13.5  (2026-06-25) COOLDOWN-D (time-delay only):
+          Entry-churn reduction adapted from L5 v19.9.
           L3 v13.4 baseline: 39 losing clusters, 86 trades,
           -1,083,400 NTD (29.7% of gross loss).
-          Rule 1: Same-box ban (v_Box_Top = v_LastExit_BoxTop
-          -> permanent block until new box forms).
-          Rule 2: New-box delay (wait Cooldown_Bars after exit).
+          Same-box permanent ban REMOVED after A/B: L3 is a
+          range strategy -- same box = still valid setup.
+          Ban killed 20 TP_Mid winners, net -108K vs baseline.
+          Kept: time delay (wait Cooldown_Bars after any exit).
           New input: Cooldown_Bars(3), GA range 1-10.
 
    v13    + D3Filter + CL_Labels (no logic changes)
@@ -329,12 +330,10 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
                     * BigPointValue);
 
-    { --- v13.5 Cooldown-D gate --- }
+    { --- v13.5 Cooldown-D gate (time-delay only, no same-box ban) --- }
     v_Cooldown_OK = true;
     if v_LastExit_BarNum > 0 then begin
-        if v_Box_Top = v_LastExit_BoxTop then
-            v_Cooldown_OK = false
-        else if BarNumber - v_LastExit_BarNum < Cooldown_Bars then
+        if BarNumber - v_LastExit_BarNum < Cooldown_Bars then
             v_Cooldown_OK = false;
     end;
 
