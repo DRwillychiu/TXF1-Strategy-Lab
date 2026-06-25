@@ -2,11 +2,30 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：**v13.2B（生產設定 = 變體 B：凍結開、保本關）**+ HolidayFlat_v3（repo 已定稿，**MC9 空手時部署，6/17 前**）
+> 版本：**v13.5 + Cooldown-D + FrozenSL + HolidayFlat_v3 + ImmediateStop**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行（運行中為 v13 舊版；待換裝 v13.2B）
+> 狀態：**READY**（v13.5 Cooldown-D 加入，待部署驗證）
 > 口數：1 口
 > 深度審查：`L3_ConsolidationLong_review.md`（A/B 全紀錄：D 否決、**B 裁定部署 2026-06-13**）
+
+## v13.5 Cooldown-D（2026-06-25）
+
+**問題**：v13.4 基準 401 筆交易中，39 個虧損 cluster（86 筆 = 21.4%），淨損 **-1,083,400 NTD**（佔毛損 29.7%）。
+
+**根因**：與 L5 相同 — SL 出場後 Box 沒變，進場條件立刻重新成立。
+
+**解決方案（Plan D，與 L5 v19.9 相同機制）**：
+
+| 規則 | 觸發條件 | 動作 |
+|------|---------|------|
+| 同箱封鎖 | `v_Box_Top = v_LastExit_BoxTop` | **永久禁止**進場，直到新箱形成 |
+| 新箱冷卻 | 不同 Box 但 `BarNumber - v_LastExit_BarNum < Cooldown_Bars` | 等待 N 根 bar |
+
+新增輸入：`Cooldown_Bars(3)` — GA 範圍 1-10，step 1
+
+**L5 v19.9 驗證實績**：Cooldown-D 將虧損 cluster 從 27 個/-719,400 降至 **0 個/+0**。
+
+---
 
 ## v13.2B 生產設定（2026-06-13 用戶裁定）
 

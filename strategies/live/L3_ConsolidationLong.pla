@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.4 + ImmediateStop
+ Version     : v13.5 + Cooldown-D + ImmediateStop
                v13.3/v13.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -10,6 +10,15 @@
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
 
  CHANGELOG:
+   v13.5  (2026-06-25) COOLDOWN-D (same-box ban + new-box delay):
+          Same entry-churn fix proven in L5 v19.9.
+          L3 v13.4 baseline: 39 losing clusters, 86 trades,
+          -1,083,400 NTD (29.7% of gross loss).
+          Rule 1: Same-box ban (v_Box_Top = v_LastExit_BoxTop
+          -> permanent block until new box forms).
+          Rule 2: New-box delay (wait Cooldown_Bars after exit).
+          New input: Cooldown_Bars(3), GA range 1-10.
+
    v13    + D3Filter + CL_Labels (no logic changes)
    v13.1  (2026-06-12) Holiday Flat Rule v3 + safety rails:
           - Iron Rule: flat before the 05:00 close of the last
@@ -115,7 +124,10 @@ inputs:
     Freeze_SL_On(true),            { PRODUCTION: lock leg/stop/target at entry; false = old v13 dynamic }
     BE_Trigger_Pts(0),             { PRODUCTION: 0 = BE off. REJECTED at 50 for range strategies
                                      (variant D: 100 zero-win CL_BE exits, amputated ~96 target hits) }
-    BE_Offset_Pts(5);              { breakeven floor offset; inert while BE_Trigger_Pts = 0 }
+    BE_Offset_Pts(5),              { breakeven floor offset; inert while BE_Trigger_Pts = 0 }
+
+    { --- v13.5 Cooldown-D (same-box ban + new-box time delay) --- }
+    Cooldown_Bars(3);
 
 variables:
     { --- Data2 Variables (60M) --- }
@@ -162,7 +174,13 @@ variables:
     v_Work_Target(0),
     v_Work_IsBot(false),
     v_BE_Armed(false),
-    v_BE_IsFloor(false);
+    v_BE_IsFloor(false),
+
+    { --- v13.5 Cooldown-D --- }
+    v_Cooldown_OK(true),
+    v_LastExit_BarNum(0),
+    v_LastExit_BoxTop(0),
+    v_Entry_BoxTop(0);
 
 arrays:
     Holiday_Tail[80](0);
@@ -311,8 +329,17 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
                     * BigPointValue);
 
-    { --- Entry Logic (gated by Holiday Tail) --- }
-    if MarketPosition = 0 then begin
+    { --- v13.5 Cooldown-D gate --- }
+    v_Cooldown_OK = true;
+    if v_LastExit_BarNum > 0 then begin
+        if v_Box_Top = v_LastExit_BoxTop then
+            v_Cooldown_OK = false
+        else if BarNumber - v_LastExit_BarNum < Cooldown_Bars then
+            v_Cooldown_OK = false;
+    end;
+
+    { --- Entry Logic (gated by Holiday Tail + Cooldown) --- }
+    if MarketPosition = 0 and v_Cooldown_OK then begin
 
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
@@ -334,6 +361,10 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
     { --- Exit Logic (v13.2 variant-switched engine) --- }
     if MarketPosition = 1 then begin
+
+        { v13.5: capture entry-time Box_Top for cooldown tracking }
+        if v_Entry_BoxTop = 0 then
+            v_Entry_BoxTop = v_Box_Top;
 
         if Freeze_SL_On = true then begin
 
@@ -431,10 +462,16 @@ end;
   ========================================== }
 
 if MarketPosition = 0 then begin
+    { v13.5: track exit for cooldown before resetting }
+    if v_Entry_BoxTop > 0 then begin
+        v_LastExit_BarNum = BarNumber;
+        v_LastExit_BoxTop = v_Entry_BoxTop;
+    end;
     v_SL_Locked     = false;
     v_Frozen_SL     = 0;
     v_Frozen_Target = 0;
     v_Leg_IsBot     = false;
     v_BE_Armed      = false;
     v_BE_IsFloor    = false;
+    v_Entry_BoxTop  = 0;
 end;
