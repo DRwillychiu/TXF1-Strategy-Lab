@@ -82,17 +82,17 @@ inputs:
     ATR_Length(35),
     ATR_Stop_Mult(4.5),
     FrontRun_Ticks(5),
-    Time_Stop_Bars(31),
+    Time_Stop_Bars(30),
 
     { [SEC-5] God Mode: Relative MFE Engine }
-    Trail_Start_Mult(2.5),
-    MFE_ATR_Tier_1(3.0),
+    Trail_Start_Mult(1),
+    MFE_ATR_Tier_1(2.5),
     MFE_ATR_Tier_2(6.0),
-    MFE_ATR_Tier_3(10.0),
-    Trail_Mult_0(3.0),
+    MFE_ATR_Tier_3(11),
+    Trail_Mult_0(3.5),
     Trail_Mult_1(2.0),
-    Trail_Mult_2(1.5),
-    Trail_Mult_3(0.8),
+    Trail_Mult_2(2),
+    Trail_Mult_3(1),
 
     { [SEC-6] Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
