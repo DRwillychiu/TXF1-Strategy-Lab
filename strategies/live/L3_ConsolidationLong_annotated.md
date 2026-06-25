@@ -2,17 +2,17 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：**v13.5 + FrozenSL + HolidayFlat_v3 + ImmediateStop**（Cooldown-D 已測試並關閉）
+> 版本：**v13.4 + FrozenSL + HolidayFlat_v3 + ImmediateStop**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**READY**（v13.5 驗證完成，Cooldown_Bars=0）
+> 狀態：**READY**（v13.4 基準，Cooldown-D 已測試並完全移除）
 > 口數：1 口
 > 深度審查：`L3_ConsolidationLong_review.md`（A/B 全紀錄：D 否決、**B 裁定部署 2026-06-13**）
 
-## v13.5 Cooldown-D 測試與關閉（2026-06-25）
+## Cooldown-D 測試紀錄（2026-06-25，已完全移除）
 
 **問題**：v13.4 基準 401 筆交易中，39 個虧損 cluster（86 筆 = 21.4%），淨損 **-1,083,400 NTD**（佔毛損 29.7%）。
 
-**4 種 Cooldown 變體全部 FAIL**：
+**4 種 Cooldown 變體全部 FAIL，程式碼已完全移除**：
 
 | 變體 | 淨利 | vs 基準 | 判定 |
 |------|-----:|:------:|:----:|
@@ -21,7 +21,7 @@
 | 純 3bar 時間延遲 | +813,400 | -4.5% | FAIL |
 | GA 最佳化 1bar | +411,800 | -51.7% | FAIL |
 
-**結論**：Cooldown-D 不適用於 L3。L3 是盤整策略，同箱重進是有效交易（TP 贏家來源）。Cluster 損失是策略結構成本，不是可修復的缺陷。`Cooldown_Bars = 0`（關閉）。
+**結論**：Cooldown-D 不適用於 L3。程式碼已完全移除，恢復至 v13.4。
 
 **與 L5 的根本差異**：
 
