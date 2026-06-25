@@ -640,32 +640,32 @@ if MarketPosition = 1 then begin
                 from Entry ("BL_Entry_Mid")
                 next bar at v_Dynamic_Stop Stop;
         end else if v_SP_Armed and v_SP_Floor > EntryPrice then begin
-            Sell ("BL_SP_Bot") CurrentContracts contracts
+            Sell ("BL_TrailSP_Bot") CurrentContracts contracts
                 from Entry ("BL_Entry_Bot")
                 next bar at v_SP_Floor Stop;
-            Sell ("BL_SP_Mid") CurrentContracts contracts
+            Sell ("BL_TrailSP_Mid") CurrentContracts contracts
                 from Entry ("BL_Entry_Mid")
                 next bar at v_SP_Floor Stop;
         end else begin
-            Sell ("BL_BE_Bot") CurrentContracts contracts
+            Sell ("BL_TrailBE_Bot") CurrentContracts contracts
                 from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
-            Sell ("BL_BE_Mid") CurrentContracts contracts
+            Sell ("BL_TrailBE_Mid") CurrentContracts contracts
                 from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
         end;
 
     { Fallback: inside consolidation, partial position, trail not yet active }
     end else if CurrentContracts < MaxContracts then begin
         if v_SP_Armed and v_SP_Floor > EntryPrice then begin
-            Sell ("BL_SP_Bot") CurrentContracts contracts
+            Sell ("BL_HoldSP_Bot") CurrentContracts contracts
                 from Entry ("BL_Entry_Bot")
                 next bar at v_SP_Floor Stop;
-            Sell ("BL_SP_Mid") CurrentContracts contracts
+            Sell ("BL_HoldSP_Mid") CurrentContracts contracts
                 from Entry ("BL_Entry_Mid")
                 next bar at v_SP_Floor Stop;
         end else begin
-            Sell ("BL_BE_Bot") CurrentContracts contracts
+            Sell ("BL_HoldBE_Bot") CurrentContracts contracts
                 from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
-            Sell ("BL_BE_Mid") CurrentContracts contracts
+            Sell ("BL_HoldBE_Mid") CurrentContracts contracts
                 from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
         end;
     end;
