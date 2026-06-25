@@ -515,172 +515,166 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         end;
     end;
 
-    { ==========================================
-      [SEC-4] EXIT LOGIC
-      ========================================== }
+end;
 
-    if MarketPosition = 1 then begin
+{ ==========================================
+  [SEC-4] EXIT LOGIC
+  B+F restructure: exit runs ALWAYS when in position,
+  regardless of consolidation state. Trail survives breakout.
+  ========================================== }
 
-        if v_Highest_Since_Entry = 0 then
-            v_Highest_Since_Entry = EntryPrice;
-        if High > v_Highest_Since_Entry then
-            v_Highest_Since_Entry = High;
+if MarketPosition = 1 then begin
 
-        v_Current_MFE_Distance = v_Highest_Since_Entry - EntryPrice;
+    if v_Highest_Since_Entry = 0 then
+        v_Highest_Since_Entry = EntryPrice;
+    if High > v_Highest_Since_Entry then
+        v_Highest_Since_Entry = High;
 
-        if High > v_Box_Top + v_ATR_Trail_Start then
-            v_Trail_Active = true;
+    v_Current_MFE_Distance = v_Highest_Since_Entry - EntryPrice;
 
-        { v19.7: Freeze ATR ONCE on entry bar }
-        if Freeze_SL_On and v_SL_Locked = false then begin
-            v_Frozen_ATR        = v_Current_ATR;
-            v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult;
-            v_SL_Locked         = true;
+    { v19.7: Freeze ATR ONCE on entry bar }
+    if Freeze_SL_On and v_SL_Locked = false then begin
+        v_Frozen_ATR        = v_Current_ATR;
+        v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult;
+        v_SL_Locked         = true;
+    end;
+
+    { v19.8: SP arming (permanently disabled, SP_Trigger_Pts=0) }
+    if Close - EntryPrice > v_Peak_Profit then
+        v_Peak_Profit = Close - EntryPrice;
+    if SP_Trigger_Pts > 0 and v_Peak_Profit >= SP_Trigger_Pts then
+        v_SP_Armed = true;
+    if v_SP_Armed then
+        v_SP_Floor = EntryPrice +
+            (v_Peak_Profit * (1 - SP_Retain_Pct / 100));
+
+    v_ScaleOut_Size = Round(MaxContracts * ScaleOut_Percent, 0);
+    if MaxContracts > 1 and v_ScaleOut_Size = 0 then
+        v_ScaleOut_Size = 1;
+
+    { Priority 0: Holiday / Registry / Kill - ALWAYS active }
+    if Manual_Kill_Switch then begin
+        Sell ("BL_Kill_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+        Sell ("BL_Kill_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    end else if v_Registry_Expired then begin
+        Sell ("BL_RegistryEnd_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+        Sell ("BL_RegistryEnd_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    end else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+        Sell ("BL_Holiday_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+        Sell ("BL_Holiday_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    end else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+        Sell ("BL_Settlement_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+        Sell ("BL_Settlement_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    end;
+
+    { Trail activation: breakout = trail ON }
+    if not v_is_in_consolidation then
+        v_Trail_Active = true;
+    if High > v_Box_Top + v_ATR_Trail_Start then
+        v_Trail_Active = true;
+
+    { Stage 1: full position, inside consolidation only }
+    if v_is_in_consolidation and CurrentContracts = MaxContracts then begin
+
+        if v_ScaleOut_Size > 0 then begin
+            Sell ("BL_TP_Bot") v_ScaleOut_Size contracts
+                from Entry ("BL_Entry_Bot") next bar at v_Target_Bot Limit;
+            Sell ("BL_TP_Mid") v_ScaleOut_Size contracts
+                from Entry ("BL_Entry_Mid") next bar at v_Target_Mid Limit;
         end;
 
-        { v19.8: Close-based MFE peak + SP arming (L1 SP philosophy).
-          Never disarms until flat. v_SP_Floor scales with peak. }
-        if Close - EntryPrice > v_Peak_Profit then
-            v_Peak_Profit = Close - EntryPrice;
-        if SP_Trigger_Pts > 0 and v_Peak_Profit >= SP_Trigger_Pts then
-            v_SP_Armed = true;
-        if v_SP_Armed then
-            v_SP_Floor = EntryPrice +
-                (v_Peak_Profit * (1 - SP_Retain_Pct / 100));
-
-        v_ScaleOut_Size = Round(MaxContracts * ScaleOut_Percent, 0);
-        if MaxContracts > 1 and v_ScaleOut_Size = 0 then
-            v_ScaleOut_Size = 1;
-
-        { Priority 0: Holiday Iron Rule / Registry / Kill
-          (Market-type, runs before stop/limit logic in PL engine) }
-        if Manual_Kill_Switch then begin
-            Sell ("BL_Kill_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-            Sell ("BL_Kill_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
-        end else if v_Registry_Expired then begin
-            Sell ("BL_RegistryEnd_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-            Sell ("BL_RegistryEnd_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
-        end else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
-            Sell ("BL_Holiday_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-            Sell ("BL_Holiday_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
-        end else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
-            Sell ("BL_Settlement_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-            Sell ("BL_Settlement_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        if Freeze_SL_On and v_SL_Locked then begin
+            v_Bot_Base_Stop = v_Box_Btm  - v_Frozen_ATR_Buffer;
+            v_Mid_Base_Stop = v_Mid_Line - v_Frozen_ATR_Buffer;
+        end else begin
+            v_Bot_Base_Stop = v_Box_Btm  - v_ATR_Buffer;
+            v_Mid_Base_Stop = v_Mid_Line - v_ATR_Buffer;
         end;
 
-        { Stage 1: Full position }
-        if CurrentContracts = MaxContracts then begin
+        if v_SP_Armed and v_SP_Floor > v_Bot_Base_Stop then
+            Sell ("BL_SP_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot")
+                next bar at v_SP_Floor Stop
+        else
+            Sell ("BL_SL_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot")
+                next bar at v_Bot_Base_Stop Stop;
 
-            if v_ScaleOut_Size > 0 then begin
-                Sell ("BL_TP_Bot") v_ScaleOut_Size contracts
-                    from Entry ("BL_Entry_Bot") next bar at v_Target_Bot Limit;
-                Sell ("BL_TP_Mid") v_ScaleOut_Size contracts
-                    from Entry ("BL_Entry_Mid") next bar at v_Target_Mid Limit;
-            end;
+        if v_SP_Armed and v_SP_Floor > v_Mid_Base_Stop then
+            Sell ("BL_SP_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid")
+                next bar at v_SP_Floor Stop
+        else
+            Sell ("BL_SL_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid")
+                next bar at v_Mid_Base_Stop Stop;
 
-            { v19.7: base SL uses Frozen ATR Buffer when locked }
-            if Freeze_SL_On and v_SL_Locked then begin
-                v_Bot_Base_Stop = v_Box_Btm  - v_Frozen_ATR_Buffer;
-                v_Mid_Base_Stop = v_Mid_Line - v_Frozen_ATR_Buffer;
-            end else begin
-                v_Bot_Base_Stop = v_Box_Btm  - v_ATR_Buffer;
-                v_Mid_Base_Stop = v_Mid_Line - v_ATR_Buffer;
-            end;
-
-            { v19.8: emit BL_SP_* when SP binds higher than base SL,
-              else BL_SL_* (mutually exclusive per leg per bar) }
-            if v_SP_Armed and v_SP_Floor > v_Bot_Base_Stop then
-                Sell ("BL_SP_Bot") CurrentContracts contracts
-                    from Entry ("BL_Entry_Bot")
-                    next bar at v_SP_Floor Stop
-            else
-                Sell ("BL_SL_Bot") CurrentContracts contracts
-                    from Entry ("BL_Entry_Bot")
-                    next bar at v_Bot_Base_Stop Stop;
-
-            if v_SP_Armed and v_SP_Floor > v_Mid_Base_Stop then
-                Sell ("BL_SP_Mid") CurrentContracts contracts
-                    from Entry ("BL_Entry_Mid")
-                    next bar at v_SP_Floor Stop
-            else
-                Sell ("BL_SL_Mid") CurrentContracts contracts
-                    from Entry ("BL_Entry_Mid")
-                    next bar at v_Mid_Base_Stop Stop;
-
-            if BarsSinceEntry >= Time_Stop_Bars then begin
-                Sell ("BL_TimeExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-                Sell ("BL_TimeExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
-            end;
-
-        end;
-
-        { Stage 2 and 3: Partial position }
-        if CurrentContracts < MaxContracts then begin
-
-            if v_Trail_Active then begin
-
-                if v_Current_MFE_Distance > v_ATR_Tier3 then
-                    v_Dynamic_Trail_Mult = 0.8
-                else if v_Current_MFE_Distance > v_ATR_Tier2 then
-                    v_Dynamic_Trail_Mult = 1.5
-                else if v_Current_MFE_Distance > v_ATR_Tier1 then
-                    v_Dynamic_Trail_Mult = 2.0
-                else
-                    v_Dynamic_Trail_Mult = 3.0;
-
-                v_Dynamic_Stop = v_Highest_Since_Entry -
-                                 (v_Current_ATR * v_Dynamic_Trail_Mult);
-
-                { v19.8 priority for runner: Trail > SP > BE }
-                if v_Dynamic_Stop > MaxList(EntryPrice, v_SP_Floor) then begin
-                    Sell ("BL_Trail_Bot") CurrentContracts contracts
-                        from Entry ("BL_Entry_Bot")
-                        next bar at v_Dynamic_Stop Stop;
-                    Sell ("BL_Trail_Mid") CurrentContracts contracts
-                        from Entry ("BL_Entry_Mid")
-                        next bar at v_Dynamic_Stop Stop;
-                end else if v_SP_Armed and v_SP_Floor > EntryPrice then begin
-                    Sell ("BL_SP_Bot") CurrentContracts contracts
-                        from Entry ("BL_Entry_Bot")
-                        next bar at v_SP_Floor Stop;
-                    Sell ("BL_SP_Mid") CurrentContracts contracts
-                        from Entry ("BL_Entry_Mid")
-                        next bar at v_SP_Floor Stop;
-                end else begin
-                    Sell ("BL_BE_Bot") CurrentContracts contracts
-                        from Entry ("BL_Entry_Bot")
-                        next bar at EntryPrice Stop;
-                    Sell ("BL_BE_Mid") CurrentContracts contracts
-                        from Entry ("BL_Entry_Mid")
-                        next bar at EntryPrice Stop;
-                end;
-
-            end else begin
-                { Trail not yet active. v19.8: SP > BE priority. }
-                if v_SP_Armed and v_SP_Floor > EntryPrice then begin
-                    Sell ("BL_SP_Bot") CurrentContracts contracts
-                        from Entry ("BL_Entry_Bot")
-                        next bar at v_SP_Floor Stop;
-                    Sell ("BL_SP_Mid") CurrentContracts contracts
-                        from Entry ("BL_Entry_Mid")
-                        next bar at v_SP_Floor Stop;
-                end else begin
-                    Sell ("BL_BE_Bot") CurrentContracts contracts
-                        from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
-                    Sell ("BL_BE_Mid") CurrentContracts contracts
-                        from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
-                end;
-            end;
-
+        if BarsSinceEntry >= Time_Stop_Bars then begin
+            Sell ("BL_TimeExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_TimeExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
         end;
 
     end;
 
-end else begin
-    if MarketPosition = 1 then begin
-        Sell ("BL_BreakExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
-        Sell ("BL_BreakExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    { Trail management: after scale-out OR outside consolidation }
+    if v_Trail_Active and
+       (CurrentContracts < MaxContracts or
+        not v_is_in_consolidation) then begin
+
+        if v_Current_MFE_Distance > v_ATR_Tier3 then
+            v_Dynamic_Trail_Mult = 0.8
+        else if v_Current_MFE_Distance > v_ATR_Tier2 then
+            v_Dynamic_Trail_Mult = 1.5
+        else if v_Current_MFE_Distance > v_ATR_Tier1 then
+            v_Dynamic_Trail_Mult = 2.0
+        else
+            v_Dynamic_Trail_Mult = 3.0;
+
+        v_Dynamic_Stop = v_Highest_Since_Entry -
+                         (v_Current_ATR * v_Dynamic_Trail_Mult);
+
+        { Trail > SP > BE priority (highest stop wins for long) }
+        if v_Dynamic_Stop > MaxList(EntryPrice, v_SP_Floor) then begin
+            Sell ("BL_Trail_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot")
+                next bar at v_Dynamic_Stop Stop;
+            Sell ("BL_Trail_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid")
+                next bar at v_Dynamic_Stop Stop;
+        end else if v_SP_Armed and v_SP_Floor > EntryPrice then begin
+            Sell ("BL_SP_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot")
+                next bar at v_SP_Floor Stop;
+            Sell ("BL_SP_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid")
+                next bar at v_SP_Floor Stop;
+        end else begin
+            Sell ("BL_BE_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
+            Sell ("BL_BE_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
+        end;
+
     end;
+
+    { Inside consolidation, partial position, trail not yet active }
+    if v_is_in_consolidation and CurrentContracts < MaxContracts and
+       not v_Trail_Active then begin
+        if v_SP_Armed and v_SP_Floor > EntryPrice then begin
+            Sell ("BL_SP_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot")
+                next bar at v_SP_Floor Stop;
+            Sell ("BL_SP_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid")
+                next bar at v_SP_Floor Stop;
+        end else begin
+            Sell ("BL_BE_Bot") CurrentContracts contracts
+                from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
+            Sell ("BL_BE_Mid") CurrentContracts contracts
+                from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
+        end;
+    end;
+
 end;
 
 { ==========================================
