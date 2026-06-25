@@ -694,26 +694,18 @@ if v_ManualAnnot_Drawn = false and Date >= 1260625 then begin
     TL_SetColor(v_ManualAnnot_ID1, Green);
     TL_SetStyle(v_ManualAnnot_ID1, 3);
 
-    { MC exit format: count / arrow / signal name (top to bottom) }
+    { MC native exit style: count above, signal name below }
     v_ManualAnnot_ID2 = Text_New(1260625, 845, 47060,
         "2");
     Text_SetColor(v_ManualAnnot_ID2, White);
     Text_SetSize(v_ManualAnnot_ID2, 7);
-    Text_SetAttribute(v_ManualAnnot_ID2, 0, true);
+    Text_SetStyle(v_ManualAnnot_ID2, 0, true);
 
-    { Arrow at exit price (dotted line terminates here) }
     v_ManualAnnot_ID3 = Text_New(1260625, 845, 46990,
-        "v");
+        "BL_TP_Bot");
     Text_SetColor(v_ManualAnnot_ID3, White);
     Text_SetSize(v_ManualAnnot_ID3, 7);
-    Text_SetAttribute(v_ManualAnnot_ID3, 0, true);
-
-    { Signal name below arrow }
-    v_ManualAnnot_ID4 = Text_New(1260625, 845, 46920,
-        "BL_TP_Bot");
-    Text_SetColor(v_ManualAnnot_ID4, White);
-    Text_SetSize(v_ManualAnnot_ID4, 7);
-    Text_SetAttribute(v_ManualAnnot_ID4, 0, true);
+    Text_SetStyle(v_ManualAnnot_ID3, 0, true);
 
     v_ManualAnnot_Drawn = true;
 end;
