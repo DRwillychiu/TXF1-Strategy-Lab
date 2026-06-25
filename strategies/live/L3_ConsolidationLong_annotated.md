@@ -2,36 +2,33 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：**v13.5 + Cooldown-D + FrozenSL + HolidayFlat_v3 + ImmediateStop**
+> 版本：**v13.5 + FrozenSL + HolidayFlat_v3 + ImmediateStop**（Cooldown-D 已測試並關閉）
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**READY**（v13.5 Cooldown-D 加入，待部署驗證）
+> 狀態：**READY**（v13.5 驗證完成，Cooldown_Bars=0）
 > 口數：1 口
 > 深度審查：`L3_ConsolidationLong_review.md`（A/B 全紀錄：D 否決、**B 裁定部署 2026-06-13**）
 
-## v13.5 Cooldown-D（2026-06-25）
+## v13.5 Cooldown-D 測試與關閉（2026-06-25）
 
 **問題**：v13.4 基準 401 筆交易中，39 個虧損 cluster（86 筆 = 21.4%），淨損 **-1,083,400 NTD**（佔毛損 29.7%）。
 
-**根因**：與 L5 相同 — SL 出場後 Box 沒變，進場條件立刻重新成立。
+**4 種 Cooldown 變體全部 FAIL**：
 
-**解決方案（時間冷卻，無同箱封鎖）**：
+| 變體 | 淨利 | vs 基準 | 判定 |
+|------|-----:|:------:|:----:|
+| v13.4 基準（無冷卻） | **+851,800** | — | **最佳** |
+| 同箱封鎖 + 3bar 延遲 | +743,200 | -12.8% | FAIL |
+| 純 3bar 時間延遲 | +813,400 | -4.5% | FAIL |
+| GA 最佳化 1bar | +411,800 | -51.7% | FAIL |
 
-| 規則 | 觸發條件 | 動作 |
-|------|---------|------|
-| ~~同箱封鎖~~ | ~~`v_Box_Top = v_LastExit_BoxTop`~~ | **已移除**（A/B 證實殺 TP 贏家） |
-| 時間冷卻 | 任何出場後 `BarNumber - v_LastExit_BarNum < Cooldown_Bars` | 等待 N 根 bar |
+**結論**：Cooldown-D 不適用於 L3。L3 是盤整策略，同箱重進是有效交易（TP 贏家來源）。Cluster 損失是策略結構成本，不是可修復的缺陷。`Cooldown_Bars = 0`（關閉）。
 
-新增輸入：`Cooldown_Bars(3)` — GA 範圍 1-10，step 1
+**與 L5 的根本差異**：
 
-**同箱封鎖 A/B 結果（2026-06-25）**：
-
-| 指標 | v13.4 基準 | v13.5 含同箱封鎖 | 判定 |
-|------|:--------:|:---------------:|:----:|
-| 淨利 | +851,800 | +743,200 (-12.8%) | **FAIL** |
-| TP_Mid | 139 / +3,470,200 | 119 / +2,964,000 | 殺 20 筆贏家 |
-| 虧損 cluster | -1,083,400 | -557,400 | 改善但代價過高 |
-
-**根因**：L3 是盤整策略，同箱 = 仍有效的交易場。永久封鎖殺掉的 TP 利潤 > 省下的 cluster 損失。
+| | L5 突破策略 | L3 盤整策略 |
+|---|---|---|
+| 同箱重進 | 同箱 = 同失敗（Cooldown 消滅 100% 虧損 cluster） | 同箱 = 仍有效（封鎖殺 TP 贏家） |
+| Cooldown 效果 | 淨利 +29.7%、PF 1.55→2.68 | 淨利 -4.5% ~ -51.7% |
 
 ---
 

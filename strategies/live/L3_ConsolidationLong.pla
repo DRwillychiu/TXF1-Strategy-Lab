@@ -10,15 +10,15 @@
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
 
  CHANGELOG:
-   v13.5  (2026-06-25) COOLDOWN-D (time-delay only):
-          Entry-churn reduction adapted from L5 v19.9.
-          L3 v13.4 baseline: 39 losing clusters, 86 trades,
-          -1,083,400 NTD (29.7% of gross loss).
-          Same-box permanent ban REMOVED after A/B: L3 is a
-          range strategy -- same box = still valid setup.
-          Ban killed 20 TP_Mid winners, net -108K vs baseline.
-          Kept: time delay (wait Cooldown_Bars after any exit).
-          New input: Cooldown_Bars(3), GA range 1-10.
+   v13.5  (2026-06-25) COOLDOWN-D tested and DISABLED:
+          Adapted from L5 v19.9 entry-churn fix. 4 variants
+          tested, ALL worse than v13.4 baseline (+851,800):
+            - Same-box ban + 3-bar delay: +743,200 (-12.8%)
+            - Time-delay only 3-bar:      +813,400 (-4.5%)
+            - GA optimal 1-bar:           +411,800 (-51.7%)
+          Root cause: L3 is a range strategy; same-box re-entry
+          produces TP winners. Cluster cost is structural, not
+          a defect. Cooldown_Bars default = 0 (OFF).
 
    v13    + D3Filter + CL_Labels (no logic changes)
    v13.1  (2026-06-12) Holiday Flat Rule v3 + safety rails:
@@ -128,7 +128,7 @@ inputs:
     BE_Offset_Pts(5),              { breakeven floor offset; inert while BE_Trigger_Pts = 0 }
 
     { --- v13.5 Cooldown-D (same-box ban + new-box time delay) --- }
-    Cooldown_Bars(3);
+    Cooldown_Bars(0);              { DISABLED: all 4 variants worse than baseline }
 
 variables:
     { --- Data2 Variables (60M) --- }
