@@ -304,7 +304,8 @@ variables:
     v_ManualAnnot_Drawn(false),
     v_ManualAnnot_ID1(-1),
     v_ManualAnnot_ID2(-1),
-    v_ManualAnnot_ID3(-1);
+    v_ManualAnnot_ID3(-1),
+    v_ManualAnnot_ID4(-1);
 
 arrays:
     Holiday_Tail[80](0);
@@ -693,16 +694,25 @@ if v_ManualAnnot_Drawn = false and Date >= 1260625 then begin
     TL_SetColor(v_ManualAnnot_ID1, Green);
     TL_SetStyle(v_ManualAnnot_ID1, 3);
 
-    { MC exit format: count above, signal name below }
+    { MC exit format: count / signal name / arrow (top to bottom) }
     v_ManualAnnot_ID2 = Text_New(1260625, 845, 47060,
         "2");
     Text_SetColor(v_ManualAnnot_ID2, White);
     Text_SetSize(v_ManualAnnot_ID2, 7);
+    Text_SetAttribute(v_ManualAnnot_ID2, 0, true);
 
     v_ManualAnnot_ID3 = Text_New(1260625, 845, 46990,
         "BL_TP_Bot");
     Text_SetColor(v_ManualAnnot_ID3, White);
     Text_SetSize(v_ManualAnnot_ID3, 7);
+    Text_SetAttribute(v_ManualAnnot_ID3, 0, true);
+
+    { Exit arrow marker at exit price }
+    v_ManualAnnot_ID4 = Text_New(1260625, 845, 46920,
+        "v");
+    Text_SetColor(v_ManualAnnot_ID4, White);
+    Text_SetSize(v_ManualAnnot_ID4, 7);
+    Text_SetAttribute(v_ManualAnnot_ID4, 0, true);
 
     v_ManualAnnot_Drawn = true;
 end;
