@@ -2,84 +2,76 @@
 
 > 腳本名稱：_Live_Adaptive_Farmer_v19_8_BreakoutLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_BREAKOUT_C
-> 版本：**v19.8 + Pre-Trail SP A/B Engine + HolidayFlat_v3 + FrozenSL**
+> 版本：**v19.9 + Cooldown-D + HolidayFlat_v3 + FrozenSL + ImmediateStop**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：🟢 已上架實盤運行 v19.6（待空手時部署 v19.8，預設 = v19.7 行為）
-> 口數：1 口
-
-## v19.8 Pre-Trail SP A/B Engine — 實證結果（2026-06-13）
-
-### 裁定：**全變體 FAIL，維持 v19.7 行為為生產**（SP_Trigger_Pts 永久 = 0）
-
-| 變體 | 淨利 | Δ vs A | Top-10 保留 | 裁定 |
-|------|------|--------|-------------|------|
-| **A** baseline | **+1,563,200** | 0 | **100%** | ✅ **生產** |
-| B Aggressive (60/50) | +777,200 | -50% | 35% | ❌ FAIL |
-| C Mid (80/50) | +1,040,200 | -34% | 43% | ❌ FAIL |
-| D Conservative (100/50) | +1,344,800 | -14% | 50% | ❌ FAIL |
-| E LessRetain (80/40) | +968,800 | -38% | 36% | ❌ FAIL |
-| **F L1-Like (100/55)** | +1,280,200 | -18% | 49% | ❌ **連完全鏡像 L1 也 FAIL** |
-
-**鐵證**：3 筆大贏家被所有變體斬首（2026-04-07 +376K → ~+7~16K；2026-03-31 +177K → +5~38K；2026-03-12 +131K → +7~14K）。
-
-**完整實證**：[docs/L5_v198_variant_results.md](../../docs/L5_v198_variant_results.md)
-
-### 新發現：策略尾巴集中度決定 SP 是否可行
-
-| 策略 | Top-10 占淨利 | SP 適用？ |
-|------|--------------|----------|
-| L1 趨勢 | 38%（適中）| ✅ V2.6 成功 |
-| L4 反轉 | 高 | ❌ v14.2 失敗 |
-| **L5 突破** | **88%（極端）** | ❌ **v19.8 失敗** |
-
-**L5 淨利 88% 集中在 Top-10**，截斷大尾巴 = 自殺。
-
-### v19.8 程式碼保留原因
-
-雖然 SP 駁回，程式碼保留：
-- 完整記錄實證失敗模式（教育價值）
-- 未來若想試「post-trail-only SP」或「+200 高門檻」可重啟
-- input 預設永久 = 0，無運行成本
-
-**MC9 端不需要動 input**——預設值已是生產配置。
+> 狀態：OFFLINE（等待 Cooldown_Bars GA 優化完成後部署）
+> 口數：**1 口**（100 萬本金）
 
 ---
 
-## v19.8 Pre-Trail SP A/B Engine（2026-06-13）原始設計
+## v19.9 變更（2026-06-25）
 
-**用戶概念**：L5 = L1 獲利延伸 + L3 進場策略；解決「曾經獲利但全部吐回」問題。
+### 1. 1 口簡化：移除 dead code
 
-**機制**（從 L1 V2.6 SP 移植）：
-- close-based MFE 追蹤（v_Peak_Profit = max(Close - Entry)）
-- v_Peak_Profit >= SP_Trigger_Pts → v_SP_Armed = true
-- v_SP_Floor = EntryPrice + Peak × (1 - SP_Retain_Pct/100)
-- 永不解除（直到 flat）
-- 優先序：Trail > SP > BE > 初始 SL
+在 1 口操作下，以下機制永遠不觸發，全部移除：
 
-**Input 開關（生產預設 OFF，等同 v19.7 行為）**：
-| Input | 預設 | 含義 |
-|-------|------|------|
-| `SP_Trigger_Pts` | **0**（off）| 0 = 關閉。A/B 測 60/80/100 |
-| `SP_Retain_Pct` | 50 | 0-100。L1 用 55 |
+| 移除項目 | 原因 |
+|---------|------|
+| ScaleOut_Percent 輸入 + v_ScaleOut_Size | Round(1 × 0.4) = 0，無法分批 |
+| TP 出場（BL_TP_Bot/Mid）| 需要 ScaleOut_Size > 0 |
+| SP 模組（SP_Trigger_Pts/SP_Retain_Pct + 全部 SP 變數）| v19.8 A/B 全 FAIL，永久關閉 |
+| Fallback 區塊（BL_HoldSP/BL_HoldBE）| 需要 CurrentContracts < MaxContracts，1 口不可能 |
 
-**新標籤**：BL_SP_Bot / BL_SP_Mid（與 BL_BE / BL_SL / BL_Trail 互斥優先）
+**10 個出場標籤移除**（BL_TP/SP/TrailSP/HoldSP/HoldBE × Bot/Mid），**16 個保留**。
 
-**完整變體設計**：[docs/L5_v198_pretrail_sp_design.md](../../docs/L5_v198_pretrail_sp_design.md)
+完整移除程式碼歸檔：[L5_v199_1contract_removed_code.md](../../docs/strategy_archive/L5_v199_1contract_removed_code.md)
 
-**6 個建議測試變體**：
-| 變體 | SP_Trigger | SP_Retain | 假設 |
-|------|-----------|-----------|------|
-| A baseline | 0 | — | v19.7 對照（迴歸）|
-| B Aggressive | 60 | 50 | 早期保護 |
-| C Mid | 80 | 50 | 中等門檻 |
-| D Conservative | 100 | 50 | 高門檻 |
-| E LessRetain | 80 | 40 | 更多回吐空間 |
-| F L1-Like | 100 | 55 | 完全鏡像 L1 SP |
+日後擴展至多口數時（建議 5 口以上），按歸檔文件中的 Restoration guide 恢復。
 
-**接受條件**：淨利 > v19.7、BL_SP 勝率 ≥ 50%、Top-10 保留 ≥ 80%、MDD 不惡化 > 10%
-**否決條件**：BL_SP 勝率 < 30%（L3/L4 詛咒）、Top-10 < 70%、淨利低於 v19.7
+### 2. Cooldown-D：同箱封鎖 + 新箱冷卻
 
-**L4 v14.2 失敗教訓已內化**：L5 因為有 Scale-Out 緩衝（40% 在 TP 落袋），SP 截斷風險理論上比 L4 小，但仍須 A/B 驗證。
+**問題**：182 筆交易中 56% 為同價位 cluster churn。27 個虧損 cluster、73 筆、-719,400 NTD（佔毛損 38%）。最嚴重案例：T58-T63 在 @20249 連續 6 次進場，5 次虧損。
+
+**根因**：SL 出場後 Box 沒變，進場條件立刻重新成立，策略盲目重新進場。
+
+**解決方案（Plan D）**：
+
+| 規則 | 觸發條件 | 動作 |
+|------|---------|------|
+| 同箱封鎖 | `v_Box_Top = v_LastExit_BoxTop` | **永久禁止**進場，直到新箱形成 |
+| 新箱冷卻 | 不同 Box 但 `BarNumber - v_LastExit_BarNum < Cooldown_Bars` | 等待 N 根 bar |
+
+新增輸入：`Cooldown_Bars(3)` — GA 範圍 1-10，step 1
+
+新增變數：
+- `v_Cooldown_OK` — 每根 bar 計算，決定是否允許進場
+- `v_LastExit_BarNum` — 上次出場的 BarNumber
+- `v_LastExit_BoxTop` — 上次出場的 Box_Top（從 v_Entry_BoxTop 繼承）
+- `v_Entry_BoxTop` — 進場時鎖定的 Box_Top
+
+### 3. 出場架構簡化
+
+v19.9 在 1 口下只有兩條出場路徑：
+
+```
+進場 → 盤整中 → Stage 1（SL 或 TimeExit）
+進場 → 突破盤整 → Stage 2（Trail 4 階動態追蹤 + BE 底線）
+```
+
+出場優先序：
+```
+Priority 0: Kill > Registry > Holiday > Settlement
+Stage 1:    SL（Frozen ATR）> TimeExit
+Stage 2:    Trail（4 階動態）> BE（進場價）
+```
+
+---
+
+## v19.8 SP A/B 實證摘要（歷史，程式碼已移除）
+
+裁定：**全 5 變體 FAIL**，SP 程式碼在 v19.9 完全移除。
+- L5 淨利 88% 集中在 Top-10 大贏家，SP 截斷大尾巴 = 自殺
+- 完整實證：[L5_v198_variant_results.md](../../docs/strategy_archive/L5_v198_variant_results.md)
 
 ---
 
@@ -87,37 +79,9 @@
 
 | 修正 | v19.6 狀況 | v19.7 改善 |
 |------|-----------|-----------|
-| **DayOfWeek=7 Dead Code** | 3 處引用 DOW=7，PowerLanguage Sat=6 → 永不成立 | 全移除；BL_SatClose 標籤刪除（4.8 年 0 觸發已實證） |
-| **無假日鐵律** | 跨假持倉無保護 | 加入 HolidayFlat_v3：63 筆 TAIFEX 登錄表 + 04:15 強制歸零 + Registry fail-safe + Manual_Kill_Switch |
-| **初始停損漂移** | v_ATR_Buffer 每根重算，reload 變動 | Freeze_SL_On(true)：進場根鎖 ATR，整筆交易固定 |
-
-### v19.7 新出場標籤
-
-| 標籤 | 觸發 |
-|------|------|
-| BL_Holiday_Bot / BL_Holiday_Mid | 尾段日 04:15 強制歸零 |
-| BL_RegistryEnd_Bot / BL_RegistryEnd_Mid | 登錄表過期 fail-safe |
-| BL_Kill_Bot / BL_Kill_Mid | Manual_Kill_Switch（颱風臨時停市）|
-
-### 本輪刻意 **不**改變
-
-| 議題 | 為什麼不動 |
-|------|-----------|
-| BL_BE 機制 | L4 v14.2 A/B 證明 BE 對多階段獲利策略有截斷副作用，但 L5 BE 是設計內建，未做 A/B；列為下一輪研究 |
-| 夜盤封鎖（Path A）| L5 02-04 進場 12 筆 +87,800 淨利（不像 L4 -120,800），封鎖會傷害 L5 |
-| Scale-Out / Trail 倍數 | 屬於 God Mode 核心引擎，非本輪 scope |
-
-### MC9 部署（空手時）
-
-新增 4 個 inputs 預設值：
-- `Freeze_SL_On(true)`
-- `Holiday_Flat_Time(415)`
-- `Registry_Valid_Until(1270101)`
-- `Manual_Kill_Switch(false)`
-
-部署前提：MC9 空手狀態（v19.7 改變停損價計算，跨版會影響歷史軌跡）。
-
----
+| **DayOfWeek=7 Dead Code** | 3 處引用 DOW=7，PowerLanguage Sat=6 → 永不成立 | 全移除 |
+| **無假日鐵律** | 跨假持倉無保護 | HolidayFlat_v3：63 筆 TAIFEX 登錄表 + 04:15 強制歸零 |
+| **初始停損漂移** | v_ATR_Buffer 每根重算 | Freeze_SL_On：進場根鎖 ATR |
 
 ---
 
@@ -195,18 +159,17 @@
 
 ---
 
-## 出場邏輯（God Mode MFE 引擎）
+## 出場邏輯（v19.9 簡化版）
 
-### 全倉階段（Stage 1）
+### Stage 1：盤整中（SL + TimeExit）
 | 機制 | 條件 |
 |------|------|
-| 部分停利 | 40% 口數在目標價出場（Limit） |
-| 初始停損 | Box_Btm/Mid - ATR(35) × 4.5（Stop） |
+| 初始停損 | Box_Btm/Mid - Frozen_ATR × 4.5（Stop） |
 | 時間停損 | 持倉 ≥ 31 根 K 棒 → 市價出場 |
 
-### 減倉後（Stage 2-3：MFE 三階追蹤）
+### Stage 2：突破盤整（4 階動態追蹤）
 ```
-啟動：價格突破 Box_Top + ATR × 2.5
+啟動：盤整箱體被打破（日線突破 Box_Top 或 Box_Btm）
 追蹤停損倍數隨 MFE 距離動態調整：
 
 MFE 距離          追蹤倍數    含義
@@ -219,15 +182,10 @@ MFE 距離          追蹤倍數    含義
 若追蹤停損 < 進場價 → 改用打平停損（BE）
 ```
 
-### 盤整失效出場
+### Cooldown-D（進場冷卻）
 ```
-若盤整箱體被打破（日線突破 Box_Top 或 Box_Btm）且仍持倉
-→ 市價出場（BL_BreakExit）
-```
-
-### 週末出場
-```
-週六 04:00 後強制平倉
+同箱封鎖：上次出場的 Box 仍在 → 禁止進場（硬規則）
+新箱冷卻：新 Box 但距上次出場 < Cooldown_Bars 根 → 等待
 ```
 
 ---
@@ -244,13 +202,17 @@ MFE 距離          追蹤倍數    含義
 | ATR_Stop_Mult | 4.5 | 停損 | 初始停損 ATR 倍數 |
 | FrontRun_Ticks | 5 | 進場 | 前搶 tick 數 |
 | Time_Stop_Bars | 31 | 停損 | 時間停損 K 棒數 |
-| ScaleOut_Percent | 0.4 | 減碼 | 部分停利比例（40%） |
 | Trail_Start_Mult | 2.5 | MFE | 追蹤啟動 ATR 倍數 |
 | MFE_ATR_Tier_1 | 3.0 | MFE | 第一階收緊門檻 |
 | MFE_ATR_Tier_2 | 6.0 | MFE | 第二階收緊門檻 |
 | MFE_ATR_Tier_3 | 10.0 | MFE | 第三階極緊門檻 |
+| Trail_Mult_0 | 3.0 | MFE | Tier 0 追蹤寬度（MFE < Tier_1） |
+| Trail_Mult_1 | 2.0 | MFE | Tier 1 追蹤寬度 |
+| Trail_Mult_2 | 1.5 | MFE | Tier 2 追蹤寬度 |
+| Trail_Mult_3 | 0.8 | MFE | Tier 3 追蹤寬度（極緊） |
 | Weekly_MA_Fast | 20 | 週線 | 週線快速 MA |
 | Weekly_MA_Slow | 60 | 週線 | 週線慢速 MA |
+| Cooldown_Bars | 3 | 冷卻 | 新箱冷卻等待 bar 數（GA 1-10） |
 
 ---
 
@@ -271,8 +233,8 @@ MFE 距離          追蹤倍數    含義
 
 1. **盤整箱體偵測**：日線自動辨識波動收縮（≤ 60%），不依賴主觀判斷
 2. **雙進場區域**：底部和中線兩個接球點，提高進場機會
-3. **MFE 三階追蹤（God Mode）**：隨利潤增長自動收緊停損，從 3.0 ATR 收到 0.8 ATR
-4. **部分停利 + 追蹤**：40% 先落袋，60% 讓利潤奔跑
+3. **MFE 4 階追蹤（God Mode）**：隨利潤增長自動收緊停損，從 3.0 ATR 收到 0.8 ATR
+4. **Cooldown-D 冷卻機制**：同箱永久封鎖 + 新箱時間冷卻，杜絕 cluster churn
 5. **AND 週線過濾**：比 L1 的 OR 過濾更嚴格，確保多頭環境確立才進場
 6. **時間過濾**：凌晨 4-5 點和週六不進場
-7. **盤整失效保護**：箱體被打破時立即出場，不硬撐
+7. **Frozen SL**：進場根鎖定 ATR，停損不漂移
