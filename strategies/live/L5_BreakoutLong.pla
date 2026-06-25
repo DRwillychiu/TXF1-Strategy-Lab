@@ -204,6 +204,10 @@ inputs:
     MFE_ATR_Tier_1(3.0),
     MFE_ATR_Tier_2(6.0),
     MFE_ATR_Tier_3(10.0),
+    Trail_Mult_0(3.0),
+    Trail_Mult_1(2.0),
+    Trail_Mult_2(1.5),
+    Trail_Mult_3(0.8),
 
     { [SEC-6] Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
@@ -620,13 +624,13 @@ if MarketPosition = 1 then begin
         not v_is_in_consolidation) then begin
 
         if v_Current_MFE_Distance > v_ATR_Tier3 then
-            v_Dynamic_Trail_Mult = 0.8
+            v_Dynamic_Trail_Mult = Trail_Mult_3
         else if v_Current_MFE_Distance > v_ATR_Tier2 then
-            v_Dynamic_Trail_Mult = 1.5
+            v_Dynamic_Trail_Mult = Trail_Mult_2
         else if v_Current_MFE_Distance > v_ATR_Tier1 then
-            v_Dynamic_Trail_Mult = 2.0
+            v_Dynamic_Trail_Mult = Trail_Mult_1
         else
-            v_Dynamic_Trail_Mult = 3.0;
+            v_Dynamic_Trail_Mult = Trail_Mult_0;
 
         v_Dynamic_Stop = v_Highest_Since_Entry -
                          (v_Current_ATR * v_Dynamic_Trail_Mult);
