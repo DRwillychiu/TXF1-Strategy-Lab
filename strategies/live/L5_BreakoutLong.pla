@@ -55,8 +55,8 @@
                Same for Mid leg.
 
           INPUT SWITCHES (all default to OFF = v19.7 behavior):
-            SP_Trigger_Pts(0)    { 0 = off. Try 60/80/100 in A/B. }
-            SP_Retain_Pct(50)    { 0-100. L1 uses 55, L5 starts 50. }
+            SP_Trigger_Pts(0)    (0 = off. Try 60/80/100 in A/B.)
+            SP_Retain_Pct(50)    (0-100. L1 uses 55, L5 starts 50.)
 
           NAMED VARIANTS for MC9 A/B testing:
             A baseline    : SP=0 (= v19.7 regression check)
