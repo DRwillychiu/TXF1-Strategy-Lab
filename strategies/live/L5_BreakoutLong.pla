@@ -614,10 +614,8 @@ if MarketPosition = 1 then begin
             Sell ("BL_TimeExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
         end;
 
-    end;
-
     { Trail management: after scale-out OR outside consolidation }
-    if v_Trail_Active and
+    end else if v_Trail_Active and
        (CurrentContracts < MaxContracts or
         not v_is_in_consolidation) then begin
 
@@ -655,11 +653,8 @@ if MarketPosition = 1 then begin
                 from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
         end;
 
-    end;
-
-    { Inside consolidation, partial position, trail not yet active }
-    if v_is_in_consolidation and CurrentContracts < MaxContracts and
-       not v_Trail_Active then begin
+    { Fallback: inside consolidation, partial position, trail not yet active }
+    end else if CurrentContracts < MaxContracts then begin
         if v_SP_Armed and v_SP_Floor > EntryPrice then begin
             Sell ("BL_SP_Bot") CurrentContracts contracts
                 from Entry ("BL_Entry_Bot")
