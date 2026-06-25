@@ -298,7 +298,12 @@ variables:
     v_SP_Armed(false),
     v_SP_Floor(0),
     v_Bot_Base_Stop(0),            { Stage 1 base SL for Bot leg }
-    v_Mid_Base_Stop(0);            { Stage 1 base SL for Mid leg }
+    v_Mid_Base_Stop(0),            { Stage 1 base SL for Mid leg }
+
+    { [SEC-10] Manual trade annotations }
+    v_ManualAnnot_Drawn(false),
+    v_ManualAnnot_ID1(-1),
+    v_ManualAnnot_ID2(-1);
 
 arrays:
     Holiday_Tail[80](0);
@@ -674,6 +679,24 @@ end else begin
         Sell ("BL_BreakExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
         Sell ("BL_BreakExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
     end;
+end;
+
+{ ==========================================
+  [ANNOTATION] Manual Exit 2026-06-25
+  Micro-TXF 076: Buy 45732 x2 at 03:59 -> Sell 46990 x2 at 08:45
+  ========================================== }
+if v_ManualAnnot_Drawn = false and Date >= 1260625 then begin
+    v_ManualAnnot_ID1 = Text_New(1260625, 345, 45632,
+        "Buy 45732 x2 (03:59)");
+    Text_SetColor(v_ManualAnnot_ID1, Green);
+    Text_SetSize(v_ManualAnnot_ID1, 10);
+
+    v_ManualAnnot_ID2 = Text_New(1260625, 845, 47090,
+        "BL_TP_Bot");
+    Text_SetColor(v_ManualAnnot_ID2, Red);
+    Text_SetSize(v_ManualAnnot_ID2, 10);
+
+    v_ManualAnnot_Drawn = true;
 end;
 
 { ==========================================
