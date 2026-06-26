@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.5  (2026-06-26 - Phase 2 GA round 3, pending WFA)
+  Version     : v1.5  (2026-06-26 - Phase 3 WFA FAIL, 2/9 OOS pass)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -52,7 +52,12 @@
            Cooldown     0 -> 1       daily limit on
          Exit profile: SP 79/+1,452K (dominant), TP 4/+413K, SL 13/-584K
          Max single SL = -94,600 (vs r2 -346K), Sortino 0.69 (vs r2 0.45)
-         Pending: Phase 3 WFA + Monte Carlo before promotion
+         Phase 3 WFA (2026-06-26): FAIL
+           9 windows IS 2y/OOS 6m/step 6m, OOS pass 2/9 (W1,W6 only)
+           Median WFE = -38%, Total OOS = -762,000 NTD
+           7/12 params CV > 30% (overfit confirmed)
+           W8 OOS -528K MDD -63%, W9 OOS -263K (2 trades only)
+           Decision pending: reduce param freedom / v1.2 fixed-param WFA / KILL
 
     v1.4 (2026-06-26): Phase 2 GA round 2 (superseded by v1.5)
          Net +1,082,200 / PF 2.18 / MDD -18% / 70 trades
