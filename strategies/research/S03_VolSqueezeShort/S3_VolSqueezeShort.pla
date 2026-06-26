@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.2 FROZEN  (2026-06-24 - FINAL, baseline for Phase 2 GA)
+  Version     : v1.3  (2026-06-26 - Phase 2 GA optimized, pending WFA)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,6 +31,24 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
+    v1.3 (2026-06-26): Phase 2 GA optimized (all 12 tradable params, full-space GA)
+         Baseline: v1.2 Cool=1 Net +552,200 / PF 1.18 / MDD -52% / 185 trades
+         Result:   v1.3 GA    Net +924,000 / PF 2.33 / MDD -16% / 91 trades
+         Key changes (9 params moved, 3 unchanged):
+           BBLen        45 -> 60     wider BB = smoother squeeze detection
+           BBStd        2.0 -> 2.5   wider bands = stricter entry filter
+           BWLookback   120 -> 180   longer percentile history
+           ATR_Len      14 -> 7      shorter ATR = more responsive to recent vol
+           StopATRMult  2.75 -> 3.5  wider stop + shorter ATR = fewer SL hits
+           MaxBars      35 -> 45     more room before time exit
+           MidExit_MinBars 2 -> 1    faster mid-band exit
+           SP_Trigger   1.5 -> 1.0   arm trail earlier (1 ATR profit)
+           SP_Retain    70 -> 50     keep 50% of peak (loose trail)
+           Cooldown     0 -> 1       daily limit on
+         Unchanged: BWPctile=30, TargetATRMult=3.5, UseMidExit=True
+         Exit signal shift: SL 43/-2,496K -> 5/-298K (88% reduction)
+         Pending: Phase 3 WFA + Monte Carlo before promotion
+
     v1.2 FROZEN (2026-06-24): FINAL VERSION for Phase 2 GA baseline
 
          REVERTED FROM v1.3 ATTEMPT:
@@ -112,8 +130,8 @@
 
   PARAMETERIZATION:
     All numeric thresholds are PowerLanguage inputs - none hardcoded.
-    v1.0 defaults = 4 short-customized + 8 mirrored from S3_L Phase 3 best.
-    W3 baseline backtest will A/B test Cooldown_Days (0 vs 1).
+    v1.3 defaults = Phase 2 GA optimized (full 12-param space).
+    v1.2 baseline (Cool=1) used as GA fitness reference.
     W4 Walk-Forward IS 2y / OOS 6m / step 6m (same setup as S3_L).
 
   LESSON CHECK (mandatory header reminders):
@@ -145,8 +163,7 @@
     SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
     No Long labels (R-6 split produced separate S3_L file).
 
-  STATUS: v1.0 ready for MC12 baseline backtest (W3 phase).
-          Pending: W3 baseline, W4 WFA, W5 10-dim eval.
+  STATUS: v1.3 Phase 2 GA complete. Pending Phase 3 (WFA + Monte Carlo).
 ================================================================================ }
 
 [IntrabarOrderGeneration = false]
@@ -154,33 +171,33 @@
 
 { ============================================================
   SECTION 1 - INPUTS
-  v1.0 defaults: 4 short-customized + 8 mirrored from S3_L Phase 3 best.
+  v1.3 defaults: Phase 2 GA optimized (9 params moved, 3 unchanged).
   All inputs MC12-optimizable.
   ============================================================ }
 
 inputs:
-    { ===== Bollinger Bands (core squeeze detection - mirrored from S3_L) ===== }
-    BBLen                     ( 45    ),   { mirror S3_L Phase 3 best }
-    BBStd                     ( 2.0   ),   { mirror }
-    BWLookback                ( 120   ),   { mirror }
-    BWPctile                  ( 30    ),   { mirror }
+    { ===== Bollinger Bands (core squeeze detection) ===== }
+    BBLen                     ( 60    ),   { v1.3 GA (was 45) }
+    BBStd                     ( 2.5   ),   { v1.3 GA (was 2.0) }
+    BWLookback                ( 180   ),   { v1.3 GA (was 120) }
+    BWPctile                  ( 30    ),   { unchanged }
 
-    { ===== ATR (stop / target anchor - SL mirrored, TP customized for short) ===== }
-    ATR_Len                   ( 14    ),   { mirror }
-    StopATRMult               ( 2.75  ),   { mirror - SL symmetric }
-    TargetATRMult             ( 3.5   ),   { CUSTOMIZED - short panic fast drop, near TP }
+    { ===== ATR (stop / target anchor) ===== }
+    ATR_Len                   ( 7     ),   { v1.3 GA (was 14) - shorter = more responsive }
+    StopATRMult               ( 3.5   ),   { v1.3 GA (was 2.75) - wider stop, fewer SL }
+    TargetATRMult             ( 3.5   ),   { unchanged - short panic fast drop, near TP }
 
-    { ===== Exit timing (CUSTOMIZED for short structure) ===== }
-    MaxBars                   ( 35    ),   { CUSTOMIZED - short holds shorter (vs S3_L 70) }
-    UseMidExit                ( True  ),   { mid-band exit on/off }
-    MidExit_MinBars           ( 2     ),   { CUSTOMIZED - faster bounce reaction (vs S3_L 3) }
+    { ===== Exit timing ===== }
+    MaxBars                   ( 45    ),   { v1.3 GA (was 35) - more room to run }
+    UseMidExit                ( True  ),   { unchanged }
+    MidExit_MinBars           ( 1     ),   { v1.3 GA (was 2) - faster mid-band exit }
 
     { ===== Layer 2: Trailing StopProfit (v1.1 NEW, short-only) ===== }
-    SP_Trigger_ATRMult        ( 1.5   ),   { NEW v1.1: arm SP when peak profit >= ATR * 1.5 }
-    SP_Retain_Pct             ( 70    ),   { NEW v1.1: retain 70 pct of peak (tolerate 30 pct giveback) }
+    SP_Trigger_ATRMult        ( 1.0   ),   { v1.3 GA (was 1.5) - arm at 1 ATR profit }
+    SP_Retain_Pct             ( 50    ),   { v1.3 GA (was 70) - keep 50 pct of peak }
 
-    { ===== Same-day cooldown (CUSTOMIZED per user ruling) ===== }
-    Cooldown_Days             ( 0     ),   { CUSTOMIZED - no daily limit (vs S3_L 1); W3 A/B }
+    { ===== Same-day cooldown ===== }
+    Cooldown_Days             ( 1     ),   { v1.3 GA (was 0) - daily limit on }
 
     { ===== Priority 0 Protection (Rule #11 / #12 - mirrored from S3_L) ===== }
     Holiday_Flat_Time         ( 415   ),   { 60M grid -> fire 04:15 holiday tail }
