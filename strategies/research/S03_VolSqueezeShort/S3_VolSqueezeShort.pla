@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.4  (2026-06-26 - Phase 2 GA round 2, pending WFA)
+  Version     : v1.5  (2026-06-26 - Phase 2 GA round 3, pending WFA)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -31,30 +31,36 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
-    v1.4 (2026-06-26): Phase 2 GA round 2 (all 12 params, second optimization run)
+    v1.5 (2026-06-26): Phase 2 GA round 3 FINAL (SP-dominant, best PF/Sharpe)
          Baseline: v1.2 Cool=1 Net +552,200 / PF 1.18 / MDD -52% / 185 trades
          GA r1 (v1.3):     Net +924,000 / PF 2.33 / MDD -16% / 91 trades
          GA r2 (v1.4):     Net +1,082,200 / PF 2.18 / MDD -18% / 70 trades
-         v1.4 chosen over v1.3: higher net (+17%), all years positive except 2023
-         Key params (all 12 moved vs v1.2):
-           BBLen        45 -> 80     much wider BB = very strict squeeze
-           BBStd        2.0 -> 2.75  wider bands = harder to breach lower band
+         GA r3 (v1.5):     Net +1,174,800 / PF 2.35 / MDD -17% / 100 trades
+         v1.5 chosen: best PF + Sharpe + Sortino, most trades, smallest max SL
+         Key params (10 moved, 2 unchanged vs v1.2):
+           BBLen        45 -> 60     wider BB, moderate (not extreme like r2=80)
+           BBStd        2.0 -> 2.25  slightly wider bands
            BWLookback   120 -> 160   longer percentile window
-           BWPctile     30 -> 45     relaxed percentile = more squeeze events pass
-           ATR_Len      14 -> 14     unchanged (standard)
-           StopATRMult  2.75 -> 4.0  much wider stop = absorb noise
-           TargetATRMult 3.5 -> 4.0  slightly farther TP
-           MaxBars      35 -> 45     more room to run
-           MidExit_MinBars 2 -> 3    slower mid-band exit
-           SP_Trigger   1.5 -> 1.75  arm trail at 1.75 ATR profit
+           BWPctile     30 -> 25     stricter squeeze gate
+           ATR_Len      14 -> 7      shorter ATR = responsive to recent vol
+           StopATRMult  2.75 -> 2.75 unchanged (baseline value, most stable)
+           TargetATRMult 3.5 -> 6.0  far TP = rare bonus (SP handles most exits)
+           MaxBars      35 -> 30     tighter time discipline
+           MidExit_MinBars 2 -> 2    unchanged
+           SP_Trigger   1.5 -> 1.25  arm trail at 1.25 ATR profit
            SP_Retain    70 -> 70     unchanged
            Cooldown     0 -> 1       daily limit on
-         Exit signals: TP 13/+1,007K, SP 44/+841K, SL 11/-742K
+         Exit profile: SP 79/+1,452K (dominant), TP 4/+413K, SL 13/-584K
+         Max single SL = -94,600 (vs r2 -346K), Sortino 0.69 (vs r2 0.45)
          Pending: Phase 3 WFA + Monte Carlo before promotion
+
+    v1.4 (2026-06-26): Phase 2 GA round 2 (superseded by v1.5)
+         Net +1,082,200 / PF 2.18 / MDD -18% / 70 trades
+         Params too extreme (BBLen=80, Stop=4.0), max SL -346K
 
     v1.3 (2026-06-26): Phase 2 GA round 1 (superseded by v1.4)
          Net +924,000 / PF 2.33 / MDD -16% / 91 trades
-         SL 5/-298K (88% reduction vs v1.2), but Sharpe 0.24, SP_Retain=50 suspect
+         SL 5/-298K but SP_Retain=50 too loose, ATR_Len=7+Stop=3.5 unstable
 
     v1.2 FROZEN (2026-06-24): FINAL VERSION for Phase 2 GA baseline
 
@@ -137,7 +143,7 @@
 
   PARAMETERIZATION:
     All numeric thresholds are PowerLanguage inputs - none hardcoded.
-    v1.4 defaults = Phase 2 GA round 2 (all 12 params, second optimization).
+    v1.5 defaults = Phase 2 GA round 3 FINAL (SP-dominant profile).
     v1.2 baseline (Cool=1) used as GA fitness reference.
     W4 Walk-Forward IS 2y / OOS 6m / step 6m (same setup as S3_L).
 
@@ -170,7 +176,7 @@
     SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
     No Long labels (R-6 split produced separate S3_L file).
 
-  STATUS: v1.4 Phase 2 GA round 2 complete. Pending Phase 3 (WFA + Monte Carlo).
+  STATUS: v1.5 Phase 2 GA round 3 FINAL. Pending Phase 3 (WFA + Monte Carlo).
 ================================================================================ }
 
 [IntrabarOrderGeneration = false]
@@ -178,33 +184,33 @@
 
 { ============================================================
   SECTION 1 - INPUTS
-  v1.4 defaults: Phase 2 GA round 2 (all 12 params optimized).
+  v1.5 defaults: Phase 2 GA round 3 FINAL (SP-dominant, 100 trades).
   All inputs MC12-optimizable.
   ============================================================ }
 
 inputs:
     { ===== Bollinger Bands (core squeeze detection) ===== }
-    BBLen                     ( 80    ),   { v1.4 GA (was 45) }
-    BBStd                     ( 2.75  ),   { v1.4 GA (was 2.0) }
-    BWLookback                ( 160   ),   { v1.4 GA (was 120) }
-    BWPctile                  ( 45    ),   { v1.4 GA (was 30) }
+    BBLen                     ( 60    ),   { v1.5 GA (was 45) }
+    BBStd                     ( 2.25  ),   { v1.5 GA (was 2.0) }
+    BWLookback                ( 160   ),   { v1.5 GA (was 120) }
+    BWPctile                  ( 25    ),   { v1.5 GA (was 30) - stricter squeeze }
 
     { ===== ATR (stop / target anchor) ===== }
-    ATR_Len                   ( 14    ),   { unchanged (standard) }
-    StopATRMult               ( 4.0   ),   { v1.4 GA (was 2.75) - wide stop, absorb noise }
-    TargetATRMult             ( 4.0   ),   { v1.4 GA (was 3.5) - slightly farther TP }
+    ATR_Len                   ( 7     ),   { v1.5 GA (was 14) - responsive to recent vol }
+    StopATRMult               ( 2.75  ),   { unchanged (v1.2 baseline, most stable) }
+    TargetATRMult             ( 6.0   ),   { v1.5 GA (was 3.5) - far TP, SP handles most }
 
     { ===== Exit timing ===== }
-    MaxBars                   ( 45    ),   { v1.4 GA (was 35) - more room to run }
+    MaxBars                   ( 30    ),   { v1.5 GA (was 35) - tighter time discipline }
     UseMidExit                ( True  ),   { unchanged }
-    MidExit_MinBars           ( 3     ),   { v1.4 GA (was 2) - slower mid-band exit }
+    MidExit_MinBars           ( 2     ),   { unchanged (v1.2 baseline) }
 
     { ===== Layer 2: Trailing StopProfit (v1.1 NEW, short-only) ===== }
-    SP_Trigger_ATRMult        ( 1.75  ),   { v1.4 GA (was 1.5) - arm at 1.75 ATR profit }
+    SP_Trigger_ATRMult        ( 1.25  ),   { v1.5 GA (was 1.5) - arm at 1.25 ATR profit }
     SP_Retain_Pct             ( 70    ),   { unchanged }
 
     { ===== Same-day cooldown ===== }
-    Cooldown_Days             ( 1     ),   { v1.3 GA (was 0) - daily limit on }
+    Cooldown_Days             ( 1     ),   { v1.5 GA (was 0) - daily limit on }
 
     { ===== Priority 0 Protection (Rule #11 / #12 - mirrored from S3_L) ===== }
     Holiday_Flat_Time         ( 415   ),   { 60M grid -> fire 04:15 holiday tail }
