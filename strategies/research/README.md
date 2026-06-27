@@ -13,13 +13,14 @@
 |------|------|------|------|
 | **S3_S** | **VolSqueezeShort** | 🔵 **CURRENT — Stage -1** | [`S03_VolSqueezeShort/`](S03_VolSqueezeShort/) |
 
-### 最近 PROMOTED (history 保留)
+### 最近 PROMOTED (history archived)
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| S3_L | VolSqueezeLong | ✅ Promoted 2026-06-23 → live_simulation/ | [`S03_VolSqueezeLong/`](S03_VolSqueezeLong/) (W5 history) |
+| S3_L | VolSqueezeLong | ✅ Promoted → live_simulation/ | [`archive/S03_VolSqueezeLong_promoted_20260620/`](archive/S03_VolSqueezeLong_promoted_20260620/) |
 
 → S3_L production .pla 在 [`../live_simulation/S3_VolSqueezeLong.pla`](../live_simulation/S3_VolSqueezeLong.pla)
+→ W0-W5 開發歷史已歸檔至 archive/
 
 ---
 

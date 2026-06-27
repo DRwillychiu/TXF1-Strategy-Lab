@@ -29,6 +29,8 @@
 | [`settlement_flat_flow_diagram.svg`](policies/settlement_flat_flow_diagram.svg) | 結算日決策流程圖 | 參考 |
 | [`settlement_flat_backtest_validation_20260617.md`](policies/settlement_flat_backtest_validation_20260617.md) | 6 隻策略結算回測驗證 | 證據 |
 | [`strategy_classification_decision_matrix.svg`](policies/strategy_classification_decision_matrix.svg) | 策略分類 × Settlement 角色矩陣 | 參考 |
+| [`STRATEGY_SUCCESS_CRITERIA.md`](policies/STRATEGY_SUCCESS_CRITERIA.md) | 機構級策略成功標準 | 參考 |
+| [`lesson_L24_risk_overlay_alpha_preservation.md`](policies/lesson_L24_risk_overlay_alpha_preservation.md) | Lesson L24: Risk overlay 不可削 alpha source | 參考 |
 
 ---
 
@@ -40,6 +42,7 @@
 | [`claude_code_workflow.md`](methodology/claude_code_workflow.md) | Claude Code 與此 repo 的協作流程 |
 | [`cowork_sync_prompt.md`](methodology/cowork_sync_prompt.md) | Cowork ↔ Claude Code 同步規範 |
 | [`position_sizing_and_capacity.md`](methodology/position_sizing_and_capacity.md) | 口數配置 + 胃納量框架 |
+| [`LOOP_FRAMEWORK.md`](methodology/LOOP_FRAMEWORK.md) | Loop 開發迭代框架 |
 
 ---
 
@@ -60,11 +63,13 @@
 ### L 系列（live）
 | 文件 | 對應策略 / 版本 |
 |------|---------------|
+| `L1_v26_20260622_gap_miss_case.md` | L1 v2.6 Gap miss 案例分析 |
 | `L4_v142_pathA_entry_diagnostic.md` | L4 v14.2 Path A 進場品質診斷 |
 | `L4_v142_pathB_variant_matrix.md` | L4 v14.2 Path B 變體矩陣 |
 | `L4_v142_variant_results.md` | L4 v14.2 A-G 七變體實證結果 |
 | `L5_v198_pretrail_sp_design.md` | L5 v19.8 SP 模組設計 |
 | `L5_v198_variant_results.md` | L5 v19.8 A/B 六變體實證 |
+| `L5_v199_1contract_removed_code.md` | L5 v19.9 移除多口邏輯碼 |
 | `range_force_exit_deployment_20260617.md` | L3/L4 RangeForceExit 部署紀錄 |
 | `range_force_exit_rollback_20260617.md` | L3/L4 RangeForceExit 回滾原因 |
 

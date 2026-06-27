@@ -11,9 +11,9 @@
 - 回測區間：2020/01/01 ~ 今天
 - 交易時段：日盤 08:45-13:45 / 夜盤 15:00-05:00
 
-## 目錄結構（2026-06-22 深度整理）
+## 目錄結構（2026-06-27 審計更新）
 ```
-CLAUDE.md                          # 本檔（14 條強制規範）
+CLAUDE.md                          # 本檔（15 條強制規範）
 README.md                          # 專案總覽
 .gitignore
 
@@ -23,32 +23,55 @@ strategies/                        # 策略原始碼三層分類
 │   ├── L1_TrendLong.pla / _annotated.md / _review.md
 │   ├── L2_TrendShort.pla / _annotated.md / _review.md
 │   ├── L3_ConsolidationLong.pla / _annotated.md / _review.md
-│   ├── L4_ConsolidationShort.pla / _annotated.md
+│   ├── L4_ConsolidationShort.pla / _annotated.md / _review.md
 │   └── L5_BreakoutLong.pla / _annotated.md / _review.md
 ├── live_simulation/               # MC12 模擬中
 │   ├── README.md
 │   ├── S1_NightMomentum.pla / _annotated.md
-│   └── S3_RapidPullbackShort.pla / _annotated.md   # 2026-06-20 部署
-└── research/                      # 研究中（雙軌）
+│   ├── S3_RapidPullbackShort.pla / _annotated.md
+│   └── S3_VolSqueezeLong.pla / _annotated.md / _DEPLOYMENT.md
+└── research/                      # 研究中（單軌 OFFICIAL_ROADMAP）
     ├── README.md
-    ├── S03_VolSqueeze/            # ★ CURRENT — 原始排程
-    ├── 2026-W24/                  # 軌道 B：每週批次（Cowork 自動）
+    ├── S03_VolSqueezeShort/       # ★ CURRENT — v1.7.3 regime filter
+    │   ├── S3_VolSqueezeShort.pla           # v1.5 (WFA FAIL baseline)
+    │   ├── S3_VolSqueezeShort_v17.pla       # v1.7.3 (regime filter experiment)
+    │   ├── S3_VolSqueezeShort_annotated.md
+    │   ├── v17_round1_*.md                  # Round 1 evaluation docs
+    │   ├── progress_*_handoff.md            # Session handoffs
+    │   ├── extreme_event_coverage_20260624.md
+    │   └── _analyze_scripts/               # One-time analysis scripts
     └── archive/                   # 歷史與 off-roadmap
-        ├── batch01_S2-S5/         # 原始排程雛形
-        ├── batch02_S6-S10/
-        ├── batch03_S11-S15/
+        ├── README.md
+        ├── _batch_summaries/              # Batch02/03 摘要（Batch01 在 batch01_S2-S5/ 內）
+        ├── batch01_S2-S5/                 # 原始排程雛形 + powerlanguage/
+        ├── batch02_S6-S10/                # S06-S10 各自子資料夾
+        │   ├── S06_FlashCrashMomentum/
+        │   ├── S07_BullPullbackLong/
+        │   ├── S08_BearBounceSell/
+        │   ├── S09_VolExplosion/
+        │   └── S10_AdaptiveBreakout/
+        ├── batch03_S11-S15/               # S11-S15 各自子資料夾
+        │   ├── S11_MiddayCompression/
+        │   ├── S12_WeekdayMomentum/
+        │   ├── S13_VolCollapseShort/
+        │   ├── S14_TripleTFTrend/
+        │   └── S15_BBReversion/
         ├── S02_InsideBarBreak_killed_20260622/
         ├── S03_RapidPullbackShort_archived_20260622/
-        ├── offRoadmap_2026Q2_killed/    # S4-S9 偏離排程
-        └── _temp_offRoadmap_2026Q2/
+        ├── S03_VolSqueezeLong_promoted_20260620/   # S3_L 升等後 W0-W5 歷史
+        ├── S3_S_v2_killed_20260626/
+        └── offRoadmap_2026Q2_killed/      # S4-S9 偏離排程 KILL
 
 docs/                              # 機構級文件分類（data-analyst 規範）
 ├── README.md                      # 文件索引
+├── handoffs/                      # 當前 session handoffs
 ├── policies/                      # ★ 強制規範（合規層）
-│   ├── OFFICIAL_ROADMAP.md        # Rule #14 排程鎖定
+│   ├── OFFICIAL_ROADMAP.md                    # Rule #14 排程鎖定
 │   ├── SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # Rule #11
 │   ├── P3b_immediate_stop_guard_design_20260618.md  # Rule #12
-│   ├── institutional_risk_framework_20260619.md  # Rule #13
+│   ├── institutional_risk_framework_20260619.md     # Rule #13
+│   ├── STRATEGY_SUCCESS_CRITERIA.md           # 機構級成功標準
+│   ├── lesson_L24_risk_overlay_alpha_preservation.md  # Lesson L24
 │   ├── settlement_flat_module_20260617.md
 │   ├── settlement_flat_flow_diagram.svg
 │   ├── settlement_flat_backtest_validation_20260617.md
@@ -57,36 +80,42 @@ docs/                              # 機構級文件分類（data-analyst 規範
 │   ├── entry_exit_sop.md
 │   ├── claude_code_workflow.md
 │   ├── cowork_sync_prompt.md
-│   └── position_sizing_and_capacity.md
+│   ├── position_sizing_and_capacity.md
+│   └── LOOP_FRAMEWORK.md
 ├── research/                      # 主題研究 / theses
 │   ├── index_level_thesis.md
 │   ├── structural_issues_review_20260618.md
 │   └── optimization_opportunities_2026Q2.md
 ├── strategy_archive/              # 既有策略歷史演進
-│   ├── L4_v142_*.md
-│   ├── L5_v198_*.md
-│   ├── S1_v23_*.md / v24_*.md
-│   └── range_force_exit_*.md
+│   ├── L1_v26_20260622_gap_miss_case.md
+│   ├── L4_v142_*.md               # pathA / pathB / variant_results
+│   ├── L5_v198_*.md / L5_v199_*.md
+│   ├── S1_v23_*.md / S1_v24_*.md
+│   └── range_force_exit_*.md      # deployment + rollback
 └── archive/                       # 歸檔（off-roadmap、舊 handoffs）
-    ├── handoffs/
-    └── offRoadmap_2026Q2/         # 22 個偏離排程文件
+    ├── handoffs/                   # 過期 handoffs（2026-06-07、06-13）
+    └── offRoadmap_2026Q2/         # 24 個偏離排程產物
 
 optimization/                      # 原始 ROADMAP 追蹤系統
 ├── README.md
 ├── TRACKER.md                     # S1-S15 master 進度表
 └── logs/                          # 每隻策略 Phase 1-4 詳細紀錄
-    ├── B01_S1_NightMomentum.md   # 🟢 已部署
-    ├── B01_S3_VolSqueeze.md      # 🔵 CURRENT
-    ├── B01_S4_MACDDivergence.md  # ⏳ next
-    └── ... (共 16 個 log)
+    ├── B01_S1_NightMomentum.md    # 🟢 已部署 live_simulation
+    ├── B01_S3_VolSqueeze.md       # 🟡 v1.7.3 regime filter 實驗中
+    ├── B01_S4_MACDDivergence.md   # ⏳ next
+    ├── B02_S6~S10 / B03_S11~S15  # ⏳ Queue
+    └── TEMPLATE_optimization_log.md
 
 scripts/                           # 驗證 / 分析腳本
 ├── README.md
 ├── verify_all_live.py             # ★ Master 跨策略驗證 110 項
-├── verify_l1-l5_immediate_stop.py # Rule #12 驗證
+├── verify_pla_ascii.py            # Rule #15 ASCII 驗證
+├── verify_l{1..5}_immediate_stop.py  # Rule #12 驗證
 ├── verify_settlement_*.py         # Rule #11 驗證
-├── verify_s1_v22-v26.py
-└── analyze_l5_v198_variants.py
+├── verify_s1_v22~v26.py           # S1 各版本驗證
+├── analyze_*.py                   # 分析腳本
+├── wfa_loop_runner.py             # WFA 自動化
+└── results/                       # WFA JSON 輸出
 
 backtest/                          # ⚠️ Python 日線代理（DEPRECATED）
 ├── README.md
@@ -96,7 +125,9 @@ backtest/                          # ⚠️ Python 日線代理（DEPRECATED）
 ├── results_batch01.json           # 原始基線證據
 ├── results_batch02.json
 ├── optimize/                      # Walk-Forward / Monte Carlo 框架
-└── results/s1_optimization/       # S1 視覺化結果
+└── results/                       # S1 視覺化 + portfolio 分析
+    ├── s1_optimization/           # Phase 1-3 PNG + JSON
+    └── portfolio/                 # 組合分析 JSON
 ```
 
 ## 三層晉升流程
