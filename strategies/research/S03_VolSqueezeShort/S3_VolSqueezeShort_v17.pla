@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.7  (2026-06-27 - REGIME FILTER ADDED, v1.2 base + bull/range only)
+  Version     : v1.7.1  (2026-06-27 - regime MA reduced to 20/50 for Daily data fit)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -237,10 +237,12 @@ inputs:
     { ===== Same-day cooldown ===== }
     Cooldown_Days             ( 1     ),   { unchanged }
 
-    { ===== Regime Filter (v1.7 NEW) ===== }
-    Use_Regime_Filter         ( True  ),   { v1.7 NEW: master switch for Daily MA regime gate }
-    Regime_MinRatio           ( 0.98  ),   { v1.7 NEW: allow only if MA50/MA200 >= 0.98 (block bear) }
-    Regime_BlockWeakBull      ( True  ),   { v1.7 NEW: if True, also block 1.02 < ratio < 1.05 zone }
+    { ===== Regime Filter (v1.7 NEW, MA periods adjusted in v1.7.1) ===== }
+    Use_Regime_Filter         ( True  ),   { master switch for Daily MA regime gate }
+    Regime_FastMA             ( 20    ),   { v1.7.1: Daily fast MA period (was hardcoded 50) }
+    Regime_SlowMA             ( 50    ),   { v1.7.1: Daily slow MA period (was hardcoded 200) }
+    Regime_MinRatio           ( 0.98  ),   { allow only if FastMA/SlowMA >= 0.98 (block bear) }
+    Regime_BlockWeakBull      ( True  ),   { if True, also block 1.02 < ratio < 1.05 zone }
 
     { ===== Priority 0 Protection (Rule #11 / #12) ===== }
     Holiday_Flat_Time         ( 415   ),
@@ -283,9 +285,9 @@ variables:
     v_Peak_Profit_Pts        ( 0     ),
     v_SP_Floor_Price         ( 0     ),
 
-    { ===== Regime Filter state (v1.7 NEW) ===== }
-    v_MA50_D                 ( 0     ),
-    v_MA200_D                ( 0     ),
+    { ===== Regime Filter state (v1.7 NEW, renamed in v1.7.1) ===== }
+    v_MA_Fast_D              ( 0     ),
+    v_MA_Slow_D              ( 0     ),
     v_Regime_Ratio           ( 1     ),
     v_In_WeakBull_Zone       ( False ),
     v_Regime_OK              ( True  ),
@@ -448,23 +450,28 @@ end;
 
 
 { ============================================================
-  SECTION 5.5 - REGIME FILTER (v1.7 NEW)
-  Read Daily MA50/MA200 ratio from Data2, classify regime.
+  SECTION 5.5 - REGIME FILTER (v1.7 NEW, MA reduced in v1.7.1)
+  Read Daily FastMA/SlowMA ratio from Data2, classify regime.
+  v1.7.1: changed from MA50/MA200 to MA20/MA50 (default).
+          Reason: Daily Data2 only has ~1540 bars (6.4yr backtest),
+          MA200 + 19:1 ratio = ~3800 60M MaxBarsBack req, impossible.
+          MA50 = ~950 60M req, MaxBarsBack=1000 fits comfortably.
   Allow entry only if:
     1. ratio >= Regime_MinRatio (e.g. 0.98) - blocks bear / strong_bear
     2. If Regime_BlockWeakBull = True, also block 1.02 < ratio < 1.05
   Effective: only allow strong_bull (>1.05) + range (0.98-1.02)
 
   IMPORTANT: REQUIRES Data2 = TXF1 Daily on chart.
+             MaxBarsBack should be set to 1000 (cover Daily MA50 * 19 ratio).
              [1] index = last closed daily bar (avoid look-ahead).
   ============================================================ }
 
 if Use_Regime_Filter = True then begin
-    v_MA50_D  = ( Average( Close, 50  ) of Data2 )[1];
-    v_MA200_D = ( Average( Close, 200 ) of Data2 )[1];
+    v_MA_Fast_D = ( Average( Close, Regime_FastMA ) of Data2 )[1];
+    v_MA_Slow_D = ( Average( Close, Regime_SlowMA ) of Data2 )[1];
 
-    if v_MA200_D > 0 then
-        v_Regime_Ratio = v_MA50_D / v_MA200_D
+    if v_MA_Slow_D > 0 then
+        v_Regime_Ratio = v_MA_Fast_D / v_MA_Slow_D
     else
         v_Regime_Ratio = 1;
 
