@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.7.2  (2026-06-27 - add Range block, quality > quantity)
+  Version     : v1.7.3  (2026-06-27 - fix regime to band-reject, recover Bear alpha)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -181,16 +181,20 @@
     SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
     No Long labels (R-6 split produced separate S3_L file).
 
-  STATUS: v1.7 EXPERIMENTAL - regime filter A/B (v1.2 base + 3 new inputs).
+  STATUS: v1.7.3 EXPERIMENTAL - band-reject regime filter (v1.2 base + 4 inputs).
 
   V1.7 DESIGN (2026-06-27):
     Driver: WFA fail root cause = event-driven alpha, not systematic.
-            Regime analysis showed weak_bull (-67K) and strong_bear (-43K) lose,
-            while strong_bull (+482K) and range (+444K) win.
-    Filter: Use Daily MA50/MA200 ratio to gate entry.
-            - Allow if ratio >= 0.98 (block strong_bear / bear)
-            - If BlockWeakBull = True, also block 1.02 < ratio < 1.05
-            - Net: only allow strong_bull (>1.05) + range (0.98-1.02)
+            Round 1 regime analysis (140 trades, MA20/MA50):
+              Bear (<0.98): PF 11.0, 12 trades, +502K  -> ALLOW
+              Range (0.98-1.02): PF 0.73, 65 trades, -259K -> BLOCK
+              Weak Bull (1.02-1.05): PF 1.61, 21 trades -> BLOCK
+              Strong Bull (>1.05): PF 4.49, 4 trades, +162K -> ALLOW
+    Filter: Band-reject on Daily MA20/MA50 ratio (v1.7.3).
+            - Start allow-all, then block specific zones
+            - If BlockRange = True, block 0.98 <= ratio <= 1.02
+            - If BlockWeakBull = True, block 1.02 < ratio < 1.05
+            - Net: allow Bear (<0.98) + Strong Bull (>1.05)
     Setup: REQUIRES Data2 = TXF1 Daily (mandatory chart change)
     Inputs reverted to v1.2 defaults (no GA contamination):
             BBLen=45, BBStd=2.0, BWLookback=120, BWPctile=30,
@@ -241,9 +245,8 @@ inputs:
     Use_Regime_Filter         ( True  ),   { master switch for Daily MA regime gate }
     Regime_FastMA             ( 20    ),   { v1.7.1: Daily fast MA period (was hardcoded 50) }
     Regime_SlowMA             ( 50    ),   { v1.7.1: Daily slow MA period (was hardcoded 200) }
-    Regime_MinRatio           ( 0.98  ),   { allow only if FastMA/SlowMA >= 0.98 (block bear) }
-    Regime_BlockWeakBull      ( True  ),   { if True, also block 1.02 < ratio < 1.05 zone }
-    Regime_BlockRange         ( True  ),   { v1.7.2: block 0.98-1.02 range (PF 0.73, 46% of trades) }
+    Regime_BlockRange         ( True  ),   { v1.7.3: block 0.98 <= ratio <= 1.02 (PF 0.73) }
+    Regime_BlockWeakBull      ( True  ),   { v1.7.1: block 1.02 < ratio < 1.05 (PF 1.61) }
 
     { ===== Priority 0 Protection (Rule #11 / #12) ===== }
     Holiday_Flat_Time         ( 415   ),
@@ -458,12 +461,10 @@ end;
           Reason: Daily Data2 only has ~1540 bars (6.4yr backtest),
           MA200 + 19:1 ratio = ~3800 60M MaxBarsBack req, impossible.
           MA50 = ~950 60M req, MaxBarsBack=1000 fits comfortably.
-  Allow entry only if:
-    1. ratio >= Regime_MinRatio (e.g. 0.98) - blocks bear / strong_bear
-    2. If Regime_BlockWeakBull = True, also block 1.02 < ratio < 1.05
-    3. If Regime_BlockRange = True, also block 0.98 <= ratio <= 1.02 (v1.7.2)
-  v1.7.2: added Regime_BlockRange to block 0.98-1.02 (PF 0.73, 65/140 trades).
-  Effective: only allow strong_bull (>1.05) + bear (<0.98)
+  Band-reject filter (v1.7.3): start allow-all, then block specific zones.
+    1. If Regime_BlockRange = True, block 0.98 <= ratio <= 1.02 (PF 0.73, -259K)
+    2. If Regime_BlockWeakBull = True, block 1.02 < ratio < 1.05 (PF 1.61)
+  Effective: allow Bear (<0.98, PF 11.0) + Strong Bull (>1.05, PF 4.49)
 
   IMPORTANT: REQUIRES Data2 = TXF1 Daily on chart.
              MaxBarsBack should be set to 1000 (cover Daily MA50 * 19 ratio).
@@ -482,12 +483,12 @@ if Use_Regime_Filter = True then begin
     v_In_WeakBull_Zone = ( v_Regime_Ratio > 1.02 ) and ( v_Regime_Ratio < 1.05 );
     v_In_Range_Zone = ( v_Regime_Ratio >= 0.98 ) and ( v_Regime_Ratio <= 1.02 );
 
-    v_Regime_OK = ( v_Regime_Ratio >= Regime_MinRatio );
-
-    if Regime_BlockWeakBull = True and v_In_WeakBull_Zone = True then
-        v_Regime_OK = False;
+    v_Regime_OK = True;
 
     if Regime_BlockRange = True and v_In_Range_Zone = True then
+        v_Regime_OK = False;
+
+    if Regime_BlockWeakBull = True and v_In_WeakBull_Zone = True then
         v_Regime_OK = False;
 end
 else
