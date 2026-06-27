@@ -1,6 +1,6 @@
 # 策略優化進度追蹤表
 
-> 最後更新：2026-06-22 (S2 KILLED / S3 RapidPullback 部署 live_sim / S3 VolSqueeze 啟動 / L1-L5 v2.6 含 ImmediateStop)
+> 最後更新：2026-06-27 (S3_S v1.7.3 regime filter band-reject / S3_L live_simulation)
 > 規則：每隻策略經過完整 4 Phase 優化流程後，依據「績效門檻」判定 Pass/Fail
 >
 > **NEW 2026-06-22**：本表與 [`docs/policies/OFFICIAL_ROADMAP.md`](../docs/policies/OFFICIAL_ROADMAP.md) 互補，依 Rule #14 嚴守原始 batch01-03 排程。
@@ -27,8 +27,8 @@
 |------|------|---------|------|------|---------|--------|---------|---------|---------|-------|------|--------|
 | B01 | S1 | NightMomentum | ★純做多 | 15M | +1,997,000 | 1.448 | -278,800 | ~12.4 | 🟢 **live_sim** | 4/4 | **MC12 部署，模擬中** | 🥇 高 |
 | B01 | S2 | InsideBarBreak | ★雙向(MA) | 30M+D | +791,754 | 4.61 | -63,879 | 0.5 | ⛔ **KILLED 2026-06-22** | 2/4 | **alpha 已死，archive 歸檔** | — |
-| B01 | **S3_L** | **VolSqueezeLong** | **★純多** | **60M** | -115,622 | 0.88 | -645,467 | 0.5 | 🔵 **CURRENT — W0 Pre-verify** | 0/4 | **2026-06-22 啟動 Sx_L/Sx_S 拆解** | 🥇 當前 |
-| B01 | S3_S | VolSqueezeShort | ★純空 | 60M | — | — | — | — | ⏳ Queue（S3_L 後） | 0/4 | — | 🥈 next |
+| B01 | S3_L | VolSqueezeLong | ★純多 | 60M | — | — | — | — | 🟢 **live_simulation** | — | **MC12 模擬中（2026-06-20 部署）** | — |
+| B01 | **S3_S** | **VolSqueezeShort** | **★純空** | **60M** | — | — | — | — | 🟡 **v1.7.3 實驗中** | 2/4 | **v1.5 WFA FAIL → v1.7 regime filter** | 🥇 當前 |
 | B01 | S4_L | MACDDivergenceLong | ★純多逆勢 | 60M | +38,000 | — | 0 | 0.03 | ⏳ Queue | 0/4 | — | 🥉 後 |
 | B01 | S4_S | MACDDivergenceShort | ★純空逆勢 | 60M | — | — | — | — | ⏳ Queue | 0/4 | — | 🥉 後 |
 | B01 | S5_L | SettlementWeekLong | ★結算後多 | 日線 | — | — | — | — | ⏳ Queue | 0/4 | — | ⚠️ 高風險 |
@@ -179,3 +179,9 @@
 | 2026-06-22 | 🔵啟動 | S3 VolSqueeze | **回歸原始 batch01 排程，W0 Pre-verify 待開始** |
 | 2026-06-22 | 拆解規則生效 | S3-S15 雙向策略 | **Rule R-6：Sx_L / Sx_S 命名，先 L 後 S。Queue 從 13 隻擴為 21 隻** |
 | 2026-06-22 | 改名 | S3 → **S3_L VolSqueezeLong** | 純多單，短邊由 S3_S 接續 |
+| 2026-06-23 | 建立 | S3_S v1.0 | R-6 split 純空版 |
+| 2026-06-24 | 開發 | S3_S v1.1~v1.2 FROZEN | SP trailing + cooldown bugfix |
+| 2026-06-26 | GA x3 | S3_S v1.3~v1.5 | v1.5 GA r3 採用（PF 2.35, 100 trades） |
+| 2026-06-26 | WFA | S3_S v1.5 Phase 3 | **FAIL**（2/9 OOS pass, median WFE -38%） |
+| 2026-06-27 | 實驗 | S3_S v1.7.0~v1.7.1 | Data2 regime filter, Round 1 W4 8/9 PASS |
+| 2026-06-27 | 修正 | **S3_S v1.7.3 band-reject** | 移除 MinRatio，允許 Bear+StrongBull，待回測 |

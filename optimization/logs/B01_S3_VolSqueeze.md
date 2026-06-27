@@ -3,7 +3,7 @@
 > 批次：B01
 > 開始日期：2026-06-07
 > 最後更新：2026-06-26
-> 當前狀態：🔴 S3_S v1.5 Phase 3 WFA FAIL（S3_L 已升等 live_simulation）
+> 當前狀態：🟡 S3_S v1.7.3 regime filter band-reject 待回測（v1.5 WFA FAIL → v1.7 重開）
 
 ---
 
@@ -107,10 +107,54 @@ v1.5 特徵：SP-dominant（79/100 exits），最小 max SL（-95K），Sortino 
 2. **近期市況崩潰**：W8 OOS -528K/MDD -63%, W9 OOS -263K（僅 2 筆）
 3. **W6 異常值**：IS 僅 27 筆，WFE 505% 靠低基數膨脹
 
-### 待決定
-- 選項 A：縮減自由度（鎖穩定參數），只優化 3-4 核心參數重跑 WFA
-- 選項 B：v1.2 固定參數跑 9 窗口 OOS，驗證原始參數穩健度
-- 選項 C：判定 S3_S KILL，推進 S4_L MACDDivergenceLong
+### 待決定（已選擇 → v1.7 regime filter）
+- ~~選項 A：縮減自由度（鎖穩定參數），只優化 3-4 核心參數重跑 WFA~~
+- ~~選項 B：v1.2 固定參數跑 9 窗口 OOS，驗證原始參數穩健度~~
+- ~~選項 C：判定 S3_S KILL，推進 S4_L MACDDivergenceLong~~
+- **選擇：v1.7 regime filter**（v1.2 base + Data2 Daily MA regime gate）
+
+---
+
+## S3_S v1.7.x: Regime Filter Experimental Track
+
+### 背景
+v1.5 WFA FAIL 根因：alpha 來源為事件驅動（非系統性），不同市場 regime 下表現差異極大。
+選擇加入 Daily MA regime filter（Data2 = TWII Daily），按 MA20/MA50 ratio 分類市況並封鎖低 alpha 區間。
+
+### 版本演進
+
+| 版本 | 改動 | 狀態 |
+|------|------|------|
+| v1.7.0 | Data2 regime filter（MA50/200, MinRatio=0.98） | 基礎架構 |
+| v1.7.1 | MA 從 50/200 改為 20/50（更敏感） | Round 1 W4 WFA 8/9 PASS |
+| v1.7.2 | 加入 BlockRange（0.98~1.02） | BUG: MinRatio lower-bound 誤殺 Bear |
+| **v1.7.3** | **修正為 band-reject（移除 MinRatio）** | **待 MC12 回測驗證** |
+
+### v1.7.3 Band-Reject Filter
+
+先允許全部，再封鎖特定 zone（不再使用 MinRatio lower bound）。
+
+| Regime | Ratio | PF | Trades | Net | Action |
+|--------|:-----:|:---:|:---:|:---:|:---:|
+| Strong Bear | < 0.95 | 99 | 1 | +10K | ALLOW |
+| Weak Bear | 0.95~0.98 | 11.0 | 11 | +492K | ALLOW |
+| Range | 0.98~1.02 | 0.73 | 65 | -259K | BLOCK |
+| Weak Bull | 1.02~1.05 | 1.61 | 21 | +164K | BLOCK |
+| Strong Bull | > 1.05 | 4.49 | 4 | +162K | ALLOW |
+
+### Round 1 評估（v1.7.1, 桌機端 2026-06-27）
+
+| Gate | Result | Pass? |
+|------|--------|:---:|
+| W4 WFA | 8/9 OOS pass | PASS |
+| W5 10-dim | 9/10 dimensions | FAIL (DIM 7 Range) |
+
+DIM 7 FAIL 根因：Range zone 佔 46% 交易、PF 0.73、-259K。v1.7.3 BlockRange 預期解決。
+
+### 待辦
+- MC12 回測 v1.7.3（BlockRange=True, BlockWeakBull=True）
+- 驗證 Bear alpha（PF 11.0）保留
+- 重跑 W5 10-dim 確認 DIM 7 通過
 
 ---
 
@@ -125,8 +169,8 @@ v1.5 特徵：SP-dominant（79/100 exits），最小 max SL（-95K），Sortino 
 | 參數高原 > 20% | 7/12 CV > 30%（無高原） | ✗ |
 | 邏輯可解釋 | 波動率週期理論有基礎 ✓ | ✓ |
 
-- **最終判定**：Phase 3 WFA FAIL — 待用戶決定下一步
-- **根本問題**：VolSqueezeShort 的 alpha 無法在不同市況下用固定參數框架捕捉
+- **v1.5 判定**：Phase 3 WFA FAIL — 已選擇 v1.7 regime filter 路線
+- **v1.7.3 判定**：待 MC12 回測驗證（band-reject filter）
 
 ---
 
@@ -140,3 +184,7 @@ v1.5 特徵：SP-dominant（79/100 exits），最小 max SL（-95K），Sortino 
 | 2026-06-26 | 2 | v1.3~v1.5 GA x3 | PASS | v1.5 GA r3 採用（PF 2.35, 100 trades） |
 | 2026-06-26 | 2 | v2.0 KILL | KILL | ride-to-end thesis disproved |
 | 2026-06-26 | 3 | WFA 9 windows | **FAIL** | 2/9 OOS pass, median WFE -38%, total OOS -762K |
+| 2026-06-27 | — | v1.7.0~v1.7.1 regime filter | — | Data2 Daily MA20/MA50 gate |
+| 2026-06-27 | — | v1.7.1 Round 1 eval | W4 8/9, W5 9/10 | DIM 7 Range FAIL |
+| 2026-06-27 | — | v1.7.2 BlockRange | BUG | MinRatio lower-bound 誤殺 Bear alpha |
+| 2026-06-27 | — | **v1.7.3 band-reject fix** | **待驗證** | 移除 MinRatio，允許 Bear+StrongBull |

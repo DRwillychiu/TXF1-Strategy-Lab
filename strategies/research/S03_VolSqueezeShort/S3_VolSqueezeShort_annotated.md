@@ -1,11 +1,12 @@
 # S3_S 波動率壓縮放空 — VolSqueezeShort
 
-> 狀態：🔴 v1.5 Phase 3 WFA FAIL（2/9 OOS pass, median WFE -38%, OOS total -762K）
+> 狀態：🟡 v1.7.3 regime filter band-reject 待回測（v1.5 WFA FAIL → v1.7 重開）
 > R-6 配對對手：S3_L VolSqueezeLong（已升等 live_simulation）
 > 方向：純做空
 > 週期：60 分鐘
 > 口數：1 口
 > v2.0 KILL：2026-06-26（歸檔至 `archive/S3_S_v2_killed_20260626/`）
+> v1.7 實驗分支：[`S3_VolSqueezeShort_v17.pla`](S3_VolSqueezeShort_v17.pla)（Data2 regime filter，v1.2 base）
 
 ---
 
