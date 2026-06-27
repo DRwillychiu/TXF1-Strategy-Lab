@@ -2,7 +2,7 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.7.1  (2026-06-27 - regime MA reduced to 20/50 for Daily data fit)
+  Version     : v1.7.2  (2026-06-27 - add Range block, quality > quantity)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 60M (sole feed, no multi-TF)
@@ -243,6 +243,7 @@ inputs:
     Regime_SlowMA             ( 50    ),   { v1.7.1: Daily slow MA period (was hardcoded 200) }
     Regime_MinRatio           ( 0.98  ),   { allow only if FastMA/SlowMA >= 0.98 (block bear) }
     Regime_BlockWeakBull      ( True  ),   { if True, also block 1.02 < ratio < 1.05 zone }
+    Regime_BlockRange         ( True  ),   { v1.7.2: block 0.98-1.02 range (PF 0.73, 46% of trades) }
 
     { ===== Priority 0 Protection (Rule #11 / #12) ===== }
     Holiday_Flat_Time         ( 415   ),
@@ -290,6 +291,7 @@ variables:
     v_MA_Slow_D              ( 0     ),
     v_Regime_Ratio           ( 1     ),
     v_In_WeakBull_Zone       ( False ),
+    v_In_Range_Zone          ( False ),
     v_Regime_OK              ( True  ),
 
     { ===== Cooldown ===== }
@@ -459,7 +461,9 @@ end;
   Allow entry only if:
     1. ratio >= Regime_MinRatio (e.g. 0.98) - blocks bear / strong_bear
     2. If Regime_BlockWeakBull = True, also block 1.02 < ratio < 1.05
-  Effective: only allow strong_bull (>1.05) + range (0.98-1.02)
+    3. If Regime_BlockRange = True, also block 0.98 <= ratio <= 1.02 (v1.7.2)
+  v1.7.2: added Regime_BlockRange to block 0.98-1.02 (PF 0.73, 65/140 trades).
+  Effective: only allow strong_bull (>1.05) + bear (<0.98)
 
   IMPORTANT: REQUIRES Data2 = TXF1 Daily on chart.
              MaxBarsBack should be set to 1000 (cover Daily MA50 * 19 ratio).
@@ -476,10 +480,14 @@ if Use_Regime_Filter = True then begin
         v_Regime_Ratio = 1;
 
     v_In_WeakBull_Zone = ( v_Regime_Ratio > 1.02 ) and ( v_Regime_Ratio < 1.05 );
+    v_In_Range_Zone = ( v_Regime_Ratio >= 0.98 ) and ( v_Regime_Ratio <= 1.02 );
 
     v_Regime_OK = ( v_Regime_Ratio >= Regime_MinRatio );
 
     if Regime_BlockWeakBull = True and v_In_WeakBull_Zone = True then
+        v_Regime_OK = False;
+
+    if Regime_BlockRange = True and v_In_Range_Zone = True then
         v_Regime_OK = False;
 end
 else
