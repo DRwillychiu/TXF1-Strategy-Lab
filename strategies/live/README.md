@@ -5,15 +5,17 @@
 
 ---
 
-## 上架策略清單（截至 2026-06-27）
+## 上架策略清單（截至 2026-06-28）
 
-| 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 最新基準淨利 |
-|------|------|------|------|----------|--------------|
-| **L1** TrendLong | 趨勢追蹤 | 純多 | V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 | `TL_` | — |
-| **L2** TrendShort | 趨勢追蹤 | 純空 | 5.2 + HolidayFlat_v3 | `TS_` | +1,400,200 |
-| **L3** ConsolidationLong | 盤整區間 | 純多 | v13.2B（Freeze 開、BE 關） | `CL_` | +778,000 |
-| **L4** ConsolidationShort | 盤整反轉 | 純空 | v14.2B（Night 開、BE/SP 關） | `CS_` | +687,200 |
-| **L5** BreakoutLong | 盤整突破 | 純多 | v19.8（SP 駁回、預設 = v19.7 行為） | `BL_` | +1,563,200 |
+| 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 最新基準淨利 | BOSS_VIEW |
+|------|------|------|------|----------|--------------|----------|
+| **L1** TrendLong | 趨勢追蹤 | 純多 | V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 | `TL_` | **+3,216,200** | [📋](L1_TrendLong_BOSS_VIEW.md) |
+| **L2** TrendShort | 趨勢追蹤 | 純空 | 5.2 + HolidayFlat_v3 | `TS_` | +1,400,200 | [📋](L2_TrendShort_BOSS_VIEW.md) |
+| **L3** ConsolidationLong | 盤整區間 | 純多 | v13.4（Variant B：Freeze 開、BE 關） | `CL_` | +697,200 | [📋](L3_ConsolidationLong_BOSS_VIEW.md) |
+| **L4** ConsolidationShort | 盤整反轉 | 純空 | v14.2B（Night 開、BE/SP 關）+ v14.4 ImmediateStop | `CS_` | +687,200 | [📋](L4_ConsolidationShort_BOSS_VIEW.md) |
+| **L5** BreakoutLong | 盤整突破 | 純多 | v19.9 + Cooldown-D + HolidayFlat_v3 | `BL_` | +1,361,400 | [📋](L5_BreakoutLong_BOSS_VIEW.md) |
+
+📋 = **BOSS_VIEW**（老闆快速 view，每隻策略強制附，規範見 [`docs/methodology/BOSS_VIEW_TEMPLATE.md`](../../docs/methodology/BOSS_VIEW_TEMPLATE.md)）
 
 ---
 

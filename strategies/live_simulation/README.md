@@ -27,10 +27,11 @@
 
 | 策略 | BOSS_VIEW 狀態 |
 |------|--------------|
-| S1 NightMomentum | ⏳ 待補 |
-| S3 RapidPullbackShort | ⏳ 待補 |
-| S3_L VolSqueezeLong | ⏳ 待補 |
-| **S3_S VolSqueezeShort** | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort_BOSS_VIEW.md) (2026-06-28 首份) |
+| **S1** NightMomentum | ✅ [BOSS_VIEW](S1_NightMomentum_BOSS_VIEW.md) |
+| **S3** RapidPullbackShort | ✅ [BOSS_VIEW](S3_RapidPullbackShort_BOSS_VIEW.md) |
+| **S3_L** VolSqueezeLong | ✅ [BOSS_VIEW](S3_VolSqueezeLong_BOSS_VIEW.md) |
+| **S3_S** VolSqueezeShort | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort_BOSS_VIEW.md) |
+| L1-L5 (live/) | ✅ 5 份 BOSS_VIEW 已補（同步 2026-06-28，見 `strategies/live/`）|
 
 ---
 
