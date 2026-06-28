@@ -44,8 +44,8 @@
 | ~~S2~~ | ~~InsideBarBreak~~ | B 價格結構 | 30M + 日線 | 雙向 | ⚰️ KILLED 2026-06-22 |
 | S3_L | VolSqueezeLong | C 波動率 | 60M | 純多 | ✅ **PROMOTED to live_simulation/ (2026-06-23, W5 PASS)** |
 | S3_S | VolSqueezeShort | C 波動率 | 60M | 純空 | ✅ **PROMOTED to live_simulation/ (2026-06-28, v1.7.3-PROD, 3% cap, R-6 hedge pair)** |
-| S4_L | MACDDivergenceLong | D 動量逆勢 | 60M | 純多 | ⏳ Queue |
-| S4_S | MACDDivergenceShort | D 動量逆勢 | 60M | 純空 | ⏳ Queue |
+| S4_L | MACDDivergenceLong | D 動量逆勢 | 60M | 純多 | ⏳ Queue (推延至 S16 後) |
+| **S4_S** | **MACDDivergenceShort** | **D 動量逆勢** | **60M** | **純空** | 🔵 **CURRENT (Stage-1, user 2026-06-28 跳號)** |
 | S5_L | SettlementWeekLong | E 統計 | 日線 | 結算後做多 | ⏳ Queue |
 | S5_S | SettlementWeekShort | E 統計 | 日線 | 結算前做空 | ⏳ Queue |
 
@@ -72,18 +72,45 @@
 | S15_L | BBReversionLong | B 價格結構 | 60M | 純多 | ⏳ Queue |
 | S15_S | BBReversionShort | B 價格結構 | 60M | 純空 | ⏳ Queue |
 
-### 總計
+### Batch 04 — User-added short reinforcement（2026-06-28 ruling）
+| # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
+|---|---------|------|--------|------|------|
+| **S16** | **MACrossShort** | **G 動量交叉** | **15M** | **純空** | ⏳ **Queue (user 2026-06-28 added)** |
 
-- **原始排程**：13 隻策略（部分雙向）
-- **拆解後**：**21 個開發單位**（不含已 KILLED 的 S2）
-- **預估完成時程**：每隻 5-7 工作日 → 約 4-5 個月（KILL 加速時程縮短）
+⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。理由：補強做空 sleeve 厚度（live + live_sim 僅 4 隻空頭，相對 5 隻多頭略弱）。
+規格：15M 時框、死亡交叉進場（Fast MA cross down Slow MA）、黃金交叉出場（Fast cross up Slow），MA 參數可優化。
+合規仍需走 W0-W6 完整流程 + 7 個強制模組（Settlement / SetStopLoss / Holiday / Kill / Registry / IOG=false / ASCII）。
 
-### 完整開發順序（嚴守，不跳號）
+### 總計（2026-06-28 update）
+
+- **原始排程**：13 隻策略（部分雙向）→ 拆解 21 個開發單位（不含 KILL 的 S2）
+- **+ Batch 04 user-added**：1 隻 S16
+- **= 22 個開發單位**
+
+### 完整開發順序（2026-06-28 user ruling override）
 
 ```
-S3_L → S3_S → S4_L → S4_S → S5_L → S5_S → S6 → S7 → S8 → S9_L → S9_S
-  → S10_L → S10_S → S11 → S12_L → S12_S → S13 → S14_L → S14_S → S15_L → S15_S
+2026-06-28 起更新順序:
+  [已完成] S3_L → S3_S
+  [進行中] S4_S → S16 → S4_L → S5_L → S5_S → ...
+              ↑      ↑       ↑
+              用戶 ruling: 先補完 2 支做空 (S4_S + S16), 再回 S4_L 排程
+
+完整 22 隻順序:
+  S3_L → S3_S → S4_S → S16 → S4_L → S5_L → S5_S → S6 → S7 → S8
+    → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13
+    → S14_L → S14_S → S15_L → S15_S
 ```
+
+### 用戶 2026-06-28 ruling audit trail
+
+| 條目 | 說明 |
+|------|------|
+| 衝突 Rule | R-1（不發明）/ R-2（不跳號）/ Rule #14（嚴格排程）|
+| Override 理由 | 做空 sleeve 4 隻 vs 多頭 5 隻偏弱，先補完做空再回排程 |
+| 緩解措施 | S16 寫入 ROADMAP 合法化 + 走完 W0-W6 + 全合規模組 |
+| 風險 | off-roadmap 過往集體 KILL (S5-S9)，需嚴守 W0 pre-verify gates |
+| 順序 | S4_S 先（跳過 S4_L），完成後 S16，再回 S4_L |
 
 ---
 
