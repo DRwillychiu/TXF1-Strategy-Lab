@@ -2,8 +2,9 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.7.3-PROD  (2026-06-28 - PROMOTED to live_simulation; band-reject locked)
-                Stage 1 GA best (60 combos): FastMA=15 / SlowMA=80 / BWPctile=30
+  Version     : v1.7.3-FINAL  (2026-06-28 - PROMOTED to live_simulation; band-reject locked)
+                FINAL inputs: FastMA=15 / SlowMA=40 / BWPctile=25 (tightened from initial PROD)
+                Backtest 2020-2026 (6.3y): 29 trades / Net +1,013,600 / PF gross 3.95 / Sortino 1.08
                 Stage 2 W4 WFA (18 backtests): 2/9 isolated FAIL but PORTFOLIO context PROMOTED
                 User ruling 2026-06-28: WFA isolated standard does not apply to portfolio sleeve;
                 4 trades/year by design (precision hedge, not all-weather).
@@ -226,7 +227,7 @@ inputs:
     BBLen                     ( 45    ),   { v1.7: reverted to v1.2 base }
     BBStd                     ( 2.0   ),   { v1.7: reverted to v1.2 base }
     BWLookback                ( 120   ),   { v1.7: reverted to v1.2 base }
-    BWPctile                  ( 30    ),   { v1.7: reverted to v1.2 base }
+    BWPctile                  ( 25    ),   { v1.7.3-FINAL: tightened from 30 to 25 (stricter squeeze) }
 
     { ===== ATR (stop / target anchor) - v1.2 defaults ===== }
     ATR_Len                   ( 14    ),   { v1.7: reverted to v1.2 base }
@@ -247,8 +248,8 @@ inputs:
 
     { ===== Regime Filter (v1.7 NEW, MA periods adjusted in v1.7.1) ===== }
     Use_Regime_Filter         ( True  ),   { master switch for Daily MA regime gate }
-    Regime_FastMA             ( 15    ),   { v1.7.3-PROD: Stage 1 GA best (was v1.7.1 default 20) }
-    Regime_SlowMA             ( 80    ),   { v1.7.3-PROD: Stage 1 GA best (was v1.7.1 default 50) }
+    Regime_FastMA             ( 15    ),   { v1.7.3-FINAL: GA best }
+    Regime_SlowMA             ( 40    ),   { v1.7.3-FINAL: revised from 80 to 40 (sharper regime split) }
     Regime_BlockRange         ( True  ),   { v1.7.3: block 0.98 <= ratio <= 1.02 (PF 0.73) }
     Regime_BlockWeakBull      ( True  ),   { v1.7.1: block 1.02 < ratio < 1.05 (PF 1.61) }
 

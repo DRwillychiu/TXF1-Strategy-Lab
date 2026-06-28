@@ -12,11 +12,25 @@
 | **S1** NightMomentum | A 類時段型 | 純多 | **v2.6 + Settlement + ImmediateStop + HolidayFlat_v3** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
 | **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 | **S3_L** VolSqueezeLong | C 類波動率（純多）| 純多 | **v1.0 (W5 PASS, 5% portfolio cap)** | `LE_VS_` / `LX_VS_` | **2026-06-23** |
-| **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.7.3-PROD (band-reject, 3% cap, precision hedge)** | `SE_VS_` / `SX_VS_` | **2026-06-28** |
+| **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.7.3-FINAL (BWPctile 25, SlowMA 40, 3% cap, precision hedge)** | `SE_VS_` / `SX_VS_` | **2026-06-28** |
 
 ⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong_DEPLOYMENT.md)。
 
-⚠️ **S3_S 部署 caveats**：3% 上限 + 4 trades/year by design + 接受 Tier S 偶有漏抓 + 12 個月 0 trades 觸發 review。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort_strategy.md)。
+⚠️ **S3_S 部署 caveats**：3% 上限 + 4 trades/year by design + 接受 Tier S 偶有漏抓 + 12 個月 0 trades 觸發 review。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort_strategy.md) + [S3_S_VolSqueezeShort_BOSS_VIEW.md](S3_S_VolSqueezeShort_BOSS_VIEW.md)。
+
+---
+
+## 📋 BOSS_VIEW 規範（2026-06-28 新增）
+
+**每隻** promoted 到 `live_simulation/` 或 `live/` 的策略**強制**附 `_BOSS_VIEW.md`，作為老闆 / 主管 / 投委會的快速 view（< 1 頁）。
+規範詳見 [`docs/methodology/BOSS_VIEW_TEMPLATE.md`](../../docs/methodology/BOSS_VIEW_TEMPLATE.md)。
+
+| 策略 | BOSS_VIEW 狀態 |
+|------|--------------|
+| S1 NightMomentum | ⏳ 待補 |
+| S3 RapidPullbackShort | ⏳ 待補 |
+| S3_L VolSqueezeLong | ⏳ 待補 |
+| **S3_S VolSqueezeShort** | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort_BOSS_VIEW.md) (2026-06-28 首份) |
 
 ---
 

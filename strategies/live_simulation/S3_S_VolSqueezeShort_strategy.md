@@ -41,15 +41,15 @@
 - **精準出手打擊型**（4 trades/year, avg +30.7K）
 
 ### 5. 賺錢目標
-| 維度 | 目標 | v1.7.3 實證 |
-|------|------|------------|
-| 頻率 | 3-5 trades/year | 4.1 trades/year ✅ |
-| WR | > 75% | 80.6% ✅ |
-| Avg trade | > +25K | +30.7K ✅ |
-| Annual Net | +100K~+180K | +127K ✅ |
-| PF gross | > 2.5 | 3.38 ✅ |
-| Sortino | > 1.0 | 1.02 ✅ |
-| MDD % | < -25% | -23.1% ✅ |
+| 維度 | 目標 | **v1.7.3-FINAL 實證 (2020-2026)** |
+|------|------|----------------------------------|
+| 頻率 | 3-5 trades/year | **4.6 trades/year** ✅ |
+| WR | > 75% | **82.8%** ✅ |
+| Avg trade | > +25K | **+34,952** ✅ |
+| Annual Net | +100K~+180K | **+160K** ✅ |
+| PF gross | > 2.5 | **3.95** ✅ |
+| Sortino | > 1.0 | **1.08** ✅ |
+| MDD % | < -25% | **-22.1%** ✅ |
 
 ---
 
@@ -117,11 +117,11 @@
 ## 七、Final 定案參數（鎖定）
 
 ```pla
-{ Bollinger Bands - v1.2 baseline (鎖定) }
+{ Bollinger Bands - v1.7.3-FINAL (BWPctile tightened) }
 BBLen                = 45
 BBStd                = 2.0
 BWLookback           = 120
-BWPctile             = 30
+BWPctile             = 25      *** v1.7.3-FINAL: tightened from 30 ***
 
 { ATR / Stop / Target - v1.2 baseline (鎖定) }
 ATR_Len              = 14
@@ -140,10 +140,10 @@ SP_Retain_Pct        = 70
 { Cooldown - v1.2 baseline (鎖定) }
 Cooldown_Days        = 1
 
-{ Regime Filter - v1.7.3-PROD Stage 1 GA best }
+{ Regime Filter - v1.7.3-FINAL }
 Use_Regime_Filter    = True
-Regime_FastMA        = 15      *** GA best (v1.7.1 R1 was 20) ***
-Regime_SlowMA        = 80      *** GA best (v1.7.1 R1 was 50) ***
+Regime_FastMA        = 15      *** GA best ***
+Regime_SlowMA        = 40      *** v1.7.3-FINAL: revised from 80 to 40 (sharper regime split) ***
 Regime_BlockRange    = True    *** v1.7.3 NEW (band-reject 0.98-1.02) ***
 Regime_BlockWeakBull = True    *** band-reject 1.02-1.05 ***
 
