@@ -44,21 +44,39 @@ When a short position hits its ATR-based stop loss during extreme volatility:
 
 ---
 
-## 3. Multi-Layer Defense Architecture
+## 3. Multi-Layer Defense Architecture (User Approved 2026-06-29)
 
-```
-Layer E: ATR x mult (SetStopLoss)     = absolute last resort, safety net
-Layer D: Structure break (1M)          = structural confirmation
-Layer C: Momentum / Speed (1M)         = cascade pre-detection
-Layer B: Volume-Price (1M)             = real-time force measurement
-Layer A: Candlestick pattern (1M)      = immediate reversal detection
-```
+Initial stop loss is a structural stop (like a commercial office building).
+The foundation is the 60M ATR stop. The upper floors are 1M multi-layer real-time monitoring.
 
-Each layer operates independently. The scoring system aggregates signals across all layers.
-A single layer cannot trigger an exit alone — multi-layer confluence is required.
+### Foundation — 60M ATR Stop Loss (SetStopLoss)
+The absolute last resort safety net. ATR x multiplier, placed at the exchange level.
 
-**Key design rule**: ATR (Layer E) remains as the backstop via SetStopLoss.
-Layers A-D are the active defense, monitored on every 1M bar via IOG (IntrabarOrderGeneration).
+### 1F — K-bar Pattern Monitoring
+Detect 1M reversal patterns: volume + long lower shadow, bullish engulfing, consecutive bullish bars,
+expanding bullish bars. Confirms that buy-side is aggressively intervening.
+
+### 2F — Volume-Price Monitoring
+Detect 1M sudden volume spike + up, rising volume + rising price synchronization.
+Confirms that adverse momentum has real volume support, not a short-side false breakout.
+
+### 3F — Momentum Speed Monitoring
+Detect 1M price acceleration increasing, per-unit-time advance exceeding threshold.
+Enables maximum avoidance of stop cascade risk.
+
+### 4F — Structure Break Monitoring
+Detect 1M gap up, price breaking above short entry price.
+Confirms price structure has flipped. (When this condition fires, exit is 100% guaranteed to be a losing exit.)
+
+### 5F — Volatility Environment Monitoring
+Detect 1M ATR suddenly jumping to multiples of recent average.
+Indicates overall market structure is undergoing regime change (vol expansion turning to contraction / vol secondary expansion).
+
+### Trigger Mechanism
+All five floors operate independently, using a weighted scoring system.
+No intervention during normal conditions (does not activate until unrealized loss exceeds threshold).
+When multiple floors light up simultaneously (>= 3 floors + score >= 65%),
+preemptive market exit BEFORE price reaches the ATR stop level, avoiding the stop cascade zone.
 
 ---
 
