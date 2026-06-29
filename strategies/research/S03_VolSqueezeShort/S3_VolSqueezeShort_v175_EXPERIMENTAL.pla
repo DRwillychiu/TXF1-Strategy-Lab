@@ -1,0 +1,816 @@
+{ ================================================================================
+  S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
+  Signal Name : S3_VolSqueezeShort
+  MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
+  Version     : v1.7.5-EXPERIMENTAL  (2026-06-29 - Conditional Hard Cap, not promoted)
+                Based on v1.7.4 but replaces fixed cap with conditional cap that preserves SP.
+                Design philosophy (user 2026-06-28): "small loss + small gain + big gain;
+                  loss control IS the strategy" - cap single loss while keeping SP alive.
+
+                v1.7.4 lesson: fixed cap 100 < SP arm distance (1.5 ATR ~290 pts at vol expansion)
+                  --> 8 SP trades converted to SL, -432K alpha destruction, Net -26%
+                  --> Root cause: cap ignores SP arm relationship
+
+                Key change vs v1.7.4:
+                  NEW INPUT: SL_Cap_SP_Buffer_Pts (default 15)
+                  Section 9: v_Frozen_SL_Dist = MinList(ATR*2.75, MaxList(cap, ATR*1.5 + buffer))
+                  Effect: cap adapts to vol -- always >= SP arm distance, SP never fails
+
+                Engineering System (Rule #16) checklist:
+                  R-SL2: cap >= SP arm at every vol level (proven in spec)
+                  R-SL3: SP count target <= 20% shift vs baseline
+                  AP-1/AP-6: addressed by conditional design
+                  Spec: v175_ConditionalCap_spec.md
+
+                Status: EXPERIMENTAL - not promoted, awaiting W3 backtest verification.
+                If W3 SP count preserved AND MDD improved -> W4 WFA -> promote.
+                If W3 SP count drops > 20% -> KILL, revert to v1.7.3-FINAL.
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 12 PowerLanguage x64
+  Timeframe   : Data1 = 60M (sole feed, no multi-TF)
+  Class       : Volatility Regime (C class) - Short only (Rule R-6 split)
+  Direction   : Short only
+  Allocation  : TBD (post W4 Walk-Forward)
+
+  CREATED 2026-06-23
+    From OFFICIAL_ROADMAP.md (docs/policies/OFFICIAL_ROADMAP.md)
+    Source spec: strategies/research/archive/batch01_S2-S5/TXF1_Strategies_Batch01.md S3 VolSqueeze
+    R-6 split (2026-06-22): original bi-directional -> Sx_L pure long + Sx_S pure short
+    Order rule: L first, S second (TXF1 2020-2026 bullish regime)
+    This file is the S (short) version; S3_L VolSqueezeLong already promoted to live_simulation.
+
+  STAGE-1 DESIGN DECISIONS (2026-06-23 user-ruled):
+    1. Period: 60M (same as S3_L) - keeps R-6 symmetric for clean comparison.
+    2. Short-side params NOT mirrored from S3_L because short panic structure differs:
+       - Long trend: slow grind, far TP (ATR x 8)
+       - Short panic: fast drop then range, near TP (ATR x 3.5)
+       - Long holds 70 bars; short holds 35 bars max
+       - Long Mid exit 3 bars; short 2 bars (faster bounce reaction)
+    3. Cooldown_Days = 0 (user ruling: SL controls per-trade risk, no daily limit)
+       - W3 will A/B test (0 vs 1) to verify
+    4. Short-side variant: SetStopLoss guard = MP >= 0 (per Rule #12 short variant)
+    5. Frozen SL: v_SL_Level = EntryPrice + v_Frozen_SL_Dist (above entry)
+    6. All other compliance modules byte-identical to S3_L.
+
+  CHANGELOG:
+    v1.7.5 (2026-06-29): Conditional Hard Cap (fix v1.7.4 SP destruction)
+         Change: MinList(ATR*2.75, MaxList(cap100, ATR*1.5 + 15))
+         New input: SL_Cap_SP_Buffer_Pts (15) - buffer above SP arm
+         Why: v1.7.4 cap100 < SP arm (290 pts) -> 8 SP->SL, -432K
+         Fix: conditional cap always >= SP arm, SP mechanism preserved
+         Spec: v175_ConditionalCap_spec.md (Rule #16 5-pillar checklist)
+
+    v1.7.4 (2026-06-28): Hard SL Cap 100 EXPERIMENTAL (sub-optimal, superseded by v1.7.5)
+         Change: MinList(ATR*2.75, SL_Hard_Cap_Pts=100)
+         Result: MDD -13.1% (improved 9pp) but Net -26% (cap < SP arm)
+         Verdict: cap 100 too tight, 8 SP->SL conversions, -432K loss
+         See: v174_cap100_result_20260628.md
+
+    v1.5 (2026-06-26): Phase 2 GA round 3 FINAL (SP-dominant, best PF/Sharpe)
+         Baseline: v1.2 Cool=1 Net +552,200 / PF 1.18 / MDD -52% / 185 trades
+         GA r1 (v1.3):     Net +924,000 / PF 2.33 / MDD -16% / 91 trades
+         GA r2 (v1.4):     Net +1,082,200 / PF 2.18 / MDD -18% / 70 trades
+         GA r3 (v1.5):     Net +1,174,800 / PF 2.35 / MDD -17% / 100 trades
+         v1.5 chosen: best PF + Sharpe + Sortino, most trades, smallest max SL
+         Key params (10 moved, 2 unchanged vs v1.2):
+           BBLen        45 -> 60     wider BB, moderate (not extreme like r2=80)
+           BBStd        2.0 -> 2.25  slightly wider bands
+           BWLookback   120 -> 160   longer percentile window
+           BWPctile     30 -> 25     stricter squeeze gate
+           ATR_Len      14 -> 7      shorter ATR = responsive to recent vol
+           StopATRMult  2.75 -> 2.75 unchanged (baseline value, most stable)
+           TargetATRMult 3.5 -> 6.0  far TP = rare bonus (SP handles most exits)
+           MaxBars      35 -> 30     tighter time discipline
+           MidExit_MinBars 2 -> 2    unchanged
+           SP_Trigger   1.5 -> 1.25  arm trail at 1.25 ATR profit
+           SP_Retain    70 -> 70     unchanged
+           Cooldown     0 -> 1       daily limit on
+         Exit profile: SP 79/+1,452K (dominant), TP 4/+413K, SL 13/-584K
+         Max single SL = -94,600 (vs r2 -346K), Sortino 0.69 (vs r2 0.45)
+         Phase 3 WFA (2026-06-26): FAIL
+           9 windows IS 2y/OOS 6m/step 6m, OOS pass 2/9 (W1,W6 only)
+           Median WFE = -38%, Total OOS = -762,000 NTD
+           7/12 params CV > 30% (overfit confirmed)
+           W8 OOS -528K MDD -63%, W9 OOS -263K (2 trades only)
+           Decision pending: reduce param freedom / v1.2 fixed-param WFA / KILL
+
+    v1.4 (2026-06-26): Phase 2 GA round 2 (superseded by v1.5)
+         Net +1,082,200 / PF 2.18 / MDD -18% / 70 trades
+         Params too extreme (BBLen=80, Stop=4.0), max SL -346K
+
+    v1.3 (2026-06-26): Phase 2 GA round 1 (superseded by v1.4)
+         Net +924,000 / PF 2.33 / MDD -16% / 91 trades
+         SL 5/-298K but SP_Retain=50 too loose, ATR_Len=7+Stop=3.5 unstable
+
+    v1.2 FROZEN (2026-06-24): FINAL VERSION for Phase 2 GA baseline
+
+         REVERTED FROM v1.3 ATTEMPT:
+         v1.3 tried to fix Section 12 same-bar entry+exit case using
+         "MarketPosition=0 AND EntriesToday(Date)>0". Empirical re-test showed
+         v1.3 made things worse:
+           v1.2 Cool=1: Net +552,200 / PF 1.18 / MDD -52pct / 185 trades [BETTER]
+           v1.3 Cool=1: Net +371,000 / PF 1.11 / MDD -59pct / 195 trades
+         Root causes:
+           1. MC section execution order: Section 10 entry signal can fire before
+              Section 12 sets cool, on same bar where intra-bar TP exit occurred
+           2. EntriesToday(Date) TXF1 cross-midnight quirk: night session bars
+              past midnight reset EntriesToday=0, bypassing cooldown
+         Decision: revert Section 12 to v1.2 original, accept the disclosed
+                   limitation. Frozen as final per user 2026-06-24 ruling.
+
+         ACCEPTED LIMITATION (v1.2):
+         Same-bar entry+exit fast-TP case does not trigger cooldown.
+         Concrete instance: 2025-04-07 TP +278,800 + SL -206,200 (net +72,600).
+         Edge impact: ~1-3 trades per 6 years, net +/-100K range.
+         Not fixed in v1.2; v1.4 alternative (v_TradedDate flag in Section 10)
+         in backlog for post-Phase-2 re-evaluation.
+
+         v1.2 BUGFIX (Section 8 cooldown reset predicate) RETAINED:
+         Symptom: A/B test (Cool=0 vs Cool=1) returned 100 pct identical results
+                  (185 trades both, same Net/PF/MDD/all metrics), proving the
+                  cooldown gate was effectively non-functional.
+         Root cause: Section 8 reset required BOTH "Date <> v_LastExit_Date"
+                     AND "DateDiff >= Cooldown_Days" - the first clause is
+                     redundant and creates a contradiction:
+                       Cool=0 same day: diff=0 OK, but Date==LastExit fails
+                         -> cooldown stays True forever, NEVER allows reset
+                       Cool=1 same day: diff=0<1 anyway
+                       Both branches behave identically (cool effectively dead).
+         Fix: removed "Date <> v_LastExit_Date" clause; pure DateDiff>=Cooldown:
+                Cool=0 -> diff>=0 always True -> resets every bar -> same-day OK
+                Cool=1 -> diff>=1 -> next-day only -> same-day blocked
+         Action: re-run A/B (Cool=0 baseline + Cool=1 variant) to confirm fix.
+
+    v1.1 (2026-06-24): add Layer 2 - Trailing StopProfit (per annotated.md 5-layer ruling)
+         Driver: user identified short-side asymmetry - short panic reverses faster
+         than long pullback, so peak-profit protection earlier (vs L1 SP) is needed.
+         New inputs:
+           SP_Trigger_ATRMult ( 1.5 )  - arm SP when peak profit >= ATR * 1.5
+           SP_Retain_Pct      ( 70  )  - retain 70% of peak (tolerate 30% giveback)
+         New label: SX_VS_SP (mutually exclusive with SX_VS_SL)
+         Logic:
+           1. Track v_Peak_Profit_Pts = max(EntryPrice - Low) over hold
+           2. Arm v_SP_Armed when peak >= ATR * SP_Trigger_ATRMult (irreversible)
+           3. Compute v_SP_Floor_Price = EntryPrice - (peak * SP_Retain_Pct / 100)
+           4. While armed: SL order replaced by SP order at floor price
+           5. Reset all SP state when flat
+         Versus L1 SP (45% retain):
+           S3_S uses 70% retain because short bounces are sharper than long pullbacks.
+         Per Lesson L24: this is ATR-based dynamic protection, NOT event filter.
+
+    v1.0 (2026-06-23): initial release, R-6 short mirror with 4 params customized:
+         - TargetATRMult  8.0 -> 3.5   (short panic = fast drop, near TP)
+         - MaxBars        70  -> 35    (short holds shorter)
+         - MidExit_MinBars 3  -> 2     (faster bounce reaction)
+         - Cooldown_Days  1   -> 0     (user ruling: no daily limit)
+         All other inputs mirror S3_L v1.1 Phase 3 best:
+         BBLen=45, BBStd=2.0, BWLookback=120, BWPctile=30, ATR_Len=14, StopATRMult=2.75
+
+  ALPHA THESIS:
+    Bollinger BandWidth (BBW) compressed to 30-percentile of past 120 periods
+    = volatility squeeze, statistically anticipates expansion.
+    Short entry: Squeeze condition + Close < Lower Band (downward breakout).
+    Theory: vol cycle expansion -> directional follow-through (downward variant).
+
+    Macro shock catalysts for TXF1 are asymmetric: FOMC tightening, Trump tariffs,
+    US limit down, geopolitical war, BoJ surprise = predominantly DOWNSIDE catalysts.
+    Short panic is faster and more violent than long FOMO (panic > FOMO).
+    But TXF1 2020-2026 is bullish regime overall, so:
+      - Sample expected: 50-100 trades / 6yr (vs S3_L 134)
+      - Single Sharpe expected: < 0.5 (vs S3_L 1.02)
+      - PORTFOLIO Sharpe with S3_L pairing: expected > 1.2
+    Hedge value (R-6 directional pair) > single-sleeve Sharpe per Lesson L24.
+
+  PARAMETERIZATION:
+    All numeric thresholds are PowerLanguage inputs - none hardcoded.
+    v1.5 defaults = Phase 2 GA round 3 FINAL (SP-dominant profile).
+    v1.2 baseline (Cool=1) used as GA fitness reference.
+    W4 Walk-Forward IS 2y / OOS 6m / step 6m (same setup as S3_L).
+
+  LESSON CHECK (mandatory header reminders):
+    1. CLOSED TIME INTERVALS (Rule MC_Time_24hr):
+       60M bars - holiday tail detection at Time<=500 within day boundary;
+       all Time>=X conditions paired with state guards OR explicit Time<=Y.
+    2. FILTER REDUNDANCY CHECK (Rule Filter_Redundancy):
+       BBW + Close<Lower = 2 conditions, orthogonal. Squeeze = state, Close = trigger.
+    3. VOLUME SIGNAL: not used (consistent with S3_L, archive S3 also didn't use volume).
+
+  CONSTITUTION COMPLIANCE (mandatory per CLAUDE.md Rule #11/#12/#13/#14):
+    Rule #11 Settlement_Flat (7 elements): present in Priority 0.
+    Rule #12 P3b SetStopLoss: single call before entry block,
+             guarded by MarketPosition >= 0 (SHORT variant).
+    Rule #13 10-dim eval before live_simulation: deferred to W5 gate.
+    Rule #14 OFFICIAL_ROADMAP alignment: S3_S is next per official sequence after S3_L.
+    Rule #15 ASCII-only (all .pla source): 100% ASCII.
+
+  LABEL CONVENTIONS (Short-only):
+    SE_VS_Entry        short entry
+    SX_VS_Kill         manual kill switch (P0-1)
+    SX_VS_RegistryEnd  registry expired (P0-2)
+    SX_VS_HolFlat      holiday tail flat (P0-3)
+    SX_VS_Settlement   settlement day flat (P0-4)
+    SX_VS_TP           target profit (Layer 4)
+    SX_VS_Mid          mid-band exit / thesis fail (Layer 3)
+    SX_VS_TimeStop     time exit (Layer 5)
+    SX_VS_SP           trailing stop profit / breakeven floor (Layer 2, NEW v1.1)
+    SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
+    No Long labels (R-6 split produced separate S3_L file).
+
+  STATUS: v1.7.3 EXPERIMENTAL - band-reject regime filter (v1.2 base + 4 inputs).
+
+  V1.7 DESIGN (2026-06-27):
+    Driver: WFA fail root cause = event-driven alpha, not systematic.
+            Round 1 regime analysis (140 trades, MA20/MA50):
+              Bear (<0.98): PF 11.0, 12 trades, +502K  -> ALLOW
+              Range (0.98-1.02): PF 0.73, 65 trades, -259K -> BLOCK
+              Weak Bull (1.02-1.05): PF 1.61, 21 trades -> BLOCK
+              Strong Bull (>1.05): PF 4.49, 4 trades, +162K -> ALLOW
+    Filter: Band-reject on Daily MA20/MA50 ratio (v1.7.3).
+            - Start allow-all, then block specific zones
+            - If BlockRange = True, block 0.98 <= ratio <= 1.02
+            - If BlockWeakBull = True, block 1.02 < ratio < 1.05
+            - Net: allow Bear (<0.98) + Strong Bull (>1.05)
+    Setup: REQUIRES Data2 = TXF1 Daily (mandatory chart change)
+    Inputs reverted to v1.2 defaults (no GA contamination):
+            BBLen=45, BBStd=2.0, BWLookback=120, BWPctile=30,
+            ATR_Len=14, TargetATRMult=3.5, MaxBars=35,
+            SP_Trigger_ATRMult=1.5
+    A/B test plan:
+            A baseline:  Use_Regime_Filter=False (= v1.2 baseline, 171 trades / +829K)
+            B BlockWeak: Use_Regime_Filter=True, BlockWeakBull=False (143 trades expected)
+            C strict:    Use_Regime_Filter=True, BlockWeakBull=True (108 trades expected)
+    Expected effect:
+            v1.2 baseline:  171 trades / Net +829K / PF 1.28 / MDD -47pct
+            v1.7 C strict:  ~108 trades / Net +926K / PF ~1.45 / MDD ~-35pct
+================================================================================ }
+
+[IntrabarOrderGeneration = false]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  v1.7 defaults: v1.2 baseline (no GA) + 3 NEW regime filter inputs.
+  ============================================================ }
+
+inputs:
+    { ===== Bollinger Bands (core squeeze detection) - v1.2 defaults ===== }
+    BBLen                     ( 45    ),   { v1.7: reverted to v1.2 base }
+    BBStd                     ( 2.0   ),   { v1.7: reverted to v1.2 base }
+    BWLookback                ( 120   ),   { v1.7: reverted to v1.2 base }
+    BWPctile                  ( 25    ),   { v1.7.3-FINAL: tightened from 30 to 25 (stricter squeeze) }
+
+    { ===== ATR (stop / target anchor) - v1.2 defaults ===== }
+    ATR_Len                   ( 14    ),   { v1.7: reverted to v1.2 base }
+    StopATRMult               ( 2.75  ),   { unchanged - still used as upper-bound calc }
+    TargetATRMult             ( 3.5   ),   { v1.7: reverted to v1.2 base }
+
+    { ===== v1.7.5 Conditional Hard Cap (max single-trade loss + SP preservation) ===== }
+    SL_Hard_Cap_Pts           ( 100   ),   { v1.7.4: hard floor pts; 100 pts = -20K NTD = -2pct account on 1M }
+    SL_Cap_SP_Buffer_Pts      ( 15    ),   { v1.7.5: buffer above SP arm distance to prevent noise trigger }
+
+    { ===== Exit timing - v1.2 defaults ===== }
+    MaxBars                   ( 35    ),   { v1.7: reverted to v1.2 base }
+    UseMidExit                ( True  ),   { unchanged }
+    MidExit_MinBars           ( 2     ),   { unchanged }
+
+    { ===== Layer 2: Trailing StopProfit (v1.1) ===== }
+    SP_Trigger_ATRMult        ( 1.5   ),   { v1.7: reverted to v1.2 base }
+    SP_Retain_Pct             ( 70    ),   { unchanged }
+
+    { ===== Same-day cooldown ===== }
+    Cooldown_Days             ( 1     ),   { unchanged }
+
+    { ===== Regime Filter (v1.7 NEW, MA periods adjusted in v1.7.1) ===== }
+    Use_Regime_Filter         ( True  ),   { master switch for Daily MA regime gate }
+    Regime_FastMA             ( 15    ),   { v1.7.3-FINAL: GA best }
+    Regime_SlowMA             ( 40    ),   { v1.7.3-FINAL: revised from 80 to 40 (sharper regime split) }
+    Regime_BlockRange         ( True  ),   { v1.7.3: block 0.98 <= ratio <= 1.02 (PF 0.73) }
+    Regime_BlockWeakBull      ( True  ),   { v1.7.1: block 1.02 < ratio < 1.05 (PF 1.61) }
+
+    { ===== Priority 0 Protection (Rule #11 / #12) ===== }
+    Holiday_Flat_Time         ( 415   ),
+    Registry_Valid_Until      ( 1270101 ),
+    Manual_Kill_Switch        ( False ),
+    Settlement_Flat_Time      ( 1230  );
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+variables:
+    { ===== Bollinger Bands ===== }
+    v_MidBand                ( 0     ),
+    v_UpperBand              ( 0     ),
+    v_LowerBand              ( 0     ),
+    v_BandWidth              ( 0     ),
+    v_BWRank                 ( 0     ),
+    v_BWCount                ( 0     ),
+    v_Squeeze                ( False ),
+
+    { ===== ATR ===== }
+    v_ATR                    ( 0     ),
+    v_StopDist               ( 0     ),
+    v_TargetDist             ( 0     ),
+
+    { ===== Trade state ===== }
+    v_EntryBar               ( 0     ),
+    v_Prev_MP                ( 0     ),
+
+    { ===== Frozen SL (Rule #12 backup, Short variant) ===== }
+    v_SL_Locked              ( False ),
+    v_Frozen_ATR             ( 0     ),
+    v_Frozen_SL_Dist         ( 0     ),
+    v_SL_Level               ( 0     ),
+
+    { ===== Layer 2 SP state (v1.1 NEW) ===== }
+    v_SP_Armed               ( False ),
+    v_Peak_Profit_Pts        ( 0     ),
+    v_SP_Floor_Price         ( 0     ),
+
+    { ===== Regime Filter state (v1.7 NEW, renamed in v1.7.1) ===== }
+    v_MA_Fast_D              ( 0     ),
+    v_MA_Slow_D              ( 0     ),
+    v_Regime_Ratio           ( 1     ),
+    v_In_WeakBull_Zone       ( False ),
+    v_In_Range_Zone          ( False ),
+    v_Regime_OK              ( True  ),
+
+    { ===== Cooldown ===== }
+    v_LastExit_Date          ( 0     ),
+    v_Cooldown_Active        ( False ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block          ( False ),
+    v_Registry_Expired       ( False ),
+    v_Settlement_Day         ( False ),
+    Registry_Warn_ID         ( -1    ),
+    hidx                     ( 0     ),
+    v_i                      ( 0     ),
+    ExitFired                ( 0     );
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  Holiday_Tail: shared 63-entry TAIFEX registry (byte-identical to L1-L5/S1/S3/S3_L).
+  ============================================================ }
+
+arrays:
+    Holiday_Tail[80]( 0 );
+
+
+{ ============================================================
+  SECTION 4 - HOLIDAY TAIL REGISTRY (TAIFEX-verified)
+  Byte-identical copy from S3_VolSqueezeLong.pla.
+  Holiday_Tail = last trading day + 1 calendar day = the date stamped on
+  the 00:00-05:00 tail bars of the final night session before each closure.
+  ============================================================ }
+
+if CurrentBar = 1 then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;
+    Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;
+    Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;
+    Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;
+    Holiday_Tail[11] = 1210101;
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;
+    Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;
+    Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;
+    Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;
+    Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;
+    Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;
+    Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;
+    Holiday_Tail[26] = 1221231;
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;
+    Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;
+    Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;
+    Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;
+    Holiday_Tail[34] = 1231230;
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;
+    Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;
+    Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;
+    Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;
+    Holiday_Tail[42] = 1250101;
+
+    { --- 2025 --- }
+    Holiday_Tail[43] = 1250123;
+    Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;
+    Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;
+    Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;
+    Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;
+    Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;
+    Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;
+    Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;
+    Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;
+    Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;
+    Holiday_Tail[63] = 1270101;
+
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+
+{ ============================================================
+  SECTION 5 - HOLIDAY / REGISTRY / SETTLEMENT DETECTION
+  Byte-identical to S3_VolSqueezeLong.
+  Closed time interval: tail-bar scan bounded by Time < 500 (strict <).
+  ============================================================ }
+
+v_Holiday_Block = False;
+
+if Time < 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+v_Registry_Expired = False;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
+end;
+
+{ Monthly Settlement detection (3rd Wed of month) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+{ Registry-expiry red warning, 30 days out }
+if LastBarOnChart and
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New( Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr( Registry_Valid_Until, 0 ) +
+            " - REBUILD FROM TAIFEX CALENDAR" );
+        Text_SetColor( Registry_Warn_ID, Red );
+        Text_SetSize( Registry_Warn_ID, 14 );
+        Text_SetAttribute( Registry_Warn_ID, 1, True );
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 5.5 - REGIME FILTER (v1.7 NEW, MA reduced in v1.7.1)
+  Read Daily FastMA/SlowMA ratio from Data2, classify regime.
+  v1.7.1: changed from MA50/MA200 to MA20/MA50 (default).
+          Reason: Daily Data2 only has ~1540 bars (6.4yr backtest),
+          MA200 + 19:1 ratio = ~3800 60M MaxBarsBack req, impossible.
+          MA50 = ~950 60M req, MaxBarsBack=1000 fits comfortably.
+  Band-reject filter (v1.7.3): start allow-all, then block specific zones.
+    1. If Regime_BlockRange = True, block 0.98 <= ratio <= 1.02 (PF 0.73, -259K)
+    2. If Regime_BlockWeakBull = True, block 1.02 < ratio < 1.05 (PF 1.61)
+  Effective: allow Bear (<0.98, PF 11.0) + Strong Bull (>1.05, PF 4.49)
+
+  IMPORTANT: REQUIRES Data2 = TXF1 Daily on chart.
+             MaxBarsBack should be set to 1000 (cover Daily MA50 * 19 ratio).
+             [1] index = last closed daily bar (avoid look-ahead).
+  ============================================================ }
+
+if Use_Regime_Filter = True then begin
+    v_MA_Fast_D = ( Average( Close, Regime_FastMA ) of Data2 )[1];
+    v_MA_Slow_D = ( Average( Close, Regime_SlowMA ) of Data2 )[1];
+
+    if v_MA_Slow_D > 0 then
+        v_Regime_Ratio = v_MA_Fast_D / v_MA_Slow_D
+    else
+        v_Regime_Ratio = 1;
+
+    v_In_WeakBull_Zone = ( v_Regime_Ratio > 1.02 ) and ( v_Regime_Ratio < 1.05 );
+    v_In_Range_Zone = ( v_Regime_Ratio >= 0.98 ) and ( v_Regime_Ratio <= 1.02 );
+
+    v_Regime_OK = True;
+
+    if Regime_BlockRange = True and v_In_Range_Zone = True then
+        v_Regime_OK = False;
+
+    if Regime_BlockWeakBull = True and v_In_WeakBull_Zone = True then
+        v_Regime_OK = False;
+end
+else
+    v_Regime_OK = True;
+
+
+{ ============================================================
+  SECTION 6 - BOLLINGER BANDS + SQUEEZE DETECTION
+  Byte-identical to S3_VolSqueezeLong - squeeze detection is symmetric.
+
+  BBW = (Upper - Lower) / Mid * 100 (percent of price level)
+  BWRank = % of past BWLookback bars where BBW > current BBW
+         (low rank = current BBW is historically low = squeeze)
+  Squeeze = BWRank <= BWPctile
+  ============================================================ }
+
+v_MidBand   = Average( Close, BBLen );
+v_UpperBand = v_MidBand + BBStd * StandardDev( Close, BBLen, 1 );
+v_LowerBand = v_MidBand - BBStd * StandardDev( Close, BBLen, 1 );
+
+if v_MidBand > 0 then
+    v_BandWidth = ( v_UpperBand - v_LowerBand ) / v_MidBand * 100
+else
+    v_BandWidth = 0;
+
+{ Compute BWRank: count how many past BWLookback bars had wider BBW }
+v_BWCount = 0;
+for v_i = 1 to BWLookback begin
+    if v_BandWidth[v_i] > v_BandWidth then
+        v_BWCount = v_BWCount + 1;
+end;
+if BWLookback > 0 then
+    v_BWRank = v_BWCount / BWLookback * 100
+else
+    v_BWRank = 100;
+
+v_Squeeze = ( v_BWRank <= BWPctile );
+
+
+{ ============================================================
+  SECTION 7 - ATR + STOP / TARGET DISTANCES
+  Byte-identical formula to S3_L (multipliers differ per inputs).
+  ============================================================ }
+
+v_ATR        = AvgTrueRange( ATR_Len );
+v_StopDist   = v_ATR * StopATRMult;
+v_TargetDist = v_ATR * TargetATRMult;
+
+
+{ ============================================================
+  SECTION 8 - SAME-DAY COOLDOWN RESET
+  v1.0: Cooldown_Days default = 0 (no daily limit per user ruling).
+  v1.2 (2026-06-24 BUGFIX): removed redundant "Date <> v_LastExit_Date" predicate.
+    Previous version had: Date <> LastExit AND LastExit > 0 AND DateDiff >= Cooldown.
+    The Date<>LastExit clause caused contradiction with DateDiff>=0 logic:
+      - Cool=0 same day: diff=0 satisfies >=0, but Date==LastExit fails first clause
+        => cooldown stuck True, no same-day re-entry possible (contrary to design)
+      - Cool=1 same day: diff=0 fails >=1 anyway (correct block)
+      - A/B test 2026-06-24 showed Cool=0 == Cool=1 100% identical (185 trades both)
+        because the contradiction made cooldown effectively non-functional.
+    Fix: pure DateDiff check; Cool=0 -> diff>=0 always True -> reset every bar
+         -> same-day re-entry allowed; Cool=1 -> diff>=1 -> only next-day reset.
+  Section retained for W3 A/B test (Cooldown_Days = 1 reference variant).
+  ============================================================ }
+
+if v_LastExit_Date > 0 and
+   DateToJulian( Date ) - DateToJulian( v_LastExit_Date ) >= Cooldown_Days then
+    v_Cooldown_Active = False;
+
+
+{ ============================================================
+  SECTION 9 - FROZEN SL SETUP + SetStopLoss (Rule #12, SHORT variant)
+
+  R-6 mirror differences vs S3_L:
+    - MarketPosition = -1 (was 1)
+    - v_SL_Level = EntryPrice + v_Frozen_SL_Dist (was -)
+    - SetStopLoss guard: MP >= 0 (was <= 0)
+
+  Frozen SL: lock ATR + SL level on entry bar (belt-and-suspenders).
+  SetStopLoss: MC engine guard, fires on entry bar without IOG dependency.
+  Both use same ATR anchor (frozen on entry).
+  ============================================================ }
+
+{ Frozen SL setup (locks once per trade on entry bar)
+  v1.7.5 Conditional Cap: SL = min(ATR ceiling, max(hard floor, SP arm + buffer))
+  Guarantees: cap >= SP arm distance at every vol level (R-SL2 compliance)
+  Effect: vol expansion SL capped but SP mechanism never fails (v1.7.4 fix) }
+if MarketPosition = -1 then begin
+    if v_SL_Locked = False then begin
+        v_Frozen_ATR     = v_ATR;
+        v_Frozen_SL_Dist = MinList( v_Frozen_ATR * StopATRMult, MaxList( SL_Hard_Cap_Pts, v_Frozen_ATR * SP_Trigger_ATRMult + SL_Cap_SP_Buffer_Pts ) );
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        v_SL_Locked      = True;
+    end;
+end
+else begin
+    v_SL_Locked       = False;
+    v_Frozen_ATR      = 0;
+    v_Frozen_SL_Dist  = 0;
+    v_SL_Level        = 0;
+    v_SP_Armed        = False;
+    v_Peak_Profit_Pts = 0;
+    v_SP_Floor_Price  = 0;
+end;
+
+{ SetStopLoss engine guard (shares frozen ATR once locked) }
+if v_SL_Locked = True then
+    v_StopDist = v_Frozen_SL_Dist;
+
+if MarketPosition >= 0 then
+    SetStopLoss( v_StopDist * BigPointValue );
+
+
+{ ============================================================
+  SECTION 10 - ENTRY LOGIC (Short-only per R-6 split)
+
+  R-6 mirror difference vs S3_L:
+    - Close < v_LowerBand (was > UpperBand)
+    - sell short (was buy)
+    - SE_VS_Entry label (was LE_VS_Entry)
+
+  Gates (all must be true):
+    - Flat (MP = 0)
+    - v_Squeeze = True              (BBW historically compressed)
+    - Close < v_LowerBand           (downward breakout confirmation)
+    - Not on cooldown
+    - Not on a holiday tail bar
+    - Not on a settlement day
+    - Not registry expired
+  ============================================================ }
+
+if ( MarketPosition = 0 ) and
+   ( v_Squeeze = True ) and
+   ( Close < v_LowerBand ) and
+   ( v_Cooldown_Active = False ) and
+   ( v_Holiday_Block = False ) and
+   ( v_Settlement_Day = False ) and
+   ( v_Registry_Expired = False ) and
+   ( v_Regime_OK = True ) then begin           { v1.7 NEW regime gate }
+    sell short ( "SE_VS_Entry" ) next bar at Market;
+    v_EntryBar = BarNumber;
+end;
+
+
+{ ============================================================
+  SECTION 11 - EXIT CHAIN (5-layer architecture v1.1, SHORT variant)
+
+  R-6 mirror differences vs S3_L:
+    - MarketPosition = -1 (was 1)
+    - All "sell" -> "buy to cover"
+    - SX_VS_* labels (was LX_VS_*)
+    - TP price = EntryPrice - TargetDist (was +)
+    - SL price = EntryPrice + StopDist (was -)
+    - Mid trigger: Close > MidBand (was <)
+
+  5-LAYER EXIT (v1.1 upgrade per 2026-06-24 user ruling):
+    Layer 0 (P0)  Safety gates (Kill / Registry / Holiday / Settlement)
+    Layer 1       Initial SL    SX_VS_SL  (Entry + ATR * StopATRMult, fixed)
+    Layer 2       Trailing SP   SX_VS_SP  (NEW v1.1, arm at peak >= ATR * 1.5,
+                                          retain 70 pct of peak, irreversible)
+    Layer 3       Mid exit      SX_VS_Mid (thesis fail: Close > MidBand after N bars)
+    Layer 4       Target TP     SX_VS_TP  (Entry - ATR * TargetATRMult, limit)
+    Layer 5       Time stop     SX_VS_TimeStop (BarsHeld >= MaxBars)
+
+  PRIORITY ORDER (per CLAUDE.md Rule #11):
+    P0-1  SX_VS_Kill          (Manual_Kill_Switch)
+    P0-2  SX_VS_RegistryEnd   (registry expired)
+    P0-3  SX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
+    P0-4  SX_VS_Settlement    (settlement day + Settlement_Flat_Time)
+    S-1   SX_VS_TP            (limit, always set)
+    S-2   SX_VS_Mid           (market, thesis fail)
+    S-3   SX_VS_TimeStop      (market, time exit)
+    S-4   SX_VS_SP / SX_VS_SL (stop, mutually exclusive - SP when armed, SL otherwise)
+  ============================================================ }
+
+ExitFired = 0;
+
+if MarketPosition = -1 then begin
+
+    { ---- P0-1 Manual kill switch ---- }
+    if ( ExitFired = 0 ) and ( Manual_Kill_Switch = True ) then begin
+        buy to cover ( "SX_VS_Kill" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-2 Registry fail-safe ---- }
+    if ( ExitFired = 0 ) and ( v_Registry_Expired = True ) then begin
+        buy to cover ( "SX_VS_RegistryEnd" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-3 Holiday iron rule (state-guarded + closed interval) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Holiday_Block = True ) and
+       ( Time >= Holiday_Flat_Time ) and
+       ( Time <= 455 ) then begin
+        buy to cover ( "SX_VS_HolFlat" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-4 Settlement flat (state-guarded) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Settlement_Day = True ) and
+       ( Time >= Settlement_Flat_Time ) then begin
+        buy to cover ( "SX_VS_Settlement" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- Layer 2 SP tracking (v1.1 NEW): peak profit + arm + floor ---- }
+    { Peak profit for short = max(EntryPrice - Low) over hold }
+    if EntryPrice - Low > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Low;
+
+    { Arm SP once peak crosses threshold (irreversible per design) }
+    if ( v_SP_Armed = False ) and
+       ( v_Peak_Profit_Pts >= v_ATR * SP_Trigger_ATRMult ) then
+        v_SP_Armed = True;
+
+    { Compute SP floor price (retain N pct of peak profit) }
+    if v_SP_Armed = True then
+        v_SP_Floor_Price = EntryPrice - ( v_Peak_Profit_Pts * SP_Retain_Pct / 100 );
+
+    { ---- Strategy exits ---- }
+    if ExitFired = 0 then begin
+
+        { S-1: TP at ATR x TargetMult (limit, favorable to short = lower price) }
+        buy to cover ( "SX_VS_TP" ) next bar at EntryPrice - v_TargetDist limit;
+
+        { S-2: Mid-band exit (thesis fail, market) }
+        if UseMidExit = True and
+           BarNumber - v_EntryBar >= MidExit_MinBars and
+           Close > v_MidBand then begin
+            buy to cover ( "SX_VS_Mid" ) next bar at Market;
+            ExitFired = 1;
+        end;
+
+        { S-3: Time stop }
+        if ExitFired = 0 and
+           BarNumber - v_EntryBar >= MaxBars then begin
+            buy to cover ( "SX_VS_TimeStop" ) next bar at Market;
+            ExitFired = 1;
+        end;
+
+        { S-4: SP / SL stop (mutually exclusive per Layer 2 design)
+          - SP_Armed=True  : trailing stop at v_SP_Floor_Price (label SX_VS_SP)
+          - SP_Armed=False : initial stop at v_SL_Level (label SX_VS_SL, fallback)
+          Belt+suspenders with Section 9 SetStopLoss engine guard. }
+        if ExitFired = 0 then begin
+            if v_SP_Armed = True then
+                buy to cover ( "SX_VS_SP" ) next bar at v_SP_Floor_Price Stop
+            else if v_SL_Locked = True then
+                buy to cover ( "SX_VS_SL" ) next bar at v_SL_Level Stop;
+        end;
+
+    end;
+
+end;
+
+
+{ ============================================================
+  SECTION 12 - COOLDOWN SET ON EXIT
+  v1.2 ORIGINAL (FROZEN) - reverted from v1.3 attempt
+  Cooldown semantics (accepted limitation):
+    - Multi-bar exit (TP via limit reached later bar, Mid/TimeStop/SL): cool set OK
+    - Same-bar entry+exit (entry fill bar TP also hits same bar): cool NOT set
+      (v_Prev_MP from prior bar end = 0, condition v_Prev_MP=-1 fails)
+      Effect: rare same-day 2nd entry can pass cooldown (e.g., 2025-04-07 case
+              TP +278K + SL -206K, net +72K - disclosed edge, not fixed in v1.2)
+  v1.3 attempted EntriesToday(Date) fix but failed due to:
+    - MC section execution order (Sec 10 entry signal can fire before Sec 12 set)
+    - EntriesToday TXF1 cross-midnight calendar/session quirk
+    Result: v1.3 Cool=1 worse than v1.2 (Net -181K, MDD -7pct, +10 trades)
+  Decision (2026-06-24 user ruling): v1.2 frozen as final, v1.4 in backlog.
+  ============================================================ }
+
+if v_Prev_MP = -1 and MarketPosition <> -1 then begin
+    v_Cooldown_Active = True;
+    v_LastExit_Date   = Date;
+end;
+
+
+{ ============================================================
+  SECTION 13 - PREV_MP TRACKING (last line, per Rule #8)
+  ============================================================ }
+
+v_Prev_MP = MarketPosition;
