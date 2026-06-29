@@ -2,33 +2,41 @@
 
 ## 1. Status
 
-- **Session type**: Laptop deep research (no backtest execution)
-- **Primary deliverable**: Extreme market multi-layer SL SOP + v1.8+ architecture direction
-- **v1.7.5 .pla**: Created and pushed (conditional cap — superseded by v1.8+ direction)
+- **Session type**: Laptop deep research + implementation
+- **Primary deliverable**: Extreme market multi-layer SL SOP + v1.8.0 .pla implementation
+- **v1.8.0 .pla**: Created — 1M multi-layer exit monitoring (IOG + Data3 + 11-factor scoring)
+- **v1.7.5 .pla**: Created and pushed (conditional cap — superseded by v1.8.0)
 - **Engineering System**: Rule #16 created and enforced
+- **CLAUDE.md**: Rule #17 added (extreme SL SOP mandatory)
 
 ## 2. What Changed
 
-### New files (4)
+### New files (6)
 | File | Purpose |
 |------|---------|
 | `docs/methodology/ENGINEERING_SYSTEM.md` | Rule #16 five-pillar framework |
 | `docs/methodology/extreme_sl_multilayer_sop_20260629.md` | Extreme market multi-layer SL SOP (permanent methodology) |
 | `strategies/research/S03_VolSqueezeShort/v175_ConditionalCap_spec.md` | v1.7.5 conditional cap spec (superseded) |
-| `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_v175_EXPERIMENTAL.pla` | v1.7.5 .pla (superseded by v1.8+ direction) |
+| `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_v175_EXPERIMENTAL.pla` | v1.7.5 .pla (superseded by v1.8.0) |
+| `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_v180_EXPERIMENTAL.pla` | v1.8.0 .pla (1M multi-layer exit, 1043 lines) |
+| `strategies/research/S03_VolSqueezeShort/v180_MultiLayer1M_spec.md` | v1.8.0 spec document |
 
-### Modified files (2)
+### Modified files (3)
 | File | Change |
 |------|--------|
-| `CLAUDE.md` | Added Rule #16 (Engineering System 5-pillar) |
+| `CLAUDE.md` | Added Rule #16 (Engineering System) + Rule #17 (extreme SL SOP mandatory) |
 | `docs/README.md` | Added ENGINEERING_SYSTEM.md + extreme SL SOP to methodology index |
+| `docs/handoffs/handoff_20260629_deep_sl_research.md` | Updated with v1.8.0 implementation |
 
 ### Git log (today's commits)
 ```
+bf96e5a Rule #17: extreme market multi-layer SL SOP mandatory for all volatile strategies
+feab813 Update SOP Section 3 with user-approved building metaphor floor descriptions
 820c873 Add extreme market multi-layer SL SOP (Fine Dining architecture)
 c862664 S3_S v1.7.5 EXPERIMENTAL .pla: Conditional Hard Cap (fix v1.7.4 SP destruction)
 0012ff4 S3_S v1.7.5 Conditional Cap spec: deep SL design with Rule #16 checklist
 e76f0bf Rule #16: Engineering System — five-pillar framework
+(+ v1.8.0 commit pending)
 ```
 
 ## 3. Current State
@@ -38,11 +46,13 @@ e76f0bf Rule #16: Engineering System — five-pillar framework
 - User 2026-06-29 ruling: fixed-point caps (100 pts, 15 pts) are design contradiction in vol-adaptive architecture
 - v1.7.5 files preserved as reference, not promoted
 
-### v1.8+ direction: CONFIRMED
-- Architecture upgrade from single-TF (60M only) to multi-TF (60M + 1M)
+### v1.8.0: IMPLEMENTED
+- Architecture upgrade from single-TF (60M only) to multi-TF (60M + Daily + 1M)
 - ATR SetStopLoss demoted to Layer E safety net (last resort)
-- 1M multi-factor scoring system becomes active defense (Layers A-D)
-- Implementation target: Scenario 1 (real extreme move, multi-category confluence exit)
+- 1M 11-factor scoring system becomes active defense (5 floors, 3-gate trigger)
+- IOG=True, Data3=1M, entry/mid/time gated to BarStatus(1)=2
+- IntraBarPersist on SP/SL state variables for IOG compatibility
+- New exit label: SX_VS_1M_Exit (priority S-0, between P0 safety and S-1 TP)
 
 ### SL design philosophy: LOCKED
 - Saved as permanent SOP: `docs/methodology/extreme_sl_multilayer_sop_20260629.md`
@@ -64,23 +74,22 @@ e76f0bf Rule #16: Engineering System — five-pillar framework
 ## 5. Next Steps
 
 ### Immediate (next session)
-1. **v1.8.0 spec document**: Formal spec for 1M multi-factor preemptive exit
-   - Define exact parameters for each of 11 factors (N values, thresholds, lookbacks)
-   - Define scoring weights and trigger threshold
-   - IOG architecture design for MC12
-   - Data2 = 1M setup requirements
-2. **Scenario 1 detailed walkthrough**: Map Scenario 1 to exact MC12 PowerLanguage logic
-3. **Backtest feasibility**: Assess 1M data availability depth and backtest speed impact
+1. **v1.8.0 backtest on Desktop MC12**: Load .pla with Data1=60M + Data2=Daily + Data3=1M
+   - Verify 1M data availability and history depth for TXF1
+   - Run baseline comparison: v1.7.3-FINAL vs v1.8.0 (same period)
+   - Check for false positive SX_VS_1M_Exit exits
+2. **Parameter optimization**: If baseline looks clean, GA on ML_ inputs
+   - ML_ActivationPct (40-60), ML_ScoreTrigger (55-75), ML_SpeedThreshPts (60-120)
+3. **IOG edge case testing**: Verify entry gating works correctly at bar boundaries
 
 ### Dependencies
-- MC12 1M data feed for TXF1 (verify availability and history depth)
-- IOG testing on simple cases before full implementation
-- May need v1.7.3-FINAL as baseline comparison (production unchanged)
+- MC12 Desktop with 1M data feed for TXF1 (verify availability and history depth)
+- MaxBarsBack setting must cover 1M lookback (min 60 bars)
 
 ### Risk
 - 1M backtest ~60x slower (each 60M bar = 60 evaluations)
 - 1M data history may be shorter than 60M (limiting backtest period)
-- IOG changes all order execution timing, needs careful testing
+- False positive 1M exits could reduce net profit (monitor SX_VS_1M_Exit count/PnL)
 
 ## 6. Files Reference
 
@@ -88,6 +97,8 @@ e76f0bf Rule #16: Engineering System — five-pillar framework
 - `strategies/live_simulation/S3_S_VolSqueezeShort.pla` — v1.7.3-FINAL (29 trades, PF 3.95)
 
 ### Research (today)
+- `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_v180_EXPERIMENTAL.pla` — v1.8.0 (1M multi-layer, 1043 lines)
+- `strategies/research/S03_VolSqueezeShort/v180_MultiLayer1M_spec.md` — v1.8.0 spec
 - `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_v175_EXPERIMENTAL.pla` — superseded
 - `strategies/research/S03_VolSqueezeShort/v175_ConditionalCap_spec.md` — superseded
 
