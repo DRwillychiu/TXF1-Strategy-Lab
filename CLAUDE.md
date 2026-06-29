@@ -199,6 +199,15 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - 反模式 AP-1~6 逐條檢查，觸發任一 = 立即 KILL
     - 完整規範：[`docs/methodology/ENGINEERING_SYSTEM.md`](docs/methodology/ENGINEERING_SYSTEM.md)
     - 違反本規則 = 違反用戶 2026-06-29 明確指示
+17. **★ 強制規範**：極端行情策略必須採用多層停損 SOP（商辦大樓架構）
+    - 詳見 [`docs/methodology/extreme_sl_multilayer_sop_20260629.md`](docs/methodology/extreme_sl_multilayer_sop_20260629.md)
+    - ATR 停損 = 最後防線（地基），不是主要出場機制
+    - 1M 五層即時監控（1F K棒 / 2F 量價 / 3F 動能 / 4F 結構 / 5F 波動率）
+    - 觸發機制：加權積分 ≥ 65% + 跨類別 ≥ 3 層 + 虧損啟動門檻
+    - 禁止固定點數 cap（在 vol-adaptive 架構中是設計矛盾）
+    - 適用範圍：所有操作於極端波動環境的策略（S3_S、S6、S9 等）
+    - 所有新策略的停損設計 spec 必須引用本 SOP 並檢查合規
+    - 違反本規則 = 違反用戶 2026-06-29 明確指示
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
