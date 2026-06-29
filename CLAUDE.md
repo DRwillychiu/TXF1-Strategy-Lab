@@ -192,6 +192,13 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - Commit 前**必須跑驗證**通過才能 push
     - 適用範圍：`strategies/live/`、`strategies/live_simulation/`、`strategies/research/`（排除 archive/）
     - 違反本規則 = 違反 memory rule `feedback_mc_english_only` + 用戶 2026-06-22 明確指示
+16. **★ 強制規範**：五支柱工程系統（Rules / Context / Verification / Memory / Format）
+    - 每次設計決策、程式碼修改、版本推進，必須通過五支柱檢查
+    - 設計 spec 文件必含 Engineering System Checklist（5 區段）
+    - Handoff 文件必含 7 區段（Status / Changed / State / Decisions / Next / Files / Git）
+    - 反模式 AP-1~6 逐條檢查，觸發任一 = 立即 KILL
+    - 完整規範：[`docs/methodology/ENGINEERING_SYSTEM.md`](docs/methodology/ENGINEERING_SYSTEM.md)
+    - 違反本規則 = 違反用戶 2026-06-29 明確指示
 
 ## 優化工作流程（Claude Code 使用時遵守）
 

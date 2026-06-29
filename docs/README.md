@@ -43,6 +43,7 @@
 | [`cowork_sync_prompt.md`](methodology/cowork_sync_prompt.md) | Cowork ↔ Claude Code 同步規範 |
 | [`position_sizing_and_capacity.md`](methodology/position_sizing_and_capacity.md) | 口數配置 + 胃納量框架 |
 | [`LOOP_FRAMEWORK.md`](methodology/LOOP_FRAMEWORK.md) | Loop 開發迭代框架 |
+| [`ENGINEERING_SYSTEM.md`](methodology/ENGINEERING_SYSTEM.md) | **五支柱工程規範**（Rule #16，2026-06-29 建立） |
 
 ---
 
