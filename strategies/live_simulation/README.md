@@ -12,7 +12,7 @@
 | **S1** NightMomentum | A 類時段型 | 純多 | **v2.6 + Settlement + ImmediateStop + HolidayFlat_v3** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
 | **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 | **S3_L** VolSqueezeLong | C 類波動率（純多）| 純多 | **v1.0 (W5 PASS, 5% portfolio cap)** | `LE_VS_` / `LX_VS_` | **2026-06-23** |
-| **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.7.3-FINAL (BWPctile 25, SlowMA 40, 3% cap, precision hedge)** | `SE_VS_` / `SX_VS_` | **2026-06-28** |
+| **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.8.0-PROD (1M Multi-layer 升級, PF 4.13, 3% cap)** | `SE_VS_` / `SX_VS_` / `SX_VS_1M_Exit` | **2026-06-30**（升 v1.7.3→v1.8.0）|
 
 ⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong_DEPLOYMENT.md)。
 

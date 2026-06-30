@@ -2,17 +2,15 @@
   S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
-  Version     : v1.8.0-PROD  (2026-06-30 - PROMOTED to live_simulation; replaces v1.7.3-FINAL)
-                Base: v1.7.3 entry/regime logic + NEW 1M Multi-layer preemptive exit
-                ML defaults locked to GA-best (user 2026-06-30 ruling D after WFA review)
-                Backtest full period (2020-2026): 24 trades / Net +846K / PF gross 4.13 / Sortino 0.47
-                W4 WFA: 3/9 strict PASS but 6/9 with Sharpe+Net gate (PF=0 all-win anomaly)
-                User ruling: WFA isolated standard does not apply to precision sleeve;
-                  alpha skew to recent is TWII regime shift (12K -> 46K); quality > quantity by design.
-                v1.7.3 archived: strategies/research/archive/S03_VolSqueezeShort_v173_archived_20260630/
+  Version     : v1.7.3-FINAL  (2026-06-28 - PROMOTED to live_simulation; band-reject locked)
+                FINAL inputs: FastMA=15 / SlowMA=40 / BWPctile=25 (tightened from initial PROD)
+                Backtest 2020-2026 (6.3y): 29 trades / Net +1,013,600 / PF gross 3.95 / Sortino 1.08
+                Stage 2 W4 WFA (18 backtests): 2/9 isolated FAIL but PORTFOLIO context PROMOTED
+                User ruling 2026-06-28: WFA isolated standard does not apply to portfolio sleeve;
+                4 trades/year by design (precision hedge, not all-weather).
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
-  Timeframe   : Data1 = 60M (entry/indicators) + Data2 = Daily (regime) + Data3 = 1M (exit monitor)
+  Timeframe   : Data1 = 60M (sole feed, no multi-TF)
   Class       : Volatility Regime (C class) - Short only (Rule R-6 split)
   Direction   : Short only
   Allocation  : TBD (post W4 Walk-Forward)
@@ -38,20 +36,6 @@
     6. All other compliance modules byte-identical to S3_L.
 
   CHANGELOG:
-    v1.8.0 (2026-06-29): Multi-TF 1M preemptive exit monitoring
-         Architecture: Foundation (60M ATR SL) + 5-floor 1M monitoring
-           1F K-bar (A1 vol+shadow, A2 engulfing, A4 consecutive, A6 expanding)
-           2F Volume (B1 spike+up, B2 rising vol+price)
-           3F Momentum (C1 acceleration, C2 speed threshold)
-           4F Structure (D2 gap up, D3 break entry)
-           5F Environment (E3 vol regime shift)
-         Scoring: 11 factors, max 30 pts, trigger at 65% + 3 categories + activation gate
-         Data3 = 1M (NEW), IOG = True (NEW)
-         Entry gated by BarStatus(1)=2 to prevent intrabar false entries
-         IntraBarPersist on SP/SL state variables for IOG compatibility
-         New exit label: SX_VS_1M_Exit (priority between P0 safety and S-1 TP)
-         SOP: docs/methodology/extreme_sl_multilayer_sop_20260629.md
-
     v1.5 (2026-06-26): Phase 2 GA round 3 FINAL (SP-dominant, best PF/Sharpe)
          Baseline: v1.2 Cool=1 Net +552,200 / PF 1.18 / MDD -52% / 185 trades
          GA r1 (v1.3):     Net +924,000 / PF 2.33 / MDD -16% / 91 trades
@@ -200,10 +184,9 @@
     SX_VS_TimeStop     time exit (Layer 5)
     SX_VS_SP           trailing stop profit / breakeven floor (Layer 2, NEW v1.1)
     SX_VS_SL           initial stop loss (Layer 1, fallback when SP not armed)
-    SX_VS_1M_Exit      preemptive 1M multi-layer exit (v1.8.0 NEW, before ATR SL)
     No Long labels (R-6 split produced separate S3_L file).
 
-  STATUS: v1.8.0 EXPERIMENTAL - 1M multi-layer exit monitoring (v1.7.3 base + IOG + Data3).
+  STATUS: v1.7.3 EXPERIMENTAL - band-reject regime filter (v1.2 base + 4 inputs).
 
   V1.7 DESIGN (2026-06-27):
     Driver: WFA fail root cause = event-driven alpha, not systematic.
@@ -231,7 +214,7 @@
             v1.7 C strict:  ~108 trades / Net +926K / PF ~1.45 / MDD ~-35pct
 ================================================================================ }
 
-[IntrabarOrderGeneration = True]
+[IntrabarOrderGeneration = false]
 
 
 { ============================================================
@@ -274,20 +257,7 @@ inputs:
     Holiday_Flat_Time         ( 415   ),
     Registry_Valid_Until      ( 1270101 ),
     Manual_Kill_Switch        ( False ),
-    Settlement_Flat_Time      ( 1230  ),
-
-    { ===== Multi-Layer 1M Exit Monitoring (v1.8.0 NEW) ===== }
-    { SOP: extreme_sl_multilayer_sop_20260629.md }
-    ML_ActivationPct          ( 30    ),   { v1.8.0-PROD GA best (was 40) - Gate 1 activate scoring }
-    ML_ScoreTrigger           ( 30    ),   { v1.8.0-PROD GA best (was 65, -54pct) - Gate 2 trigger }
-    ML_MinCategories          ( 3     ),   { v1.8.0-PROD GA best - Gate 3 cross-category }
-    ML_VolSpikeMult           ( 1.5   ),   { v1.8.0-PROD GA best (was 2.5, -40pct) }
-    ML_VolAvgLen              ( 15    ),   { v1.8.0-PROD GA best (was 20) }
-    ML_SpeedBars              ( 5     ),   { v1.8.0-PROD GA best (unchanged) }
-    ML_SpeedThreshPts         ( 30    ),   { v1.8.0-PROD GA best (was 80, -63pct) }
-    ML_ATR_Short_Len          ( 3     ),   { v1.8.0-PROD GA best (was 5) }
-    ML_ATR_Long_Len           ( 90    ),   { v1.8.0-PROD GA best (was 60, +50pct) }
-    ML_ATR_Ratio              ( 2.5   );   { v1.8.0-PROD GA best (was 2.0, +25pct) }
+    Settlement_Flat_Time      ( 1230  );
 
 
 { ============================================================
@@ -319,10 +289,10 @@ variables:
     v_Frozen_SL_Dist         ( 0     ),
     v_SL_Level               ( 0     ),
 
-    { ===== Layer 2 SP state (v1.1, IntraBarPersist for IOG v1.8.0) ===== }
-    IntraBarPersist v_SP_Armed        ( False ),
-    IntraBarPersist v_Peak_Profit_Pts ( 0     ),
-    IntraBarPersist v_SP_Floor_Price  ( 0     ),
+    { ===== Layer 2 SP state (v1.1 NEW) ===== }
+    v_SP_Armed               ( False ),
+    v_Peak_Profit_Pts        ( 0     ),
+    v_SP_Floor_Price         ( 0     ),
 
     { ===== Regime Filter state (v1.7 NEW, renamed in v1.7.1) ===== }
     v_MA_Fast_D              ( 0     ),
@@ -332,9 +302,9 @@ variables:
     v_In_Range_Zone          ( False ),
     v_Regime_OK              ( True  ),
 
-    { ===== Cooldown (IntraBarPersist for IOG v1.8.0) ===== }
-    IntraBarPersist v_LastExit_Date   ( 0     ),
-    IntraBarPersist v_Cooldown_Active ( False ),
+    { ===== Cooldown ===== }
+    v_LastExit_Date          ( 0     ),
+    v_Cooldown_Active        ( False ),
 
     { ===== Priority 0 protection state ===== }
     v_Holiday_Block          ( False ),
@@ -343,45 +313,7 @@ variables:
     Registry_Warn_ID         ( -1    ),
     hidx                     ( 0     ),
     v_i                      ( 0     ),
-    ExitFired                ( 0     ),
-
-    { ===== Multi-Layer 1M state (v1.8.0 NEW) ===== }
-    IntraBarPersist v_1M_ExitFired   ( False ),
-    v_1M_Score               ( 0     ),
-    v_1M_Score_Pct           ( 0     ),
-    v_1M_CatCount            ( 0     ),
-    v_1M_Trigger             ( False ),
-    v_1M_Loss                ( 0     ),
-    v_1M_Gate1               ( False ),
-    v_1M_Gate2               ( False ),
-    v_1M_Gate3               ( False ),
-
-    { 1M factor scores (recalculated each eval) }
-    v_Score_A1               ( 0     ),
-    v_Score_A2               ( 0     ),
-    v_Score_A4               ( 0     ),
-    v_Score_A6               ( 0     ),
-    v_Score_B1               ( 0     ),
-    v_Score_B2               ( 0     ),
-    v_Score_C1               ( 0     ),
-    v_Score_C2               ( 0     ),
-    v_Score_D2               ( 0     ),
-    v_Score_D3               ( 0     ),
-    v_Score_E3               ( 0     ),
-
-    { 1M helper variables }
-    v_1M_Body                ( 0     ),
-    v_1M_LowerShadow         ( 0     ),
-    v_1M_AvgVol              ( 0     ),
-    v_1M_Body0               ( 0     ),
-    v_1M_Body1               ( 0     ),
-    v_1M_Body2               ( 0     ),
-    v_1M_ConsecUp            ( 0     ),
-    v_1M_Speed_Cur           ( 0     ),
-    v_1M_Speed_Prev          ( 0     ),
-    v_1M_SpeedBarsP1         ( 0     ),
-    v_1M_ATR_S               ( 0     ),
-    v_1M_ATR_L               ( 0     );
+    ExitFired                ( 0     );
 
 
 { ============================================================
@@ -673,189 +605,6 @@ if MarketPosition >= 0 then
 
 
 { ============================================================
-  SECTION 9.5 - 1M MULTI-LAYER EXIT MONITORING (v1.8.0 NEW)
-
-  Multi-TF preemptive exit: monitors Data3 (1M) for adverse
-  upward momentum signals while in short position.
-
-  Architecture per SOP extreme_sl_multilayer_sop_20260629.md:
-    Foundation = 60M ATR SL (Section 9, unchanged)
-    1F = K-bar patterns  (A1 vol+shadow, A2 engulfing, A4 consec, A6 expanding)
-    2F = Volume-price     (B1 spike+up, B2 rising vol+price)
-    3F = Momentum speed   (C1 acceleration, C2 speed threshold)
-    4F = Structure break   (D2 gap up, D3 break entry)
-    5F = Vol environment   (E3 regime shift)
-
-  3-Gate trigger:
-    Gate 1: Unrealized loss > ML_ActivationPct % of frozen SL dist
-    Gate 2: Score >= ML_ScoreTrigger % (of max 30 pts)
-    Gate 3: Categories >= ML_MinCategories (of 5 categories)
-
-  IOG evaluates this section every Data3 (1M) bar close.
-  Preemptive market exit fires BEFORE ATR SL level to avoid cascade.
-  ============================================================ }
-
-if MarketPosition = -1 and v_1M_ExitFired = False then begin
-
-    { --- Reset all factor scores --- }
-    v_Score_A1 = 0;
-    v_Score_A2 = 0;
-    v_Score_A4 = 0;
-    v_Score_A6 = 0;
-    v_Score_B1 = 0;
-    v_Score_B2 = 0;
-    v_Score_C1 = 0;
-    v_Score_C2 = 0;
-    v_Score_D2 = 0;
-    v_Score_D3 = 0;
-    v_Score_E3 = 0;
-    v_1M_Trigger = False;
-
-    { --- Gate 1: Activation threshold --- }
-    v_1M_Loss = Close of Data3 - EntryPrice;
-    v_1M_Gate1 = ( v_Frozen_SL_Dist > 0 ) and
-                 ( v_1M_Loss > v_Frozen_SL_Dist * ML_ActivationPct / 100 );
-
-    if v_1M_Gate1 = True then begin
-
-        { --- 1M helper calculations --- }
-        v_1M_AvgVol = Average( Volume, ML_VolAvgLen ) of Data3;
-        v_1M_Body = AbsValue( Close of Data3 - Open of Data3 );
-        v_1M_LowerShadow = MinList( Close of Data3, Open of Data3 )
-                         - Low of Data3;
-
-        { === 1F: K-bar Patterns === }
-
-        { A1: Volume + Long Lower Shadow (3 pts) }
-        if Close of Data3 > Open of Data3 and
-           v_1M_Body > 0 and
-           v_1M_LowerShadow > 2 * v_1M_Body and
-           v_1M_AvgVol > 0 and
-           Volume of Data3 > ML_VolSpikeMult * v_1M_AvgVol then
-            v_Score_A1 = 3;
-
-        { A2: Bullish Engulfing (3 pts) }
-        if Close of Data3 > Open of Data3 and
-           Close[1] of Data3 < Open[1] of Data3 and
-           Close of Data3 > Open[1] of Data3 and
-           Open of Data3 < Close[1] of Data3 then
-            v_Score_A2 = 3;
-
-        { A4: Consecutive Bullish Bars (2 pts) }
-        v_1M_ConsecUp = 0;
-        if Close of Data3 > Close[1] of Data3 then begin
-            v_1M_ConsecUp = 1;
-            if Close[1] of Data3 > Close[2] of Data3 then begin
-                v_1M_ConsecUp = 2;
-                if Close[2] of Data3 > Close[3] of Data3 then
-                    v_1M_ConsecUp = 3;
-            end;
-        end;
-        if v_1M_ConsecUp >= 2 then
-            v_Score_A4 = 2;
-
-        { A6: Expanding Bullish Bars (3 pts) }
-        v_1M_Body0 = AbsValue( Close of Data3 - Open of Data3 );
-        v_1M_Body1 = AbsValue( Close[1] of Data3 - Open[1] of Data3 );
-        v_1M_Body2 = AbsValue( Close[2] of Data3 - Open[2] of Data3 );
-        if Close of Data3 > Open of Data3 and
-           Close[1] of Data3 > Open[1] of Data3 and
-           Close[2] of Data3 > Open[2] of Data3 and
-           v_1M_Body0 > v_1M_Body1 and
-           v_1M_Body1 > v_1M_Body2 and
-           v_1M_Body2 > 0 then
-            v_Score_A6 = 3;
-
-        { === 2F: Volume-Price === }
-
-        { B1: Sudden Volume Spike + Up (3 pts) }
-        if v_1M_AvgVol > 0 and
-           Volume of Data3 > ML_VolSpikeMult * v_1M_AvgVol and
-           Close of Data3 > Open of Data3 then
-            v_Score_B1 = 3;
-
-        { B2: Rising Volume + Rising Price, 3 bars (3 pts) }
-        if Volume of Data3 > Volume[1] of Data3 and
-           Close of Data3 > Close[1] of Data3 and
-           Volume[1] of Data3 > Volume[2] of Data3 and
-           Close[1] of Data3 > Close[2] of Data3 then
-            v_Score_B2 = 3;
-
-        { === 3F: Momentum Speed === }
-
-        { C1: Price Acceleration (3 pts) }
-        v_1M_SpeedBarsP1 = ML_SpeedBars + 1;
-        v_1M_Speed_Cur = Close of Data3 - Close[ML_SpeedBars] of Data3;
-        v_1M_Speed_Prev = Close[1] of Data3
-                        - Close[v_1M_SpeedBarsP1] of Data3;
-        if v_1M_Speed_Cur > v_1M_Speed_Prev and
-           v_1M_Speed_Cur > 0 then
-            v_Score_C1 = 3;
-
-        { C2: Speed Threshold (3 pts) }
-        if Close of Data3 - Close[ML_SpeedBars] of Data3
-           > ML_SpeedThreshPts then
-            v_Score_C2 = 3;
-
-        { === 4F: Structure Break === }
-
-        { D2: 1M Gap Up (2 pts) }
-        if Open of Data3 > High[1] of Data3 then
-            v_Score_D2 = 2;
-
-        { D3: Break Entry Price (2 pts) }
-        if Close of Data3 > EntryPrice then
-            v_Score_D3 = 2;
-
-        { === 5F: Volatility Environment === }
-
-        { E3: Volatility Regime Shift (3 pts) }
-        v_1M_ATR_S = AvgTrueRange( ML_ATR_Short_Len ) of Data3;
-        v_1M_ATR_L = AvgTrueRange( ML_ATR_Long_Len ) of Data3;
-        if v_1M_ATR_L > 0 and
-           v_1M_ATR_S > ML_ATR_Ratio * v_1M_ATR_L then
-            v_Score_E3 = 3;
-
-        { --- Score summation (max 30 pts) --- }
-        v_1M_Score = v_Score_A1 + v_Score_A2 + v_Score_A4 + v_Score_A6
-                   + v_Score_B1 + v_Score_B2
-                   + v_Score_C1 + v_Score_C2
-                   + v_Score_D2 + v_Score_D3
-                   + v_Score_E3;
-
-        v_1M_Score_Pct = v_1M_Score / 30 * 100;
-
-        { --- Gate 2: Score threshold --- }
-        v_1M_Gate2 = ( v_1M_Score_Pct >= ML_ScoreTrigger );
-
-        { --- Gate 3: Cross-category count --- }
-        v_1M_CatCount = 0;
-        if v_Score_A1 + v_Score_A2 + v_Score_A4 + v_Score_A6 > 0 then
-            v_1M_CatCount = v_1M_CatCount + 1;
-        if v_Score_B1 + v_Score_B2 > 0 then
-            v_1M_CatCount = v_1M_CatCount + 1;
-        if v_Score_C1 + v_Score_C2 > 0 then
-            v_1M_CatCount = v_1M_CatCount + 1;
-        if v_Score_D2 + v_Score_D3 > 0 then
-            v_1M_CatCount = v_1M_CatCount + 1;
-        if v_Score_E3 > 0 then
-            v_1M_CatCount = v_1M_CatCount + 1;
-
-        v_1M_Gate3 = ( v_1M_CatCount >= ML_MinCategories );
-
-        { --- TRIGGER: All 3 gates passed --- }
-        v_1M_Trigger = v_1M_Gate1 and v_1M_Gate2 and v_1M_Gate3;
-
-    end;
-
-end;
-
-{ Reset 1M exit flag when not in short position }
-if MarketPosition <> -1 then
-    v_1M_ExitFired = False;
-
-
-{ ============================================================
   SECTION 10 - ENTRY LOGIC (Short-only per R-6 split)
 
   R-6 mirror difference vs S3_L:
@@ -873,19 +622,16 @@ if MarketPosition <> -1 then
     - Not registry expired
   ============================================================ }
 
-{ v1.8.0: gate entry to Data1 bar close only (IOG fires every 1M tick) }
-if BarStatus(1) = 2 then begin
-    if ( MarketPosition = 0 ) and
-       ( v_Squeeze = True ) and
-       ( Close < v_LowerBand ) and
-       ( v_Cooldown_Active = False ) and
-       ( v_Holiday_Block = False ) and
-       ( v_Settlement_Day = False ) and
-       ( v_Registry_Expired = False ) and
-       ( v_Regime_OK = True ) then begin       { v1.7 regime gate }
-        sell short ( "SE_VS_Entry" ) next bar at Market;
-        v_EntryBar = BarNumber;
-    end;
+if ( MarketPosition = 0 ) and
+   ( v_Squeeze = True ) and
+   ( Close < v_LowerBand ) and
+   ( v_Cooldown_Active = False ) and
+   ( v_Holiday_Block = False ) and
+   ( v_Settlement_Day = False ) and
+   ( v_Registry_Expired = False ) and
+   ( v_Regime_OK = True ) then begin           { v1.7 NEW regime gate }
+    sell short ( "SE_VS_Entry" ) next bar at Market;
+    v_EntryBar = BarNumber;
 end;
 
 
@@ -900,25 +646,23 @@ end;
     - SL price = EntryPrice + StopDist (was -)
     - Mid trigger: Close > MidBand (was <)
 
-  6-LAYER EXIT (v1.8.0 upgrade: +1M preemptive layer):
+  5-LAYER EXIT (v1.1 upgrade per 2026-06-24 user ruling):
     Layer 0 (P0)  Safety gates (Kill / Registry / Holiday / Settlement)
-    Layer 0.5     1M Preemptive SX_VS_1M_Exit (v1.8.0 NEW, before ATR SL cascade)
     Layer 1       Initial SL    SX_VS_SL  (Entry + ATR * StopATRMult, fixed)
-    Layer 2       Trailing SP   SX_VS_SP  (v1.1, arm at peak >= ATR * 1.5,
+    Layer 2       Trailing SP   SX_VS_SP  (NEW v1.1, arm at peak >= ATR * 1.5,
                                           retain 70 pct of peak, irreversible)
     Layer 3       Mid exit      SX_VS_Mid (thesis fail: Close > MidBand after N bars)
     Layer 4       Target TP     SX_VS_TP  (Entry - ATR * TargetATRMult, limit)
     Layer 5       Time stop     SX_VS_TimeStop (BarsHeld >= MaxBars)
 
-  PRIORITY ORDER (per CLAUDE.md Rule #11 + Rule #17):
+  PRIORITY ORDER (per CLAUDE.md Rule #11):
     P0-1  SX_VS_Kill          (Manual_Kill_Switch)
     P0-2  SX_VS_RegistryEnd   (registry expired)
     P0-3  SX_VS_HolFlat       (holiday tail + Holiday_Flat_Time)
     P0-4  SX_VS_Settlement    (settlement day + Settlement_Flat_Time)
-    S-0   SX_VS_1M_Exit       (market, 1M multi-layer preemptive, v1.8.0 NEW)
     S-1   SX_VS_TP            (limit, always set)
-    S-2   SX_VS_Mid           (market, thesis fail, gated to bar close)
-    S-3   SX_VS_TimeStop      (market, time exit, gated to bar close)
+    S-2   SX_VS_Mid           (market, thesis fail)
+    S-3   SX_VS_TimeStop      (market, time exit)
     S-4   SX_VS_SP / SX_VS_SL (stop, mutually exclusive - SP when armed, SL otherwise)
   ============================================================ }
 
@@ -969,36 +713,25 @@ if MarketPosition = -1 then begin
     if v_SP_Armed = True then
         v_SP_Floor_Price = EntryPrice - ( v_Peak_Profit_Pts * SP_Retain_Pct / 100 );
 
-    { ---- S-0: Preemptive 1M exit (v1.8.0 NEW, before ATR SL cascade) ---- }
-    if ( ExitFired = 0 ) and ( v_1M_Trigger = True ) then begin
-        buy to cover ( "SX_VS_1M_Exit" ) next bar at Market;
-        v_1M_ExitFired = True;
-        ExitFired = 1;
-    end;
-
     { ---- Strategy exits ---- }
     if ExitFired = 0 then begin
 
         { S-1: TP at ATR x TargetMult (limit, favorable to short = lower price) }
         buy to cover ( "SX_VS_TP" ) next bar at EntryPrice - v_TargetDist limit;
 
-        { S-2: Mid-band exit (thesis fail, market) - gated to bar close for IOG }
-        if BarStatus(1) = 2 then begin
-            if UseMidExit = True and
-               BarNumber - v_EntryBar >= MidExit_MinBars and
-               Close > v_MidBand then begin
-                buy to cover ( "SX_VS_Mid" ) next bar at Market;
-                ExitFired = 1;
-            end;
+        { S-2: Mid-band exit (thesis fail, market) }
+        if UseMidExit = True and
+           BarNumber - v_EntryBar >= MidExit_MinBars and
+           Close > v_MidBand then begin
+            buy to cover ( "SX_VS_Mid" ) next bar at Market;
+            ExitFired = 1;
         end;
 
-        { S-3: Time stop - gated to bar close for IOG }
-        if BarStatus(1) = 2 then begin
-            if ExitFired = 0 and
-               BarNumber - v_EntryBar >= MaxBars then begin
-                buy to cover ( "SX_VS_TimeStop" ) next bar at Market;
-                ExitFired = 1;
-            end;
+        { S-3: Time stop }
+        if ExitFired = 0 and
+           BarNumber - v_EntryBar >= MaxBars then begin
+            buy to cover ( "SX_VS_TimeStop" ) next bar at Market;
+            ExitFired = 1;
         end;
 
         { S-4: SP / SL stop (mutually exclusive per Layer 2 design)
