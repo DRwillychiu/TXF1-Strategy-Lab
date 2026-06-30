@@ -16,25 +16,30 @@
 
 ---
 
-## 2. User Ruling: BoJ 2024-08-05 Trade is Unrealistic in Live Trading
+## 2. Trade Detail Verification (MC12 Trade List)
 
-### Reasoning (user 2026-06-30)
+### Actual trade (from MC12 backtest):
+- **Entry**: 2024/8/5 16:00 (night session, SE_VS_En) @ 19,374
+- **Exit**: 2024/8/6 02:00 (night session, SX_VS_SP) @ 20,080
+- **Loss**: 706 pts x 200 = -141,200 NTD (+ slippage = -143,200)
+- **Session**: Night session (15:00-05:00), NOT day session limit-down
 
-1. **Liquidity constraint**: TAIEX limit-down day = no counterparty for new short entries. Order book would be empty or queue would be too deep for retail-sized orders to fill.
+### Key finding
+The entry was during the **night session** (16:00), 1 hour after night session open.
+This is AFTER the day session limit-down ended. Night session has active liquidity.
+**This trade IS plausible in live trading** — unlike a day-session limit-down entry.
 
-2. **No pre-market order system**: S3_S does not have pre-market (before 08:45) order placement logic. The strategy evaluates signals during market hours only.
-
-3. **Manual override available**: In live trading, the user can manually close positions during extreme events, providing a human safety layer that backtests cannot model.
-
-4. **Backtest artifact**: MC12 assumes infinite liquidity and instant fills. A new short entry during limit-down is a backtest-only scenario that would not occur in production.
+### User assessment (2026-06-30)
+1. Night session entry at 16:00 is technically executable (liquidity exists)
+2. However, user has **manual override** capability — in extreme BoJ-level events, user can manually close positions
+3. Bug 2 SP fill at worst intrabar tick remains a real risk for overnight positions during violent reversals
+4. The risk is bounded: night session has liquidity for exits, just with potentially worse fill prices
 
 ### Conclusion
-
-The SP -132K loss attributed to Bug 2 is tied to a trade that **would not have been entered in live trading**. Therefore:
-
-- Bug 2 observed impact is **overstated** by backtest assumptions
-- The actual live-trading impact of Bug 2 is **significantly lower** than -132K
-- Bug 2 remains a theoretical risk for future events but is **not blocking** v1.8.x development
+- Bug 2 is a **real but low-frequency risk** (1 event in 6 years)
+- Primary defense (1M_Exit market order) is unaffected
+- Non-blocking for v1.8.x development; still requires awareness before live deployment
+- User manual override provides additional safety layer in production
 
 ---
 
