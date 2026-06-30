@@ -208,6 +208,14 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - 適用範圍：所有操作於極端波動環境的策略（S3_S、S6、S9 等）
     - 所有新策略的停損設計 spec 必須引用本 SOP 並檢查合規
     - 違反本規則 = 違反用戶 2026-06-29 明確指示
+18. **★ 強制規範**：所有策略 promote 前必跑 Non-WFA 5 件套驗證
+    - 詳見 [`docs/methodology/non_WFA_validation_SOP_20260630.md`](docs/methodology/non_WFA_validation_SOP_20260630.md)
+    - 5 件套：Monte Carlo Simulation + Bootstrap Resampling + Stress Testing + Regime Analysis + Robustness Testing
+    - 不包含 Paper Trading（本來就會在 live_simulation 期間執行）
+    - 適用範圍：所有 future strategies (S4_S 以後)，含 hot-fix 之外的所有重大改動
+    - Pass criteria：≥ 4/5 件套 pass 才考慮 promote
+    - 對 low-frequency strategy（< 10 trades/yr）尤其重要，因短週期 WFA 不公平
+    - 違反本規則 = 違反用戶 2026-06-30 明確指示
 
 ## 優化工作流程（Claude Code 使用時遵守）
 
