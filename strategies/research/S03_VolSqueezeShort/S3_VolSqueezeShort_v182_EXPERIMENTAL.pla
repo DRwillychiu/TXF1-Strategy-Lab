@@ -3,7 +3,7 @@
   Signal Name : S3_VolSqueezeShort
   MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
   Version     : v1.8.2-EXPERIMENTAL  (2026-06-30 - 1M Market Exit for SP/SL, replaces Stop order)
-                Base: v1.8.0-PROD (1M Multi-layer + GA-best ML inputs unchanged)
+                Base: v1.8.0-PROD (1M Multi-layer + GA-best ML inputs transplanted 2026-07-01)
                 FIX: S-4 SP/SL changed from Stop order to 1M K close evaluation + Market exit
                      Reason: v1.8.0 SP maxL -132K (Bug 2 SP IOG intrabar worst tick fill)
                      Approach: 1M K close cross trigger + next 1M K open Market fill
@@ -277,18 +277,19 @@ inputs:
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  ),
 
-    { ===== Multi-Layer 1M Exit Monitoring (v1.8.0 NEW) ===== }
+    { ===== Multi-Layer 1M Exit Monitoring (v1.8.0 GA-best) ===== }
     { SOP: extreme_sl_multilayer_sop_20260629.md }
-    ML_ActivationPct          ( 40    ),   { Gate 1: % of SL dist to activate scoring }
-    ML_ScoreTrigger           ( 65    ),   { Gate 2: score % to trigger preemptive exit }
-    ML_MinCategories          ( 3     ),   { Gate 3: min categories for cross-gate }
-    ML_VolSpikeMult           ( 2.5   ),   { A1/B1: volume spike multiplier vs avg }
-    ML_VolAvgLen              ( 20    ),   { A1/B1: 1M volume average lookback bars }
-    ML_SpeedBars              ( 5     ),   { C1/C2: speed calculation lookback bars }
-    ML_SpeedThreshPts         ( 80    ),   { C2: speed threshold in points }
-    ML_ATR_Short_Len          ( 5     ),   { E3: short-term 1M ATR length }
-    ML_ATR_Long_Len           ( 60    ),   { E3: long-term 1M ATR length }
-    ML_ATR_Ratio              ( 2.0   );   { E3: vol regime shift ratio }
+    { Params from v1.8.0-PROD GA optimization (desktop MC12) }
+    ML_ActivationPct          ( 30    ),   { v1.8.0-PROD GA best (was 40) - Gate 1 activate scoring }
+    ML_ScoreTrigger           ( 30    ),   { v1.8.0-PROD GA best (was 65, -54pct) - Gate 2 trigger }
+    ML_MinCategories          ( 3     ),   { v1.8.0-PROD GA best - Gate 3 cross-category }
+    ML_VolSpikeMult           ( 1.5   ),   { v1.8.0-PROD GA best (was 2.5, -40pct) }
+    ML_VolAvgLen              ( 15    ),   { v1.8.0-PROD GA best (was 20) }
+    ML_SpeedBars              ( 5     ),   { v1.8.0-PROD GA best (unchanged) }
+    ML_SpeedThreshPts         ( 30    ),   { v1.8.0-PROD GA best (was 80, -63pct) }
+    ML_ATR_Short_Len          ( 3     ),   { v1.8.0-PROD GA best (was 5) }
+    ML_ATR_Long_Len           ( 90    ),   { v1.8.0-PROD GA best (was 60, +50pct) }
+    ML_ATR_Ratio              ( 2.5   );   { v1.8.0-PROD GA best (was 2.0, +25pct) }
 
 
 { ============================================================
