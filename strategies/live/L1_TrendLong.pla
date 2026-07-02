@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop
+  Version     : V2.7 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop + ReEntry
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -64,6 +64,19 @@
           - Optimistic-bound improvement +1.93M; path-level
             whipsaw cost invisible to MFE data -> MC9 A/B is the
             final arbiter. Deploy only when flat.
+    V2.7  (2026-07-02) Plan A: SP threshold 250 -> 500.
+          Plan C: Re-entry after passive exit (TL_SL/TL_SP).
+          - Data: 77% of TL_SL exits see market higher at next
+            entry (+45 pts avg). 49% of big winners (MFE>100K)
+            are preceded by a TL_SL. Hypo re-entry +2.1M / 6.5yr.
+          - Mechanism: after TL_SL/TL_SP/TL_SL_Gap/Stop Loss,
+            within ReEntry_Window bars, if Close > prev entry
+            price AND Close > MA61, re-enter without Cross Over.
+          - New input: ReEntry_Window(6) = 4.5 hours on 45M bars.
+          - New vars: v_ReEntry_Allow, v_ReEntry_BarsLeft,
+            v_Prev_Entry_Price.
+          - New label: TL_ReEntry.
+          - Deploy only when flat.
     V2.6+ (2026-06-18) P3b Immediate Stop Guard:
           - SetStopLoss = MC engine-level stop, active on the
             ENTRY BAR itself (no IOG dependency). Closes the
@@ -88,20 +101,24 @@
                 Covers the 45min IOG=false gap between fill and
                 first custom stop order. Same distance as P3.
     P4 Trail  : MA55 - TrailOffset (breathing trail, let trend run)
-    P7 Guard  : Stop Profit - armed at +250 pts close-based, lock
+    P7 Guard  : Stop Profit - armed at +500 pts close-based, lock
                 floor = Entry + peak x 45 pct, ratchets up only
     P5 v3     : Pre-holiday flat rule (block entries on tail bars,
                 forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
+    P8 ReEntry: After passive exit (SL/SP/Gap), allow re-entry
+                within N bars if price still above MA61 + prev entry
     Exit      : single stop at Max(P4 trail, P3 frozen, P7 lock)
 
-  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
-    Net Profit    : 3,216,200 TWD
-    Profit Factor : 1.584
-    Win Rate      : 29.42%
-    MDD           : -551,000 (-23.15%)
-    Total Trades  : 469
-    Backtest      : 2019/12/16 - 2026/06/06
+  PERFORMANCE (Excel Report 2026/07/02, Initial Capital 1M):
+    --- V2.7 Plan A (SP 500) baseline ---
+    Net Profit    : 2,700,400 TWD
+    Profit Factor : 1.484
+    Win Rate      : 31.78%
+    MDD           : -461,200 (-17.68%)
+    Total Trades  : 450
+    Backtest      : 2019/12/16 - 2026/07/02
+    --- V2.7 Plan C (ReEntry) pending MC9 A/B ---
   ============================================================ }
 
 [IntrabarOrderGeneration = false]
@@ -120,8 +137,11 @@ Inputs:
     TrailOffset(50),
 
     { P7: Stop Profit Guard (ported from L2 Trendbearish_V1) }
-    stopProfitPoints_Long(250),    { activation: close-based profit >= this many points }
+    stopProfitPoints_Long(500),    { activation: close-based profit >= this many points (V2.7: 250->500) }
     profitReturnPrcnt_Long(55),    { allowed giveback pct of peak profit }
+
+    { P8: Re-Entry after passive exit (V2.7) }
+    ReEntry_Window(6),             { bars after passive exit to allow re-entry (6 x 45M = 4.5hr) }
 
     ATR_Length(20),
 
@@ -170,6 +190,11 @@ Variables:
     v_Registry_Expired(False),
     Registry_Warn_ID(-1),
     idx(0),
+
+    { P8 Re-Entry Variables }
+    v_ReEntry_Allow(False),
+    v_ReEntry_BarsLeft(0),
+    v_Prev_Entry_Price(0),
 
     { P6 Settlement Variables }
     v_Settlement_Day(False),
@@ -389,6 +414,10 @@ end;
 Cond_Breakout = (Close Crosses Over Breakout_Level);
 MP = MarketPosition;
 
+{ P8 V2.7: Re-Entry countdown (tick down every bar while flat) }
+if MP = 0 and v_ReEntry_BarsLeft > 0 then
+    v_ReEntry_BarsLeft = v_ReEntry_BarsLeft - 1;
+
 { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
   SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
   Only called when flat -> freezes at signal-bar ATR once position opens. }
@@ -397,12 +426,33 @@ if MP <= 0 then
                         Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 
 if MP = 0 then begin
-    if Cond_Breakout and
+
+    { P8 V2.7: Re-Entry after passive exit.
+      After TL_SL/TL_SP/TL_SL_Gap/Stop Loss, the Cross Over
+      condition cannot re-trigger if price stays above the
+      breakout level. This re-entry bypasses Cross Over within
+      a time window, requiring price above both MA61 and the
+      previous entry price (trend structure intact). }
+    if v_ReEntry_Allow and
+       (v_ReEntry_BarsLeft > 0) and
+       (Close > v_Prev_Entry_Price) and
+       (Close > maBase) and
+       (v_Weekly_Filter = true) and
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
+        Buy ("TL_ReEntry") next bar at Market;
+        v_ReEntry_Allow    = False;
+        v_ReEntry_BarsLeft = 0;
+    end
+
+    else if Cond_Breakout and
        (v_Weekly_Filter = true) and
        (v_Holiday_Block = false) and
        (v_Settlement_Day = false) then begin
         Buy ("TL_Entry") next bar at Market;
+        v_ReEntry_Allow = False;
     end;
+
 end;
 
 { ==========================================
@@ -446,17 +496,32 @@ if MP > 0 then begin
     Final_Exit_Price = MaxList(Exit_Price_Trail,
                        MaxList(Exit_Price_SL, stopProfitPrice_L));
 
-    { Execution with unified TL_ labels }
+    { Execution with unified TL_ labels.
+      P8: passive exits (SL/SP/Gap/StopLoss) arm re-entry;
+      active exits (TP/Holiday/Settlement/Kill) do not. }
     if Close < Final_Exit_Price then begin
         Sell ("TL_SL_Gap") next bar at Market;
+        v_Prev_Entry_Price = Entry_P;
+        v_ReEntry_Allow    = True;
+        v_ReEntry_BarsLeft = ReEntry_Window;
     end else begin
-        if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then
-            Sell ("TL_SL") next bar at Final_Exit_Price Stop
+        if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then begin
+            Sell ("TL_SL") next bar at Final_Exit_Price Stop;
+            v_Prev_Entry_Price = Entry_P;
+            v_ReEntry_Allow    = True;
+            v_ReEntry_BarsLeft = ReEntry_Window;
+        end
         else if stopProfitPrice_L > 0 and
-                AbsValue(Final_Exit_Price - stopProfitPrice_L) < 0.001 then
-            Sell ("TL_SP") next bar at Final_Exit_Price Stop
-        else
+                AbsValue(Final_Exit_Price - stopProfitPrice_L) < 0.001 then begin
+            Sell ("TL_SP") next bar at Final_Exit_Price Stop;
+            v_Prev_Entry_Price = Entry_P;
+            v_ReEntry_Allow    = True;
+            v_ReEntry_BarsLeft = ReEntry_Window;
+        end
+        else begin
             Sell ("TL_TP") next bar at Final_Exit_Price Stop;
+            v_ReEntry_Allow = False;
+        end;
     end;
 
 end else begin
@@ -465,6 +530,11 @@ end else begin
     v_Frozen_SL       = 0;
     posbleProfit_Long = 0;
     stopProfitPrice_L = 0;
+
+    { P8 V2.7: Arm re-entry on the bar we go flat.
+      v_ReEntry_Allow is set by exit labels (see below).
+      v_Prev_Entry_Price preserves the last entry for the
+      re-entry gate (Close > prev entry = trend intact). }
 end;
 
 { ==========================================
