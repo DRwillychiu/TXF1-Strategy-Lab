@@ -788,6 +788,25 @@ if BarStatus(2) = 2 then begin
        ( v_Regime_OK = True ) then begin
         sell short ( "SE_VS_Entry" ) next bar at Market;
         v_EntryBar = BarNumber of Data2;
+
+        { v1.9.5-DEBUG_V2 Verify A: entry-context Print
+          Purpose: for each entry signal, print current + prior 3 60M K
+          close vs MidBand positions. Analyzes:
+            - How many entries had prior 3 K close > MidBand (bullish side)
+              -> proves v1.9.5 catches "bullish squeeze -> reversal" cases
+            - How many entries had prior 3 K close < MidBand (continuation)
+              -> proves v1.9.5 catches "continuation breakdown" cases }
+        Print( "ENTRY D=", Date,
+               " T=", Time,
+               " CD2=", Close of Data2,
+               " LB=", v_LowerBand,
+               " MB=", v_MidBand,
+               " CD2_1=", Close[1] of Data2,
+               " MB_1=", v_MidBand[1],
+               " CD2_2=", Close[2] of Data2,
+               " MB_2=", v_MidBand[2],
+               " CD2_3=", Close[3] of Data2,
+               " MB_3=", v_MidBand[3] );
     end;
 end;
 
