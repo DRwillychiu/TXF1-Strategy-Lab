@@ -1,157 +1,165 @@
 # L3 盤整多 — STRATEGY_WILLY_LONG_C
 
-> 腳本名稱：_Backtest_Adaptive_Farmer_v13_PureLong
+> 腳本名稱：_Backtest_Adaptive_Farmer_v14_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：**v13.4 + FrozenSL + HolidayFlat_v3 + ImmediateStop**
+> 版本：**v14.0 Matrix Range Capture + FrozenSL + HolidayFlat_v3 + ImmediateStop**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**READY**（v13.4 基準，Cooldown-D 已測試並完全移除）
+> 狀態：**V14 PENDING MC9 VALIDATION**（程式碼已完成，等待 MC9 回測驗證）
 > 口數：1 口
-> 深度審查：`L3_ConsolidationLong_review.md`（A/B 全紀錄：D 否決、**B 裁定部署 2026-06-13**）
-
-## Cooldown-D 測試紀錄（2026-06-25，已完全移除）
-
-**問題**：v13.4 基準 401 筆交易中，39 個虧損 cluster（86 筆 = 21.4%），淨損 **-1,083,400 NTD**（佔毛損 29.7%）。
-
-**4 種 Cooldown 變體全部 FAIL，程式碼已完全移除**：
-
-| 變體 | 淨利 | vs 基準 | 判定 |
-|------|-----:|:------:|:----:|
-| v13.4 基準（無冷卻） | **+851,800** | — | **最佳** |
-| 同箱封鎖 + 3bar 延遲 | +743,200 | -12.8% | FAIL |
-| 純 3bar 時間延遲 | +813,400 | -4.5% | FAIL |
-| GA 最佳化 1bar | +411,800 | -51.7% | FAIL |
-
-**結論**：Cooldown-D 不適用於 L3。程式碼已完全移除，恢復至 v13.4。
-
-**與 L5 的根本差異**：
-
-| | L5 突破策略 | L3 盤整策略 |
-|---|---|---|
-| 同箱重進 | 同箱 = 同失敗（Cooldown 消滅 100% 虧損 cluster） | 同箱 = 仍有效（封鎖殺 TP 贏家） |
-| Cooldown 效果 | 淨利 +29.7%、PF 1.55→2.68 | 淨利 -4.5% ~ -51.7% |
+> 深度審查：`L3_ConsolidationLong_review.md`
 
 ---
 
-## v13.2B 生產設定（2026-06-13 用戶裁定）
+## V14 架構升級（2026-07-03）
+
+### 問題診斷
+
+v13 半箱設計將盤整箱拆為 Bot→Mid 和 Mid→Top 兩腿，結構性鎖死 reward ratio ~1.1x：
+- **CL_Entry_Bot**：26 筆 / 6.5 年，勝率 26.9%，淨損 -10.4K（死腿）
+- **CL_Entry_Mid**：405 筆，勝率 51.9%，淨利 +707.6K（所有利潤來源）
+- 94% 利潤來自中線進場，但目標只吃半箱 → 盈虧比 1.1x 不匹配盤整策略應有水準
+
+### 設計方向
+
+**用戶裁示**：不管箱多大、行情在哪處盤整，都要完整吃到盤整規律的獲利。採用多維度思維方式以及矩陣化建構程式碼。
+
+### V14 矩陣四維度
+
+| 維度 | 內容 | 對應邏輯 |
+|------|------|---------|
+| **Dim 1: Box Qualification** | 箱體大小過濾（Min_Box_ATR） | 避開磨耗吃掉 edge 的小箱 |
+| **Dim 2: Support Zone** | 統一支撐區進場（Entry_Zone_Pct） | 箱底 30% 區域統一進場 |
+| **Dim 3: Dynamic Target** | 動態 swing high（Swing_Lookback） | 15M 實際壓力位，capped at Box_Top |
+| **Dim 4: Trend + Daily** | 環境過濾（不變） | 60M MA + Daily MA OR |
+
+### Pre-Verify 結果（Python 28 年 TWII Daily）
+
+| 指標 | A: 半箱（現行） | B: 全區間 | C: 過濾全區間 |
+|------|:-----------:|:-------:|:----------:|
+| PF | 0.806 | 1.021 | **1.086** |
+| Reward Ratio | 0.90x | 1.92x | **1.85x** |
+| Cum Return | -94% | +9% | **+33%** |
+| Sharpe(ann) | -0.280 | 0.024 | **0.086** |
+
+> Daily data 對 range 策略不利（15M 精確執行的 alpha 無法反映），但方向性確認全區間 > 半箱。
+> 預估 intraday uplift 套用後：Filtered PF ~1.47（vs 現行 1.187）。
+
+### V14 vs V13 差異總覽
+
+| 項目 | V13.4 | V14.0 |
+|------|-------|-------|
+| 進場 | CL_Entry_Bot + CL_Entry_Mid 雙腿 | **CL_Entry** 統一支撐區 |
+| 目標 | Bot→Mid / Mid→Top（半箱） | **動態 swing high → 全區間** |
+| 腿分類 | v_Leg_IsBot 分流 | **已移除**（無需） |
+| 箱體門檻 | 無 | **Min_Box_ATR = 3.0** |
+| 進場區域 | 固定中線/箱底 | **Entry_Zone_Pct = 0.30** |
+| Swing Target | 無 | **Swing_Lookback = 32** |
+| 出場標籤 | CL_TP_Bot / CL_TP_Mid | **CL_TP** |
+| 安全模組 | 全部 | **全部保留** |
+
+---
+
+## V13.2B 生產設定歷史（2026-06-13 用戶裁定）
 
 | 開關 | 生產值 | 裁決依據 |
 |------|------|---------|
-| Freeze_SL_On | **true** | 進場當根鎖定「腿分類+停損+目標」。A/B 實證：淨利 +12%、MDD -21%、淨利/MDD 1.89→2.67、單年集中度 82%→38%、2021-2024 四年白做工 -115K→+99K |
-| BE_Trigger_Pts | **0（關閉）** | 變體 D 實證否決：100 筆 CL_BE 零勝率，「+50 點後拉回進場」是箱體正常震盪，BE 截斷約 96 次到價獲利。**L1 的保本邏輯不可平移到區間策略** |
-| BE_Offset_Pts | 5 | BE 關閉時無作用 |
+| Freeze_SL_On | **true** | 進場當根鎖定停損+目標。淨利 +12%、MDD -21%、淨利/MDD 1.89→2.67 |
+| BE_Trigger_Pts | **0（關閉）** | 變體 D 否決：100 筆 CL_BE 零勝率，BE 截斷 ~96 次到價獲利。**L1 保本邏輯不適用區間策略** |
 
-**v13.2B 回測檔案績效**（變體 B，部署後以此為新基準）：淨利 +778,000 / PF 1.198 / MDD -291,800 / 405 筆 / 勝率 46.2%。機制亮點：目標凍結讓箱體向上破壞時帶利潤出場（CL_BreakExit 72 筆 +691,800）。代價：2025 趨勢年 -396K 重分配（趨勢年是 L1/L5 主場）。
+## Cooldown-D 測試紀錄（2026-06-25，已移除）
 
-## v13.1 假日鐵律模組（2026-06-12）
-
-| 項目 | 內容 |
-|------|------|
-| 強制歸零 | 尾段日 Time ≥ **04:15** 市價出場（15 分格線：04:15 成交、04:30/04:45 兩次重試、05:00 收盤前必歸零） |
-| 進場封鎖 | 尾段日（00:00-05:00）兩腿 Stop 單全部不掛 |
-| 視界 fail-safe | `Registry_Valid_Until = 1270101`，超過即封鎖+平倉（CL_RegistryEnd）+30 天圖表紅字 |
-| 緊急開關 | `Manual_Kill_Switch` → CL_Kill（颱風臨時停市） |
-| 新出場標籤 | CL_Holiday / CL_RegistryEnd / CL_Kill |
-| 歷史影響 | 0 筆跨假持倉 → 重算後歷史軌跡幾乎不變 |
+4 種 Cooldown 變體全部 FAIL（-4.5% ~ -51.7%），L3 是區間策略，同箱重進場產生 TP 贏家。
 
 ---
 
 ## 策略概述
 
 - **類別**：盤整區間型
-- **方向**：★純做多
-- **週期**：Data1 = 15M / Data2 = 60M / Data3 = 日線（三時間框架）
-- **核心邏輯**：60M 偵測盤整箱體（波動極度收縮 ≤ 10%） → 日線多頭環境確認 → 15M 在箱體底部/中線接球做多 → 目標價停利
-- **市場曝險**：8.35%
+- **方向**：純做多
+- **週期**：Data1 = 15M / Data2 = 60M / Data3 = 日線
+- **核心邏輯**：60M 偵測盤整箱體（收縮 ≤ 10%）→ 箱體大小過濾 → 日線多頭確認 → 15M 支撐區接球做多 → 動態 swing high 全區間停利
 
 ---
 
-## MC9 回測績效（Excel 報告 2026/06/07）
+## MC9 回測績效
+
+### V13.4 基準（Excel 2026/06/07，Variant B Production）
 
 | 指標 | 數值 |
 |------|------|
 | 回測區間 | 2020/01/07 ~ 2026/06/06 |
-| 回測期間 | 6 年 5 個月 13 天 |
-| 初始資金 | 1,000,000 NTD |
-| 滑價 | 1,000 NTD/口 RT |
-| 總交易次數 | 431（全部多單） |
+| 總交易次數 | 431 |
 | 勝率 | 50.35% |
 | Profit Factor | 1.187 |
 | 淨利 | +697,200 NTD |
-| 毛利 | +4,419,000 NTD |
-| 毛損 | -3,721,800 NTD |
-| 最大策略虧損 (MDD) | -368,800 NTD (-30.24%) |
-| 最大平倉交易虧損 | -350,600 NTD (-28.92%) |
-| 年報酬率 | 10.85% |
-| 月報酬率 | 0.90% |
-| 平均月報酬 | +9,055 NTD |
-| 年度夏普比率 | 0.467 |
-| 市場曝險時間 | 8.35% |
-
-### 交易分析
-
-| 指標 | 數值 |
-|------|------|
-| 平均獲利交易 | +20,364 NTD |
-| 平均虧損交易 | -17,473 NTD |
+| MDD | -368,800 NTD (-30.24%) |
 | 盈虧比 | 1.165 |
-| 最大單筆獲利 | +150,000 NTD（2026/05/14） |
-| 最大單筆虧損 | -113,400 NTD（2026/03/24） |
-| 獲利交易平均持倉 | 28.1 根 K 棒（~7.0 小時） |
-| 虧損交易平均持倉 | 16.7 根 K 棒（~4.2 小時） |
-| 最長持平期間 | 2 個月 18 天 9 小時 |
+| 市場曝險 | 8.35% |
+
+### V14.0 MC9 回測 — **PENDING**
+
+> 載入 V14 程式碼後，設定新 inputs 並跑回測。
+> 比較重點：PF、盈虧比（預期 1.1x → 1.5x+）、交易筆數變化。
 
 ---
 
-## 進場邏輯
+## 進場邏輯（V14）
 
-### 第一層：60M 盤整偵測（Commander）
+### 第一層：60M 盤整偵測（Commander，不變）
 ```
-① 當前 60M 高低點在前 16 根 60M K 棒的高低區間內
-   (High ≤ Ref_High, Low ≥ Ref_Low)
-② 當前 60M 波幅 ≤ 前 16 根區間的 10%（Range_Shrink_Rate = 0.1）
-   → 極度收縮，盤整箱體成立，記錄 Box_Top 和 Box_Btm
-③ 若 60M 收盤突破箱體 → 盤整失效，退出
-```
-
-### 第二層：方向過濾
-```
-① 60M 趨勢：Close > MA(12) → 偏多（v_Trend_Dir = 1）
-② 日線過濾：Close > 20MA OR Close > 60MA（OR 邏輯）
+① High ≤ Ref_High AND Low ≥ Ref_Low（完全在前 16 根區間內）
+② 當前波幅 / 參考區間 ≤ 10%（極度收縮）
+→ 箱體成立，記錄 Box_Top 和 Box_Btm
+③ 60M 收盤突破箱體 → 盤整失效
 ```
 
-### 第三層：進場執行（15M）
+### 第二層：V14 箱體資格矩陣（Dim 1, NEW）
 ```
-兩個進場區域：
-• CL_Entry_Bot：價格跌到箱底下方 → 反彈回箱底時 Stop 單做多
-• CL_Entry_Mid：價格跌到中線下方 → 反彈回中線時 Stop 單做多
-有效範圍：跌幅不超過 ATR(9) × 3.0
+Box_Range = Box_Top - Box_Btm
+Box_Range / ATR(9) >= Min_Box_ATR (3.0)
+→ 過濾磨耗型小箱
 ```
 
-**設計思路：在盤整箱體的底部和中線「接球」做多，賺的是箱體內的區間反彈。與 L5 不同，L3 是純區間操作（目標價出場），不追求突破後的延續。**
+### 第三層：方向過濾（不變）
+```
+60M 趨勢：Close > MA(12) → v_Trend_Dir = 1
+日線過濾：Close > 20MA OR Close > 60MA（OR 邏輯）
+```
+
+### 第四層：統一支撐區進場（Dim 2, NEW）
+```
+Support_Zone = Box_Btm + Box_Range × Entry_Zone_Pct (0.30)
+條件：Close < Support_Zone AND Close > Box_Btm - ATR × 3.0
+→ Buy ("CL_Entry") next bar at Box_Btm Stop
+
+V13 雙腿 CL_Entry_Bot + CL_Entry_Mid 已合併為單一 CL_Entry。
+Stop order at Box_Btm: below box = bounce fill; in zone = fills at open.
+```
 
 ---
 
-## 出場邏輯
+## 出場邏輯（V14）
 
-### 目標停利（依進場位置區分）
-| 進場 | 目標 | 停損 |
-|------|------|------|
-| CL_Entry_Bot（箱底） | 中線（CL_TP_Bot） | 箱底 - ATR × 3.0 |
-| CL_Entry_Mid（中線） | 箱頂（CL_TP_Mid） | 中線 - ATR × 3.0 |
-
-> 判斷依據：EntryPrice 是否低於 Mid_Line - ATR × 0.5
-> 低於 → 視為箱底進場，目標中線
-> 高於 → 視為中線進場，目標箱頂
-
-### ATR 停損
+### 動態 Swing High 目標（Dim 3, NEW）
 ```
-CL_SL：固定停損，進場區域下方 ATR(9) × 3.0
+進場當根計算一次，之後凍結（Freeze_SL_On）：
+  Swing_High = Highest(High, 32)  [15M 過去 32 根 = ~8 小時]
+  Frozen_Target = Min(Swing_High, Box_Top)  [不超過箱頂]
+  若 Frozen_Target < Mid_Line + ATR → 降級為 Box_Top  [保證最低報酬]
+→ Sell ("CL_TP") next bar at Frozen_Target Limit
 ```
 
-### 盤整失效出場
+### 凍結停損（不變）
 ```
-若 60M 收盤突破箱體（> Box_Top 或 < Box_Btm）且仍持倉
-→ 市價出場（CL_BreakExit）
+Frozen_SL = Box_Btm - ATR(9) × 3.0（進場當根鎖定）
+→ Sell ("CL_SL") next bar at Frozen_SL Stop
+```
+
+### 盤整失效出場（不變）
+```
+60M 收盤突破箱體 → Sell ("CL_BreakExit") next bar at Market
+注意：V14 BreakExit 只在真正箱體破壞時觸發，
+     箱體資格因 ATR 變化而改變不會觸發退出。
 ```
 
 ---
@@ -160,13 +168,18 @@ CL_SL：固定停損，進場區域下方 ATR(9) × 3.0
 
 | 參數 | 值 | 模組 | 說明 |
 |------|-----|------|------|
-| Lookback_Bars | 16 | Commander(60M) | 盤整參考期（60M K 棒數） |
-| Range_Shrink_Rate | 0.1 | Commander(60M) | 波幅收縮門檻（10%，極度嚴格） |
-| MA_Len | 12 | 趨勢過濾(60M) | 60M 趨勢 MA |
+| Lookback_Bars | 16 | Commander(60M) | 盤整參考期 |
+| Range_Shrink_Rate | 0.1 | Commander(60M) | 波幅收縮門檻（10%） |
+| MA_Len | 12 | 趨勢過濾(60M) | 60M MA |
+| **Entry_Zone_Pct** | **0.30** | **V14 Matrix** | **支撐區 = 箱底 30%** |
+| **Min_Box_ATR** | **3.0** | **V14 Matrix** | **箱體最小 ATR 倍數** |
+| **Swing_Lookback** | **32** | **V14 Matrix** | **15M swing high 回看根數** |
 | ATR_Length | 9 | 風控(15M) | ATR 計算長度 |
 | ATR_Stop_Mult | 3.0 | 停損(15M) | 停損 ATR 倍數 |
 | Daily_MA_Fast | 20 | 日線過濾 | 日線快速 MA |
 | Daily_MA_Slow | 60 | 日線過濾 | 日線慢速 MA |
+| Freeze_SL_On | true | 凍結引擎 | V14 永遠 true |
+| BE_Trigger_Pts | 0 | BE 層（關閉） | 區間策略不適用 BE |
 
 ---
 
@@ -183,29 +196,15 @@ CL_SL：固定停損，進場區域下方 ATR(9) × 3.0
 
 ---
 
-## 策略特色
+## 出場標籤對照
 
-1. **極度嚴格的盤整偵測**：波幅收縮至 ≤ 10%（L5 為 ≤ 60%），只在最極端的盤整中進場
-2. **60M Commander**：比 L5 的日線 Commander 更細緻，能捕捉更短週期的盤整
-3. **純區間操作**：目標價出場（底→中線、中線→頂），不追突破，賺箱體內反彈
-4. **高頻交易**：431 筆 / 6.4 年 ≈ 67 筆/年，是 L5（33 筆/年）的 2 倍
-5. **Daily OR 過濾**：只需日線收盤高於 20MA 或 60MA 其中之一即可，比 L5 的 Weekly AND 寬鬆
-
----
-
-## L3 vs L5 對比
-
-| 面向 | L3 盤整多 | L5 盤整多頭突破 |
-|------|----------|---------------|
-| Commander 週期 | 60M | 日線 |
-| 收縮門檻 | ≤ 10%（極嚴格） | ≤ 60% |
-| 進場邏輯 | 箱體內接球 | 箱體內接球 |
-| 出場邏輯 | 目標價（箱體區間） | MFE 三階追蹤（追突破延續） |
-| 環境過濾 | Daily OR | Weekly AND |
-| 交易頻率 | ~67 筆/年 | ~33 筆/年 |
-| PF | 1.187 | 2.136 |
-| MDD | -368,800 (-30.24%) | -193,200 (-16.61%) |
-| 盈虧比 | 1.165 | 1.885 |
-| 曝險 | 8.35% | 4.19% |
-
-> L3 賺箱體內反彈，L5 賺箱體突破後延續。兩者互補但 L3 績效明顯較弱。
+| 標籤 | V14 觸發條件 |
+|------|------------|
+| CL_TP | Dynamic swing high / Box_Top limit（全區間目標） |
+| CL_SL | Frozen SL at Box_Btm - ATR × 3.0 |
+| CL_BE | BE floor（disabled, BE_Trigger_Pts = 0） |
+| CL_BreakExit | 60M close 突破箱體（真正 box break） |
+| CL_Holiday | 休市前夕夜盤尾段 ≥ 04:15 強制歸零 |
+| CL_Settlement | 結算日 ≥ 12:30 歸零 |
+| CL_RegistryEnd | 超出假日登錄驗證視界 |
+| CL_Kill | 手動緊急出場 |

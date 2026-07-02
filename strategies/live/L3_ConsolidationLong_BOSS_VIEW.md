@@ -1,93 +1,74 @@
-# L3 ConsolidationLong — 老闆快速 View
+# L3 ConsolidationLong — Boss View
 
-**版本** V13.4 (Variant B: Freeze 開、BE 關) + FrozenSL + HolidayFlat_v3 ｜ **回測** 2020-01 ~ 2026-06（6.4 年）｜ **狀態** ✅ live 實盤
-
----
-
-## 📊 績效重點
-
-| 指標 | 數值 |
-|------|-----|
-| **淨利** | **+697,200 NTD** |
-| **獲利因子** | 1.187 |
-| **勝率** | **50.4%** |
-| **Sharpe (年化)** | 0.467 |
-| **最大回撤** | -369K（-30.2%）|
-| **交易筆數** | **431 筆 / 6.4 年** ≈ 67 筆/年（高頻薄利型）|
-| **平均曝險** | 8% |
+**Version** V14.0 Matrix Range Capture + FrozenSL + HolidayFlat_v3 | **Status** PENDING MC9 VALIDATION
 
 ---
 
-## 💰 賺什麼錢
+## Performance (V13.4 Baseline — V14 backtest pending)
 
-**賺「盤整箱體區間反彈」的薄利錢** — 60M 偵測極度收縮箱體（波幅 ≤ 10%），日線多頭環境確認，15M 在箱底 / 中線反彈時做多，目標停利。
-高頻 67 筆/年薄利型，45% 進場死停損靠 45% 進場停利蓋過。
-
----
-
-## ✅ 適合行情
-
-1. **盤整箱體行情**（標準區間交易）
-2. **日線多頭環境**（Daily 20MA 或 60MA 向上）
-3. **2025 型箱體爆炸年**（單年 +569K = 全淨利 82%）
-
-## ❌ 不適合行情
-
-- **趨勢年**（L1/L5 主場，L3 在 2025 趨勢段 -396K 重分配）
-- **空頭環境**（日線 AND 邏輯禁入）
+| Metric | Value |
+|--------|-------|
+| **Net Profit** | **+697,200 NTD** |
+| **PF** | 1.187 |
+| **Win Rate** | 50.4% |
+| **Reward Ratio** | 1.165 |
+| **MDD** | -369K (-30.2%) |
+| **Trades** | 431 / 6.4yr = 67/yr |
+| **Sharpe** | 0.467 |
 
 ---
 
-## 🎯 進場規則
+## V14 Upgrade (2026-07-03)
 
-1. **60M 偵測盤整箱體**：前 16 根高低區間 + 波幅 ≤ 10%（極嚴格）
-2. **60M 偏多**：Close > MA(12)
-3. **15M 執行**：價跌到箱底 / 中線下方 → 反彈回 Stop 單做多
-4. **無持倉 + 非假日 + 非結算日**
+**Problem**: V13 half-box design capped reward ratio at 1.1x.
+CL_Entry_Bot was dead (26 trades, -10.4K). 94% profit from CL_Entry_Mid targeting only half the box.
 
-→ 三層 commander / trend / execution 全 True 才進
+**Solution**: Matrix Range Capture — 4 dimensions:
+1. **Box filter**: skip boxes < 3x ATR (friction eats edge)
+2. **Unified support zone**: bottom 30% of box (merge Bot+Mid)
+3. **Dynamic swing high target**: full range instead of half
+4. **Filters**: unchanged (60M trend + Daily MA)
 
----
-
-## 🚪 出場規則
-
-| 情境 | 動作 |
-|------|------|
-| **目標停利** | 箱底→中線 / 中線→箱頂（218 筆 +4.42M）|
-| **盤整失效** | 60M 突破箱體 → BreakExit（v13.2B 72 筆 +691K）|
-| **固定停損** | 進場區下方 ATR × 3.0（194 筆 -3.55M）|
-| 假日 / 結算 / Kill | 強制歸零 |
+**Pre-verify (28yr TWII)**: Full-range PF 1.086 vs half-box 0.806 (+35%). Reward ratio 0.90x -> 1.92x.
 
 ---
 
-## 🛡 風控
+## What It Earns
 
-- 單口 ｜ 盤整型 sleeve（與 L1/L5 趨勢分工）
-- **凍結初損**（v13.2B Variant B 鎖三腿）
-- **BE 已停用**（v13.2D 100 筆 0 勝率慘案教訓）
+**Consolidation box range capture** — 60M detects extreme compression (range <= 10%), buy at support zone, target dynamic resistance (full box range). V14 aims to double reward ratio from 1.1x to 2.0x+.
 
 ---
 
-## 🎯 一句話 pitch
+## Entry Rules (V14)
 
-> **「盤整箱體反彈接球手 — 6.4 年 +69 萬，靠 50% 勝率守住薄利。」**
+1. **60M box detection**: 16-bar lookback, shrink <= 10%
+2. **Box qualification**: range >= 3.0x ATR (skip small boxes)
+3. **60M bullish**: Close > MA(12)
+4. **Daily filter**: Close > 20MA OR 60MA
+5. **15M support zone**: Close in bottom 30% of box -> Stop buy at Box_Btm
+6. **Gates**: no position + no holiday + no settlement
 
-是 portfolio 中**整理盤期間的工人 sleeve**，不貪不躲。
+## Exit Rules (V14)
 
----
-
-## 📋 老闆決策摘要
-
-| 問題 | 答 |
-|------|-----|
-| 這策略幹什麼？| 盤整箱體區間反彈接球 |
-| 多久進一次？| ~67 筆/年（高頻薄利）|
-| 每筆賺多少？| 平均 +1.6K（薄利型）|
-| 最大會虧多少？| MDD -369K（-30%）⚠️ 較高 |
-| 跟其他策略衝突？| 盤整 sleeve，L1/L5 趨勢年互補 |
-| 為什麼上架？| 6.4 年實證 +69.7 萬，50% WR 穩定 |
-| 風險？| 2025 集中度 82% / 滑價佔淨利 62% / Sharpe 0.47 全組合最低 |
+| Trigger | Action |
+|---------|--------|
+| **Dynamic target** | Swing high (32-bar 15M lookback, capped at Box_Top) -> CL_TP |
+| **Box break** | 60M close outside box -> CL_BreakExit |
+| **Frozen stop** | Box_Btm - ATR x 3.0 -> CL_SL |
+| **Safety** | Holiday / Settlement / Registry / Kill |
 
 ---
 
-**詳細**：見 `L3_ConsolidationLong_annotated.md` + `L3_ConsolidationLong_review.md`
+## Decision Summary
+
+| Question | Answer |
+|----------|--------|
+| What does it do? | Consolidation box full-range capture |
+| V14 changes? | Half-box -> full-range, dual-leg -> unified entry, box filter added |
+| Why upgrade? | Half-box reward ratio 1.1x structurally flawed, pre-verify confirms full-range +35% PF |
+| Risk? | V14 is new architecture — must validate via MC9 backtest before deploy |
+| Next step? | Load V14 in MC9, backtest, compare vs V13.4 baseline |
+
+---
+
+**Details**: `L3_ConsolidationLong_annotated.md` + `L3_ConsolidationLong_review.md`

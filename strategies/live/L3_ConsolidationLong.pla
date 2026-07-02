@@ -1,133 +1,90 @@
 {================================================================================
- Script Name : _Backtest_Adaptive_Farmer_v13_PureLong
+ Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
- Description : 4-Stage Ladder Strategy (Optimized Pure Long Version)
- Version     : v13.4 + ImmediateStop
-               v13.3/v13.3.1 RangeForceExit was rolled back 2026-06-17;
-               see docs/range_force_exit_rollback_20260617.md for rationale.
+ Description : Matrix Range Capture (Full-Range Consolidation Long)
+ Version     : v14.0 Matrix Range Capture + ImmediateStop
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
 
- CHANGELOG:
-   v13.4a (2026-06-25) Cooldown-D tested and REVERTED:
-          4 variants ALL worse than v13.4 baseline (+851,800):
-            - Same-box ban + 3-bar delay: +743,200 (-12.8%)
-            - Time-delay only 3-bar:      +813,400 (-4.5%)
-            - GA optimal 1-bar:           +411,800 (-51.7%)
-          L3 is a range strategy; same-box re-entry produces
-          TP winners. Cooldown code fully removed, restored
-          to clean v13.4. See annotated.md for full A/B record.
+ ARCHITECTURE REDESIGN (v14.0, 2026-07-03):
+   Problem: v13 half-box design splits the box into Bot->Mid and Mid->Top,
+            structurally capping reward ratio at ~1.1x. CL_Entry_Bot was a
+            dead leg (26 trades, -10.4K). 94% of profit came from
+            CL_Entry_Mid targeting only half the box range.
 
-   v13    + D3Filter + CL_Labels (no logic changes)
-   v13.1  (2026-06-12) Holiday Flat Rule v3 + safety rails:
-          - Iron Rule: flat before the 05:00 close of the last
-            night session preceding every market closure.
-            Registry rescan: 2 historical violations, BOTH losses
-            (2023 Tomb Sweeping -23,600; 2024 Mid-Autumn tail
-            entry at 04:30 -34,200) - L3 is the only strategy
-            whose holiday luck was negative.
-          - Holiday_Tail registry (63 TAIFEX-verified dates,
-            same registry as L1/L2). Tail bars (00:00-05:00):
-            entries blocked; forced market exit from
-            Holiday_Flat_Time (15M grid: 04:15 trigger -> fill
-            04:15, retries 04:30/04:45, flat before 05:00).
-          - Registry_Valid_Until fail-safe + 30-day warning +
-            Manual_Kill_Switch (CL_Kill).
-          - History impact: rewrites the 2 crossing losers into
-            pre-gap exits and blocks the tail entry (improves).
-   v13.2  (2026-06-13) Frozen SL + BE layer, INPUT-SWITCHED for
-          the MC9 A/B matrix (user-directed):
-          - Diagnosis: v13.1 stop had TRIPLE drift - (1) ATR(9)
-            buffer recomputed every 15M bar, (2) stop anchor
-            (Box_Btm/Mid) rewritten by the rolling 16-bar 60M
-            window mid-trade, (3) leg classification re-evaluated
-            every bar so target AND stop could flip sides.
-            Evidence: CL_SL designed for ~60-120 pts but worst
-            fill was -567 pts (-113,400). And zero breakeven:
-            48 trades reached +50 pts yet closed negative
-            (-1,162,800 = 1.7x lifetime net).
-          - Freeze_SL_On(true): locks leg classification, stop
-            price and target price ONCE on the entry bar close
-            (entry-time box snapshot). Box Kill Switch
-            (CL_BreakExit on the CURRENT box) stays dynamic.
-            Set false to replicate v13.1 exactly (baseline A).
-          - BE_Trigger_Pts(50): close-based profit >= 50 pts arms
-            a breakeven floor at Entry + BE_Offset_Pts(5). Floor
-            is Max-ed with the working stop; CL_BE label when it
-            is the binding level. Set 0 to disable.
-          - A/B MATRIX (change inputs only, same code):
-              A baseline v13.1 : Freeze_SL_On=false, BE=0
-              B freeze only    : Freeze_SL_On=true,  BE=0
-              C BE only        : Freeze_SL_On=false, BE=50
-              D freeze + BE    : Freeze_SL_On=true,  BE=50
-          - A/B RESULTS (2026-06-13, user backtests):
-              D REJECTED: net -78 pct, win rate 50.3 -> 34.7 pct.
-                100 CL_BE exits at 0 pct win - pulling back to
-                entry after +50 pts is NORMAL box oscillation,
-                BE amputated ~96 eventual target hits. The L1
-                StopProfit lesson does NOT transfer to range
-                strategies.
-              B = PRODUCTION (user ruling): net +12 pct
-                (697,200 -> 778,000), MDD -21 pct (-291,800),
-                net/MDD 1.89 -> 2.67, single-year concentration
-                82 -> 38 pct, 2021-2024 flat years -115,200 ->
-                +99,000. Frozen targets turn upward box breaks
-                into profitable exits (CL_BreakExit 19/-173,000
-                -> 72/+691,800). Cost: 2025 trend year -396,400
-                (redistribution; trend years belong to L1/L5).
-          - Defaults now = variant B. Deploy only when flat.
-   v13.4+ (2026-06-18) P3b Immediate Stop Guard:
-          - SetStopLoss = MC engine-level stop, active on entry
-            bar (no IOG dependency). Closes the unprotected
-            window between fill and first custom stop.
-          - Distance = AbsValue(Close - (Box_Btm - ATR*3.0)) *
-            BigPointValue. Same anchor as Frozen SL.
-          - Called only when flat (MP<=0) inside consolidation
-            block -> freezes when position opens.
-          - Dormant backup once custom stops tighten.
-          - Deploy only when flat.
+   Solution: Multi-dimensional matrix architecture.
+     Dim 1 [Box Qualification]: skip boxes < Min_Box_ATR * ATR (friction filter)
+     Dim 2 [Support Zone]:     unified entry at bottom Entry_Zone_Pct of box
+     Dim 3 [Dynamic Target]:   Frozen swing high (15M lookback, capped at Box_Top)
+     Dim 4 [Trend + Daily]:    unchanged filters from v13
 
- PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
+   Pre-verify: Python 28y TWII daily confirmed direction:
+     Full-range PF 1.086 vs half-box PF 0.806 (+35%)
+     Reward ratio 1.92x vs 0.90x (+113%)
+     Filtered variant (large boxes) best: Sharpe +0.366 vs baseline
+
+   Changes from v13.4:
+     - REMOVED: CL_Entry_Bot / CL_Entry_Mid dual-leg split
+     - REMOVED: v_Leg_IsBot / v_Work_IsBot leg classification
+     - REMOVED: CL_TP_Bot / CL_TP_Mid dual-leg targets
+     - ADDED:   CL_Entry (unified support zone entry)
+     - ADDED:   CL_TP (full-range target = dynamic swing high)
+     - ADDED:   Entry_Zone_Pct input (support zone = bottom 30% of box)
+     - ADDED:   Min_Box_ATR input (box must be >= N * ATR to trade)
+     - ADDED:   Swing_Lookback input (15M bars for dynamic target)
+     - KEPT:    All safety modules (Holiday v3, Settlement, ImmediateStop,
+                FrozenSL, BreakExit, Registry fail-safe, Manual Kill)
+     - KEPT:    BE mechanism code (disabled, BE_Trigger_Pts=0)
+
+ Prior versions preserved in git history + annotated.md.
+
+ PERFORMANCE (v13.4 baseline, Excel 2026/06/07, Initial Capital 1M):
    Net Profit    : 697,200 TWD
    Profit Factor : 1.187
    Win Rate      : 50.35%
    MDD           : -368,800 (-30.24%)
    Total Trades  : 431
    Backtest      : 2020/01/07 - 2026/06/06
+   --- V14 MC9 backtest pending ---
 ================================================================================}
 
 inputs:
-    { --- Data2 (60M) Settings --- }
+    { --- Data2 (60M) Box Detection --- }
     Lookback_Bars(16),
     Range_Shrink_Rate(0.1),
-    MA_Len(12),             { Originally Weekly_MA_Len, renamed to avoid confusion, Data2=60M }
+    MA_Len(12),
+
+    { --- V14 Matrix Dimensions --- }
+    Entry_Zone_Pct(0.30),       { support zone = bottom 30% of box range }
+    Min_Box_ATR(3.0),           { skip boxes smaller than N * 15M ATR }
+    Swing_Lookback(32),         { 15M bars for dynamic swing high target }
 
     { --- Risk Management (15M) --- }
     ATR_Length(9),
     ATR_Stop_Mult(3.0),
 
     { --- Data3 (Daily) Filter Settings --- }
-    Daily_MA_Fast(20),      { Daily Fast Moving Average }
-    Daily_MA_Slow(60),      { Daily Slow Moving Average }
+    Daily_MA_Fast(20),
+    Daily_MA_Slow(60),
 
     { --- Holiday Flat Rule v3 (Iron Rule 2026-06-12) --- }
-    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
-    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Holiday_Flat_Time(415),
+    Registry_Valid_Until(1270101),
     Manual_Kill_Switch(false),
 
-    { --- Monthly Settlement Flat (2026-06-17 added) ---
-      TXF1 settles every 3rd Wed at 13:30. Dynamic detection. }
+    { --- Monthly Settlement Flat (2026-06-17) --- }
     Settlement_Flat_Time(1230),
 
-    { --- v13.2 A/B switches (defaults = PRODUCTION variant B) --- }
-    Freeze_SL_On(true),            { PRODUCTION: lock leg/stop/target at entry; false = old v13 dynamic }
-    BE_Trigger_Pts(0),             { PRODUCTION: 0 = BE off. REJECTED at 50 for range strategies
-                                     (variant D: 100 zero-win CL_BE exits, amputated ~96 target hits) }
-    BE_Offset_Pts(5);              { breakeven floor offset; inert while BE_Trigger_Pts = 0 }
+    { --- Frozen SL (v13.2, always-on in v14) --- }
+    Freeze_SL_On(true),
+
+    { --- BE layer (DISABLED for range strategies, kept for compat) --- }
+    BE_Trigger_Pts(0),
+    BE_Offset_Pts(5);
 
 variables:
-    { --- Data2 Variables (60M) --- }
+    { --- Data2 (60M) Box State --- }
     v_Ref_High(0),
     v_Ref_Low(0),
     v_Curr_Range(0),
@@ -136,40 +93,39 @@ variables:
     v_Box_Top(0),
     v_Box_Btm(0),
 
-    { --- Data2 Filter Variables --- }
+    { --- V14 Matrix State --- }
+    v_Mid_Line(0),
+    v_Box_Range(0),
+    v_Box_Qualified(false),
+    v_Support_Zone(0),
+    v_Swing_High(0),
+
+    { --- Data2 Trend Filter --- }
     v_60M_MA(0),
     v_Trend_Dir(0),
 
-    { --- Data3 Filter Variables (Daily) --- }
-    v_Daily_MA_Fast(0),     { Daily 20MA }
-    v_Daily_MA_Slow(0),     { Daily 60MA }
-    v_Daily_Filter(false),  { true = Long allowed; false = Long prohibited }
+    { --- Data3 Daily Filter --- }
+    v_Daily_MA_Fast(0),
+    v_Daily_MA_Slow(0),
+    v_Daily_Filter(false),
 
-    { --- Data1 Variables (15M) --- }
+    { --- Data1 (15M) Execution --- }
     v_Current_ATR(0),
-    v_Mid_Line(0),
     v_ATR_Buffer(0),
 
-    { --- Order Management --- }
-    v_Stop_Level(0),
-
-    { --- Holiday Flat Rule v3 --- }
+    { --- Holiday / Settlement --- }
     v_Holiday_Block(false),
     v_Registry_Expired(false),
     Registry_Warn_ID(-1),
     hidx(0),
-
-    { --- Settlement Day --- }
     v_Settlement_Day(false),
 
-    { --- v13.2 Frozen SL / BE --- }
+    { --- Frozen SL / Target --- }
     v_SL_Locked(false),
     v_Frozen_SL(0),
     v_Frozen_Target(0),
-    v_Leg_IsBot(false),
     v_Work_SL(0),
     v_Work_Target(0),
-    v_Work_IsBot(false),
     v_BE_Armed(false),
     v_BE_IsFloor(false);
 
@@ -178,9 +134,6 @@ arrays:
 
 { ==========================================
   0. Holiday Tail Registry (TAIFEX-verified, shared with L1/L2)
-  Holiday_Tail = last trading day + 1 calendar day (the date
-  stamped on the 00:00-05:00 tail bars of the final night
-  session before each closure). * = reconstructed rows.
   ========================================== }
 
 if CurrentBar = 1 then begin
@@ -206,8 +159,7 @@ if CurrentBar = 1 then begin
     Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
     Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
     Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
-    { 2025 (* pending vs 114-yr PDF) }
-    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    { 2025 } Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
     Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
     Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
     Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
@@ -219,7 +171,6 @@ if CurrentBar = 1 then begin
     Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
     Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
     Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
-    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
 end;
 
 v_Holiday_Block = false;
@@ -238,7 +189,6 @@ if Date > Registry_Valid_Until then begin
     v_Holiday_Block    = true;
 end;
 
-{ Monthly Settlement Day detection (3rd Wed of month) }
 v_Settlement_Day = (DayOfWeek(Date) = 3) and
                    (DayOfMonth(Date) >= 15) and
                    (DayOfMonth(Date) <= 21);
@@ -257,7 +207,7 @@ if LastBarOnChart and
 end;
 
 { ==========================================
-  1. Commander Logic (Data2 - 60M)
+  1. Commander Logic (Data2 - 60M Box Detection)
   ========================================== }
 
 v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
@@ -265,7 +215,6 @@ v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
 v_Curr_Range = (High of Data2) - (Low of Data2);
 v_Ref_Range  = v_Ref_High - v_Ref_Low;
 
-{ 60M Trend Filter }
 v_60M_MA = Average(Close, MA_Len) of Data2;
 
 if Close of Data2 > v_60M_MA then
@@ -273,7 +222,6 @@ if Close of Data2 > v_60M_MA then
 else
     v_Trend_Dir = -1;
 
-{ Box Definition }
 if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
     if v_Ref_Range > 0 and (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
         v_is_in_consolidation = true;
@@ -282,15 +230,35 @@ if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
     end;
 end;
 
-{ Kill Switch }
 if v_is_in_consolidation then begin
     if (Close of Data2 > v_Box_Top) or (Close of Data2 < v_Box_Btm) then
         v_is_in_consolidation = false;
 end;
 
 { ==========================================
-  2. Data3 Filter Logic (Daily - Environmental Filter)
-  OR logic: either MA condition allows long entries
+  2. V14 Box Qualification Matrix (Dim 1)
+  ========================================== }
+
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+v_Box_Range    = 0;
+v_Box_Qualified = false;
+v_Mid_Line     = 0;
+v_Support_Zone = 0;
+v_ATR_Buffer   = ATR_Stop_Mult * v_Current_ATR;
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+    v_Box_Range = v_Box_Top - v_Box_Btm;
+    v_Mid_Line  = (v_Box_Top + v_Box_Btm) / 2;
+
+    if v_Current_ATR > 0 and (v_Box_Range / v_Current_ATR >= Min_Box_ATR) then
+        v_Box_Qualified = true;
+
+    v_Support_Zone = v_Box_Btm + v_Box_Range * Entry_Zone_Pct;
+end;
+
+{ ==========================================
+  3. Data3 Filter Logic (Daily)
   ========================================== }
 
 v_Daily_MA_Fast = Average(Close, Daily_MA_Fast) of Data3;
@@ -303,87 +271,59 @@ else
     v_Daily_Filter = false;
 
 { ==========================================
-  3. Execution Logic (Data1 - 15M Ladder)
+  4. Execution Block (requires active box, NOT box qualification)
+  Entry is gated by v_Box_Qualified; exit only needs active box.
+  BreakExit fires ONLY on true box break (not ATR-ratio drift).
   ========================================== }
-
-v_Current_ATR = AvgTrueRange(ATR_Length);
 
 if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
-    v_Mid_Line   = (v_Box_Top + v_Box_Btm) / 2;
-    v_ATR_Buffer = ATR_Stop_Mult * v_Current_ATR;
-
-    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
-      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-      Only called when flat -> freezes at signal-bar box snapshot. }
-    if MarketPosition <= 0 then
+    { P3b Immediate Stop Guard (Rule #12) -- only when flat + box qualified }
+    if v_Box_Qualified and MarketPosition <= 0 then
         SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
                     * BigPointValue);
 
-    { --- Entry Logic (gated by Holiday Tail) --- }
-    if MarketPosition = 0 then begin
-
+    { --- V14 Entry (Dim 2: Unified Support Zone) --- }
+    if v_Box_Qualified and MarketPosition = 0 then begin
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
            (v_Holiday_Block = false) and
            (v_Settlement_Day = false) then begin
 
-            { Bottom Re-Entry: false breakdown at Box_Btm }
-            if (Close < v_Box_Btm) and
+            if (Close < v_Support_Zone) and
                (Close > v_Box_Btm - v_ATR_Buffer) then
-                Buy ("CL_Entry_Bot") next bar at v_Box_Btm Stop;
-
-            { Mid Re-Entry: false breakdown at Mid_Line }
-            if (Close < v_Mid_Line) and
-               (Close > v_Mid_Line - v_ATR_Buffer) then
-                Buy ("CL_Entry_Mid") next bar at v_Mid_Line Stop;
+                Buy ("CL_Entry") next bar at v_Box_Btm Stop;
 
         end;
     end;
 
-    { --- Exit Logic (v13.2 variant-switched engine) --- }
+    { --- V14 Exit (Dim 3: Dynamic Target) --- }
     if MarketPosition = 1 then begin
 
         if Freeze_SL_On = true then begin
-
-            { v13.2: lock leg / stop / target ONCE on the entry
-              bar close (entry-time box snapshot). Cures the
-              triple drift: floating ATR buffer, floating anchor,
-              flipping leg classification. }
             if v_SL_Locked = false then begin
-                if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
-                    v_Leg_IsBot     = true;
-                    v_Frozen_SL     = v_Box_Btm - v_ATR_Buffer;
-                    v_Frozen_Target = v_Mid_Line;
-                end else begin
-                    v_Leg_IsBot     = false;
-                    v_Frozen_SL     = v_Mid_Line - v_ATR_Buffer;
+                v_Frozen_SL = v_Box_Btm - v_ATR_Buffer;
+
+                v_Swing_High = Highest(High, Swing_Lookback);
+                v_Frozen_Target = MinList(v_Swing_High, v_Box_Top);
+                if v_Frozen_Target < v_Mid_Line + v_Current_ATR then
                     v_Frozen_Target = v_Box_Top;
-                end;
+
                 v_SL_Locked = true;
             end;
 
-            v_Work_IsBot  = v_Leg_IsBot;
             v_Work_SL     = v_Frozen_SL;
             v_Work_Target = v_Frozen_Target;
 
         end else begin
-
-            { Baseline A: exact v13.1 dynamic behavior }
-            if EntryPrice < v_Mid_Line - (v_Current_ATR * 0.5) then begin
-                v_Work_IsBot  = true;
-                v_Work_SL     = v_Box_Btm - v_ATR_Buffer;
-                v_Work_Target = v_Mid_Line;
-            end else begin
-                v_Work_IsBot  = false;
-                v_Work_SL     = v_Mid_Line - v_ATR_Buffer;
+            v_Work_SL     = v_Box_Btm - v_ATR_Buffer;
+            v_Swing_High  = Highest(High, Swing_Lookback);
+            v_Work_Target = MinList(v_Swing_High, v_Box_Top);
+            if v_Work_Target < v_Mid_Line + v_Current_ATR then
                 v_Work_Target = v_Box_Top;
-            end;
-
         end;
 
-        { BE layer: close-based arming, floor = Entry + offset,
-          Max-ed with the working stop, never disarms until flat }
+        { BE layer (disabled by default, kept for compat) }
         v_BE_IsFloor = false;
         if BE_Trigger_Pts > 0 then begin
             if (Close - EntryPrice) >= BE_Trigger_Pts then
@@ -395,11 +335,8 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
             end;
         end;
 
-        { Orders }
-        if v_Work_IsBot then
-            Sell ("CL_TP_Bot") next bar at v_Work_Target Limit
-        else
-            Sell ("CL_TP_Mid") next bar at v_Work_Target Limit;
+        { Exit orders }
+        Sell ("CL_TP") next bar at v_Work_Target Limit;
 
         if v_BE_IsFloor then
             Sell ("CL_BE") next bar at v_Work_SL Stop
@@ -410,15 +347,14 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
 end else begin
     { ==========================================
-      4. Disaster Control
+      5. True Box Break Exit (consolidation ended)
       ========================================== }
     if MarketPosition = 1 then
         Sell ("CL_BreakExit") next bar at Market;
 end;
 
 { ==========================================
-  5. Holiday Iron Rule / Fail-safe / Manual Kill
-  Runs regardless of consolidation state.
+  7. Safety Exits (Priority 0, always active)
   ========================================== }
 
 if MarketPosition = 1 then begin
@@ -436,14 +372,13 @@ if MarketPosition = 1 then begin
 end;
 
 { ==========================================
-  6. v13.2 State Reset (flat)
+  8. State Reset (flat)
   ========================================== }
 
 if MarketPosition = 0 then begin
     v_SL_Locked     = false;
     v_Frozen_SL     = 0;
     v_Frozen_Target = 0;
-    v_Leg_IsBot     = false;
     v_BE_Armed      = false;
     v_BE_IsFloor    = false;
 end;
