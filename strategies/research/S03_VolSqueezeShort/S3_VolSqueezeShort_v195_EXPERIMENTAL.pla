@@ -147,12 +147,12 @@ inputs:
     BBLen                     ( 45    ),
     BBStd                     ( 2.0   ),
     BWLookback                ( 120   ),
-    BWPctile                  ( 25    ),
+    BWPctile                  ( 35    ),
 
     { ===== ATR (stop / target anchor) - v1.2 defaults ===== }
     ATR_Len                   ( 14    ),
     StopATRMult               ( 2.75  ),
-    TargetATRMult             ( 3.5   ),
+    TargetATRMult             ( 2   ),
 
     { ===== Exit timing - v1.2 defaults ===== }
     MaxBars                   ( 35    ),
@@ -160,7 +160,7 @@ inputs:
     MidExit_MinBars           ( 2     ),
 
     { ===== Layer 2: Trailing StopProfit (v1.1) ===== }
-    SP_Trigger_ATRMult        ( 1.5   ),
+    SP_Trigger_ATRMult        ( 1.4   ),
     SP_Retain_Pct             ( 70    ),
 
     { ===== Layer 2 Tiered SP Retain (v1.9.2 NEW) ===== }
@@ -174,8 +174,8 @@ inputs:
     Use_Cooldown              ( False ),
 
     { ===== Hunt quality gates (v1.9.5 NEW) ===== }
-    Thrust_Margin_ATR         ( 0.25  ),
-    Hunt_Max_Stops            ( 3     ),
+    Thrust_Margin_ATR         ( 0.2  ),
+    Hunt_Max_Stops            ( 2    ),
 
     { ===== Regime Filter (Daily via Data3) ===== }
     Use_Regime_Filter         ( True  ),
@@ -191,10 +191,10 @@ inputs:
     Settlement_Flat_Time      ( 1230  ),
 
     { ===== Multi-Layer 1M Exit Monitoring (now native on Data1) ===== }
-    ML_ActivationPct          ( 30    ),
-    ML_ScoreTrigger           ( 30    ),
+    ML_ActivationPct          ( 20    ),
+    ML_ScoreTrigger           ( 40    ),
     ML_MinCategories          ( 3     ),
-    ML_VolSpikeMult           ( 1.5   ),
+    ML_VolSpikeMult           ( 2   ),
     ML_VolAvgLen              ( 15    ),
     ML_SpeedBars              ( 5     ),
     ML_SpeedThreshPts         ( 30    ),
