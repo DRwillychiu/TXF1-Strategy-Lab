@@ -1,0 +1,857 @@
+{ ================================================================================
+  S3_S - VOLATILITY SQUEEZE SHORT STRATEGY
+  Signal Name : S3_VolSqueezeShort
+  MC Load Name: STRATEGY_GEN_S3_VolSqueezeShort
+  Version     : v1.9.3-EXPERIMENTAL  (2026-07-02 - Squeeze memory entry window)
+                Base: v1.9.2-EXPERIMENTAL (SP Priority Fire + Tiered Retain)
+                Architecture: Data1=1M, Data2=60M, Data3=Daily
+                Goal: decouple squeeze detection from breakout trigger.
+                      v1.9.1 backtest (-80K / PF 0.69) proved that requiring
+                      v_Squeeze AND breakout on the SAME 60M bar blocks the
+                      exact extreme moves this strategy targets: a violent
+                      crash expands StdDev on the breakout bar itself, so
+                      v_Squeeze flips False exactly when the best entries
+                      appear (missed 2025-04-07 +278K, 2026-06-05/06 +348K).
+                Approach (squeeze memory):
+                  v_SqueezeBar stamps the Data2 bar number of the last
+                  v_Squeeze=True. v_RecentSqueeze = within SqzMemory (12)
+                  bars of that stamp. Entry gate uses v_RecentSqueeze:
+                    A) squeezing now + breakout        (distance 0)
+                    B) squeezed recently + violent breakout (distance 1..N)
+                    C) no recent squeeze -> filtered   (distance > N)
+                Combined with v1.9.2 exit-side upgrades: entry-side fix
+                (this version) + exit-side alpha capture (P0.5 + tiers)
+                target the SAME fast-crash cases from both directions.
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 12 PowerLanguage x64
+  Timeframe   : Data1 = 1M (execution) + Data2 = 60M (decision/indicators) + Data3 = Daily (regime)
+  Class       : Volatility Regime (C class) - Short only (Rule R-6 split)
+  Direction   : Short only
+
+  CHART SETUP REQUIRED:
+    Data1 = TXF1 1M
+    Data2 = TXF1 60M
+    Data3 = TXF1 Daily
+    MaxBarsBack >= 1000 (covers Daily MA50 via Data3)
+    IntrabarOrderGeneration = FALSE
+
+  CHANGELOG:
+    v1.9.3 (2026-07-02): Squeeze memory entry window
+         - NEW input SqzMemory (12): entry allowed within N 60M bars
+           after the last v_Squeeze=True reading (GA range 3-30)
+         - NEW vars v_SqueezeBar / v_RecentSqueeze (Section 2 + 6)
+         - Entry gate (Section 10): v_Squeeze replaced by v_RecentSqueeze
+         - v_SqueezeBar > 0 guard prevents warm-up false positives
+         - All v1.9.2 exit-side logic UNCHANGED (isolated verification of
+           entry-side fix on top of exit-side fix)
+         - NOTE: BB family (BBLen/BBStd/BWLookback/BWPctile) + SqzMemory
+           require GA re-optimization: existing values were tuned under
+           the inverted count(>) BWRank semantics of v1.8.0
+
+    v1.9.2 (2026-07-01): SP Priority Fire + Tiered Retain
+         - Section 1: Added 3 new inputs
+             SP_Retain_Tier1_Pct (default 80)
+             SP_Retain_Tier2_Pct (default 85)
+             SP_Retain_Tier3_Pct (default 90)
+             Thresholds hardcoded at 100/200/300 pts
+         - Section 2: Added v_SP_Retain_Dynamic variable
+         - Section 11:
+             a. Layer 2 SP tracking uses v_SP_Retain_Dynamic (tiered)
+             b. NEW P0.5 SP Armed Priority Fire block (Market order)
+                Fires before S-0 1M_Exit when SP armed and Close >= Floor
+             c. S-4 SP Stop retained as backup (only fires if P0.5 misses)
+             d. Label naming: SX_VS_SP_Armed (P0.5) vs SX_VS_SP (S-4 backup)
+         - All entry logic, factor scoring, other exits: UNCHANGED
+         - Parameter values (BB/ATR/Regime/ML_*): UNCHANGED from v1.9.1
+
+    v1.9.1 (2026-07-01): BWRank comparison direction fix
+    v1.9.0 (2026-07-01): Data1=1M architecture rewrite
+    v1.8.0 (2026-06-29): [see v1.8.0-PROD header for full history]
+
+  ALPHA THESIS: [unchanged from v1.8.0]
+  PARAMETERIZATION: [tiered SP retain new; others unchanged]
+  CONSTITUTION COMPLIANCE: [unchanged]
+  LABEL CONVENTIONS: [unchanged + SX_VS_SP_Armed added]
+
+  STATUS: v1.9.3 EXPERIMENTAL - Entry (squeeze memory) + exit (P0.5/tiers)
+          combined, pending backtest validation. Acceptance: 2025-04-07 and
+          2026-06-05/06 crashes MUST have entries; 1M_Exit protection intact.
+================================================================================ }
+
+[IntrabarOrderGeneration = False]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  v1.9.2: Added 3 tiered SP retain inputs. All other values from v1.9.1.
+  ============================================================ }
+
+inputs:
+    { ===== Bollinger Bands (core squeeze detection) - v1.2 defaults ===== }
+    BBLen                     ( 45    ),
+    BBStd                     ( 2.0   ),
+    BWLookback                ( 120   ),
+    BWPctile                  ( 25    ),
+
+    { ===== Squeeze memory window (v1.9.3 NEW, unit = 60M bars) ===== }
+    SqzMemory                 ( 12    ),
+
+    { ===== ATR (stop / target anchor) - v1.2 defaults ===== }
+    ATR_Len                   ( 14    ),
+    StopATRMult               ( 2.75  ),
+    TargetATRMult             ( 3.5   ),
+
+    { ===== Exit timing - v1.2 defaults ===== }
+    MaxBars                   ( 35    ),
+    UseMidExit                ( True  ),
+    MidExit_MinBars           ( 2     ),
+
+    { ===== Layer 2: Trailing StopProfit (v1.1) ===== }
+    SP_Trigger_ATRMult        ( 1.5   ),
+    SP_Retain_Pct             ( 70    ),
+
+    { ===== Layer 2 Tiered SP Retain (v1.9.2 NEW) ===== }
+    { Thresholds hardcoded: 100 / 200 / 300 pts of Peak profit }
+    SP_Retain_Tier1_Pct       ( 80    ),
+    SP_Retain_Tier2_Pct       ( 85    ),
+    SP_Retain_Tier3_Pct       ( 90    ),
+
+    { ===== Same-day cooldown ===== }
+    Cooldown_Days             ( 1     ),
+
+    { ===== Regime Filter (Daily via Data3) ===== }
+    Use_Regime_Filter         ( True  ),
+    Regime_FastMA             ( 15    ),
+    Regime_SlowMA             ( 40    ),
+    Regime_BlockRange         ( True  ),
+    Regime_BlockWeakBull      ( True  ),
+
+    { ===== Priority 0 Protection (Rule #11 / #12) ===== }
+    Holiday_Flat_Time         ( 415   ),
+    Registry_Valid_Until      ( 1270101 ),
+    Manual_Kill_Switch        ( False ),
+    Settlement_Flat_Time      ( 1230  ),
+
+    { ===== Multi-Layer 1M Exit Monitoring (now native on Data1) ===== }
+    ML_ActivationPct          ( 30    ),
+    ML_ScoreTrigger           ( 30    ),
+    ML_MinCategories          ( 3     ),
+    ML_VolSpikeMult           ( 1.5   ),
+    ML_VolAvgLen              ( 15    ),
+    ML_SpeedBars              ( 5     ),
+    ML_SpeedThreshPts         ( 30    ),
+    ML_ATR_Short_Len          ( 3     ),
+    ML_ATR_Long_Len           ( 90    ),
+    ML_ATR_Ratio              ( 2.5   );
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  v1.9.2: Added v_SP_Retain_Dynamic for tiered retain logic.
+  ============================================================ }
+
+variables:
+    { ===== Bollinger Bands ===== }
+    v_MidBand                ( 0     ),
+    v_UpperBand              ( 0     ),
+    v_LowerBand              ( 0     ),
+    v_BandWidth              ( 0     ),
+    v_BWRank                 ( 0     ),
+    v_BWCount                ( 0     ),
+    v_Squeeze                ( False ),
+
+    { ===== Squeeze memory state (v1.9.3 NEW) ===== }
+    v_SqueezeBar             ( 0     ),
+    v_RecentSqueeze          ( False ),
+
+    { ===== BWRank circular buffer state (v1.9.0 NEW) ===== }
+    v_BW_Ptr                 ( 0     ),
+    v_BW_Filled              ( 0     ),
+
+    { ===== ATR ===== }
+    v_ATR                    ( 0     ),
+    v_StopDist               ( 0     ),
+    v_TargetDist             ( 0     ),
+
+    { ===== Trade state ===== }
+    v_EntryBar               ( 0     ),
+    v_Prev_MP                ( 0     ),
+
+    { ===== Frozen SL (Rule #12 backup, Short variant) ===== }
+    v_SL_Locked              ( False ),
+    v_Frozen_ATR             ( 0     ),
+    v_Frozen_SL_Dist         ( 0     ),
+    v_SL_Level               ( 0     ),
+
+    { ===== Layer 2 SP state (v1.9.2: added v_SP_Retain_Dynamic) ===== }
+    v_SP_Armed               ( False ),
+    v_Peak_Profit_Pts        ( 0     ),
+    v_SP_Floor_Price         ( 0     ),
+    v_SP_Retain_Dynamic      ( 70    ),
+
+    { ===== Regime Filter state (Daily via Data3) ===== }
+    v_MA_Fast_D              ( 0     ),
+    v_MA_Slow_D              ( 0     ),
+    v_Regime_Ratio           ( 1     ),
+    v_In_WeakBull_Zone       ( False ),
+    v_In_Range_Zone          ( False ),
+    v_Regime_OK              ( True  ),
+
+    { ===== Cooldown (v1.9.0: no IntraBarPersist) ===== }
+    v_LastExit_Date          ( 0     ),
+    v_Cooldown_Active        ( False ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block          ( False ),
+    v_Registry_Expired       ( False ),
+    v_Settlement_Day         ( False ),
+    Registry_Warn_ID         ( -1    ),
+    hidx                     ( 0     ),
+    v_i                      ( 0     ),
+    ExitFired                ( 0     ),
+
+    { ===== Multi-Layer 1M state (now native on Data1) ===== }
+    v_1M_ExitFired           ( False ),
+    v_1M_Score               ( 0     ),
+    v_1M_Score_Pct           ( 0     ),
+    v_1M_CatCount            ( 0     ),
+    v_1M_Trigger             ( False ),
+    v_1M_Loss                ( 0     ),
+    v_1M_Gate1               ( False ),
+    v_1M_Gate2               ( False ),
+    v_1M_Gate3               ( False ),
+
+    { 1M factor scores }
+    v_Score_A1               ( 0     ),
+    v_Score_A2               ( 0     ),
+    v_Score_A4               ( 0     ),
+    v_Score_A6               ( 0     ),
+    v_Score_B1               ( 0     ),
+    v_Score_B2               ( 0     ),
+    v_Score_C1               ( 0     ),
+    v_Score_C2               ( 0     ),
+    v_Score_D2               ( 0     ),
+    v_Score_D3               ( 0     ),
+    v_Score_E3               ( 0     ),
+
+    { 1M helper variables }
+    v_1M_Body                ( 0     ),
+    v_1M_LowerShadow         ( 0     ),
+    v_1M_AvgVol              ( 0     ),
+    v_1M_Body0               ( 0     ),
+    v_1M_Body1               ( 0     ),
+    v_1M_Body2               ( 0     ),
+    v_1M_ConsecUp            ( 0     ),
+    v_1M_Speed_Cur           ( 0     ),
+    v_1M_Speed_Prev          ( 0     ),
+    v_1M_SpeedBarsP1         ( 0     ),
+    v_1M_ATR_S               ( 0     ),
+    v_1M_ATR_L               ( 0     );
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+arrays:
+    Holiday_Tail[80]( 0 ),
+    BW_History[150]( 0 );
+
+
+{ ============================================================
+  SECTION 4 - HOLIDAY TAIL REGISTRY (TAIFEX-verified)
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+if CurrentBar = 1 then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;
+    Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;
+    Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;
+    Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;
+    Holiday_Tail[11] = 1210101;
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;
+    Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;
+    Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;
+    Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;
+    Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;
+    Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;
+    Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;
+    Holiday_Tail[26] = 1221231;
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;
+    Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;
+    Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;
+    Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;
+    Holiday_Tail[34] = 1231230;
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;
+    Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;
+    Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;
+    Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;
+    Holiday_Tail[42] = 1250101;
+
+    { --- 2025 --- }
+    Holiday_Tail[43] = 1250123;
+    Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;
+    Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;
+    Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;
+    Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;
+    Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;
+    Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;
+    Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;
+    Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;
+    Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;
+    Holiday_Tail[63] = 1270101;
+
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+
+{ ============================================================
+  SECTION 5 - HOLIDAY / REGISTRY / SETTLEMENT DETECTION
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+v_Holiday_Block = False;
+
+if Time < 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+v_Registry_Expired = False;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
+end;
+
+{ Monthly Settlement detection (3rd Wed of month) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+{ Registry-expiry red warning, 30 days out }
+if LastBarOnChart and
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New( Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr( Registry_Valid_Until, 0 ) +
+            " - REBUILD FROM TAIFEX CALENDAR" );
+        Text_SetColor( Registry_Warn_ID, Red );
+        Text_SetSize( Registry_Warn_ID, 14 );
+        Text_SetAttribute( Registry_Warn_ID, 1, True );
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 5.5 - REGIME FILTER (Daily via Data3)
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+if Use_Regime_Filter = True then begin
+    v_MA_Fast_D = ( Average( Close, Regime_FastMA ) of Data3 )[1];
+    v_MA_Slow_D = ( Average( Close, Regime_SlowMA ) of Data3 )[1];
+
+    if v_MA_Slow_D > 0 then
+        v_Regime_Ratio = v_MA_Fast_D / v_MA_Slow_D
+    else
+        v_Regime_Ratio = 1;
+
+    v_In_WeakBull_Zone = ( v_Regime_Ratio > 1.02 ) and ( v_Regime_Ratio < 1.05 );
+    v_In_Range_Zone = ( v_Regime_Ratio >= 0.98 ) and ( v_Regime_Ratio <= 1.02 );
+
+    v_Regime_OK = True;
+
+    if Regime_BlockRange = True and v_In_Range_Zone = True then
+        v_Regime_OK = False;
+
+    if Regime_BlockWeakBull = True and v_In_WeakBull_Zone = True then
+        v_Regime_OK = False;
+end
+else
+    v_Regime_OK = True;
+
+
+{ ============================================================
+  SECTION 6 - BOLLINGER BANDS + SQUEEZE DETECTION + SQUEEZE MEMORY
+  v1.9.3 SQUEEZE MEMORY:
+    - v_SqueezeBar stamps the Data2 bar number of the last squeeze
+    - v_RecentSqueeze = within SqzMemory bars of that stamp
+    - Entry uses v_RecentSqueeze so a violent breakout bar that expands
+      BW (killing same-bar v_Squeeze) can still enter
+    - v_SqueezeBar > 0 guard prevents false positives during warm-up
+  BB / BWRank computation byte-identical to v1.9.1.
+  Between 60M closes, v_Squeeze / v_RecentSqueeze retain last values.
+  ============================================================ }
+
+if BarStatus(2) = 2 then begin
+
+    v_MidBand   = Average( Close, BBLen ) of Data2;
+    v_UpperBand = v_MidBand + BBStd * StandardDev( Close, BBLen, 1 ) of Data2;
+    v_LowerBand = v_MidBand - BBStd * StandardDev( Close, BBLen, 1 ) of Data2;
+
+    if v_MidBand > 0 then
+        v_BandWidth = ( v_UpperBand - v_LowerBand ) / v_MidBand * 100
+    else
+        v_BandWidth = 0;
+
+    { BWRank: count bars NARROWER than current (low rank = narrow bands = squeeze) }
+    v_BWCount = 0;
+    for v_i = 1 to v_BW_Filled begin
+        if BW_History[v_i] < v_BandWidth then
+            v_BWCount = v_BWCount + 1;
+    end;
+    if v_BW_Filled > 0 then
+        v_BWRank = v_BWCount / v_BW_Filled * 100
+    else
+        v_BWRank = 100;
+
+    v_Squeeze = ( v_BWRank <= BWPctile );
+
+    { Squeeze memory: stamp last squeeze bar, compute entry window (v1.9.3) }
+    if v_Squeeze then
+        v_SqueezeBar = BarNumber of Data2;
+
+    v_RecentSqueeze = ( v_SqueezeBar > 0 ) and
+                      ( BarNumber of Data2 - v_SqueezeBar <= SqzMemory );
+
+    { Store current BW into circular buffer (after comparison) }
+    v_BW_Ptr = v_BW_Ptr + 1;
+    if v_BW_Ptr > BWLookback then
+        v_BW_Ptr = 1;
+    BW_History[v_BW_Ptr] = v_BandWidth;
+    if v_BW_Filled < BWLookback then
+        v_BW_Filled = v_BW_Filled + 1;
+
+end;
+
+
+{ ============================================================
+  SECTION 7 - ATR + STOP / TARGET DISTANCES
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+v_ATR        = AvgTrueRange( ATR_Len ) of Data2;
+v_StopDist   = v_ATR * StopATRMult;
+v_TargetDist = v_ATR * TargetATRMult;
+
+
+{ ============================================================
+  SECTION 8 - SAME-DAY COOLDOWN RESET
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+if v_LastExit_Date > 0 and
+   DateToJulian( Date ) - DateToJulian( v_LastExit_Date ) >= Cooldown_Days then
+    v_Cooldown_Active = False;
+
+
+{ ============================================================
+  SECTION 9 - FROZEN SL SETUP + SetStopLoss (Rule #12, SHORT variant)
+  v1.9.2: reset v_SP_Retain_Dynamic on exit.
+  ============================================================ }
+
+{ Frozen SL setup (locks once per trade on entry bar) }
+if MarketPosition = -1 then begin
+    if v_SL_Locked = False then begin
+        v_Frozen_ATR     = v_ATR;
+        v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        v_SL_Locked      = True;
+    end;
+end
+else begin
+    v_SL_Locked          = False;
+    v_Frozen_ATR         = 0;
+    v_Frozen_SL_Dist     = 0;
+    v_SL_Level           = 0;
+    v_SP_Armed           = False;
+    v_Peak_Profit_Pts    = 0;
+    v_SP_Floor_Price     = 0;
+    v_SP_Retain_Dynamic  = SP_Retain_Pct;
+end;
+
+{ SetStopLoss engine guard (shares frozen ATR once locked) }
+if v_SL_Locked = True then
+    v_StopDist = v_Frozen_SL_Dist;
+
+if MarketPosition >= 0 then
+    SetStopLoss( v_StopDist * BigPointValue );
+
+
+{ ============================================================
+  SECTION 9.5 - 1M MULTI-LAYER EXIT MONITORING
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+if MarketPosition = -1 and v_1M_ExitFired = False then begin
+
+    { --- Reset all factor scores --- }
+    v_Score_A1 = 0;
+    v_Score_A2 = 0;
+    v_Score_A4 = 0;
+    v_Score_A6 = 0;
+    v_Score_B1 = 0;
+    v_Score_B2 = 0;
+    v_Score_C1 = 0;
+    v_Score_C2 = 0;
+    v_Score_D2 = 0;
+    v_Score_D3 = 0;
+    v_Score_E3 = 0;
+    v_1M_Trigger = False;
+
+    { --- Gate 1: Activation threshold --- }
+    v_1M_Loss = Close - EntryPrice;
+    v_1M_Gate1 = ( v_Frozen_SL_Dist > 0 ) and
+                 ( v_1M_Loss > v_Frozen_SL_Dist * ML_ActivationPct / 100 );
+
+    if v_1M_Gate1 = True then begin
+
+        { --- 1M helper calculations --- }
+        v_1M_AvgVol = Average( Volume, ML_VolAvgLen );
+        v_1M_Body = AbsValue( Close - Open );
+        v_1M_LowerShadow = MinList( Close, Open ) - Low;
+
+        { === 1F: K-bar Patterns === }
+
+        { A1: Volume + Long Lower Shadow (3 pts) }
+        if Close > Open and
+           v_1M_Body > 0 and
+           v_1M_LowerShadow > 2 * v_1M_Body and
+           v_1M_AvgVol > 0 and
+           Volume > ML_VolSpikeMult * v_1M_AvgVol then
+            v_Score_A1 = 3;
+
+        { A2: Bullish Engulfing (3 pts) }
+        if Close > Open and
+           Close[1] < Open[1] and
+           Close > Open[1] and
+           Open < Close[1] then
+            v_Score_A2 = 3;
+
+        { A4: Consecutive Bullish Bars (2 pts) }
+        v_1M_ConsecUp = 0;
+        if Close > Close[1] then begin
+            v_1M_ConsecUp = 1;
+            if Close[1] > Close[2] then begin
+                v_1M_ConsecUp = 2;
+                if Close[2] > Close[3] then
+                    v_1M_ConsecUp = 3;
+            end;
+        end;
+        if v_1M_ConsecUp >= 2 then
+            v_Score_A4 = 2;
+
+        { A6: Expanding Bullish Bars (3 pts) }
+        v_1M_Body0 = AbsValue( Close - Open );
+        v_1M_Body1 = AbsValue( Close[1] - Open[1] );
+        v_1M_Body2 = AbsValue( Close[2] - Open[2] );
+        if Close > Open and
+           Close[1] > Open[1] and
+           Close[2] > Open[2] and
+           v_1M_Body0 > v_1M_Body1 and
+           v_1M_Body1 > v_1M_Body2 and
+           v_1M_Body2 > 0 then
+            v_Score_A6 = 3;
+
+        { === 2F: Volume-Price === }
+
+        { B1: Sudden Volume Spike + Up (3 pts) }
+        if v_1M_AvgVol > 0 and
+           Volume > ML_VolSpikeMult * v_1M_AvgVol and
+           Close > Open then
+            v_Score_B1 = 3;
+
+        { B2: Rising Volume + Rising Price, 3 bars (3 pts) }
+        if Volume > Volume[1] and
+           Close > Close[1] and
+           Volume[1] > Volume[2] and
+           Close[1] > Close[2] then
+            v_Score_B2 = 3;
+
+        { === 3F: Momentum Speed === }
+
+        { C1: Price Acceleration (3 pts) }
+        v_1M_SpeedBarsP1 = ML_SpeedBars + 1;
+        v_1M_Speed_Cur = Close - Close[ML_SpeedBars];
+        v_1M_Speed_Prev = Close[1] - Close[v_1M_SpeedBarsP1];
+        if v_1M_Speed_Cur > v_1M_Speed_Prev and
+           v_1M_Speed_Cur > 0 then
+            v_Score_C1 = 3;
+
+        { C2: Speed Threshold (3 pts) }
+        if Close - Close[ML_SpeedBars] > ML_SpeedThreshPts then
+            v_Score_C2 = 3;
+
+        { === 4F: Structure Break === }
+
+        { D2: 1M Gap Up (2 pts) }
+        if Open > High[1] then
+            v_Score_D2 = 2;
+
+        { D3: Break Entry Price (2 pts) }
+        if Close > EntryPrice then
+            v_Score_D3 = 2;
+
+        { === 5F: Volatility Environment === }
+
+        { E3: Volatility Regime Shift (3 pts) }
+        v_1M_ATR_S = AvgTrueRange( ML_ATR_Short_Len );
+        v_1M_ATR_L = AvgTrueRange( ML_ATR_Long_Len );
+        if v_1M_ATR_L > 0 and
+           v_1M_ATR_S > ML_ATR_Ratio * v_1M_ATR_L then
+            v_Score_E3 = 3;
+
+        { --- Score summation (max 30 pts) --- }
+        v_1M_Score = v_Score_A1 + v_Score_A2 + v_Score_A4 + v_Score_A6
+                   + v_Score_B1 + v_Score_B2
+                   + v_Score_C1 + v_Score_C2
+                   + v_Score_D2 + v_Score_D3
+                   + v_Score_E3;
+
+        v_1M_Score_Pct = v_1M_Score / 30 * 100;
+
+        { --- Gate 2: Score threshold --- }
+        v_1M_Gate2 = ( v_1M_Score_Pct >= ML_ScoreTrigger );
+
+        { --- Gate 3: Cross-category count --- }
+        v_1M_CatCount = 0;
+        if v_Score_A1 + v_Score_A2 + v_Score_A4 + v_Score_A6 > 0 then
+            v_1M_CatCount = v_1M_CatCount + 1;
+        if v_Score_B1 + v_Score_B2 > 0 then
+            v_1M_CatCount = v_1M_CatCount + 1;
+        if v_Score_C1 + v_Score_C2 > 0 then
+            v_1M_CatCount = v_1M_CatCount + 1;
+        if v_Score_D2 + v_Score_D3 > 0 then
+            v_1M_CatCount = v_1M_CatCount + 1;
+        if v_Score_E3 > 0 then
+            v_1M_CatCount = v_1M_CatCount + 1;
+
+        v_1M_Gate3 = ( v_1M_CatCount >= ML_MinCategories );
+
+        { --- TRIGGER: All 3 gates passed --- }
+        v_1M_Trigger = v_1M_Gate1 and v_1M_Gate2 and v_1M_Gate3;
+
+    end;
+
+end;
+
+{ Reset 1M exit flag when not in short position }
+if MarketPosition <> -1 then
+    v_1M_ExitFired = False;
+
+
+{ ============================================================
+  SECTION 10 - ENTRY LOGIC (Short-only per R-6 split)
+  v1.9.3: v_Squeeze -> v_RecentSqueeze (squeeze memory window).
+  All other conditions byte-identical to v1.9.1.
+  ============================================================ }
+
+if BarStatus(2) = 2 then begin
+    if ( MarketPosition = 0 ) and
+       ( v_RecentSqueeze = True ) and
+       ( Close of Data2 < v_LowerBand ) and
+       ( v_Cooldown_Active = False ) and
+       ( v_Holiday_Block = False ) and
+       ( v_Settlement_Day = False ) and
+       ( v_Registry_Expired = False ) and
+       ( v_Regime_OK = True ) then begin
+        sell short ( "SE_VS_Entry" ) next bar at Market;
+        v_EntryBar = BarNumber of Data2;
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 11 - EXIT CHAIN (v1.9.2: P0.5 SP Priority + Tiered Retain)
+  Priority order:
+    P0-1 ~ P0-4  Safety gates (Kill/Registry/Holiday/Settlement)
+    Layer 2 SP tracking (peak/arm/floor with tiered retain)
+    P0.5 NEW     SP Armed Priority Fire (Market)
+    S-0          1M_Exit (Market, only if P0.5 not fired)
+    S-1          TP limit
+    S-2          Mid-band exit (60M gate)
+    S-3          Time stop (60M gate)
+    S-4          SP / SL Stop (backup)
+  ============================================================ }
+
+ExitFired = 0;
+
+if MarketPosition = -1 then begin
+
+    { ---- P0-1 Manual kill switch ---- }
+    if ( ExitFired = 0 ) and ( Manual_Kill_Switch = True ) then begin
+        buy to cover ( "SX_VS_Kill" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-2 Registry fail-safe ---- }
+    if ( ExitFired = 0 ) and ( v_Registry_Expired = True ) then begin
+        buy to cover ( "SX_VS_RegistryEnd" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-3 Holiday iron rule (state-guarded + closed interval) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Holiday_Block = True ) and
+       ( Time >= Holiday_Flat_Time ) and
+       ( Time <= 455 ) then begin
+        buy to cover ( "SX_VS_HolFlat" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0-4 Settlement flat (state-guarded) ---- }
+    if ( ExitFired = 0 ) and
+       ( v_Settlement_Day = True ) and
+       ( Time >= Settlement_Flat_Time ) then begin
+        buy to cover ( "SX_VS_Settlement" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- Layer 2 SP tracking: peak profit + arm + tiered floor ---- }
+    { Peak profit for short = max(EntryPrice - Low) over hold }
+    { Low = Data1 (1M) for fine-grained peak tracking }
+    if EntryPrice - Low > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Low;
+
+    { Arm SP once peak crosses threshold (irreversible per design) }
+    if ( v_SP_Armed = False ) and
+       ( v_Peak_Profit_Pts >= v_ATR * SP_Trigger_ATRMult ) then
+        v_SP_Armed = True;
+
+    { v1.9.2 NEW: Tiered SP_Retain_Pct based on Peak profit (pts) }
+    { Bigger peak = higher confidence = tighter retention }
+    if v_Peak_Profit_Pts >= 300 then
+        v_SP_Retain_Dynamic = SP_Retain_Tier3_Pct
+    else if v_Peak_Profit_Pts >= 200 then
+        v_SP_Retain_Dynamic = SP_Retain_Tier2_Pct
+    else if v_Peak_Profit_Pts >= 100 then
+        v_SP_Retain_Dynamic = SP_Retain_Tier1_Pct
+    else
+        v_SP_Retain_Dynamic = SP_Retain_Pct;
+
+    { Compute SP floor price using dynamic (tiered) retain % }
+    if v_SP_Armed = True then
+        v_SP_Floor_Price = EntryPrice - ( v_Peak_Profit_Pts * v_SP_Retain_Dynamic / 100 );
+
+    { ---- P0.5 NEW v1.9.2: SP Armed Priority Fire ---- }
+    { Fires BEFORE 1M_Exit to lock alpha at Floor level (Market order) }
+    { Condition: SP armed AND Close (Data1 1M) has crossed above Floor }
+    { For SHORT: rebound to Floor level = profit-give-back reached retain point }
+    if ( ExitFired = 0 ) and
+       ( v_SP_Armed = True ) and
+       ( Close >= v_SP_Floor_Price ) then begin
+        buy to cover ( "SX_VS_SP_Armed" ) next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { ---- S-0: Preemptive 1M exit (native on Data1, fills at next 1M bar) ---- }
+    if ( ExitFired = 0 ) and ( v_1M_Trigger = True ) then begin
+        buy to cover ( "SX_VS_1M_Exit" ) next bar at Market;
+        v_1M_ExitFired = True;
+        ExitFired = 1;
+    end;
+
+    { ---- Strategy exits ---- }
+    if ExitFired = 0 then begin
+
+        { S-1: TP at ATR x TargetMult (limit, fills at target price) }
+        buy to cover ( "SX_VS_TP" ) next bar at EntryPrice - v_TargetDist limit;
+
+        { S-2: Mid-band exit (thesis fail) - gated to 60M bar close }
+        if BarStatus(2) = 2 then begin
+            if UseMidExit = True and
+               BarNumber of Data2 - v_EntryBar >= MidExit_MinBars and
+               Close of Data2 > v_MidBand then begin
+                buy to cover ( "SX_VS_Mid" ) next bar at Market;
+                ExitFired = 1;
+            end;
+        end;
+
+        { S-3: Time stop - gated to 60M bar close }
+        if BarStatus(2) = 2 then begin
+            if ExitFired = 0 and
+               BarNumber of Data2 - v_EntryBar >= MaxBars then begin
+                buy to cover ( "SX_VS_TimeStop" ) next bar at Market;
+                ExitFired = 1;
+            end;
+        end;
+
+        { S-4: SP / SL stop (backup for P0.5 miss or SP not armed)
+          Stop orders fill at next 1M bar - Bug 2 eliminated.
+          1M intrabar variance is negligible vs 60M. }
+        if ExitFired = 0 then begin
+            if v_SP_Armed = True then
+                buy to cover ( "SX_VS_SP" ) next bar at v_SP_Floor_Price Stop
+            else if v_SL_Locked = True then
+                buy to cover ( "SX_VS_SL" ) next bar at v_SL_Level Stop;
+        end;
+
+    end;
+
+end;
+
+
+{ ============================================================
+  SECTION 12 - COOLDOWN SET ON EXIT
+  Byte-identical to v1.9.1.
+  ============================================================ }
+
+if v_Prev_MP = -1 and MarketPosition <> -1 then begin
+    v_Cooldown_Active = True;
+    v_LastExit_Date   = Date;
+end;
+
+
+{ ============================================================
+  SECTION 13 - PREV_MP TRACKING (last line, per Rule #8)
+  ============================================================ }
+
+v_Prev_MP = MarketPosition;
