@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v19_8_BreakoutLong
  MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
  Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
- Version     : v19.9 + Cooldown-D + HolidayFlat_v3 + FrozenSL + ImmediateStop
+ Version     : v19.9 + Cooldown-D + HolidayFlat_v3 + FrozenSL + ImmediateStop + Stage1BE
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
@@ -31,6 +31,15 @@
             Rule 2: New Box delay - wait Cooldown_Bars (default 3)
             after last exit before re-entering a new box.
             New input: Cooldown_Bars(3), GA range 1-10.
+
+   v19.9+ (2026-07-03) Stage 1 Breakeven Protection:
+          Structural gap: Stage 1 had MFE tracking but no profit
+          protection. MFE could reach +500 pts and reverse to -1081
+          stop loss. Added optional BE: when MFE >= Frozen_ATR *
+          Stage1_BE_Mult, stop raised to EntryPrice. Default OFF.
+          New inputs: Stage1_BE_On(false), Stage1_BE_Mult(2.0).
+          GA range: 1.0-5.0, step 0.5. Does NOT cap upside (unlike
+          removed SP module). Uses Frozen_ATR for stability.
 
    v19.8  (2026-06-13) Pre-Trail StopProfit A/B Engine:
           VERDICT: All 5 SP variants FAILED net-vs-baseline.
@@ -110,7 +119,11 @@ inputs:
     Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement (3rd Wed) }
 
     { [SEC-9] v19.9 Cooldown-D (same-box ban + new-box time delay) }
-    Cooldown_Bars(3);              { new-box wait after exit; same box = permanent ban }
+    Cooldown_Bars(3),              { new-box wait after exit; same box = permanent ban }
+
+    { [SEC-10] v19.9+ Stage 1 Breakeven Protection }
+    Stage1_BE_On(false),           { true = activate BE in Stage 1; false = v19.9 baseline }
+    Stage1_BE_Mult(2.0);           { MFE >= Frozen_ATR * this to trigger BE; GA: 1.0-5.0 step 0.5 }
 
 variables:
     { [SEC-0] Time filter state }
@@ -460,6 +473,15 @@ if MarketPosition = 1 then begin
         end else begin
             v_Bot_Base_Stop = v_Box_Btm  - v_ATR_Buffer;
             v_Mid_Base_Stop = v_Mid_Line - v_ATR_Buffer;
+        end;
+
+        { Stage 1 BE: MFE threshold met -> raise stop to entry price }
+        if Stage1_BE_On and v_SL_Locked and
+           v_Current_MFE_Distance >= v_Frozen_ATR * Stage1_BE_Mult then begin
+            if EntryPrice > v_Bot_Base_Stop then
+                v_Bot_Base_Stop = EntryPrice;
+            if EntryPrice > v_Mid_Base_Stop then
+                v_Mid_Base_Stop = EntryPrice;
         end;
 
         Sell ("BL_SL_Bot") CurrentContracts contracts

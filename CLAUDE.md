@@ -13,7 +13,7 @@
 
 ## 目錄結構（2026-06-27 審計更新）
 ```
-CLAUDE.md                          # 本檔（15 條強制規範）
+CLAUDE.md                          # 本檔（18 條強制規範）
 README.md                          # 專案總覽
 .gitignore
 
