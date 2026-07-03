@@ -56,11 +56,16 @@ GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）�
 
 ---
 
-## 待辦（以 v1.9.5 為基準）
+## 驗證進度（以 v1.9.5 為基準）
 
-1. **蒙地卡羅模擬** — 驗證績效是否來自少數極端交易
-2. **Walk-Forward 驗證** — IS/OOS 切分確認參數穩定性
-3. **參數敏感度分析** — TargetATRMult 2.0 / StopATRMult 3.75 高原 vs 尖峰
+1. ~~**蒙地卡羅 + Bootstrap**~~ — DONE (2026-07-03)
+   - MC 95% MDD -30.64% (boundary FAIL, 0.64% over)
+   - Bootstrap P(Net>0) 89.3% PASS, P(PF>1) 89.3% PASS
+   - 詳見 [v195_GA_validation_20260703.md](v195_GA_validation_20260703.md)
+2. **參數敏感度分析** — ★ NEXT (MC12 掃描)
+   - 8 單參數掃描 + StopATRMult x TargetATRMult 2D 交叉
+   - 高原寬度 > 20% 範圍才算 PASS
+3. **Walk-Forward 驗證** — IS/OOS 切分確認參數穩定性
 4. **T68 -135.4K V 轉保護** — 是否需額外機制
 5. 通過後 → GA 最佳化參數寫入 .pla 預設值 → 晉升 live_simulation
 
