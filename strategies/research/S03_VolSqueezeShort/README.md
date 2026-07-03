@@ -1,14 +1,68 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🔵 **W2 .pla v1.0 寫好，等用戶 MC12 baseline backtest**
-**.pla**：[S3_VolSqueezeShort.pla](S3_VolSqueezeShort.pla) (532 LOC, ASCII clean, Rule #11/#12/#14 PASS)
+**狀態**：🟠 **v1.9.5 GA 最佳化完成，待蒙地卡羅 / WFA / 敏感度驗證**
+**當前版本**：[S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
+**架構**：Data1=1M（執行）, Data2=60M（訊號）, Data3=Daily（Regime）
 **Stage -1 + 用戶 ruling**: 2026-06-23 完成（4 段討論 + 4 follow-up Q&A）
-**前置**：[S3_L VolSqueezeLong](../S03_VolSqueezeLong/) 已 W5 PASS + Promoted (2026-06-23)
+**前置**：[S3_L VolSqueezeLong](../archive/S03_VolSqueezeLong_promoted_20260620/) 已 W5 PASS + Promoted (2026-06-23)
 **R-6 對手**：S3_S 是 S3_L 的鏡像，補完 vol expansion 雙向 capture
 **Roadmap 依據**：[../../../docs/policies/OFFICIAL_ROADMAP.md](../../../docs/policies/OFFICIAL_ROADMAP.md) batch01 — S3_S
-**原始概念檔**：[../archive/batch01_S2-S5/S3_VolSqueeze.pla](../archive/batch01_S2-S5/S3_VolSqueeze.pla) (原雙向 spec 的 short 部分)
-**原始說明**：[../archive/batch01_S2-S5/TXF1_Strategies_Batch01.md §策略3](../archive/batch01_S2-S5/TXF1_Strategies_Batch01.md)
+
+---
+
+## v1.9.5 GA 最佳化結果（2026-07-02，當前基準線）
+
+| 指標 | 值 |
+|------|---|
+| 交易數 | 68 |
+| 淨利 | +513,400 NTD |
+| 獲利因子 | 1.574 |
+| MDD | -19.05% |
+| 勝率 | 50.0% |
+| 最大單筆獲利 | +278,800（2025-04-07 崩盤捕獲） |
+| 最大單筆虧損 | -135,400（2026-06-08 V 轉） |
+
+### GA 關鍵參數變動（8/38）
+
+BWPctile 25→35, StopATRMult 2.75→3.75, TargetATRMult 3.5→2.0,
+SP_Trigger_ATRMult 1.5→1.4, Thrust_Margin_ATR 0.25→0.15,
+Hunt_Max_Stops 3→2, ML_ActivationPct 30→15, ML_ScoreTrigger 30→40
+
+GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）。
+
+---
+
+## 版本演進
+
+| 版本 | 核心改動 | 結果 |
+|------|----------|------|
+| v1.0 | 初版（鏡像 S3_L） | W2 baseline |
+| v1.7.x | 多輪 WFA + 機構評估 | 不穩定 |
+| v1.8.0 | SP Priority Fire + Tiered Retain（出場端） | PROD baseline |
+| v1.9.0 | Data1=1M 架構重寫 | Bug 2 消除 |
+| v1.9.1 | BWRank count(<) 修正 | 語意正確但時序衝突 |
+| v1.9.2 | SP Priority Fire + Tiered Retain（出場端） | v1.8.0 之上 |
+| v1.9.3 | Squeeze memory 進場窗口 | 31T / -205K / FAIL |
+| v1.9.4 | Hunt state machine（取代固定窗口） | 73T / -23.8K / PF 0.97 |
+| **v1.9.5** | **Thrust margin + circuit breaker** | **68T / +513.4K / PF 1.574** |
+| v1.9.6 | Post-crash continuation hunt | 171T / +369.6K / PF 1.169 — **棄用** |
+
+### v1.9.6 棄用原因
+
+延續模式（SE_VS_Cont）增加 100 筆交易但淨損 -43.4K。
+設計缺陷：需 hunt DISARM（Close > MidBand）才啟動延續，但崩盤後 MidBand 高懸，
+正好是想捕捉的情境反而觸發不了。06-08 後 21 天空白期未解決。
+
+---
+
+## 待辦（以 v1.9.5 為基準）
+
+1. **蒙地卡羅模擬** — 驗證績效是否來自少數極端交易
+2. **Walk-Forward 驗證** — IS/OOS 切分確認參數穩定性
+3. **參數敏感度分析** — TargetATRMult 2.0 / StopATRMult 3.75 高原 vs 尖峰
+4. **T68 -135.4K V 轉保護** — 是否需額外機制
+5. 通過後 → GA 最佳化參數寫入 .pla 預設值 → 晉升 live_simulation
 
 ---
 

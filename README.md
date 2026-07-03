@@ -52,7 +52,7 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 ### Research（開發中）
 | 策略 | 類別 | 進度 |
 |------|------|------|
-| **S3 VolSqueeze** | C 類波動率 | W0 Pre-verify 待開始 |
+| **S3_S VolSqueezeShort** | C 類波動率（空） | v1.9.5 GA 完成 (+513.4K/PF1.574)，待蒙地卡羅/WFA 驗證 |
 
 ---
 
@@ -62,7 +62,7 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 
 ```
 S2 InsideBarBreak     ⚰️ KILLED (alpha 已死)
-S3 VolSqueeze         🔵 CURRENT
+S3_S VolSqueezeShort  🟠 v1.9.5 GA done, pending validation
 S4 MACDDivergence     ⏳ S3 後
 S5 SettlementWeek     ⏳
 S6 FlashCrashMomentum ⏳
@@ -89,7 +89,7 @@ TXF1-Strategy-Lab/
 │   ├── live/                       L1-L5 (MC9 實盤)
 │   ├── live_simulation/            S1, S3 RapidPullback (MC12 模擬)
 │   └── research/                   研究中
-│       ├── S03_VolSqueeze/         ← 當前開發
+│       ├── S03_VolSqueezeShort/     ← 當前開發 (v1.9.5 GA done)
 │       ├── 2026-W24/               ← 每週批次 (Cowork 自動更新)
 │       └── archive/                 歷史批次
 │           ├── batch01_S2-S5/      原始排程基線
