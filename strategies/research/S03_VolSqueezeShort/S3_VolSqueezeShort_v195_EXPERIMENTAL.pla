@@ -151,7 +151,7 @@ inputs:
 
     { ===== ATR (stop / target anchor) - v1.2 defaults ===== }
     ATR_Len                   ( 14    ),
-    StopATRMult               ( 2.75  ),
+    StopATRMult               ( 3.75  ),
     TargetATRMult             ( 2   ),
 
     { ===== Exit timing - v1.2 defaults ===== }
@@ -174,8 +174,8 @@ inputs:
     Use_Cooldown              ( False ),
 
     { ===== Hunt quality gates (v1.9.5 NEW) ===== }
-    Thrust_Margin_ATR         ( 0.2  ),
-    Hunt_Max_Stops            ( 2    ),
+    Thrust_Margin_ATR         ( 0.15  ),
+    Hunt_Max_Stops            ( 2     ),
 
     { ===== Regime Filter (Daily via Data3) ===== }
     Use_Regime_Filter         ( True  ),
