@@ -1,121 +1,59 @@
-# L4 V15.0 Matrix Range Capture (Short) — Optimization Summary
+# L4 Optimization Attempts (2026-07-04) — CLOSED
 
-**Date**: 2026-07-04
 **Strategy**: L4 ConsolidationShort (STRATEGY_WILLY_SHORT_CTEST2)
-**Upgrade**: v14.4 Spring Trap -> v15.0 Matrix Range Capture
-**Status**: FAILED — V15.0 Matrix architecture structurally unsuitable for shorts (see below)
-**Pivot**: V14.6 Adaptive SL (0.20% MAE filter on V14.4 base)
+**Status**: CLOSED — v14.4 retained as production, no changes deployed
 
 ---
 
-## Problem Statement
+## Attempt 1: V15.0 Matrix Range Capture — FAILED
 
-V14.x Spring Trap architecture had a structural CS_BreakExit bleed that could not be fixed:
+Mirror L3 Matrix architecture (resistance zone short + swing low target).
 
-- CS_BreakExit: 28 trades, 0% WR, -378K to -545K (= total net profit lost)
-- 7 A/B variants tested (A-G), only Night Block (Path A) helped
-- v14.5 filter attempts (Strong Long Block + Fast BreakExit) both failed and rolled back
-- Only 84 trades in 6.4 years, Sharpe 0.058 (portfolio weakest)
-
-User ruling (2026-07-04): "Consolidation earns oscillation money.
-L3 buys at support zone, L4 shorts at resistance zone."
-
----
-
-## Solution: Mirror L3 V14 Matrix Architecture for Shorts
-
-### 4 Dimensions (V15.0 Initial Values)
-
-| Dim | Name | Input | Value | Purpose |
-|-----|------|-------|-------|---------|
-| 1 | Box Qualification | Min_Box_ATR | 8.5 | Only trade significant boxes |
-| 2 | Resistance Zone | Entry_Zone_Pct | 0.50 | Short at top 50% of box |
-| 3 | Dynamic Target | Swing_Lookback | 80 | 15M swing low ~20hr lookback |
-| 4 | Trend + Daily | unchanged | — | 60M MA + Daily Macro Block |
-
-### Key Architecture Changes (v14.4 -> v15.0)
-
-| Removed | Added |
-|---------|-------|
-| Spring Trap detection | Resistance zone entry |
-| Trailing stop (Trail_ATR_Mult) | Dynamic swing low target (CS_TP) |
-| Time stop (Time_Stop_Bars) | Frozen target at entry |
-| BE/SP mechanism (rejected) | Box qualification filter |
-| Night block (trap-specific) | Box_Top Limit order |
-| i_Buffer_ATR_Mult | Min_Box_ATR / Swing_Lookback |
-
-### Entry Mechanism
-
-```
-Resistance_Zone = Box_Top - Box_Range * Entry_Zone_Pct (0.50)
-Condition: Close > Resistance_Zone AND Close < Box_Top + ATR * 3.0
-Order: SellShort at Box_Top Limit
-  - In resistance zone (Close < Box_Top): fills when price reaches Box_Top
-  - Above box (false breakout): fills at open
-```
-
-### Exit Mechanism
-
-```
-CS_TP: BuyToCover at Frozen_Target Limit (dynamic swing low, capped at Box_Btm)
-CS_SL: BuyToCover at Frozen_BoxTop + ATR * 2.0 Stop
-CS_BreakExit: 60M close > Frozen_BoxTop (box broke upward)
-Safety: Kill > Registry > Holiday > Settlement (unchanged)
-```
-
----
-
-## L3 vs L4 Symmetry
-
-| Aspect | L3 (Long) V14.1 | L4 (Short) V15.0 |
-|--------|-----------------|-------------------|
-| Zone | Support (bottom 50%) | Resistance (top 50%) |
-| Entry order | Buy at Box_Btm Stop | SellShort at Box_Top Limit |
-| Target | Swing HIGH, capped at Box_Top | Swing LOW, capped at Box_Btm |
-| Stop loss | Box_Btm - ATR*3.0 | Box_Top + ATR*2.0 |
-| Daily filter | Close > 20MA OR 60MA | Macro Block (bull = no shorts) |
-| 60M trend | Close > MA(12) = bullish | Close < MA(48) = bearish |
-
----
-
-## Parameters Kept from V14
-
-| Parameter | Value | Why kept |
-|-----------|-------|----------|
-| Lookback_Bars | 15 | L4-specific box detection (L3 uses 16) |
-| Range_Shrink_Rate | 0.7 | L4-specific consolidation threshold (L3 uses 0.1) |
-| Weekly_MA_Len | 48 | L4-specific 60M trend (L3 uses MA_Len=12) |
-| ATR_Length | 60 | L4-specific longer ATR (L3 uses 9) |
-| ATR_Stop_Mult | 2.0 | L4-specific tighter stop (L3 uses 3.0) |
-| Cooldown_Bars | 8 | Prevent re-entry after SL above box |
-| Daily_FastMA_Len | 20 | Macro Block unchanged |
-| Daily_SlowMA_Len | 60 | Macro Block unchanged |
-
----
-
-## V15.0 Outcome: FAILED
-
-MC9 backtest (2026-07-04): V15.0 net -69K vs V14.4 net +170K.
-Root cause: L3 Matrix architecture cannot be mirrored for shorts.
+**MC9 result**: Net -69K vs V14.4 +170K.
+**Root cause**: L3 mirror structurally unsuitable for shorts.
 Market asymmetry: support holds (L3 wins), resistance breaks (L4 loses).
-CS_SL changed role from trailing profit-capture (+448K) to fixed loss-limiter (-97.6K).
+CS_SL changed from trailing profit-capture (+448K) to fixed loss-limiter (-97.6K).
 
-## Pivot: V14.6 Adaptive SL
+## Attempt 2: V14.6 Adaptive SL 0.20% — FAILED
 
-Deep analysis of V14.4's 80 trades revealed V-shaped rebounds as the #1 profit killer.
-MAE < 0.20% of entry price = 100% WR across all years 2021-2025.
-V14.6 adds `Adaptive_SL_Pct(0.20)` to V14.4 base with CS_AdaptSL label in P3 chain.
+Deep analysis found MAE < 0.20% of entry = 100% WR across 2021-2025.
+Added `Adaptive_SL_Pct(0.20)` stop at entry * 1.002.
 
-### V14.6 MC9 Testing Checklist
+**MC9 result**: 88 trades, Net +175K (vs V14.4 +170K, delta +4.8K).
+CS_AdaptSL fired 46 times, ALL losers (0% WR, -406K).
+**Root cause**: 0.20% is a classification boundary, not a stop level.
+Many winners temporarily exceed 0.20% MAE before recovering.
+35 of 46 intercepted trades would have been profitable in V14.4.
 
-- [x] V15.0 backtest and failure analysis
-- [x] Deep research: MAE%, V-shape rebound, adaptive threshold
-- [x] Write V14.6 code (adaptive SL on V14.4 base)
-- [x] ASCII verification (24/24 PASS)
-- [ ] Load V14.6 into MC9 as STRATEGY_WILLY_SHORT_CTEST2
-- [ ] Run baseline backtest with Adaptive_SL_Pct = 0.20
-- [ ] Compare vs V14.4 — evaluate improvement
-- [ ] If promising: MC9 parameter optimization on Adaptive_SL_Pct
-- [ ] Sync optimized params into .pla code
-- [ ] Update all documentation
-- [ ] Deploy on MC9
+## Attempt 3: V14.6 Adaptive SL MC9 Optimization — NO ALPHA
+
+MC9 optimized Adaptive_SL_Pct to 1.40%.
+
+**MC9 result**: 79 trades, Net +451K, PF 1.553, Sharpe 0.343.
+Appears +281K better than V14.4 baseline, BUT:
+
+**Confounding variable discovered**: V14.4 MC9 baseline had `SP_Trigger_Pts=50`
+(enabled), while V14.6 code defaults `SP_Trigger_Pts=0` (disabled).
+The improvement is entirely from SP being off (V14.2B production decision),
+not from adaptive SL. CS_AdaptSL at 1.40% fired only 1 trade (-64K).
+
+## Final Verdict
+
+| Metric | V14.4 (SP=50) | V14.6 (0.20%) | V14.6 (1.40%) |
+|--------|---------------|---------------|---------------|
+| Net | +170,600 | +175,400 | +451,600 |
+| Trades | 80 | 88 | 79 |
+| WR | 60.0% | 21.6% | 43.0% |
+| PF | 1.291 | 1.297 | 1.553 |
+| MDD | -188,400 | -190,000 | -258,400 |
+
+**Decision**: Roll back to V14.4. Adaptive SL has no alpha at any threshold.
+User action: confirm MC9 has `SP_Trigger_Pts = 0` (V14.2B production setting).
+
+## Lessons
+
+- L24: MAE% classification boundary != stop-loss level. Trades that stay
+  below the boundary are guaranteed winners, but many winners temporarily
+  cross it. The boundary is a FILTER concept, not a STOP concept.
+- L25: Always check MC9 input settings match .pla code defaults before A/B.
+  SP_Trigger_Pts=50 in MC9 vs 0 in code created a confounding variable.

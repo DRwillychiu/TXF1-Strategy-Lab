@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.6 Adaptive SL (v14.4 base + 0.20pct MAE filter)
+ Version     : v14.4 + ImmediateStop (PRODUCTION; v14.5 fully removed after A/B failure)
                v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -165,7 +165,7 @@
             block -> freezes when short position opens.
           - Dormant backup once custom stops tighten.
 
-   v14.5  (2026-06-18) * TRIED + FULLY REMOVED *
+   v14.5  (2026-06-18) [TRIED + FULLY REMOVED]
           Two filters were added to address CS_BreakExit -378K leak:
             A. Strong Long Block (Daily MA gap% > 1.0 = no short entry)
             B. Fast BreakExit (15M Close > Locked_Top + 0.5 ATR)
@@ -200,14 +200,7 @@
             block -> freezes when short position opens.
           - Dormant backup once custom stops tighten.
 
-   v14.6  (2026-07-04) Adaptive SL: 0.20 pct MAE filter.
-          Deep analysis of 80 trades: V-shaped rebounds are the
-          #1 profit killer. MAE < 0.20 pct of entry = 100 pct WR
-          across 2021-2025. Auto-scales with index (40pt@20K,
-          50pt@25K). CS_AdaptSL label in P3 chain. SetStopLoss
-          entry guard tightened via MinList.
-
-   STATUS: v14.6 Adaptive SL is the PRODUCTION version.
+   STATUS: v14.4 + P3b ImmediateStop is the PRODUCTION version.
    Do NOT re-add Strong_Long_Filter or Fast_BreakExit without
    the redundancy+pass-rate analysis required by Constitution
    (memory: feedback_filter_redundancy_check.md).
@@ -228,7 +221,6 @@ inputs:
     { --- 2. Risk & Volatility Parameters (Data1 - 15M) --- }
     ATR_Length(60),
     ATR_Stop_Mult(2),
-    Adaptive_SL_Pct(0.20),         { v14.6: max MAE as pct of entry. 0 = off }
 
     { --- 3. Tactical Entry Parameters (S_Spring only) --- }
     i_Buffer_ATR_Mult(0.4),
@@ -305,9 +297,6 @@ variables:
     v_SL_Locked(false),
     v_Frozen_ATR(0),
     v_Frozen_LockedTop(0),
-
-    { v14.6 Adaptive SL }
-    v_Adaptive_Stop(0),
 
     { Holiday Flat Rule v3 }
     v_Holiday_Block(false),
@@ -504,15 +493,9 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
     { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
       SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
       Only called when not short -> freezes at signal-bar box snapshot. }
-    if MarketPosition >= 0 then begin
-        if Adaptive_SL_Pct > 0 then
-            SetStopLoss(MinList(
-                AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close),
-                Close * Adaptive_SL_Pct / 100) * BigPointValue)
-        else
-            SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close)
-                        * BigPointValue);
-    end;
+    if MarketPosition >= 0 then
+        SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close)
+                    * BigPointValue);
 
     { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail + Night Block) }
     v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
@@ -549,7 +532,6 @@ if MarketPosition = 0 then begin
     v_SL_Locked        = false;
     v_Frozen_ATR       = 0;
     v_Frozen_LockedTop = 0;
-    v_Adaptive_Stop    = 0;
     v_Peak_Profit_Pts  = 0;
     v_BE_Armed         = false;
     v_SP_Armed         = false;
@@ -572,8 +554,6 @@ if MarketPosition = -1 then begin
         v_Frozen_ATR       = v_Current_ATR;
         v_Frozen_LockedTop = v_Locked_Top;
         v_SL_Locked        = true;
-        if Adaptive_SL_Pct > 0 then
-            v_Adaptive_Stop = EntryPrice * (1 + Adaptive_SL_Pct / 100);
     end;
 
     { 4. Stop Level Calculation (v14.1 logic, unchanged) }
@@ -664,18 +644,14 @@ if MarketPosition = -1 then begin
         ExitFired = 1;
     end;
 
-    { Priority 3 - Labeled Stop order (CS_AdaptSL > CS_SP > CS_BE > CS_SL).
+    { Priority 3 - Labeled Stop order (CS_SP > CS_BE > CS_SL).
       Mutually exclusive: tightest binding floor wins the label.
-      Adaptive / SP / BE floors only "bind" when lower than
+      SP_Floor / BE_Floor only "bind" when they are lower than
       the original v_Stop_Level (lower = tighter for shorts). }
 
     v_Effective_Stop = v_Stop_Level;
 
-    if Adaptive_SL_Pct > 0 and v_Adaptive_Stop > 0 and
-       v_Adaptive_Stop < v_Effective_Stop then begin
-        v_Effective_Stop = v_Adaptive_Stop;
-        BuyToCover ("CS_AdaptSL") next bar at v_Effective_Stop Stop;
-    end else if v_SP_Armed = true and
+    if v_SP_Armed = true and
        v_SP_Floor > 0 and v_SP_Floor < v_Effective_Stop then begin
         v_Effective_Stop = v_SP_Floor;
         BuyToCover ("CS_SP") next bar at v_Effective_Stop Stop;
