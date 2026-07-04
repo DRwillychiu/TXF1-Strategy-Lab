@@ -3,7 +3,8 @@
 **Date**: 2026-07-04
 **Strategy**: L4 ConsolidationShort (STRATEGY_WILLY_SHORT_CTEST2)
 **Upgrade**: v14.4 Spring Trap -> v15.0 Matrix Range Capture
-**Status**: PENDING MC9 BACKTEST
+**Status**: FAILED — V15.0 Matrix architecture structurally unsuitable for shorts (see below)
+**Pivot**: V14.6 Adaptive SL (0.20% MAE filter on V14.4 base)
 
 ---
 
@@ -92,14 +93,29 @@ Safety: Kill > Registry > Holiday > Settlement (unchanged)
 
 ---
 
-## MC9 Testing Checklist
+## V15.0 Outcome: FAILED
 
-- [x] Write V15 code (matrix architecture)
+MC9 backtest (2026-07-04): V15.0 net -69K vs V14.4 net +170K.
+Root cause: L3 Matrix architecture cannot be mirrored for shorts.
+Market asymmetry: support holds (L3 wins), resistance breaks (L4 loses).
+CS_SL changed role from trailing profit-capture (+448K) to fixed loss-limiter (-97.6K).
+
+## Pivot: V14.6 Adaptive SL
+
+Deep analysis of V14.4's 80 trades revealed V-shaped rebounds as the #1 profit killer.
+MAE < 0.20% of entry price = 100% WR across all years 2021-2025.
+V14.6 adds `Adaptive_SL_Pct(0.20)` to V14.4 base with CS_AdaptSL label in P3 chain.
+
+### V14.6 MC9 Testing Checklist
+
+- [x] V15.0 backtest and failure analysis
+- [x] Deep research: MAE%, V-shape rebound, adaptive threshold
+- [x] Write V14.6 code (adaptive SL on V14.4 base)
 - [x] ASCII verification (24/24 PASS)
-- [ ] Load V15 into MC9 as STRATEGY_WILLY_SHORT_CTEST2
-- [ ] Run baseline backtest with initial params (0.50/8.5/80)
+- [ ] Load V14.6 into MC9 as STRATEGY_WILLY_SHORT_CTEST2
+- [ ] Run baseline backtest with Adaptive_SL_Pct = 0.20
 - [ ] Compare vs V14.4 — evaluate improvement
-- [ ] If promising: MC9 parameter optimization
+- [ ] If promising: MC9 parameter optimization on Adaptive_SL_Pct
 - [ ] Sync optimized params into .pla code
 - [ ] Update all documentation
 - [ ] Deploy on MC9
