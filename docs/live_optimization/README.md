@@ -10,7 +10,7 @@ that are already deployed on MC9.
 
 | Strategy | Version | Status | Folder |
 |----------|---------|--------|--------|
-| (none) | | | |
+| L4 ConsolidationShort | v14.4 -> v15.0 | PENDING MC9 BACKTEST | L4_v15_matrix_range_capture/ |
 
 ## Completed
 
