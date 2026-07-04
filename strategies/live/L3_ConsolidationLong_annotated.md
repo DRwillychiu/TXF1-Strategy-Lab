@@ -4,7 +4,7 @@
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
 > 版本：**v14.1 Matrix Range Capture + FrozenSL + HolidayFlat_v3 + ImmediateStop (OPTIMIZED)**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**DEPLOY READY**（2-round MC9 最佳化完成，2026-07-04）
+> 狀態：**DEPLOYED**（V14.1 最佳化完成 + MC9 部署確認，2026-07-04）
 > 口數：1 口
 > 深度審查：`L3_ConsolidationLong_review.md`
 

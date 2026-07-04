@@ -3,7 +3,7 @@
 **Date**: 2026-07-03 (architecture) / 2026-07-04 (optimization)
 **Strategy**: L3 ConsolidationLong (STRATEGY_WILLY_LONG_C)
 **Upgrade**: v13.4 -> v14.0 -> v14.1 (optimized)
-**Status**: DEPLOY READY
+**Status**: DEPLOYED (MC9 confirmed 2026-07-04)
 
 ---
 
@@ -143,4 +143,4 @@ Result: Entry_Zone_Pct=0.50, Min_Box_ATR=8.5, Swing_Lookback=80
 - [x] Practical deployment analysis (edge quality, consistency, regime)
 - [x] Sync optimized params into .pla code
 - [x] Update all documentation
-- [ ] Deploy on MC9 (flat position, wait for next box signal)
+- [x] Deploy on MC9 (confirmed 2026-07-04, all 17 params verified)

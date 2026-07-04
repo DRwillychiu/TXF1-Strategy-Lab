@@ -1,6 +1,6 @@
 # L3 ConsolidationLong — Boss View
 
-**Version** V14.1 Matrix Range Capture + FrozenSL + HolidayFlat_v3 (OPTIMIZED) | **Status** DEPLOY READY
+**Version** V14.1 Matrix Range Capture + FrozenSL + HolidayFlat_v3 (OPTIMIZED) | **Status** DEPLOYED (MC9 2026-07-04)
 
 ---
 
