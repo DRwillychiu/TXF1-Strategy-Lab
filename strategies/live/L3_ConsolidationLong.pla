@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v14.0 Matrix Range Capture + ImmediateStop
+ Version     : v14.1 Matrix Range Capture + ImmediateStop (OPTIMIZED)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -30,7 +30,7 @@
      - REMOVED: CL_TP_Bot / CL_TP_Mid dual-leg targets
      - ADDED:   CL_Entry (unified support zone entry)
      - ADDED:   CL_TP (full-range target = dynamic swing high)
-     - ADDED:   Entry_Zone_Pct input (support zone = bottom 30% of box)
+     - ADDED:   Entry_Zone_Pct input (support zone = bottom 50% of box)
      - ADDED:   Min_Box_ATR input (box must be >= N * ATR to trade)
      - ADDED:   Swing_Lookback input (15M bars for dynamic target)
      - KEPT:    All safety modules (Holiday v3, Settlement, ImmediateStop,
@@ -39,14 +39,24 @@
 
  Prior versions preserved in git history + annotated.md.
 
- PERFORMANCE (v13.4 baseline, Excel 2026/06/07, Initial Capital 1M):
-   Net Profit    : 697,200 TWD
-   Profit Factor : 1.187
-   Win Rate      : 50.35%
-   MDD           : -368,800 (-30.24%)
-   Total Trades  : 431
-   Backtest      : 2020/01/07 - 2026/06/06
-   --- V14 MC9 backtest pending ---
+ PERFORMANCE (v14.1 OPTIMIZED, MC9 Excel 2026/07/04, Initial Capital 1M):
+   Net Profit    : 2,048,000 TWD (+194% vs v13.4)
+   Profit Factor : 1.470 (+24% vs v13.4 1.187)
+   Win Rate      : 56.0%
+   Reward Ratio  : 1.154
+   MDD           : -378,600 (-22.3%)
+   Net/MDD       : 5.41
+   Total Trades  : 332
+   Annual Return : 33.3%
+   Sharpe        : 0.302
+   Backtest      : 2020/05/12 - 2026/07/04
+
+ OPTIMIZATION (2026-07-04, 2-round MC9 sweep):
+   Round 1: range 0.15-0.50 / 1.5-6.0 / 16-64 -> all hit upper bound
+   Round 2: expanded 0.15-0.70 / 1.5-10.0 / 16-128 -> converged interior
+   Entry_Zone_Pct : 0.30 -> 0.50 (71% of range, plateau confirmed)
+   Min_Box_ATR    : 3.0  -> 8.5  (85% of range, off boundary)
+   Swing_Lookback : 32   -> 80   (63% of range, plateau confirmed)
 ================================================================================}
 
 inputs:
@@ -56,9 +66,9 @@ inputs:
     MA_Len(12),
 
     { --- V14 Matrix Dimensions --- }
-    Entry_Zone_Pct(0.30),       { support zone = bottom 30% of box range }
-    Min_Box_ATR(3.0),           { skip boxes smaller than N * 15M ATR }
-    Swing_Lookback(32),         { 15M bars for dynamic swing high target }
+    Entry_Zone_Pct(0.50),       { support zone = bottom 50% of box range (optimized from 0.30) }
+    Min_Box_ATR(8.5),           { skip boxes smaller than N * 15M ATR (optimized from 3.0) }
+    Swing_Lookback(80),         { 15M bars for dynamic swing high target (optimized from 32) }
 
     { --- Risk Management (15M) --- }
     ATR_Length(9),

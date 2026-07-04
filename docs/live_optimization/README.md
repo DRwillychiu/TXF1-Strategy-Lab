@@ -10,11 +10,12 @@ that are already deployed on MC9.
 
 | Strategy | Version | Status | Folder |
 |----------|---------|--------|--------|
-| L3 ConsolidationLong | v13.4 -> v14.0 | MC9 backtest pending | `L3_v14_matrix_range_capture/` |
+| (none) | | | |
 
 ## Completed
 
 | Strategy | Version | Date | Result |
 |----------|---------|------|--------|
+| L3 ConsolidationLong | v13.4 -> v14.1 | 2026-07-04 | DEPLOY READY: +194% net, PF 1.470, Net/MDD 5.41 |
 | L1 TrendLong | v2.6 -> v2.7 | 2026-07-02 | Plan A (SP 500) deployed, Plan C rejected |
 | L2 TrendShort | v5.2 review | 2026-07-02 | No changes needed (best in portfolio) |

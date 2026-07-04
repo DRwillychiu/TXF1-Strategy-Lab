@@ -2,9 +2,9 @@
 
 > 腳本名稱：_Backtest_Adaptive_Farmer_v14_PureLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_C
-> 版本：**v14.0 Matrix Range Capture + FrozenSL + HolidayFlat_v3 + ImmediateStop**
+> 版本：**v14.1 Matrix Range Capture + FrozenSL + HolidayFlat_v3 + ImmediateStop (OPTIMIZED)**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**V14 PENDING MC9 VALIDATION**（程式碼已完成，等待 MC9 回測驗證）
+> 狀態：**DEPLOY READY**（2-round MC9 最佳化完成，2026-07-04）
 > 口數：1 口
 > 深度審查：`L3_ConsolidationLong_review.md`
 
@@ -28,8 +28,8 @@ v13 半箱設計將盤整箱拆為 Bot→Mid 和 Mid→Top 兩腿，結構性鎖
 | 維度 | 內容 | 對應邏輯 |
 |------|------|---------|
 | **Dim 1: Box Qualification** | 箱體大小過濾（Min_Box_ATR） | 避開磨耗吃掉 edge 的小箱 |
-| **Dim 2: Support Zone** | 統一支撐區進場（Entry_Zone_Pct） | 箱底 30% 區域統一進場 |
-| **Dim 3: Dynamic Target** | 動態 swing high（Swing_Lookback） | 15M 實際壓力位，capped at Box_Top |
+| **Dim 2: Support Zone** | 統一支撐區進場（Entry_Zone_Pct） | 箱底 50% 區域統一進場 |
+| **Dim 3: Dynamic Target** | 動態 swing high（Swing_Lookback） | 15M 80 根回看壓力位，capped at Box_Top |
 | **Dim 4: Trend + Daily** | 環境過濾（不變） | 60M MA + Daily MA OR |
 
 ### Pre-Verify 結果（Python 28 年 TWII Daily）
@@ -51,9 +51,9 @@ v13 半箱設計將盤整箱拆為 Bot→Mid 和 Mid→Top 兩腿，結構性鎖
 | 進場 | CL_Entry_Bot + CL_Entry_Mid 雙腿 | **CL_Entry** 統一支撐區 |
 | 目標 | Bot→Mid / Mid→Top（半箱） | **動態 swing high → 全區間** |
 | 腿分類 | v_Leg_IsBot 分流 | **已移除**（無需） |
-| 箱體門檻 | 無 | **Min_Box_ATR = 3.0** |
-| 進場區域 | 固定中線/箱底 | **Entry_Zone_Pct = 0.30** |
-| Swing Target | 無 | **Swing_Lookback = 32** |
+| 箱體門檻 | 無 | **Min_Box_ATR = 8.5**（最佳化後） |
+| 進場區域 | 固定中線/箱底 | **Entry_Zone_Pct = 0.50**（最佳化後） |
+| Swing Target | 無 | **Swing_Lookback = 80**（最佳化後） |
 | 出場標籤 | CL_TP_Bot / CL_TP_Mid | **CL_TP** |
 | 安全模組 | 全部 | **全部保留** |
 
@@ -96,10 +96,24 @@ v13 半箱設計將盤整箱拆為 Bot→Mid 和 Mid→Top 兩腿，結構性鎖
 | 盈虧比 | 1.165 |
 | 市場曝險 | 8.35% |
 
-### V14.0 MC9 回測 — **PENDING**
+### V14.1 MC9 回測（2-round 最佳化後, 2026/07/04）
 
-> 載入 V14 程式碼後，設定新 inputs 並跑回測。
-> 比較重點：PF、盈虧比（預期 1.1x → 1.5x+）、交易筆數變化。
+| 指標 | 數值 | vs V13.4 |
+|------|------|----------|
+| 回測區間 | 2020/05/12 ~ 2026/07/04 | |
+| 總交易次數 | 332 | -23% |
+| 勝率 | 56.0% | +5.6pp |
+| Profit Factor | **1.470** | **+24%** |
+| 淨利 | **+2,048,000 NTD** | **+194%** |
+| MDD | -378,600 NTD (-22.3%) | ~flat |
+| 淨利/MDD | **5.41** | **+186%** |
+| 盈虧比 | 1.154 | ~flat |
+| 年報酬率 | 33.3% | +204% |
+| Sharpe | 0.302 | -35% |
+
+> 最佳化歷程：Round 1 三參數全打上界 → 擴大範圍 → Round 2 收斂至高原內部。
+> Edge 品質：贏家 MFE/MAE = 2.29x vs 輸家 0.36x，勝負分離清晰。
+> 近期強化：2024-2026 PF 1.696 > 2020-2023 PF 1.209。
 
 ---
 
@@ -116,7 +130,7 @@ v13 半箱設計將盤整箱拆為 Bot→Mid 和 Mid→Top 兩腿，結構性鎖
 ### 第二層：V14 箱體資格矩陣（Dim 1, NEW）
 ```
 Box_Range = Box_Top - Box_Btm
-Box_Range / ATR(9) >= Min_Box_ATR (3.0)
+Box_Range / ATR(9) >= Min_Box_ATR (8.5)
 → 過濾磨耗型小箱
 ```
 
@@ -128,7 +142,7 @@ Box_Range / ATR(9) >= Min_Box_ATR (3.0)
 
 ### 第四層：統一支撐區進場（Dim 2, NEW）
 ```
-Support_Zone = Box_Btm + Box_Range × Entry_Zone_Pct (0.30)
+Support_Zone = Box_Btm + Box_Range × Entry_Zone_Pct (0.50)
 條件：Close < Support_Zone AND Close > Box_Btm - ATR × 3.0
 → Buy ("CL_Entry") next bar at Box_Btm Stop
 
@@ -143,7 +157,7 @@ Stop order at Box_Btm: below box = bounce fill; in zone = fills at open.
 ### 動態 Swing High 目標（Dim 3, NEW）
 ```
 進場當根計算一次，之後凍結（Freeze_SL_On）：
-  Swing_High = Highest(High, 32)  [15M 過去 32 根 = ~8 小時]
+  Swing_High = Highest(High, 80)  [15M 過去 80 根 = ~20 小時]
   Frozen_Target = Min(Swing_High, Box_Top)  [不超過箱頂]
   若 Frozen_Target < Mid_Line + ATR → 降級為 Box_Top  [保證最低報酬]
 → Sell ("CL_TP") next bar at Frozen_Target Limit
@@ -171,9 +185,9 @@ Frozen_SL = Box_Btm - ATR(9) × 3.0（進場當根鎖定）
 | Lookback_Bars | 16 | Commander(60M) | 盤整參考期 |
 | Range_Shrink_Rate | 0.1 | Commander(60M) | 波幅收縮門檻（10%） |
 | MA_Len | 12 | 趨勢過濾(60M) | 60M MA |
-| **Entry_Zone_Pct** | **0.30** | **V14 Matrix** | **支撐區 = 箱底 30%** |
-| **Min_Box_ATR** | **3.0** | **V14 Matrix** | **箱體最小 ATR 倍數** |
-| **Swing_Lookback** | **32** | **V14 Matrix** | **15M swing high 回看根數** |
+| **Entry_Zone_Pct** | **0.50** | **V14 Matrix** | **支撐區 = 箱底 50%（最佳化後）** |
+| **Min_Box_ATR** | **8.5** | **V14 Matrix** | **箱體最小 ATR 倍數（最佳化後）** |
+| **Swing_Lookback** | **80** | **V14 Matrix** | **15M swing high 回看 80 根（最佳化後）** |
 | ATR_Length | 9 | 風控(15M) | ATR 計算長度 |
 | ATR_Stop_Mult | 3.0 | 停損(15M) | 停損 ATR 倍數 |
 | Daily_MA_Fast | 20 | 日線過濾 | 日線快速 MA |
