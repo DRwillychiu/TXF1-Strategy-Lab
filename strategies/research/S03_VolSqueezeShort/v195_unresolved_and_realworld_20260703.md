@@ -344,3 +344,69 @@
 
 見主文 Q8 詳細表格。
 
+
+---
+
+## 附錄 B：v1.9.6-ANTIHUNT 規劃（2026-07-04 用戶 ruling）
+
+### B0. 用戶新觀察（2026-06 起夜盤現象）
+
+**Stop Hunting / Liquidity Grab**：
+- 對手方故意掃散戶程式單 stop → 行情立即反轉回原位
+- 夜盤流動性稀薄 = hunt 高發時段
+- S3_S BB 突破策略在 LowerBand 附近有 stop 密集區 → 特別容易被 hunt
+
+### B1. 反掃單 5 層設計
+
+| 層 | 機制 | 說明 |
+|----|------|------|
+| L1 | 夜盤 SL 加寬 22:00-05:00 × 1.3 | Time-based widening |
+| L2 | Confirmation SL：連 2 根 1M K close < SL 才觸發 | 過濾單根 spike |
+| L3 | Hunt Detection Log | MAE 觸 SL 後 5min 內回升的事件記錄 |
+| L4 | Fake Break Re-entry | Hunt 後回升 → 再進場（反利用）|
+| L5 | 時段風險 Modifier | Dynamic SL 依時段調整 |
+
+### B2. Round 1 立即實作項目（v1.9.6-ANTIHUNT）
+
+| 順序 | 來源 | 機制 |
+|------|------|------|
+| 1 | ⑤ L1 | 夜盤 SL 加寬 |
+| 2 | ⑤ L2 | Confirmation SL |
+| 3 | ① Bug | BWRank equal-BW guard |
+| 4 | ③ Exit | 連 2 根 60M K > MidBand |
+| 5 | ③ Exit | Peak >= ATR×0.5 才啟 Mid Exit |
+| 6 | ④ SP | Peak <100 pts 不 fire |
+| 7 | ④ SP | 夜盤 SP fire 需 Volume 確認 |
+
+### B3. Round 2 驗證項目
+
+- BWLookback 敏感度 57/95/120 三組
+- 獨立 episode 缺點測試
+- Hunt Detection Log 建立
+- Hunt Gates plateau sensitivity
+
+### B4. Round 3 進階實驗
+
+- Fake Break Re-entry
+- 時段風險 Modifier
+- Regime 動態 Exit
+- SP Slippage 補救
+
+### B5. 每次 squeeze = 獨立事件的 5 個缺點
+
+1. 繞過 Circuit Breaker（max_stops=2 失效）
+2. Fresh Thrust 每次重算（可能誤觸發二次 entry）
+3. v_Hunt_Low 被拉高
+4. 短期 6.3 天內反覆 squeeze churn
+5. 1M_Exit 剛 fire 又 arm
+
+**平衡配套**：Cooldown 期 或 Session Anti-Churn
+
+### B6. BWRank Bug 驗證方案
+
+| # | 驗證項目 | 方法 |
+|---|---------|------|
+| A | BWLookback 敏感度 | MC12 sweep 57/95/120 |
+| B | Bug 觸發頻率 | Python 讀 xlsx 計算 |
+| C | Bug 修正前後 | Guard 加後 vs 原版對比 |
+
