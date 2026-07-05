@@ -1,8 +1,11 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🟠 **v1.9.5 GA 最佳化完成，待蒙地卡羅 / WFA / 敏感度驗證**
-**當前版本**：[S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
+**狀態**：🟠 **v1.9.6-ANTIHUNT (Round 1 落實 anti-hunt L1+L2 + BWRank bug fix)，v1.9.5 為 baseline**
+**當前版本**：
+- **Baseline**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
+- **實驗**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, 7 items default OFF except BWRank guard)
+- **Spec**: [v196_ANTIHUNT_spec_20260704.md](v196_ANTIHUNT_spec_20260704.md)
 **架構**：Data1=1M（執行）, Data2=60M（訊號）, Data3=Daily（Regime）
 **Stage -1 + 用戶 ruling**: 2026-06-23 完成（4 段討論 + 4 follow-up Q&A）
 **前置**：[S3_L VolSqueezeLong](../archive/S03_VolSqueezeLong_promoted_20260620/) 已 W5 PASS + Promoted (2026-06-23)
@@ -46,7 +49,8 @@ GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）�
 | v1.9.3 | Squeeze memory 進場窗口 | 31T / -205K / FAIL |
 | v1.9.4 | Hunt state machine（取代固定窗口） | 73T / -23.8K / PF 0.97 |
 | **v1.9.5** | **Thrust margin + circuit breaker** | **68T / +513.4K / PF 1.574** |
-| v1.9.6 | Post-crash continuation hunt | 171T / +369.6K / PF 1.169 — **棄用** |
+| ~~v1.9.6~~ (舊) | Post-crash continuation hunt | 171T / +369.6K / PF 1.169 — **棄用** |
+| **v1.9.6-ANTIHUNT** | **Anti-hunt L1+L2 + BWRank bug + Exit/SP hardening (7 items)** | **待跑 Config A/B/C/D 4 組** |
 
 ### v1.9.6 棄用原因
 
