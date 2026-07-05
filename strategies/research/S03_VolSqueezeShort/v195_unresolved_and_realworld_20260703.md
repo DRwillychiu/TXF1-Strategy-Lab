@@ -294,3 +294,53 @@
 - ⏳ 實戰延伸 15 項待進一步討論
 
 **下一步決策**：**用戶 A/B/C 選一** → 執行
+
+---
+
+## 附錄 A：v1.9.5 8 大參數區塊實戰邏輯逐項驗證（2026-07-04 用戶 Q&A）
+
+### A1. BB Squeeze 偵測邏輯確認
+
+- **BBStd = 2.0**：上下各 2 個標準差（涵蓋 95.4% 常態分布）
+- **BWLookback = 120**：一天約 19 個 60M K，120/19 ≈ **6.3 交易日**
+- **用戶 2026-07-04 ruling**：6 天太寬鬆，應改 **5 天（95 K）** 或更嚴 **3 天（57 K）**
+- **BWRank 計算隱藏 bug**：當 lookback 內所有 BW 相等時，count(<) = 0 → BWRank = 0 → v_Squeeze=True 誤觸發
+  - v1.9.5 由於仍有 `Close < LowerBand` 進場 gate 攔截，未實際造成大損
+  - **建議**：加 guard `if v_BWCount = 0 and 所有 BW 相同 then v_Squeeze = False`
+
+### A2. 兩次壓縮處理原則（用戶 ruling）
+
+- **絕對當作獨立事件**（不論中間結構是否修復）
+- 目的：完整捕捉每一次交易機會，不因狀態機延續而錯失
+
+### A3. Exit 時間管理優化需求
+
+- **UseMidExit** = True + MidExit_MinBars = 2
+- 用戶 ruling：**至關重要，code 邏輯需優化至極致**
+- 目標：假 breakdown 判斷精準，不因短暫波動誤退
+
+### A4. SP Arm 實戰缺點清單
+
+1. 保護獲利 = 犧牲 upside（若行情續跌，SP 早退錯過大 profit）
+2. 反彈幅度誤判（小反彈觸發，之後又下殺）
+3. 1M K 夜盤波動觸發（夜盤稀薄可能瞬間觸及 Floor）
+4. Retain % 固定（不同波動環境同一 retain 可能不對）
+5. Slippage 不對稱（Market order fill 於 next 1M K open）
+
+### A5. P0.5 SP Fire timing
+
+- 觸發判斷：**1M K close** 反彈到 `v_SP_Floor_Price`
+- Fill：**next 1M K open at Market**
+- （不是 60M K）
+
+### A6. Hunt Quality Gates 過擬合疑慮
+
+- Thrust_Margin_ATR = 0.15：針對 T73 -93.8K case 設計
+- Hunt_Max_Stops = 2：針對 v1.9.4 9 個 churn episodes 設計
+- 都是 GA 對已知 flaw 的 targeted fix
+- **未經 sensitivity 驗證 plateau 寬度**
+
+### A7. 1M Multi-Layer Exit 實戰缺點與擴充需求
+
+見主文 Q8 詳細表格。
+
