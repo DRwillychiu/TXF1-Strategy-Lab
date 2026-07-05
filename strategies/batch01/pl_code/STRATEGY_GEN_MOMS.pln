@@ -1,0 +1,69 @@
+// ============================================================
+// STRATEGY_GEN_MOMS  (D類-動量趨勢型 / 動量弱勢空頭)
+// 主週期 Data1 = 60 min, 確認 Data2 = 日線
+// 方向：★ 做空 (Short Only) ★
+// 邏輯：RSI 從超買回落 + 均線死叉 + 日線弱勢
+//        專打反彈後續跌，補足空頭策略密度。
+// ============================================================
+inputs:
+    RSILen(14),
+    RSIOverbought(60),
+    FastMA(10),
+    SlowMA(30),
+    ATRLen(14),
+    StopATRmult(1.5),
+    TargetATRmult(3.0),
+    TrailATRmult(2.5),
+    MinRangeATR(0.8);
+
+variables:
+    v_RSI(0),
+    v_Fast(0), v_Slow(0),
+    v_ATR(0),
+    v_Prev_MP(0),
+    v_EntryPx(0),
+    v_MinSinceEntry(999999),
+    v_RSIPeak(0);
+
+v_RSI  = RSI(Close, RSILen);
+v_Fast = Average(Close, FastMA);
+v_Slow = Average(Close, SlowMA);
+v_ATR  = AvgTrueRange(ATRLen);
+
+// 追蹤近 5 根 RSI 高點
+if v_RSI > v_RSIPeak or currentbar mod 5 = 0 then v_RSIPeak = v_RSI;
+
+if MarketPosition <> v_Prev_MP then begin
+    if MarketPosition <> 0 then begin
+        v_EntryPx = EntryPrice;
+        v_MinSinceEntry = Close;
+        v_RSIPeak = 0;
+    end;
+    v_Prev_MP = MarketPosition;
+end;
+if MarketPosition = -1 and Low < v_MinSinceEntry then v_MinSinceEntry = Low;
+
+// -- 空方進場條件 (5 個以內) --
+condition1 = v_Fast < v_Slow;                             // 死叉狀態
+condition2 = v_RSI < RSIOverbought and v_RSIPeak >= RSIOverbought;  // RSI 由高處回落
+condition3 = Close of Data2 < Average(Close of Data2,20)[1];       // 日線收盤在 20MA 下
+condition4 = TrueRange >= MinRangeATR*v_ATR;              // 過濾死盤
+condition5 = Close < Close[3];                            // 短期價格向下
+
+if MarketPosition = 0 and condition1 and condition2 and condition3 and condition4 and condition5 then
+    sell short("MOMS_S") next bar at market;
+
+// -- 出場條件 --
+if MarketPosition = -1 then begin
+    buy to cover("MOMS_SL") next bar at v_EntryPx + StopATRmult*v_ATR stop;
+    buy to cover("MOMS_TP") next bar at v_EntryPx - TargetATRmult*v_ATR limit;
+    buy to cover("MOMS_TR") next bar at v_MinSinceEntry + TrailATRmult*v_ATR stop;
+
+    // 動能反轉出場
+    if v_Fast > v_Slow then
+        buy to cover("MOMS_REV") next bar at market;
+
+    // 時間出場 12 根 (12 小時)
+    if BarsSinceEntry >= 12 then
+        buy to cover("MOMS_TIME") next bar at market;
+end;

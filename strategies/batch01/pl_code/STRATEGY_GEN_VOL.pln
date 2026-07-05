@@ -1,0 +1,74 @@
+// ============================================================
+// STRATEGY_GEN_VOL  (C類-波動率型 / BB 擠壓後方向突破)
+// 主週期 Data1 = 30 min, 確認 Data2 = 日線
+// 方向：雙向
+// 邏輯：BB 帶寬壓縮 (Squeeze) 到近期低位後，
+//        跟隨突破方向做單。ATR 停損 + BB 中軌追蹤。
+// ============================================================
+inputs:
+    BBLen(20),
+    BBStdev(2.0),
+    SqueezeLookback(60),
+    SqueezePct(0.3),        // 帶寬 < 過去 60 根第 30 百分位視為擠壓
+    ATRLen(14),
+    StopATRmult(1.8),
+    TargetATRmult(3.5),
+    MomLen(10);             // 動量濾網
+
+variables:
+    v_Mid(0), v_Up(0), v_Dn(0),
+    v_BW(0), v_BWRef(0),
+    v_Squeezed(false),
+    v_ATR(0),
+    v_Mom(0),
+    v_Prev_MP(0),
+    v_EntryPx(0);
+
+v_Mid = Average(Close, BBLen);
+v_Up  = v_Mid + BBStdev*StdDev(Close, BBLen);
+v_Dn  = v_Mid - BBStdev*StdDev(Close, BBLen);
+v_BW  = (v_Up - v_Dn) / v_Mid;
+
+// 近 60 根排序取第 30 百分位 (以最小 SqueezePct 為近似)
+v_BWRef = Lowest(v_BW, SqueezeLookback) * (1 + SqueezePct);
+v_Squeezed = v_BW <= v_BWRef;
+
+v_ATR = AvgTrueRange(ATRLen);
+v_Mom = Close - Close[MomLen];
+
+if MarketPosition <> v_Prev_MP then begin
+    if MarketPosition <> 0 then v_EntryPx = EntryPrice;
+    v_Prev_MP = MarketPosition;
+end;
+
+// -- 進場條件 --
+condition1 = v_Squeezed[1] = true;                        // 前一根仍在擠壓
+condition2 = Close > v_Up and v_Mom > 0;                  // 突破上軌 + 動量正
+condition3 = Close < v_Dn and v_Mom < 0;                  // 跌破下軌 + 動量負
+condition4 = Close of Data2 > Average(Close of Data2,50)[1];  // 日線多方過濾
+condition5 = Close of Data2 < Average(Close of Data2,50)[1];  // 日線空方過濾
+
+if MarketPosition = 0 then begin
+    if condition1 and condition2 and condition4 then
+        buy("VOL_L") next bar at market;
+    if condition1 and condition3 and condition5 then
+        sell short("VOL_S") next bar at market;
+end;
+
+// -- 出場條件 --
+if MarketPosition = 1 then begin
+    sell("VOL_L_SL")  next bar at v_EntryPx - StopATRmult*v_ATR stop;
+    sell("VOL_L_TP")  next bar at v_EntryPx + TargetATRmult*v_ATR limit;
+    sell("VOL_L_Mid") next bar at v_Mid stop;             // 跌破 BB 中軌出場
+end;
+if MarketPosition = -1 then begin
+    buy to cover("VOL_S_SL")  next bar at v_EntryPx + StopATRmult*v_ATR stop;
+    buy to cover("VOL_S_TP")  next bar at v_EntryPx - TargetATRmult*v_ATR limit;
+    buy to cover("VOL_S_Mid") next bar at v_Mid stop;
+end;
+
+// 時間出場：8 根未達停利平倉
+if BarsSinceEntry >= 8 then begin
+    if MarketPosition = 1  then sell("VOL_L_TIME") next bar at market;
+    if MarketPosition = -1 then buy to cover("VOL_S_TIME") next bar at market;
+end;

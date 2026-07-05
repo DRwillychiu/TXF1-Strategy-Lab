@@ -1,0 +1,65 @@
+// ============================================================
+// STRATEGY_GEN_ZS  (E類-統計型 / Z-Score 均值回歸)
+// 主週期 Data1 = 30 min, 確認 Data2 = 60 min
+// 方向：雙向
+// 邏輯：計算 Close 相對 N 根均值的 Z-score，
+//        極端值 (|Z| > 2) 反向操作，
+//        Z 回到 0 附近平倉。60M 趨勢過濾。
+// ============================================================
+inputs:
+    ZLen(50),
+    EntryZ(2.0),
+    ExitZ(0.3),
+    StopZ(3.0),             // Z 惡化到 3 時強制停損
+    ATRLen(14),
+    StopATRmult(2.0),
+    MaxBars(20);            // 20 根未回歸時間出場
+
+variables:
+    v_Mean(0), v_Std(0), v_Z(0),
+    v_ATR(0),
+    v_Trend60(0),           // Data2 趨勢方向
+    v_Prev_MP(0),
+    v_EntryPx(0);
+
+v_Mean = Average(Close, ZLen);
+v_Std  = StdDev(Close, ZLen);
+if v_Std > 0 then v_Z = (Close - v_Mean) / v_Std;
+
+v_ATR    = AvgTrueRange(ATRLen);
+// 60M Data2 100 根均線斜率
+v_Trend60 = Average(Close of Data2, 20)[1] - Average(Close of Data2, 20)[6];
+
+if MarketPosition <> v_Prev_MP then begin
+    if MarketPosition <> 0 then v_EntryPx = EntryPrice;
+    v_Prev_MP = MarketPosition;
+end;
+
+// -- 進場條件 --
+// 過度下跌做多；過度上漲做空；只在 60M 趨勢一致時
+condition1 = v_Z <= -EntryZ and v_Trend60 >= 0;
+condition2 = v_Z >=  EntryZ and v_Trend60 <= 0;
+condition3 = v_Std > 0;
+
+if MarketPosition = 0 and condition3 then begin
+    if condition1 then buy("ZS_L") next bar at market;
+    if condition2 then sell short("ZS_S") next bar at market;
+end;
+
+// -- 出場條件 --
+if MarketPosition = 1 then begin
+    // 回歸平倉
+    if v_Z >= -ExitZ then sell("ZS_L_MR") next bar at market;
+    // Z 惡化強制停損
+    if v_Z <= -StopZ then sell("ZS_L_ZS") next bar at market;
+    // ATR 硬停損
+    sell("ZS_L_SL") next bar at v_EntryPx - StopATRmult*v_ATR stop;
+    // 時間出場
+    if BarsSinceEntry >= MaxBars then sell("ZS_L_TIME") next bar at market;
+end;
+if MarketPosition = -1 then begin
+    if v_Z <= ExitZ then buy to cover("ZS_S_MR") next bar at market;
+    if v_Z >= StopZ then buy to cover("ZS_S_ZS") next bar at market;
+    buy to cover("ZS_S_SL") next bar at v_EntryPx + StopATRmult*v_ATR stop;
+    if BarsSinceEntry >= MaxBars then buy to cover("ZS_S_TIME") next bar at market;
+end;

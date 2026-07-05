@@ -1,0 +1,72 @@
+{
+  "start": "2020-05-06",
+  "end": "2026-07-03",
+  "bars": 1499,
+  "results": {
+    "STRATEGY_GEN_ORB": {
+      "n": 85,
+      "win": 41.2,
+      "pf": 0.92,
+      "net_pts": -2462.0,
+      "net_ntd": -577383,
+      "mdd_ntd": 2915156,
+      "cagr": -100,
+      "annual_ntd": -95123,
+      "avg_win": 188283,
+      "avg_loss": -143345,
+      "wl_ratio": 1.31
+    },
+    "STRATEGY_GEN_VOL": {
+      "n": 29,
+      "win": 34.5,
+      "pf": 2.81,
+      "net_pts": 10485.0,
+      "net_ntd": 2067991,
+      "mdd_ntd": 354699,
+      "cagr": 31.8,
+      "annual_ntd": 349045,
+      "avg_win": 320768,
+      "avg_loss": -59983,
+      "wl_ratio": 5.35
+    },
+    "STRATEGY_GEN_MOMS": {
+      "n": 8,
+      "win": 37.5,
+      "pf": 0.74,
+      "net_pts": -243.0,
+      "net_ntd": -56643,
+      "mdd_ntd": 216045,
+      "cagr": -2.8,
+      "annual_ntd": -13321,
+      "avg_win": 53133,
+      "avg_loss": -43209,
+      "wl_ratio": 1.23
+    },
+    "STRATEGY_GEN_ZS": {
+      "n": 2,
+      "win": 50.0,
+      "pf": 0.45,
+      "net_pts": -535.0,
+      "net_ntd": -108944,
+      "mdd_ntd": 0,
+      "cagr": -13.9,
+      "annual_ntd": -66099,
+      "avg_win": 89965,
+      "avg_loss": -198909,
+      "wl_ratio": 0.45
+    },
+    "STRATEGY_GEN_MTF": {
+      "n": 33,
+      "win": 54.5,
+      "pf": 1.91,
+      "net_pts": 9490.0,
+      "net_ntd": 1864916,
+      "mdd_ntd": 777223,
+      "cagr": 29.3,
+      "annual_ntd": 307938,
+      "avg_win": 216998,
+      "avg_loss": -136070,
+      "wl_ratio": 1.59
+    }
+  }
+}

@@ -1,0 +1,69 @@
+// ============================================================
+// STRATEGY_GEN_MTF  (F類-多時間框架型 / 15M-日線 三重確認多方)
+// 主週期 Data1 = 15 min, 確認 Data2 = 日線
+// 方向：做多 (Long Only)
+// 邏輯：日線多頭排列 (20MA > 60MA) + 15M 短期拉回
+//        觸及 20MA 反彈做多，ATR 停損 + 追蹤停利。
+// ============================================================
+inputs:
+    ShortMA(20),
+    LongMA(60),
+    PullbackATR(0.6),       // 拉回 20MA ± 0.6*ATR 內視為觸及
+    ATRLen(14),
+    StopATRmult(1.5),
+    TargetATRmult(4.0),
+    TrailATRmult(2.5),
+    MinTrendSlope(0);
+
+variables:
+    v_SMA(0), v_LMA(0),
+    v_DailyOK(false),
+    v_ATR(0),
+    v_Prev_MP(0),
+    v_EntryPx(0),
+    v_MaxSinceEntry(0);
+
+v_SMA = Average(Close, ShortMA);
+v_LMA = Average(Close, LongMA);
+v_ATR = AvgTrueRange(ATRLen);
+
+// 日線多頭條件：20MA 上升 + 收盤在 60MA 上
+v_DailyOK = (Average(Close of Data2,20)[1] > Average(Close of Data2,60)[1])
+            and (Average(Close of Data2,20)[1] > Average(Close of Data2,20)[6] + MinTrendSlope)
+            and (Close of Data2 > Average(Close of Data2,60)[1]);
+
+if MarketPosition <> v_Prev_MP then begin
+    if MarketPosition <> 0 then begin
+        v_EntryPx = EntryPrice;
+        v_MaxSinceEntry = Close;
+    end;
+    v_Prev_MP = MarketPosition;
+end;
+if MarketPosition = 1 and High > v_MaxSinceEntry then v_MaxSinceEntry = High;
+
+// -- 進場條件 (拉回不破 20MA) --
+condition1 = v_DailyOK;
+condition2 = Low <= v_SMA + PullbackATR*v_ATR;      // 觸及/靠近 20MA
+condition3 = Close > Open;                          // 當根收紅
+condition4 = Close > v_SMA;                         // 收盤仍在 20MA 上
+condition5 = v_SMA > v_SMA[3];                      // 15M 20MA 向上
+
+if MarketPosition = 0
+   and condition1 and condition2 and condition3
+   and condition4 and condition5 then
+    buy("MTF_L") next bar at High + MinMove/PriceScale stop;
+
+// -- 出場條件 --
+if MarketPosition = 1 then begin
+    sell("MTF_SL") next bar at v_EntryPx - StopATRmult*v_ATR stop;
+    sell("MTF_TP") next bar at v_EntryPx + TargetATRmult*v_ATR limit;
+    sell("MTF_TR") next bar at v_MaxSinceEntry - TrailATRmult*v_ATR stop;
+
+    // 日線失守出場
+    if Close of Data2 < Average(Close of Data2,60)[1] then
+        sell("MTF_DailyBrk") next bar at market;
+
+    // 60 根未達停利：時間出場
+    if BarsSinceEntry >= 60 then
+        sell("MTF_TIME") next bar at market;
+end;

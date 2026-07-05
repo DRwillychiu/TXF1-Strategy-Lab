@@ -1,0 +1,91 @@
+// ============================================================
+// STRATEGY_GEN_ORB  (A類-時段型 / 開盤區間突破)
+// 主週期 Data1 = 5 min, 確認 Data2 = 日線
+// 方向：雙向 (做多 + 做空)
+// 邏輯：以開盤後 30 分鐘 (6 根 5M K) 高低點為區間，
+//        白天時段內突破做多、跌破做空。
+// ============================================================
+inputs:
+    ORMinutes(30),          // 開盤區間長度 (分鐘)
+    SessionStart(845),      // 台指期日盤開盤 08:45
+    SessionEnd(1330),       // 一般日盤收盤前結束新單
+    StopATRmult(1.5),       // ATR 停損倍數
+    TargetATRmult(3.0),     // ATR 停利倍數
+    TrailATRmult(2.0),      // 追蹤停利倍數
+    ATRLen(14),
+    ExitMinutesBeforeClose(15);
+
+variables:
+    v_ORHigh(0), v_ORLow(0),
+    v_ORDone(false),
+    v_CurDate(0),
+    v_MinutesFromOpen(0),
+    v_ATR(0),
+    v_Prev_MP(0),
+    v_EntryPx(0),
+    v_MaxSinceEntry(0), v_MinSinceEntry(999999);
+
+v_ATR = AvgTrueRange(ATRLen);
+
+// -- 日期換日重置 --
+if Date <> v_CurDate then begin
+    v_CurDate = Date;
+    v_ORHigh = 0;
+    v_ORLow  = 999999;
+    v_ORDone = false;
+end;
+
+// -- 計算開盤區間 --
+v_MinutesFromOpen = (Hour(Time)*60 + Minute(Time)) - (Hour(SessionStart)*60 + Minute(SessionStart));
+
+if v_MinutesFromOpen >= 0 and v_MinutesFromOpen < ORMinutes then begin
+    if High > v_ORHigh then v_ORHigh = High;
+    if Low  < v_ORLow  then v_ORLow  = Low;
+end
+else if v_MinutesFromOpen >= ORMinutes and v_ORDone = false then begin
+    v_ORDone = true;
+end;
+
+// -- 追蹤部位狀態 --
+if MarketPosition <> v_Prev_MP then begin
+    if MarketPosition <> 0 then begin
+        v_EntryPx = EntryPrice;
+        v_MaxSinceEntry = Close;
+        v_MinSinceEntry = Close;
+    end;
+    v_Prev_MP = MarketPosition;
+end;
+if MarketPosition = 1  and High > v_MaxSinceEntry then v_MaxSinceEntry = High;
+if MarketPosition = -1 and Low  < v_MinSinceEntry then v_MinSinceEntry = Low;
+
+// -- 進場條件 --
+// 日線 Data2 收盤在 20MA 上做多、下做空 (方向濾網)
+condition1 = Close of Data2 > Average(Close of Data2, 20)[1];
+condition2 = Close of Data2 < Average(Close of Data2, 20)[1];
+condition3 = v_ORDone and Time >= SessionStart and Time <= SessionEnd - ExitMinutesBeforeClose;
+condition4 = v_ATR > 0;
+
+if MarketPosition = 0 and condition3 and condition4 then begin
+    if condition1 then
+        buy("ORB_L") next bar at v_ORHigh + MinMove/PriceScale stop;
+    if condition2 then
+        sell short("ORB_S") next bar at v_ORLow - MinMove/PriceScale stop;
+end;
+
+// -- 出場條件 --
+if MarketPosition = 1 then begin
+    sell("ORB_L_SL") next bar at v_EntryPx - StopATRmult*v_ATR stop;
+    sell("ORB_L_TP") next bar at v_EntryPx + TargetATRmult*v_ATR limit;
+    sell("ORB_L_TR") next bar at v_MaxSinceEntry - TrailATRmult*v_ATR stop;
+end;
+if MarketPosition = -1 then begin
+    buy to cover("ORB_S_SL") next bar at v_EntryPx + StopATRmult*v_ATR stop;
+    buy to cover("ORB_S_TP") next bar at v_EntryPx - TargetATRmult*v_ATR limit;
+    buy to cover("ORB_S_TR") next bar at v_MinSinceEntry + TrailATRmult*v_ATR stop;
+end;
+
+// -- 時間出場：收盤前 15 分鐘平倉 --
+if (Hour(Time)*60 + Minute(Time)) >= (Hour(SessionEnd)*60 + Minute(SessionEnd)) - ExitMinutesBeforeClose then begin
+    if MarketPosition = 1  then sell("ORB_L_EOD") next bar at market;
+    if MarketPosition = -1 then buy to cover("ORB_S_EOD") next bar at market;
+end;
