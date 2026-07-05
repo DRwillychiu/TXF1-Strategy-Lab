@@ -2,14 +2,34 @@
 
 > 腳本名稱：_Live_Adaptive_Farmer_v19_8_BreakoutLong
 > MC 載入名稱：STRATEGY_WILLY_LONG_BREAKOUT_C
-> 版本：**v19.9 + Cooldown-D + HolidayFlat_v3 + FrozenSL + ImmediateStop**
+> 版本：**v19.8 + Pre-Trail SP + HolidayFlat_v3 + FrozenSL + ImmediateStop**
 > 平台：MultiCharts 9.0 PowerLanguage x64
-> 狀態：**READY**（v19.9 GA 驗證完成，ATR_Stop_Mult 高原確認，待部署）
+> 狀態：**PRODUCTION**（v19.8 上架版，SP=0 關閉）
 > 口數：**1 口**（100 萬本金）
 
 ---
 
-## v19.9 變更（2026-06-25）
+## v19.9 實驗結果（2026-07-05 裁定：REJECTED）
+
+v19.9 做了三項變更：Cooldown-D 同箱封鎖、GA Trail 參數優化、Stage1 BE 保護。
+全部在 MC9 A/B 測試中 **FAILED**，.pla 回退至 v19.8 production。
+
+| 版本 | 交易數 | PF | 淨利 | WR | 裁定 |
+|------|:------:|:---:|-----:|:---:|:----:|
+| v19.8 production | 159 | 1.851 | +1,708K | 56.6% | **RETAINED** |
+| v19.9 BE OFF | 95 | 1.033 | +50K | 50.5% | FAILED |
+| v19.9 BE ON | 100 | 0.986 | -19K | 41.0% | FAILED |
+
+**失敗原因**：
+1. Cooldown-D + GA Trail 組合在當前資料上 PF 從 1.85 降至 1.03
+2. Stage1 BE 殺死漂移 alpha（TimeExit 利潤 -147K > SL 節省 +90K），PF 跌破 1.0
+3. L26 教訓：BE 保護與漂移收割策略互斥 — L5 靠 TimeExit drift 獲利，不靠突破
+
+v19.9 .pla 保留在 git 歷史中（commit cca5326 之前），不部署。
+
+---
+
+## v19.9 變更歷史（歸檔參考）
 
 ### 1. 1 口簡化：移除 dead code
 
@@ -95,52 +115,29 @@ Stage 2:    Trail（4 階動態）> BE（進場價）
 
 ---
 
-## MC9 回測績效（v19.9 validated 2026/06/25）
-
-| 指標 | v19.8 基準（無冷卻） | **v19.9 驗證版** |
-|------|:-------------------:|:----------------:|
-| 初始資金 | 1,000,000 NTD | 1,000,000 NTD |
-| 滑價 | 1,000 NTD/口 RT | 1,000 NTD/口 RT |
-| 總交易次數 | 182 | **93** |
-| 勝率 | 44.5% | **60.2%** |
-| Profit Factor | 1.553 | **2.680** |
-| 淨利 | +1,049,200 NTD | **+1,361,400 NTD** |
-| 毛利 | ~2,946,200 NTD | +2,171,600 NTD |
-| 毛損 | ~-1,897,000 NTD | -810,200 NTD |
-| MDD | -336,200 (-22.1%) | **-201,600 (-20.2%)** |
-| SL 出場 | 84 | **20** |
-| Trail 出場 | 18 | **9** |
-| TimeExit 出場 | 76 | **61** |
-| Cluster（虧損） | 27 個 / 73 筆 / -719,400 | **0 個 / 0 筆 / +0** |
-| Top-10 集中度 | — | 92.6% |
-
-### 交易分析
+## MC9 回測績效（v19.8 production, 2026/07/05 確認）
 
 | 指標 | 數值 |
 |------|------|
-| 平均獲利交易 | +38,778 NTD |
-| 平均虧損交易 | -21,897 NTD |
-| 盈虧比 | 1.771 |
-| 最大單筆獲利 | +340,800 NTD（2026/04/07） |
-| 最大單筆虧損 | -104,600 NTD |
+| 初始資金 | 1,000,000 NTD |
+| 滑價 | 1,000 NTD/口 RT |
+| 總交易次數 | 159 |
+| 勝率 | 56.6% |
+| Profit Factor | 1.851 |
+| 淨利 | +1,708,200 NTD |
+| 毛利 | +3,715,800 NTD |
+| 毛損 | -2,007,600 NTD |
+| MDD | -539,200 (-19.6%) |
+| 最大單筆獲利 | +376,400 NTD |
+| 最大單筆虧損 | -252,200 NTD |
+| 年報酬率 | 35.0% |
+| Sharpe | 0.862 |
 
-### GA 驗證紀錄（2026-06-25）
+### GA 驗證紀錄（2026-06-25, 歸檔參考）
 
-GA 多參數優化選出 ATR_Stop_Mult = 2.5（Net +772,600, PF 1.706）。
-ATR_Stop_Mult 敏感度掃描推翻此結論：
-
-| ATR_Stop_Mult | 淨利 | PF | MDD | 判定 |
-|:---:|---:|:---:|---:|:---:|
-| 4.5 | +1,361,400 | 2.680 | -201,600 | **峰值** |
-| 3.5 | +1,304,400 | 2.616 | -201,600 | 高原 |
-| 5.0 | +1,295,000 | 2.485 | -209,400 | 高原 |
-| 4.0 | +1,212,200 | 2.440 | -201,600 | 高原 |
-| 3.0 | +1,086,600 | 2.175 | -201,600 | 邊緣 |
-| 2.5 | +772,600 | 1.706 | -217,600 | 斷崖 |
-
-結論：**3.5-5.5 為高原（PF 2.4-2.7），ATR_Stop_Mult 維持 4.5**。
-GA 改的 Trail 參數保留（Trail_Start_Mult=1, Trail_Mult_0=3.5 等），
-僅 ATR_Stop_Mult 回復原值。
+v19.9 GA 在當時資料切點顯示 PF 2.680 / Net +1,361K，但 2026-07-05 以當前資料重跑
+v19.9（Cooldown-D + GA Trail）僅得 PF 1.033 / Net +50K，**遠低於 v19.8 production**。
+GA Trail 參數（Trail_Start_Mult=1, MFE_ATR_Tier_1=2.5 等）不採用。
 
 ---
 
@@ -173,38 +170,36 @@ GA 改的 Trail 參數保留（Trail_Start_Mult=1, Trail_Mult_0=3.5 等），
 
 ---
 
-## 出場邏輯（v19.9 簡化版）
+## 出場邏輯（v19.8 production）
 
-### Stage 1：盤整中（SL + TimeExit）
+### Stage 1：全倉（SL + SP + TimeExit）
 | 機制 | 條件 |
 |------|------|
 | 初始停損 | Box_Btm/Mid - Frozen_ATR × 4.5（Stop） |
-| 時間停損 | 持倉 ≥ 30 根 K 棒 → 市價出場 |
+| SP 保護 | SP_Trigger_Pts=0（永久關閉，所有 A/B 變體 FAILED） |
+| 時間停損 | 持倉 ≥ 31 根 K 棒 → 市價出場 |
 
-### Stage 2：突破盤整（4 階動態追蹤）
+### Stage 2/3：Scale-Out 後（Trail + SP + BE）
 ```
-啟動：盤整箱體被打破（日線突破 Box_Top 或 Box_Btm）
-追蹤停損倍數隨 MFE 距離動態調整：
+啟動：價格突破 Box_Top + ATR × 2.5（Trail_Start_Mult）
+追蹤停損倍數隨 MFE 距離動態調整（硬編碼）：
 
 MFE 距離          追蹤倍數    含義
-< ATR × 2.5      3.5 ATR    寬鬆，讓利潤成長
-≥ ATR × 2.5      2.0 ATR    收緊
-≥ ATR × 6.0      2.0 ATR    維持
-≥ ATR × 11.0     1.0 ATR    收緊，鎖住大部分利潤
+< ATR × 3.0      3.0 ATR    寬鬆
+≥ ATR × 3.0      2.0 ATR    收緊
+≥ ATR × 6.0      1.5 ATR    再收緊
+≥ ATR × 10.0     0.8 ATR    鎖住大部分利潤
 
-追蹤停損 = 最高點 - ATR × 動態倍數
+優先序：Trail > SP > BE（最高停損勝出）
 若追蹤停損 < 進場價 → 改用打平停損（BE）
 ```
 
-### Cooldown-D（進場冷卻）
-```
-同箱封鎖：上次出場的 Box 仍在 → 禁止進場（硬規則）
-新箱冷卻：新 Box 但距上次出場 < Cooldown_Bars 根 → 等待
-```
+注意：1 口操作下 Scale-Out = Round(1×0.4) = 0，Stage 2/3 不觸發。
+實際出場路徑為 Stage 1 的 SL / TimeExit + BreakExit。
 
 ---
 
-## 參數一覽
+## 參數一覽（v19.8 production）
 
 | 參數 | 值 | 模組 | 說明 |
 |------|-----|------|------|
@@ -215,18 +210,16 @@ MFE 距離          追蹤倍數    含義
 | ATR_Length | 35 | 共用 | ATR 計算長度 |
 | ATR_Stop_Mult | 4.5 | 停損 | 初始停損 ATR 倍數 |
 | FrontRun_Ticks | 5 | 進場 | 前搶 tick 數 |
-| Time_Stop_Bars | 30 | 停損 | 時間停損 K 棒數 |
-| Trail_Start_Mult | 1 | MFE | 追蹤啟動 ATR 倍數 |
-| MFE_ATR_Tier_1 | 2.5 | MFE | 第一階收緊門檻 |
+| Time_Stop_Bars | 31 | 停損 | 時間停損 K 棒數 |
+| ScaleOut_Percent | 0.4 | 分批 | Scale-Out 比例（1 口 = 0，不觸發） |
+| Trail_Start_Mult | 2.5 | MFE | 追蹤啟動 ATR 倍數 |
+| MFE_ATR_Tier_1 | 3.0 | MFE | 第一階收緊門檻 |
 | MFE_ATR_Tier_2 | 6.0 | MFE | 第二階收緊門檻 |
-| MFE_ATR_Tier_3 | 11 | MFE | 第三階收緊門檻 |
-| Trail_Mult_0 | 3.5 | MFE | Tier 0 追蹤寬度（MFE < Tier_1） |
-| Trail_Mult_1 | 2.0 | MFE | Tier 1 追蹤寬度 |
-| Trail_Mult_2 | 2 | MFE | Tier 2 追蹤寬度 |
-| Trail_Mult_3 | 1 | MFE | Tier 3 追蹤寬度 |
+| MFE_ATR_Tier_3 | 10.0 | MFE | 第三階收緊門檻 |
 | Weekly_MA_Fast | 20 | 週線 | 週線快速 MA |
 | Weekly_MA_Slow | 60 | 週線 | 週線慢速 MA |
-| Cooldown_Bars | 3 | 冷卻 | 新箱冷卻等待 bar 數（GA 1-10） |
+| SP_Trigger_Pts | 0 | SP | 永久關閉（A/B 全 FAIL） |
+| SP_Retain_Pct | 50 | SP | SP=0 時無效 |
 
 ---
 
@@ -247,8 +240,8 @@ MFE 距離          追蹤倍數    含義
 
 1. **盤整箱體偵測**：日線自動辨識波動收縮（≤ 60%），不依賴主觀判斷
 2. **雙進場區域**：底部和中線兩個接球點，提高進場機會
-3. **MFE 4 階追蹤（God Mode）**：隨利潤增長自動收緊停損，從 3.5 ATR 收到 1.0 ATR
-4. **Cooldown-D 冷卻機制**：同箱永久封鎖 + 新箱時間冷卻，杜絕 cluster churn
-5. **AND 週線過濾**：比 L1 的 OR 過濾更嚴格，確保多頭環境確立才進場
-6. **時間過濾**：凌晨 4-5 點和週六不進場
-7. **Frozen SL**：進場根鎖定 ATR，停損不漂移
+3. **MFE 4 階追蹤（God Mode）**：隨利潤增長自動收緊停損，從 3.0 ATR 收到 0.8 ATR（硬編碼）
+4. **AND 週線過濾**：比 L1 的 OR 過濾更嚴格，確保多頭環境確立才進場
+5. **時間過濾**：凌晨 4-5 點和週六不進場
+6. **Frozen SL**：進場根鎖定 ATR，停損不漂移
+7. **HolidayFlat v3**：63 筆 TAIFEX 登錄表 + 04:15 強制歸零
