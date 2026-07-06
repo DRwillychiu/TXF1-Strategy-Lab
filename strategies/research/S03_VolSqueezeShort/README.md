@@ -1,11 +1,16 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🟢 **v1.9.6 Config B + OPT — Rule #18 全套 PASS (2026-07-06)，Portfolio Correlation NEXT (final gate)**
-**當前版本**：
-- **Active**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, Config B + optimized defaults)
-- **Baseline (archived)**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
-- **Spec**: [v196_ANTIHUNT_spec_20260704.md](v196_ANTIHUNT_spec_20260704.md)
+**狀態**：🚀 **v1.9.6-OPT PROMOTED (2026-07-06)** — 已升級部署 live_simulation 取代 v1.8.0-PROD
+**當前部署版本**：
+- **Live simulation**: [../../live_simulation/S3_S_VolSqueezeShort.pla](../../live_simulation/S3_S_VolSqueezeShort.pla) (v1.9.6-OPT-PROD)
+- **Deployment**: [../../live_simulation/S3_S_VolSqueezeShort_DEPLOYMENT.md](../../live_simulation/S3_S_VolSqueezeShort_DEPLOYMENT.md)
+- **Promotion Report**: [PROMOTION_20260706.md](PROMOTION_20260706.md)
+
+**Research 版本（研究保留）**：
+- Research: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC)
+- Baseline: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
+- Spec: [v196_ANTIHUNT_spec_20260704.md](v196_ANTIHUNT_spec_20260704.md)
 **架構**：Data1=1M（執行）, Data2=60M（訊號）, Data3=Daily（Regime）
 **Stage -1 + 用戶 ruling**: 2026-06-23 完成（4 段討論 + 4 follow-up Q&A）
 **前置**：[S3_L VolSqueezeLong](../archive/S03_VolSqueezeLong_promoted_20260620/) 已 W5 PASS + Promoted (2026-06-23)

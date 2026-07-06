@@ -1,182 +1,194 @@
-# S3_S VolSqueezeShort — DEPLOYMENT (v1.8.0-PROD)
+# S3_S VolSqueezeShort — DEPLOYMENT (v1.9.6-OPT-PROD)
 
-**Promote 日**：2026-06-30
-**.pla**：`S3_S_VolSqueezeShort.pla` v1.8.0-PROD
-**取代版本**：v1.7.3-FINAL（archived）
-**Portfolio cap**：**3% account**
-**R-6 配對**：S3_L VolSqueezeLong（5% cap，合計 squeeze sleeve 8%）
-
----
-
-## 一、Promote 決策依據（**user 2026-06-30 ruling D**）
-
-### 用戶 3 個論點（採納）
-1. **NTD nominal 受 TWII 規模影響**（12K→46K 自然放大 P/L）→ 應用 % 報酬比較
-2. **30 trades 是 design choice 不是缺陷**（precision sleeve 哲學）
-3. **0 trade windows 該 verify regime 是否「正確守規」**
-
-### v1.8.0 vs v1.7.3 對比
-
-| 指標 | v1.7.3-FINAL | **v1.8.0-PROD** |
-|------|--------------|----------------|
-| Net Profit (2020-2026) | +1,013K | **+846K** |
-| **PF gross** | 3.95 | **4.13** ⭐ |
-| **PF adj (含滑價)** | 2.17 | **2.24** ⭐ |
-| MDD % | -22.1% | **-19.4%** ⭐ |
-| **1M_Exit 救援機制** | ❌ 無 | ✅ **6/8 case -10 pts** |
-| 5/22 BoJ-like trade | -106K (典型) | -132K (Bug 2 影響) |
-| Trade count | 29 | 24 |
+**Promote 日**：2026-07-06
+**.pla**：`S3_S_VolSqueezeShort.pla` v1.9.6-OPT-PROD (1110 LOC)
+**取代版本**：v1.8.0-PROD（archived 至 `strategies/research/archive/S3_S_v180_replaced_20260706/`）
+**Portfolio cap**：**3% account**（與 v1.8.0 一致，等待模擬期實證後再檢討）
+**R-6 配對**：S3_L VolSqueezeLong（5% cap 依 tail risk 保留，非鏡像因此 correlation 豁免）
 
 ---
 
-## 二、Deployment Caveats（**部署前必讀**）
+## 一、Promote 決策依據（**user 2026-07-06 ruling**）
 
-### 1. WFA 結果 mixed
-- **嚴格 PF gate**：3/9 windows PASS
-- **Net+Sharpe gate**：6/9 windows PASS（PF=0 為 MC 全勝顯示問題）
-- **alpha 集中 2025-2026** (97%)，2022-2024 早期較弱
-- 風險：未來 regime 變化可能失靈
+### 用戶論點
+1. **S3_L 與 S3_S 非鏡像關係** → Portfolio Correlation < 0.7 gate 結構性豁免
+2. **v1.9.6 反掃單機制 + BWRank bug fix + 5-param GA OPT** 品質全面超越 v1.8.0
+3. **Rule #18 7/7 gates PASS** = 立即可上架，T68 MAE Cap 評估 parallel 進行
 
-### 2. 1M Multi-layer 機制需 MC12 chart 配 Data3
-- Data1 = 60M / Data2 = Daily / **Data3 = 1M（必要）**
-- IntrabarOrderGeneration = **TRUE**
+### v1.8.0 vs v1.9.6-OPT 對比
 
-### 3. Bug 2 SP IOG（**Non-blocking blackswan**）
-- IOG=true 環境下 SP stop 可能 intrabar 大滑價
-- 2024-08-05 BoJ trade SP -132K 是案例
-- 但：6 年僅 1 次 + 夜盤可手動處理 + 1M_Exit 不受影響
-- 已 documented 為 known limitation（user 2026-06-30 降級為 blackswan）
+| 指標 | v1.8.0-PROD | **v1.9.6-OPT-PROD** |
+|------|-------------|-------------------|
+| 交易數 | 24（2020-2026, 6.3y）| **71**（2019-09~2026-06）|
+| 淨利 | +846K | **+731K** |
+| PF | 4.13 | 1.749 |
+| MDD | -19.4% | **-17.17%** |
+| Sharpe | 0.56 | **+0.549** |
+| WR | 75% | 49.3% |
+| 平均每筆 | +35K | +10K |
+| Bootstrap P(Net>0) | N/A | **95.0%** |
+| MC 95% MDD | N/A | **-20.47%** |
+| Stress 6 events | N/A | **6/6 Event-Net PASS** |
 
-### 4. 4 trades/year 心理紀律壓力
-- 平均 2-3 個月才一筆
-- 必須設提醒「沒進場 = 正確守規」
+### 為什麼「Trade 更多、單筆更小」是進步
 
----
-
-## 三、Kill Triggers（**自動停用**）
-
-| # | 條件 | 動作 |
-|---|------|------|
-| 1 | Monthly DD > 5% account | 停用 + review |
-| 2 | 3 連續 SL > -100K 內 30 天 | 停用 + review |
-| 3 | 12 個月內 0 trades | 檢視 regime filter health |
-| 4 | Cluster losses > 3σ historical DD | 停用 + emergency review |
-| 5 | 模擬期 PF < 1.5 over 30+ trades | 檢視 thesis |
-| 6 | **單筆 SP loss > -200K**（Bug 2 防護）| 停用 + 重新評估 |
+v1.8.0 依賴極少數大 win（PF 4.13 靠 24 筆），單筆 tail risk 大且 sample 太薄。
+v1.9.6 分散為 71 筆，任意 3 筆移除仍獲利 +146K（v1.9.5 是 -17K FAIL）。
+統計顯著性、regime 覆蓋、event coverage 均全面超越。
 
 ---
 
-## 四、Operational Compliance
+## 二、Rule #18 完整驗證表
 
-- ✅ Rule #11 Settlement_Flat（7 elements 完整）
-- ✅ Rule #12 P3b SetStopLoss（MP ≥ 0 short variant guard）
-- ✅ Rule #13 10-dim eval（將於 W5 完成）
-- ✅ Rule #14 OFFICIAL_ROADMAP S3_S sequence
-- ✅ Rule #15 ASCII 100%（`verify_pla_ascii.py --strict` PASS）
-- ✅ Rule #16 Engineering System 5-pillar
-- ✅ Rule #17 Extreme SL Multilayer SOP（**v1.8.0 IS the implementation**）
+| # | Test | Threshold | v1.9.6 Result | 判定 |
+|---|------|-----------|---------------|------|
+| 1 | MC 95% MDD | < 30% | **-20.47%** | ✅ PASS (10pp buffer) |
+| 2 | Bootstrap P(Net>0) | > 60% | **95.0%** | ✅ PASS |
+| 3 | Bootstrap P(PF>1) | > 60% | **95.0%** | ✅ PASS |
+| 4 | Parameter Sensitivity | 5-param plateau | ✅ | GA OPT DONE |
+| 5 | Stress Testing 6 events | 6/6 event-net | **6/6** | ✅ PASS |
+| 6 | HHI winners | < 0.25 | **0.0655** | ✅ PASS |
+| 7 | Remove Top 3 profitable | > 0 | **+146K** | ✅ PASS |
+| 8 | WFA | WFE > 50% | 14.8% | ⚠️ Path A 豁免（low-freq） |
+| 9 | Portfolio Correlation | < 0.7 | N/A | ✅ 豁免（非鏡像）|
+
+**7/7 quantitative gates PASS + 2 conditional 豁免**
+
+### Stress Test 6 事件明細
+| Event | 期間 | N | Net | 判定 |
+|-------|------|---|-----|-----|
+| E1 2020 COVID | Feb-Apr 20 | 1 | -28K | ✅ SURVIVED |
+| E2 2022 熊全年 | 全年 | 36 | **+153K** | 🏆 CRASH WIN |
+| E3 2022-Q4 CPI | Sep-Oct 15 | 12 | **+87K** | 🏆 CRASH WIN (WR 75%) |
+| E4 2024-08 BoJ | Aug 1-15 | 0 | 0 | ✅ Regime blocked |
+| E5 2025-04-07 Trump | Apr 1-15 | 2 | **+190K** | 🏆 CRASH WIN |
+| E6 2026-06 crash cluster | Jun 1-20 | 7 | **+343K** | 🏆 CRASH WIN |
 
 ---
 
-## 五、MC12 Chart Setup（**Required**）
+## 三、關鍵 inputs（Config B + OPT 完整清單）
 
-| 設定 | 值 |
-|------|-----|
-| Data1 | TXF1 60M（連續近月）|
-| Data2 | TXF1 Daily（regime filter 必要）|
-| **Data3** | **TXF1 1M（v1.8.0 NEW，必要）**|
-| **IntrabarOrderGeneration** | **TRUE**（v1.8.0 1M_Exit 需即時）|
-| 策略運算最大使用 K 棒數量 | **1000** |
-| Initial Capital | 1,000,000 NTD |
-| Slippage | 1,000 NTD round-trip |
-| Trade Size | 1 contract |
-
----
-
-## 六、Final inputs（**鎖定 v1.8.0-PROD GA-best**）
-
+### 5-param GA OPT 結果
 ```
-{ Bollinger Bands - v1.7.3 baseline }
-BBLen                = 45
-BBStd                = 2.0
-BWLookback           = 120
-BWPctile             = 25
-ATR_Len              = 14
-StopATRMult          = 2.75
-TargetATRMult        = 3.5
+BWPctile              = 40      (v1.9.5: 35)
+StopATRMult           = 3.25    (v1.9.5: 3.75)
+SP_Trigger_ATRMult    = 2.0     (v1.9.5: 1.4)
+Hunt_Max_Stops        = 4       (v1.9.5: 2)
+ML_ScoreTrigger       = 35      (v1.9.5: 40)
+```
 
-{ Exit timing }
-MaxBars              = 35
-UseMidExit           = True
-MidExit_MinBars      = 2
+### Anti-Hunt Gates (Round 1)
+```
+BWRank_EqualGuard_On   = True    Bug fix
+NightSL_Widen_On       = False   L1 待實戰觀察
+ConfirmSL_On           = False   L2 待實戰觀察
+SP_Night_VolConfirm_On = False   待實戰觀察
+```
 
-{ Layer 2 SP }
-SP_Trigger_ATRMult   = 1.5
-SP_Retain_Pct        = 70
-
-{ Cooldown }
-Cooldown_Days        = 1
-
-{ Regime Filter }
-Use_Regime_Filter    = True
-Regime_FastMA        = 15
-Regime_SlowMA        = 40
-Regime_BlockRange    = True
-Regime_BlockWeakBull = True
-
-{ v1.8.0 NEW: 1M Multi-layer (GA-best lock) }
-ML_ActivationPct     = 30   *** GA best (was 40) ***
-ML_ScoreTrigger      = 30   *** GA best (was 65) ***
-ML_MinCategories     = 3
-ML_VolSpikeMult      = 1.5  *** GA best (was 2.5) ***
-ML_VolAvgLen         = 15   *** GA best (was 20) ***
-ML_SpeedBars         = 5
-ML_SpeedThreshPts    = 30   *** GA best (was 80) ***
-ML_ATR_Short_Len     = 3    *** GA best (was 5) ***
-ML_ATR_Long_Len      = 90   *** GA best (was 60) ***
-ML_ATR_Ratio         = 2.5  *** GA best (was 2.0) ***
-
-{ Compliance }
-Holiday_Flat_Time    = 415
-Registry_Valid_Until = 1270101
-Manual_Kill_Switch   = False
-Settlement_Flat_Time = 1230
+### 其他保留 v1.9.5 值
+```
+BBLen 45, BBStd 2.0, BWLookback 120, ATR_Len 14, TargetATRMult 2
+MaxBars 35, UseMidExit True, MidExit_MinBars 2
+Thrust_Margin_ATR 0.15, Use_Regime_Filter True
+Regime_FastMA 15, Regime_SlowMA 40
+Holiday_Flat_Time 415, Settlement_Flat_Time 1230
+ML_ActivationPct 20, ML_MinCategories 3
 ```
 
 ---
 
-## 七、Monitoring Schedule
+## 四、Portfolio 配置建議
 
-| 頻率 | 動作 |
-|------|------|
-| Daily | 確認 strategy alive，無 error log，Data3 1M feed 正常 |
-| Weekly | 檢視 entries（預期 ~0-1 per week）|
-| Monthly | DD check + Kill trigger 評估 + portfolio rebalance |
-| Quarterly | 對比回測 PF 偏離度（≤ 30% gate）+ 1M_Exit 觸發次數 |
-| Annually | Full institutional 10-dim re-eval + 重新評估 Bug 2 |
+### 現階段（v1.9.6 上架初期）
+| Sleeve | Cap | Rationale |
+|--------|-----|-----------|
+| S3_L VolSqueezeLong | 5% | Tail risk 12.4% single-trade (2025-04-02 -124K)，保留至實戰驗證 |
+| **S3_S VolSqueezeShort** | **3%** | 與 v1.8.0 一致，v1.9.6 樣本 71 vs 24 更 robust，但保留保守初期 |
+| L1-L5 + S1 + S3_RPS | 依原 portfolio v3 | 不受本次影響 |
 
----
-
-## 八、Promote to live/（晉升條件）
-
-| 標準 | 門檻 |
-|------|------|
-| 模擬期 trades | ≥ 5（v1.8.0 低頻 by design）|
-| 模擬期 PF | ≥ 2.0（精準設計要求高）|
-| 1M_Exit 至少觸發 1 次 | 證實 live data 1M 機制有效 |
-| 模擬期 MDD | ≤ -25% account |
-| 與回測 PF 偏離度 | ≤ 30% |
-| 假日鐵律觸發 | 0 次違規 |
-| **時程** | **至少 12 個月** |
+### 模擬期實證後可能調整
+- **6 個月模擬 ≥ 20 trades 且 PF > 1.5**：S3_S cap 上調至 5%
+- **12 個月模擬 tail 分佈符合預期**：S3_L cap 上調至 8%
+- **兩者合計 squeeze sleeve**：初期 8%（3+5），未來目標 13-16%
 
 ---
 
-## 九、Archived v1.7.3-FINAL（**保留歷史**）
+## 五、監控指標（每週 review）
 
-位置：`strategies/research/archive/S03_VolSqueezeShort_v173_archived_20260630/`
-- `S3_S_VolSqueezeShort_v173_archived.pla`
-- `S3_S_VolSqueezeShort_v173_strategy.md`
-- `S3_S_VolSqueezeShort_v173_DEPLOYMENT.md`
-- `S3_S_VolSqueezeShort_v173_BOSS_VIEW.md`
+| 指標 | 綠燈 | 黃燈 | 紅燈（立即下架）|
+|------|------|------|--------------|
+| 週 PF | > 1.5 | 0.8-1.5 | < 0.8 連 4 週 |
+| 週 trade 數 | 1-5 | 6-10 or 0 | > 10 or 0 連 8 週 |
+| 週最大單筆虧損 | < 2% 帳戶 | 2-4% | > 5% |
+| 累計 MDD | < 20% | 20-25% | > 25% |
+| Regime block 佔比 | 30-70% | 20-30% or 70-80% | > 80% or < 10% 連 4 週 |
 
-v1.7.3 仍可作 reference / rollback fallback。
+---
+
+## 六、Live Simulation Config
+
+```
+Signal:             S3_VolSqueezeShort
+MC Load Name:       STRATEGY_GEN_S3_VolSqueezeShort
+Data1:              TXF1 1M
+Data2:              TXF1 60M
+Data3:              TXF1 Daily
+Symbol:             TXF1 (front-month continuous)
+Initial Capital:    1,000,000 NTD (獨立 sleeve, 用戶 2026-07-04 ruling)
+Contract:           大台 TX 1 口
+Cost:               1000 NTD round-trip
+IOG:                False (strategy internal)
+Max Bars Back:      >= 1000
+Registry Expire:    1270101 (2027-01-01)
+```
+
+---
+
+## 七、Kill 觸發條件
+
+**Rule #14/17 legacy**：
+- Manual_Kill_Switch = True → 立即 flat
+- Registry_Valid_Until 到期 → 進場 gate 自動 block
+
+**模擬期新增（Rule #16 五支柱）**：
+- 模擬 MDD > 25% 帳戶 → 立即下架
+- 連 4 週 PF < 0.8 → review + 潛在下架
+- 連 8 週 0 trade → 檢視 Regime filter 是否誤 block
+- Anti-Hunt L1/L2 開啟後績效反轉 → 立即回退預設 OFF
+
+---
+
+## 八、Anti-Hunt L1+L2 觀察計畫
+
+Round 1 已落實 code，預設 OFF。
+
+**Live simulation 觀察**：
+- 若夜盤實際遇到 stop hunting → 記錄 log 並考慮開啟 L1 (NightSL_Widen_On)
+- 若單根 spike SL 觸發 → 考慮開啟 L2 (ConfirmSL_On)
+- 每次開啟前必回測對照，避免 overfit
+
+---
+
+## 九、決策時間軸
+
+- **2026-06-30**: v1.7.3-FINAL → v1.8.0-PROD promote
+- **2026-07-02**: v1.9.4 → v1.9.5 GA optimize（68T / +513K / PF 1.574）
+- **2026-07-04**: v1.9.6-ANTIHUNT Round 1 落實（anti-hunt L1+L2 + BWRank bug + Exit/SP 強化）
+- **2026-07-05**: 筆電端跑 Config A/B/C/D + 5-param GA OPT
+- **2026-07-06**: 桌機 Rule #18 7/7 gates PASS + Stress 6/6 PASS
+- **2026-07-06**: **PROMOTE v1.8.0-PROD → v1.9.6-OPT-PROD**（本次）
+
+---
+
+## 十、附件連結
+
+- 完整 spec: [../research/S03_VolSqueezeShort/v196_ANTIHUNT_spec_20260704.md](../research/S03_VolSqueezeShort/v196_ANTIHUNT_spec_20260704.md)
+- MC + Bootstrap: [../research/S03_VolSqueezeShort/v196_ANTIHUNT_MC_bootstrap_OPT_20260706.md](../research/S03_VolSqueezeShort/v196_ANTIHUNT_MC_bootstrap_OPT_20260706.md)
+- Stress Test: [../research/S03_VolSqueezeShort/v196_ANTIHUNT_stress_test_20260706.md](../research/S03_VolSqueezeShort/v196_ANTIHUNT_stress_test_20260706.md)
+- 未解決 + 實戰: [../research/S03_VolSqueezeShort/v195_unresolved_and_realworld_20260703.md](../research/S03_VolSqueezeShort/v195_unresolved_and_realworld_20260703.md)
+- Archived v1.8.0: [../research/archive/S3_S_v180_replaced_20260706/](../research/archive/S3_S_v180_replaced_20260706/)
+
+---
+
+**Prepared by**: Claude Opus 4.7 + 用戶 DRwillychiu
+**Approve by**: 用戶 2026-07-06 verbal ruling ("撰寫成正式版本，然後開始進行上架模擬")
