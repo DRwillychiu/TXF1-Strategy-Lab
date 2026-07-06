@@ -104,7 +104,7 @@ Config A + NightSL_Widen_On = True + ConfirmSL_On = True
 | 2 | Bootstrap Resampling | 89.3% ✅ PASS | **95.0% ✅ PASS** (+5.7pp) |
 | 3 | Parameter Sensitivity | ❌ 未跑 | ✅ DONE (5-param GA OPT) |
 | 4 | Walk-Forward Analysis | ❌ 未跑 | ⚠️ Conditional FAIL (Path A 豁免) |
-| 5 | Stress Testing 6 events | ❌ 未跑 | 🎯 **NEXT** |
+| 5 | Stress Testing 6 events | ❌ 未跑 | ✅ **6/6 Event-Net PASS** |
 
 ### 額外 Concentration gates (Rule #13 相關)
 
@@ -113,7 +113,18 @@ Config A + NightSL_Widen_On = True + ConfirmSL_On = True
 | 6 | HHI winners < 0.25 | 0.077 ✅ | **0.0655 ✅** |
 | 7 | Remove Top 3 profitable | -17.2K ❌ | **+146.4K ✅** |
 
-**綜合**：**5/5 Non-WFA gates PASS**（含 concentration 7/7 gates PASS + 1 conditional Path A）
+**綜合**：**7/7 quantitative gates PASS + 1 conditional (WFA Path A)** 🏆
+
+### Stress Test 6 Events Summary (2026-07-06)
+
+| Event | Net | Verdict |
+|-------|-----|---------|
+| E1 2020 COVID | -28K | ✅ SURVIVED (2.8%) |
+| E2 2022 熊全年 | +153K | 🏆 CRASH WIN |
+| E3 2022-Q4 CPI | +87K | 🏆 CRASH WIN (WR 75%) |
+| E4 2024-08 BoJ | 0 | ✅ Regime blocked correctly |
+| E5 2025-04-07 Trump | +190K | 🏆 CRASH WIN |
+| E6 2026-06 crash cluster | +343K | 🏆 CRASH WIN |
 
 ---
 

@@ -1,7 +1,7 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🟢 **v1.9.6 Config B + OPT — Rule #18 MC+Bootstrap 5/5 PASS (2026-07-06)，Stress Testing NEXT**
+**狀態**：🟢 **v1.9.6 Config B + OPT — Rule #18 全套 PASS (2026-07-06)，Portfolio Correlation NEXT (final gate)**
 **當前版本**：
 - **Active**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, Config B + optimized defaults)
 - **Baseline (archived)**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
@@ -102,9 +102,16 @@ OPT 結果：**70T / +770,800 / PF 1.823 / MDD -16.02% / 年化 11.31%**
    - Bootstrap P(PF>1) = 95.0% ✅ (v1.9.5 89.3% → +5.7pp)
    - HHI = 0.0655 ✅ (v1.9.5 0.077 → 更 diverse)
    - Remove Top 3 = +146.4K ✅ (v1.9.5 -17.2K ❌ → +163.6K 改善)
-5. 🎯 **Stress Testing 6 events** — ★ NEXT (2020 COVID / 2022 熊 / 2024 BoJ / 2025-04-07 / 2026-06 crash cluster)
-6. **Portfolio Correlation vs S3_L** — 在 promote 前最後測
-7. **T68 V 轉保護評估** — 2026-06-08 -120K 單筆是否需 MAE Cap
+5. ✅ **Stress Testing 6 events** — **DONE (2026-07-06), 6/6 Event-Net Gate PASS** 🎯
+   - 詳見 [v196_ANTIHUNT_stress_test_20260706.md](v196_ANTIHUNT_stress_test_20260706.md)
+   - E1 COVID: -28K (2.8% ≪ 5%) SURVIVED
+   - E2 2022 熊: **+153K** CRASH WIN
+   - E3 2022-Q4 CPI: **+87K** CRASH WIN (WR 75%)
+   - E4 2024-08 BoJ: 0 trade（Regime filter 正常 blocked）
+   - E5 2025-04-07 Trump: **+190K** CRASH WIN
+   - E6 2026-06 crash cluster: **+343K** CRASH WIN
+6. 🎯 **Portfolio Correlation vs S3_L** — ★ NEXT，promote 前最後測（Rule #13 < 0.7 gate）
+7. **T68 V 轉保護評估** — 2026-06-08 -120K 單筆是否需 MAE Cap（可 parallel 或 promote 後）
 
 ### 📊 v1.9.6 Config B + OPT 實測 (2026-07-06, xlsx)
 
