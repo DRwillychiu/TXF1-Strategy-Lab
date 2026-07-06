@@ -1,10 +1,10 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🟠 **v1.9.6-ANTIHUNT (Round 1 落實 anti-hunt L1+L2 + BWRank bug fix)，v1.9.5 為 baseline**
+**狀態**：🟡 **v1.9.6-ANTIHUNT Config B + OPT (2026-07-06)，WFA conditional FAIL → Path A → MC+Bootstrap 重跑**
 **當前版本**：
-- **Baseline**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
-- **實驗**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, 7 items default OFF except BWRank guard)
+- **Active**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, Config B + optimized defaults)
+- **Baseline (archived)**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
 - **Spec**: [v196_ANTIHUNT_spec_20260704.md](v196_ANTIHUNT_spec_20260704.md)
 **架構**：Data1=1M（執行）, Data2=60M（訊號）, Data3=Daily（Regime）
 **Stage -1 + 用戶 ruling**: 2026-06-23 完成（4 段討論 + 4 follow-up Q&A）
@@ -50,7 +50,7 @@ GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）�
 | v1.9.4 | Hunt state machine（取代固定窗口） | 73T / -23.8K / PF 0.97 |
 | **v1.9.5** | **Thrust margin + circuit breaker** | **68T / +513.4K / PF 1.574** |
 | ~~v1.9.6~~ (舊) | Post-crash continuation hunt | 171T / +369.6K / PF 1.169 — **棄用** |
-| **v1.9.6-ANTIHUNT** | **Anti-hunt L1+L2 + BWRank bug + Exit/SP hardening (7 items)** | **待跑 Config A/B/C/D 4 組** |
+| **v1.9.6-ANTIHUNT** | **Anti-hunt L1+L2 + BWRank bug + Exit/SP hardening (7 items)** | **Config B + OPT: 70T / +770.8K / PF 1.823 / MDD -16.02%** |
 
 ### v1.9.6 棄用原因
 
@@ -60,18 +60,49 @@ GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）�
 
 ---
 
-## 驗證進度（以 v1.9.5 為基準）
+## 驗證進度（以 v1.9.6 Config B + OPT 為基準）
 
-1. ~~**蒙地卡羅 + Bootstrap**~~ — DONE (2026-07-03)
-   - MC 95% MDD -30.64% (boundary FAIL, 0.64% over)
-   - Bootstrap P(Net>0) 89.3% PASS, P(PF>1) 89.3% PASS
+### Config A/B/C/D 測試結果 (2026-07-06)
+
+| Config | 設定 | 淨利 | PF | MDD% | 結論 |
+|--------|------|------|-----|------|------|
+| A | 全關 (sanity) | +413,000 | 1.402 | -22.70% | baseline |
+| **B** | **BWRank ON** | **+424,000** | **1.418** | **-22.52%** | **CONFIG SELECTED** |
+| C | 全開 (7/7) | +402,800 | 1.389 | -22.88% | L1+L2 抵消 BWRank 正效 |
+| D | L1+L2 only | +391,800 | 1.374 | -23.07% | anti-hunt 淨負效 |
+
+### 5-Param Optimization 結果 (2026-07-06)
+
+以 Config B 為基底，MC12 Exhaustive 最佳化 5 個參數：
+
+| 參數 | Config B | OPT | 意涵 |
+|------|----------|-----|------|
+| BWPctile | 35 | **40** | 放寬壓縮定義 |
+| StopATRMult | 3.75 | **3.25** | 收緊停損 |
+| SP_Trigger_ATRMult | 1.4 | **2.0** | 延後追蹤停利 |
+| Hunt_Max_Stops | 2 | **4** | 容忍更多連續止損 |
+| ML_ScoreTrigger | 40 | **35** | 降低 ML exit 門檻 |
+
+OPT 結果：**70T / +770,800 / PF 1.823 / MDD -16.02% / 年化 11.31%**
+成本結構：滑價 1000/口（含佣金），無另計手續費
+
+### 5 件套驗證清單
+
+1. ~~**蒙地卡羅 + Bootstrap**~~ — DONE on v1.9.5 (2026-07-03), 需以 OPT 新參數重跑
+   - 舊結果：MC 95% MDD -30.64% (boundary FAIL), Bootstrap PASS
    - 詳見 [v195_GA_validation_20260703.md](v195_GA_validation_20260703.md)
-2. **參數敏感度分析** — ★ NEXT (MC12 掃描)
-   - 8 單參數掃描 + StopATRMult x TargetATRMult 2D 交叉
-   - 高原寬度 > 20% 範圍才算 PASS
-3. **Walk-Forward 驗證** — IS/OOS 切分確認參數穩定性
-4. **T68 -135.4K V 轉保護** — 是否需額外機制
-5. 通過後 → GA 最佳化參數寫入 .pla 預設值 → 晉升 live_simulation
+2. ~~**參數最佳化**~~ — DONE (2026-07-06), 5 參數已寫入 .pla 預設值
+3. ~~**Walk-Forward 驗證**~~ — CONDITIONAL FAIL (2026-07-06), Path A exemption
+   - 9-window rolling WFA (IS 2y / OOS 6m / step 6m), Exhaustive, 4 params
+   - WFE = 14.8% (threshold >50%) — 形式上 FAIL
+   - **有交易的 OOS window (W1-W3, W7) 全部獲利** (+166,400 / PF avg 1.278)
+   - W4/W5/W6 OOS = 0 trades (2023H2-2024H2 多頭環境, short 策略結構性無訊號)
+   - W9 OOS = -182,600 (2026H1 高波動期, 3 trades)
+   - W8 data integrity issue: IS/OOS 數據完全相同, 需確認窗口重疊
+   - **用戶 ruling**: WFA 對 low-freq short 策略結構性不公平, 採 Path A 跳過 WFA
+4. **蒙地卡羅 + Bootstrap (OPT params)** — ★ NEXT, 用 OPT 參數 + 新數據重跑
+5. **T68 V 轉保護評估** — 是否需額外機制
+6. 通過後 → 晉升 live_simulation（Portfolio Correlation 在 promote 前最後測）
 
 ---
 

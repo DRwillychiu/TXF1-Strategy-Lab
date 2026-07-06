@@ -102,8 +102,8 @@ Config A + NightSL_Widen_On = True + ConfirmSL_On = True
 |---|------|--------|--------|
 | 1 | Monte Carlo (95% MDD) | 30.64% FAIL boundary | 待跑 |
 | 2 | Bootstrap Resampling | 89.3% PASS | 待跑 |
-| 3 | Parameter Sensitivity | ❌ 未跑 | 待跑 |
-| 4 | Walk-Forward Analysis | ❌ 未跑 | 待跑 |
+| 3 | Parameter Sensitivity | ❌ 未跑 | OPT 完成 (5-param) |
+| 4 | Walk-Forward Analysis | ❌ 未跑 | CONDITIONAL FAIL (WFE 14.8%, Path A exemption) |
 | 5 | Stress Testing 6 events | ❌ 未跑 | 待跑 |
 
 ---
