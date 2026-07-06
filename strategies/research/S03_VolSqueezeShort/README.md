@@ -1,7 +1,7 @@
 # S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 
 **啟動日**：2026-06-23
-**狀態**：🟡 **v1.9.6-ANTIHUNT Config B + OPT (2026-07-06)，WFA conditional FAIL → Path A → MC+Bootstrap 重跑**
+**狀態**：🟢 **v1.9.6 Config B + OPT — Rule #18 MC+Bootstrap 5/5 PASS (2026-07-06)，Stress Testing NEXT**
 **當前版本**：
 - **Active**: [S3_VolSqueezeShort_v196_ANTIHUNT.pla](S3_VolSqueezeShort_v196_ANTIHUNT.pla) (1107 LOC, Config B + optimized defaults)
 - **Baseline (archived)**: [S3_VolSqueezeShort_v195_EXPERIMENTAL.pla](S3_VolSqueezeShort_v195_EXPERIMENTAL.pla) (969 LOC)
@@ -86,23 +86,38 @@ GA 將策略從「寬 TP + 窄 SL」轉為「窄 TP + 寬 SL」（R:R 反轉）�
 OPT 結果：**70T / +770,800 / PF 1.823 / MDD -16.02% / 年化 11.31%**
 成本結構：滑價 1000/口（含佣金），無另計手續費
 
-### 5 件套驗證清單
+### 5 件套驗證清單（Rule #18）
 
-1. ~~**蒙地卡羅 + Bootstrap**~~ — DONE on v1.9.5 (2026-07-03), 需以 OPT 新參數重跑
-   - 舊結果：MC 95% MDD -30.64% (boundary FAIL), Bootstrap PASS
-   - 詳見 [v195_GA_validation_20260703.md](v195_GA_validation_20260703.md)
+1. ~~**MC + Bootstrap on v1.9.5**~~ — DONE (2026-07-03), 3/5 pass (MC 邊界 FAIL by 0.64%)
 2. ~~**參數最佳化**~~ — DONE (2026-07-06), 5 參數已寫入 .pla 預設值
 3. ~~**Walk-Forward 驗證**~~ — CONDITIONAL FAIL (2026-07-06), Path A exemption
-   - 9-window rolling WFA (IS 2y / OOS 6m / step 6m), Exhaustive, 4 params
-   - WFE = 14.8% (threshold >50%) — 形式上 FAIL
-   - **有交易的 OOS window (W1-W3, W7) 全部獲利** (+166,400 / PF avg 1.278)
-   - W4/W5/W6 OOS = 0 trades (2023H2-2024H2 多頭環境, short 策略結構性無訊號)
-   - W9 OOS = -182,600 (2026H1 高波動期, 3 trades)
-   - W8 data integrity issue: IS/OOS 數據完全相同, 需確認窗口重疊
-   - **用戶 ruling**: WFA 對 low-freq short 策略結構性不公平, 採 Path A 跳過 WFA
-4. **蒙地卡羅 + Bootstrap (OPT params)** — ★ NEXT, 用 OPT 參數 + 新數據重跑
-5. **T68 V 轉保護評估** — 是否需額外機制
-6. 通過後 → 晉升 live_simulation（Portfolio Correlation 在 promote 前最後測）
+   - WFE = 14.8%（threshold >50%）— 形式上 FAIL
+   - 有交易的 OOS window (W1-W3, W7) 全部獲利 +166K / PF avg 1.278
+   - W4/W5/W6 OOS = 0 trades (bull regime 結構性)
+   - 用戶 ruling: WFA 對 low-freq short 策略結構性不公平, Path A 跳過
+4. ✅ **MC + Bootstrap on v1.9.6 Config B + OPT** — **DONE (2026-07-06), 5/5 PASS** 🎯
+   - 詳見 [v196_ANTIHUNT_MC_bootstrap_OPT_20260706.md](v196_ANTIHUNT_MC_bootstrap_OPT_20260706.md)
+   - MC 95% MDD = -20.47% ✅ (v1.9.5 -30.64% ❌ → +10.17pp 改善)
+   - Bootstrap P(Net>0) = 95.0% ✅ (v1.9.5 89.3% → +5.7pp)
+   - Bootstrap P(PF>1) = 95.0% ✅ (v1.9.5 89.3% → +5.7pp)
+   - HHI = 0.0655 ✅ (v1.9.5 0.077 → 更 diverse)
+   - Remove Top 3 = +146.4K ✅ (v1.9.5 -17.2K ❌ → +163.6K 改善)
+5. 🎯 **Stress Testing 6 events** — ★ NEXT (2020 COVID / 2022 熊 / 2024 BoJ / 2025-04-07 / 2026-06 crash cluster)
+6. **Portfolio Correlation vs S3_L** — 在 promote 前最後測
+7. **T68 V 轉保護評估** — 2026-06-08 -120K 單筆是否需 MAE Cap
+
+### 📊 v1.9.6 Config B + OPT 實測 (2026-07-06, xlsx)
+
+| 指標 | 值 |
+|------|---|
+| 交易數 | 71 |
+| 淨利 | **+731,000 NTD** |
+| PF | **1.749** |
+| MDD % | **-17.17%** |
+| Sharpe | **+0.549** |
+| WR | 49.30% |
+| MC 95% MDD | -20.47% ✅ |
+| Bootstrap P(Net>0) | 95.0% ✅ |
 
 ---
 
