@@ -436,13 +436,16 @@ end;
 
 ## 五、完整參數清單（**MC12 部署用**）
 
-### Group A — Entry (ZLEMA)
+### Group A — Entry (ZLEMA) ✏️ **W0 校準 2026-07-08**
 
-| Input | Default | 範圍 |
-|-------|--------|------|
-| ZLEMA_Fast | 5 | 3, 5, 8, 10, 12, 15 |
-| ZLEMA_Slow | 20 | 15, 20, 25, 30, 40, 50 |
-| MinSlope | 1.0 | 0.5, 1.0, 2.0 |
+| Input | Default | 範圍 | W0 校準 |
+|-------|--------|------|--------|
+| ZLEMA_Fast | ~~5~~ **8** | 3, 5, 8, 10, 12, 15 | Daily best=12/30 → 5M 對應 ~8 |
+| ZLEMA_Slow | ~~20~~ **25** | 15, 20, 25, 30, 40, 50 | Daily best Slow=30 → 5M ~25 |
+| MinSlope | 1.0 | 0.5, 1.0, 2.0 | W0 顯示 0 與 1.0 daily 等效 |
+
+**W0 evidence**: `W0_alpha_preverify_result_20260708.md` — 40/216 combos 4/4 gates PASS
+Best daily combo: Fast=12, Slow=30, Fwd_N=3 → 45.8% WR, 1.29 RR, 57.1% stability
 
 ### Group B — M5 Quick Stop
 
