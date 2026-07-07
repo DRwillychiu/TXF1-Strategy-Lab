@@ -48,11 +48,13 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 |------|------|------|--------|--------|
 | **S1 NightMomentum** | 時段型 | Long | 15M | 2026-06-07 |
 | **S3 RapidPullbackShort** | 多頭過熱拉回 | Short | 5M | 2026-06-20 |
+| **S3_L VolSqueezeLong** | C 類波動率 | Long | 60M | 2026-06-23 |
+| **S3_S VolSqueezeShort** | C 類波動率 | Short | 60M+1M | **2026-07-06 v1.9.6-OPT-PROD** |
 
 ### Research（開發中）
 | 策略 | 類別 | 進度 |
 |------|------|------|
-| **S3_S VolSqueezeShort** | C 類波動率（空） | v1.9.5 GA 完成 (+513.4K/PF1.574)，待蒙地卡羅/WFA 驗證 |
+| **S16_S MACrossShort** | G 類動量交叉（空）| 🔵 **W0 STRONG PASS (2026-07-08, 40/216 combos 4/4)，進 W1** |
 
 ---
 
@@ -61,17 +63,14 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 詳見 [`docs/policies/OFFICIAL_ROADMAP.md`](docs/policies/OFFICIAL_ROADMAP.md)。
 
 ```
-S2 InsideBarBreak     ⚰️ KILLED (alpha 已死)
-S3_S VolSqueezeShort  🟠 v1.9.5 GA done, pending validation
-S4 MACDDivergence     ⏳ S3 後
-S5 SettlementWeek     ⏳
+S3_L VolSqueezeLong   ✅ PROMOTED (2026-06-23)
+S3_S VolSqueezeShort  ✅ PROMOTED (2026-07-06, v1.9.6-OPT, 7/7 PASS)
+S4_L / S4_S MACD      ⚰️ KILLED (2026-07-07, alpha 不足)
+S16_S MACrossShort    🔵 CURRENT (W0 PASS 2026-07-08, 進 W1)
+S16_L MACrossLong     ⏳ Queue (S16_S 完成後)
+S5_L / S5_S           ⏳
 S6 FlashCrashMomentum ⏳
-S7 BullPullbackLong   ⏳
-S8 BearBounceSell     ⏳
-S9 VolExplosion       ⏳
-S10 AdaptiveBreakout  ⏳
-S11-S15               ⏳
-S16+                  ⏳ 每週由 Cowork 自動生成（2026-W24 起）
+S7-S15                ⏳
 ```
 
 **規則**：依 CLAUDE.md Rule #14，不發明新策略名稱、不跳號、不平行開發。

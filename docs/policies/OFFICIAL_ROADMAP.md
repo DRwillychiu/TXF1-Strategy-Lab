@@ -75,7 +75,7 @@
 ### Batch 04 — User-added MA Cross（2026-06-28 ruling, 2026-07-07 split L/S）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | 🔵 **CURRENT Stage-1 (2026-07-07 split, whipsaw Layer 1 design done)** |
+| **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | 🔵 **CURRENT W0 STRONG PASS (2026-07-08, 40/216 combos 4/4 gates)，Layer 1+2+3 lock，進 W1** |
 | S16_L | MACrossLong | G 動量交叉 | 5M | 純多 | ⏳ Queue (S16_S 完成後) |
 
 ⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。2026-07-07 用戶決策拆分為 S16_S + S16_L，**先 S 後 L**（override 先 L 後 S 鐵則，理由：補強做空 sleeve 為原始動機）。
@@ -211,3 +211,6 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 | 2026-07-07 | S16 排序提前為 S3_S 之後直接開發 | S4 KILL 後 S16 成為 CURRENT |
 | 2026-07-07 | **S16 拆分為 S16_S + S16_L，先 S 後 L** | 用戶決策：策略可同時做多做空，S16_S 先行（原始動機為補強空頭 sleeve） |
 | 2026-07-07 | S16 Whipsaw Layer 1 設計完成 | 進場門寬開出場刀鋒利；M1 斜率保留（寬鬆）、M2 延遲棄用、M3 ATR 歸出場端、M4 量確認棄用 |
+| 2026-07-08 | S16_S Layer 2 出場端 4 機制設計完成 | M5 Quick Stop / M6 Rule #17 多層 1M / M7 Breakeven Trail / M8 Time Stop 全鎖定 |
+| 2026-07-08 | S16_S Layer 3 Regime Filter LOCK = 選項 A（純規則簡單，不加 filter） | Lesson L24 精神 + 哲學一致性 + 信任 Layer 2 exit rigor |
+| 2026-07-08 | **S16_S W0 Alpha Pre-Verify STRONG PASS** | Daily proxy 40/216 combos 4/4 gates PASS, best Fast=12/Slow=30/RR=1.29/WR=45.8%，進 W1 strategy.md |

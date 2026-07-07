@@ -11,25 +11,34 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S3_S** | **VolSqueezeShort** | 🔵 **CURRENT — Stage -1** | [`S03_VolSqueezeShort/`](S03_VolSqueezeShort/) |
+| **S16_S** | **MACrossShort** | 🔵 **CURRENT — W0 STRONG PASS (2026-07-08)，Layer 1+2+3 lock，進 W1** | [`S16_MACrossShort/`](S16_MACrossShort/) |
 
 ### 最近 PROMOTED (history archived)
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| S3_L | VolSqueezeLong | ✅ Promoted → live_simulation/ | [`archive/S03_VolSqueezeLong_promoted_20260620/`](archive/S03_VolSqueezeLong_promoted_20260620/) |
+| **S3_S** | **VolSqueezeShort** | ✅ **PROMOTED 2026-07-06 v1.9.6-OPT-PROD (7/7 gates PASS)** | [`S03_VolSqueezeShort/`](S03_VolSqueezeShort/)（history 保留研究資料夾）|
+| S3_L | VolSqueezeLong | ✅ Promoted 2026-06-23 → live_simulation/ | [`archive/S03_VolSqueezeLong_promoted_20260620/`](archive/S03_VolSqueezeLong_promoted_20260620/) |
 
-→ S3_L production .pla 在 [`../live_simulation/S3_VolSqueezeLong.pla`](../live_simulation/S3_VolSqueezeLong.pla)
+### 最近 KILLED (roadmap 依 explicit user ruling 跳過)
+
+| 編號 | 策略 | 狀態 |
+|------|------|------|
+| S4_L | MACDDivergenceLong | ⚰️ KILLED 2026-07-07（MACD 不適合作獨立策略）|
+| S4_S | MACDDivergenceShort | ⚰️ KILLED 2026-07-07（同上）|
+
+→ S3_S / S3_L production .pla 在 [`../live_simulation/`](../live_simulation/)
 → W0-W5 開發歷史已歸檔至 archive/
 
 ---
 
 ## 二、OFFICIAL_ROADMAP 完整排程
 
-按 [`docs/policies/OFFICIAL_ROADMAP.md`](../../docs/policies/OFFICIAL_ROADMAP.md) Rule R-6 拆解後 **21 個開發單位**：
+按 [`docs/policies/OFFICIAL_ROADMAP.md`](../../docs/policies/OFFICIAL_ROADMAP.md) Rule R-6 拆解後：
 
 ```
-S3_L ✅PROMOTED → S3_S 🔵CURRENT → S4_L → S4_S → S5_L → S5_S → S6 → S7 → S8
+S3_L ✅PROMOTED → S3_S ✅PROMOTED → S4_L ⚰️KILLED → S4_S ⚰️KILLED
+→ S16_S 🔵CURRENT → S16_L → S5_L → S5_S → S6 → S7 → S8
 → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13 → S14_L → S14_S → S15_L → S15_S
 ```
 
