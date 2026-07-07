@@ -72,20 +72,23 @@
 | S15_L | BBReversionLong | B 價格結構 | 60M | 純多 | ⏳ Queue |
 | S15_S | BBReversionShort | B 價格結構 | 60M | 純空 | ⏳ Queue |
 
-### Batch 04 — User-added short reinforcement（2026-06-28 ruling）
+### Batch 04 — User-added MA Cross（2026-06-28 ruling, 2026-07-07 split L/S）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| **S16** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | 🔵 **CURRENT Stage-1 (user 2026-06-28 added, 2026-07-07 timeframe 15M→5M + ZLEMA)** |
+| **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | 🔵 **CURRENT Stage-1 (2026-07-07 split, whipsaw Layer 1 design done)** |
+| S16_L | MACrossLong | G 動量交叉 | 5M | 純多 | ⏳ Queue (S16_S 完成後) |
 
-⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。理由：補強做空 sleeve 厚度（live + live_sim 僅 4 隻空頭，相對 5 隻多頭略弱）。
-規格（2026-07-07 更新）：5M 時框（原 15M，用戶決策降頻）、True Zero-Lag EMA（ZLEMA）、死亡交叉進場、黃金交叉出場、搭配極端行情多層停損 SOP（Rule #17）。
+⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。2026-07-07 用戶決策拆分為 S16_S + S16_L，**先 S 後 L**（override 先 L 後 S 鐵則，理由：補強做空 sleeve 為原始動機）。
+規格（2026-07-07 更新）：5M 時框（原 15M）、True Zero-Lag EMA（ZLEMA）、死亡交叉進場（S16_S）/ 黃金交叉進場（S16_L）、搭配極端行情多層停損 SOP（Rule #17）。
+Whipsaw 防護設計哲學：進場門寬開，出場刀鋒利。進場僅保留 M1 Slow ZLEMA 斜率 ≠ 0（輕量 gate），損害控制集中在出場端。
 合規仍需走 W0-W6 完整流程 + 7 個強制模組（Settlement / SetStopLoss / Holiday / Kill / Registry / IOG=false / ASCII）。
 
-### 總計（2026-06-28 update）
+### 總計（2026-07-07 update）
 
 - **原始排程**：13 隻策略（部分雙向）→ 拆解 21 個開發單位（不含 KILL 的 S2）
-- **+ Batch 04 user-added**：1 隻 S16
-- **= 22 個開發單位**
+- **KILLED**：S4_L + S4_S = -2
+- **+ Batch 04 user-added**：S16_S + S16_L = +2
+- **= 21 個存活開發單位**（含已完成 S3_L、S3_S）
 
 ### 完整開發順序（2026-06-28 user ruling override）
 
@@ -96,7 +99,7 @@
   [進行中] S16 → S5_L → S5_S → ...
 
 完整順序 (扣除 KILL):
-  S3_L → S3_S → S16 → S5_L → S5_S → S6 → S7 → S8
+  S3_L → S3_S → S16_S → S16_L → S5_L → S5_S → S6 → S7 → S8
     → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13
     → S14_L → S14_S → S15_L → S15_S
 ```
@@ -206,3 +209,5 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 | 2026-07-07 | **S4_L + S4_S MACDDivergence 雙殺 KILL** | MACD 概念不適合獨立策略（W0 RR 1.33 MARGINAL），保留作指標用途 |
 | 2026-07-07 | S16 時框 15M→5M + MA 類型改為 ZLEMA | 用戶決策：更低操作週期 + True Zero-Lag EMA 減少滯後 |
 | 2026-07-07 | S16 排序提前為 S3_S 之後直接開發 | S4 KILL 後 S16 成為 CURRENT |
+| 2026-07-07 | **S16 拆分為 S16_S + S16_L，先 S 後 L** | 用戶決策：策略可同時做多做空，S16_S 先行（原始動機為補強空頭 sleeve） |
+| 2026-07-07 | S16 Whipsaw Layer 1 設計完成 | 進場門寬開出場刀鋒利；M1 斜率保留（寬鬆）、M2 延遲棄用、M3 ATR 歸出場端、M4 量確認棄用 |
