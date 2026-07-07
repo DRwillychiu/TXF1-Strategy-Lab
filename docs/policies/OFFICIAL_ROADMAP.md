@@ -43,9 +43,9 @@
 |---|---------|------|--------|------|------|
 | ~~S2~~ | ~~InsideBarBreak~~ | B 價格結構 | 30M + 日線 | 雙向 | ⚰️ KILLED 2026-06-22 |
 | S3_L | VolSqueezeLong | C 波動率 | 60M | 純多 | ✅ **PROMOTED to live_simulation/ (2026-06-23, W5 PASS)** |
-| S3_S | VolSqueezeShort | C 波動率 | 60M + 1M | 純空 | ✅ **PROMOTED v1.8.0-PROD (2026-06-30, 取代 v1.7.3, 1M Multi-layer 升級, PF 4.13, 3% cap, R-6 hedge pair)** |
-| S4_L | MACDDivergenceLong | D 動量逆勢 | 60M | 純多 | ⏳ Queue (推延至 S16 後) |
-| **S4_S** | **MACDDivergenceShort** | **D 動量逆勢** | **60M** | **純空** | 🔵 **CURRENT (Stage-1, user 2026-06-28 跳號)** |
+| S3_S | VolSqueezeShort | C 波動率 | 60M + 1M | 純空 | ✅ **PROMOTED v1.9.6-OPT-PROD (2026-07-06, 7/7 PASS, 71T/+731K/PF1.749, 3% cap)** |
+| ~~S4_L~~ | ~~MACDDivergenceLong~~ | ~~D 動量逆勢~~ | ~~60M~~ | ~~純多~~ | ⚰️ **KILLED 2026-07-07 (MACD 概念不適合作為獨立策略，僅保留作判斷指標)** |
+| ~~S4_S~~ | ~~MACDDivergenceShort~~ | ~~D 動量逆勢~~ | ~~60M~~ | ~~純空~~ | ⚰️ **KILLED 2026-07-07 (同 S4_L，W0 3/4 MARGINAL RR 1.33<1.5)** |
 | S5_L | SettlementWeekLong | E 統計 | 日線 | 結算後做多 | ⏳ Queue |
 | S5_S | SettlementWeekShort | E 統計 | 日線 | 結算前做空 | ⏳ Queue |
 
@@ -75,10 +75,10 @@
 ### Batch 04 — User-added short reinforcement（2026-06-28 ruling）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| **S16** | **MACrossShort** | **G 動量交叉** | **15M** | **純空** | ⏳ **Queue (user 2026-06-28 added)** |
+| **S16** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | 🔵 **CURRENT Stage-1 (user 2026-06-28 added, 2026-07-07 timeframe 15M→5M + ZLEMA)** |
 
 ⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。理由：補強做空 sleeve 厚度（live + live_sim 僅 4 隻空頭，相對 5 隻多頭略弱）。
-規格：15M 時框、死亡交叉進場（Fast MA cross down Slow MA）、黃金交叉出場（Fast cross up Slow），MA 參數可優化。
+規格（2026-07-07 更新）：5M 時框（原 15M，用戶決策降頻）、True Zero-Lag EMA（ZLEMA）、死亡交叉進場、黃金交叉出場、搭配極端行情多層停損 SOP（Rule #17）。
 合規仍需走 W0-W6 完整流程 + 7 個強制模組（Settlement / SetStopLoss / Holiday / Kill / Registry / IOG=false / ASCII）。
 
 ### 總計（2026-06-28 update）
@@ -90,14 +90,13 @@
 ### 完整開發順序（2026-06-28 user ruling override）
 
 ```
-2026-06-28 起更新順序:
+2026-07-07 起更新順序:
   [已完成] S3_L → S3_S
-  [進行中] S4_S → S16 → S4_L → S5_L → S5_S → ...
-              ↑      ↑       ↑
-              用戶 ruling: 先補完 2 支做空 (S4_S + S16), 再回 S4_L 排程
+  [KILLED] S4_S, S4_L (MACD 概念 KILL, 2026-07-07)
+  [進行中] S16 → S5_L → S5_S → ...
 
-完整 22 隻順序:
-  S3_L → S3_S → S4_S → S16 → S4_L → S5_L → S5_S → S6 → S7 → S8
+完整順序 (扣除 KILL):
+  S3_L → S3_S → S16 → S5_L → S5_S → S6 → S7 → S8
     → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13
     → S14_L → S14_S → S15_L → S15_S
 ```
@@ -202,3 +201,8 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 | 2026-06-22 | **Sx_L / Sx_S 拆解規則生效**（R-6） | 用戶偏好純多 / 純空分開規劃，避免互相干擾統計 |
 | 2026-06-22 | **開發順序鐵則：先 L 後 S** | TXF1 2020-2026 偏多 regime，Long 驗證較快 |
 | 2026-06-22 | S3 改為 **S3_L VolSqueezeLong**，短邊由 S3_S 接續 | 對應 Sx_L / Sx_S 新規則 |
+| 2026-06-28 | S16 MACrossShort 加入排程（override R-1） | 補強做空 sleeve 厚度，先完成 S4_S+S16 再回 S4_L |
+| 2026-07-06 | S3_S v1.9.6-OPT PROMOTED to live_simulation | 7/7 quantitative PASS, 71T/+731K/PF1.749, 3% cap |
+| 2026-07-07 | **S4_L + S4_S MACDDivergence 雙殺 KILL** | MACD 概念不適合獨立策略（W0 RR 1.33 MARGINAL），保留作指標用途 |
+| 2026-07-07 | S16 時框 15M→5M + MA 類型改為 ZLEMA | 用戶決策：更低操作週期 + True Zero-Lag EMA 減少滯後 |
+| 2026-07-07 | S16 排序提前為 S3_S 之後直接開發 | S4 KILL 後 S16 成為 CURRENT |
