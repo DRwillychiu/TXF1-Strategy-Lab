@@ -396,24 +396,41 @@ end;
 
 ---
 
-## 四、Layer 3 — Regime Filter 決策（**待用戶 ruling**）
+## 四、Layer 3 — Regime Filter 決策 ✅ **LOCK 2026-07-08**
 
-### 4.1 選項對比
+### 4.1 用戶 ruling：**選項 A 純規則簡單（不加 filter）**
 
-| 選項 | 說明 | 優點 | 缺點 |
-|------|------|------|------|
-| **A. 純規則簡單** | 不加 Daily MA regime filter | 簡單、規則清楚、透明 | 多頭年 whipsaw 損失大 |
-| **B. Daily MA Filter** | Daily Close < MA50 才允許空 | 大幅減少多頭年損失 | 違反 L24 精神、規則變複雜 |
-| **C. W0 決定** | 兩版本都跑 W0，讓數據說話 | 客觀 | 增加開發時間 |
+### 4.2 決策理由
 
-### 4.2 我的建議：**C（W0 對比決定）**
+| 理由 | 說明 |
+|------|------|
+| **Lesson L24 精神** | 不為救 alpha 疊 sub-filter；接受策略本質，不用 filter 削 alpha |
+| **哲學一致性** | 「進場門戶大開，出場刀鋒銳利」— filter 屬進場端加碼，違反哲學 |
+| **可解釋性最大化** | 純 ZLEMA 交叉 = 老闆/監管/自己都能 3 秒解釋，Regime filter 需 2 分鐘解釋 |
+| **Layer 2 已足夠** | M5 Quick Stop + M6 Multi-Layer + M7 BE Trail 已提供 4 層洗盤防護 |
+| **信任 exit rigor** | 用戶明確 ruling「洗盤只做嚴格控管虧損」→ 靠 exit 端而非 entry filter |
 
-**理由**：
-- L24 教訓是「不要為救 alpha 疊 filter」，但 Regime filter 本質是**環境判斷**不是策略 sub-filter
-- 5M 純空策略在強多頭年**結構性逆風** → 若不加 filter 可能 W0 直接 FAIL
-- W0 對比讓數據說話，避免主觀判斷
+### 4.3 接受的 trade-off
 
-**待用戶 ruling**：A / B / C 選一
+- ⚠️ 多頭年（如 2024）預期較多 whipsaw losses
+- ⚠️ 需靠 M5 Quick Stop 把單筆虧損嚴格控在 15 pts 以內
+- ⚠️ 年 trade 數會比加 filter 版本更多（whipsaw 頻繁）
+- ✅ **但每筆虧損可預期、可控管** = 符合設計哲學
+
+### 4.4 未來監控紅燈
+
+若上線後出現以下情況，重新評估是否加 Regime Filter：
+- 連 3 個月 PF < 0.8 → review
+- 累計 MDD > 25% → 立即檢討
+- 多頭年單月 whipsaw > 20 次 → 考慮 Daily filter option B
+
+### 4.5 Regime 參數清除
+
+以下 input **不出現在最終 code**：
+- ~~Use_Regime_Filter~~
+- ~~Regime_MA_Period~~
+- ~~Regime_FastMA / SlowMA~~
+- ~~Regime_BlockRange / BlockWeakBull~~
 
 ---
 
@@ -468,12 +485,9 @@ end;
 | ATR_Len | 14 | 10, 14, 20 |
 | StopATRMult | 2.0 | 1.5, 2.0, 2.5, 3.0 |
 
-### Group G — Regime Filter (**待 ruling**)
+### Group G — Regime Filter ✅ **DROPPED (2026-07-08 用戶 ruling 選項 A)**
 
-| Input | Default | 範圍 |
-|-------|--------|------|
-| Use_Regime_Filter | True/False | 待 ruling |
-| Regime_MA_Period | 50 | 20, 40, 50, 100 |
+無 Regime Filter inputs。純規則簡單，靠 Layer 2 4 層出場保護。
 
 ### Group H — Rule #11 合規
 
@@ -505,7 +519,7 @@ end;
 
 1. ✅ Layer 1 進場設計 lock（2026-07-07）
 2. ✅ Layer 2 出場設計 lock（2026-07-08 本檔）
-3. ⏳ **Layer 3 Regime Filter** 用戶 ruling A/B/C
+3. ✅ Layer 3 Regime Filter 用戶 ruling **選項 A 純規則簡單**（2026-07-08）
 4. ⏳ **W0 Alpha Pre-verify Python script**（ZLEMA cross on TXF1 5M 2020-2026）
 5. ⏳ **W1 策略正式文件**（若 W0 PASS）
 6. ⏳ **W2 .pla 實作**（含 P0-P7 完整出場鏈）
