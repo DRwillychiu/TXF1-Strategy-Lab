@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.2-GA-OPT (2026-07-08 - W4 GA optimized, Candidate E)
+  Version     : v0.3-P0FIX  (2026-07-08 - F1/F2/F3 code bug fixes)
 
   DESIGN PHILOSOPHY:
     Entry wide open, exit knife sharp.
@@ -81,7 +81,7 @@ inputs:
     { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
     ML_On                   ( True  ),
     ML_ActivationPct        ( 20    ),
-    ML_ScoreTrigger         ( 65    ),
+    ML_ScoreTrigger         ( 60    ),
     ML_MinCategories        ( 3     ),
     ML_VolAvgLen            ( 15    ),
     ML_VolSpikeMult         ( 2.0   ),
@@ -167,6 +167,8 @@ variables:
     v_ML_MA_Short           ( 0     ),
 
     { ===== M7 Breakeven state ===== }
+    v_BE_Tier1_Active       ( False ),
+    v_BE_Tier2_Active       ( False ),
     v_BE_Stop_Tier1         ( 0     ),
     v_BE_Stop_Tier2         ( 0     ),
 
@@ -211,7 +213,9 @@ v_Slow_Lag = IntPortion( ( ZLEMA_Slow - 1 ) / 2 );
 v_ZLEMA_Fast = XAverage( 2 * Close - Close[v_Fast_Lag], ZLEMA_Fast );
 v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 
-v_Slope = AbsValue( v_ZLEMA_Slow - v_ZLEMA_Slow[1] );
+{ F2 fix: measure Fast ZLEMA downward slope for short entry (not Slow, not AbsValue) }
+{ Positive value = Fast is falling = bearish momentum = good for short }
+v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
 
 
 { ============================================================
@@ -246,8 +250,10 @@ if MarketPosition = -1 then begin
         v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
         v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
         v_SL_Locked      = True;
-        v_EntryBar       = CurrentBar;
+        v_EntryBar        = CurrentBar;
         v_QuickStop_Fired = False;
+        v_BE_Tier1_Active = False;
+        v_BE_Tier2_Active = False;
     end;
 end
 else begin
@@ -257,6 +263,8 @@ else begin
     v_SL_Level           = 0;
     v_EntryBar           = 0;
     v_QuickStop_Fired    = False;
+    v_BE_Tier1_Active    = False;
+    v_BE_Tier2_Active    = False;
 end;
 
 { Rule #12 SetStopLoss (short variant: MP >= 0 guard) }
@@ -402,23 +410,32 @@ if MarketPosition = -1 then begin
         end;
     end;
 
-    { ---- P3: M7 Breakeven Trailing ---- }
+    { ---- P3: M7 Breakeven Trailing (F1 fix: state-based activation) ---- }
     if ExitFired = 0 and BE_On = True then begin
 
-        { Tier 1: Profit >= 1 ATR -> lock stop at Entry - Buffer_Pts }
-        if v_Profit >= BE_Trigger_ATR * v_ATR then begin
-            v_BE_Stop_Tier1 = EntryPrice - BE_Buffer_Pts;
-            if Close >= v_BE_Stop_Tier1 then begin
-                buy to cover ( "SX_MA_BE_Trail1" ) next bar at market;
+        { Activate tiers when profit threshold reached (latching) }
+        if v_Profit >= BE_Tier2_ATR * v_ATR then begin
+            v_BE_Tier2_Active = True;
+            v_BE_Tier1_Active = True;
+        end
+        else if v_Profit >= BE_Trigger_ATR * v_ATR then begin
+            v_BE_Tier1_Active = True;
+        end;
+
+        { Tier 2 check first (tighter stop, higher priority) }
+        if ExitFired = 0 and v_BE_Tier2_Active = True then begin
+            v_BE_Stop_Tier2 = EntryPrice - BE_Tier2_Buffer_Pts;
+            if Close >= v_BE_Stop_Tier2 then begin
+                buy to cover ( "SX_MA_BE_Trail2" ) next bar at market;
                 ExitFired = 1;
             end;
         end;
 
-        { Tier 2: Profit >= 1.5 ATR -> tighter lock }
-        if ExitFired = 0 and v_Profit >= BE_Tier2_ATR * v_ATR then begin
-            v_BE_Stop_Tier2 = EntryPrice - BE_Tier2_Buffer_Pts;
-            if Close >= v_BE_Stop_Tier2 then begin
-                buy to cover ( "SX_MA_BE_Trail2" ) next bar at market;
+        { Tier 1 check (wider stop) }
+        if ExitFired = 0 and v_BE_Tier1_Active = True then begin
+            v_BE_Stop_Tier1 = EntryPrice - BE_Buffer_Pts;
+            if Close >= v_BE_Stop_Tier1 then begin
+                buy to cover ( "SX_MA_BE_Trail1" ) next bar at market;
                 ExitFired = 1;
             end;
         end;
