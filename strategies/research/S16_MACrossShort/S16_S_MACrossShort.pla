@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.1-DRAFT  (2026-07-08 - W2 initial implementation)
+  Version     : v0.2-GA-OPT (2026-07-08 - W4 GA optimized, Candidate E)
 
   DESIGN PHILOSOPHY:
     Entry wide open, exit knife sharp.
@@ -69,14 +69,14 @@
   ============================================================ }
 inputs:
     { ===== Group A: Entry (ZLEMA) ===== }
-    ZLEMA_Fast              ( 8     ),
-    ZLEMA_Slow              ( 25    ),
-    MinSlope                ( 1.0   ),
+    ZLEMA_Fast              ( 15    ),
+    ZLEMA_Slow              ( 50    ),
+    MinSlope                ( 16    ),
 
     { ===== Group B: M5 Quick Stop ===== }
     QuickStop_On            ( True  ),
-    QuickStop_MaxBars       ( 6     ),
-    QuickStop_MaxLoss_Pts   ( 15    ),
+    QuickStop_MaxBars       ( 4     ),
+    QuickStop_MaxLoss_Pts   ( 50    ),
 
     { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
     ML_On                   ( True  ),
@@ -99,11 +99,11 @@ inputs:
 
     { ===== Group E: M8 Time Stop ===== }
     M8_On                   ( True  ),
-    MaxHoldingBars          ( 48    ),
+    MaxHoldingBars          ( 144   ),
 
     { ===== Group F: ATR SL (Frozen) ===== }
     ATR_Len                 ( 14    ),
-    StopATRMult             ( 2.0   ),
+    StopATRMult             ( 3.5   ),
 
     { ===== Group H: Rule #11 Compliance ===== }
     Holiday_Flat_Time       ( 415   ),
