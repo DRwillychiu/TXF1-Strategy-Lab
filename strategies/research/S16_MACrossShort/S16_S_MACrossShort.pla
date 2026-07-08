@@ -2,7 +2,20 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.3-P0FIX  (2026-07-08 - F1/F2/F3 code bug fixes)
+  Version     : v0.4-CANDIDATE  (2026-07-09 - Momentum Burst + Time Stop candidate)
+
+  v0.4 EVIDENCE (2026-07-09 backtest):
+    Config: F25/S90/Slope26/QS45/MH24/StopATRx4
+    Result: Net +1,059,200 / PF 1.903 / MDD $-259K / 119T / WR 26.9%
+    Structure change: TimeStop dominant (31 trades, 100% WR, avg +72K).
+      Golden Cross / ML Exit / SL all NEVER fire (0 triggers).
+    Strategy has evolved from "MA Cross" -> "Momentum Burst + 2hr Time Stop".
+    Rule #13/#18: 4/8 gates PASS (Net/PF/MDD abs/sample)
+    Rule #13 FAIL: WR 27% / Sharpe 0.46 / PF adj 1.42 / MDD % 65.6% relative
+    Time concentration warning: 95% profit in 2025-2026.
+    Deep analysis: v04_CANDIDATE_analysis_20260709.md
+
+  v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
 
   DESIGN PHILOSOPHY:
     Entry wide open, exit knife sharp.
@@ -68,15 +81,15 @@
   SECTION 1 - INPUTS
   ============================================================ }
 inputs:
-    { ===== Group A: Entry (ZLEMA) ===== }
-    ZLEMA_Fast              ( 15    ),
-    ZLEMA_Slow              ( 50    ),
-    MinSlope                ( 16    ),
+    { ===== Group A: Entry (ZLEMA) - v0.4-CANDIDATE 2026-07-09 ===== }
+    ZLEMA_Fast              ( 25    ),
+    ZLEMA_Slow              ( 90    ),
+    MinSlope                ( 26    ),
 
-    { ===== Group B: M5 Quick Stop ===== }
+    { ===== Group B: M5 Quick Stop - v0.4-CANDIDATE ===== }
     QuickStop_On            ( True  ),
     QuickStop_MaxBars       ( 4     ),
-    QuickStop_MaxLoss_Pts   ( 50    ),
+    QuickStop_MaxLoss_Pts   ( 45    ),
 
     { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
     ML_On                   ( True  ),
@@ -97,13 +110,14 @@ inputs:
     BE_Tier2_ATR            ( 1.5   ),
     BE_Tier2_Buffer_Pts     ( 10    ),
 
-    { ===== Group E: M8 Time Stop ===== }
+    { ===== Group E: M8 Time Stop - v0.4-CANDIDATE (KEY ALPHA DRIVER) ===== }
+    { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
     M8_On                   ( True  ),
-    MaxHoldingBars          ( 144   ),
+    MaxHoldingBars          ( 24    ),
 
-    { ===== Group F: ATR SL (Frozen) ===== }
+    { ===== Group F: ATR SL (Frozen) - v0.4-CANDIDATE ===== }
     ATR_Len                 ( 14    ),
-    StopATRMult             ( 3.5   ),
+    StopATRMult             ( 4.0   ),
 
     { ===== Group H: Rule #11 Compliance ===== }
     Holiday_Flat_Time       ( 415   ),
