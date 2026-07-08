@@ -186,7 +186,7 @@ variables:
   ============================================================ }
 
 { Registry expired check (year * 10000 + month * 100 + day format) }
-v_Registry_Expired = ( Year(Date) + 1911 ) * 10000
+v_Registry_Expired = ( Year(Date) - 1911 ) * 10000
                      + Month(Date) * 100 + DayOfMonth(Date)
                    > Registry_Valid_Until;
 
