@@ -2,18 +2,21 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.4-CANDIDATE  (2026-07-09 - Momentum Burst + Time Stop candidate)
+  Version     : v0.5  (2026-07-09 - Broad GA calibrated, W5 pending)
+
+  v0.5 EVIDENCE (2026-07-09 MC12 backtest, 1024-combo Genetic Algorithm):
+    Config: F25/S70/Slope28/QS4-60/MH24/StopATRx4
+    Result: Net +1,075,800 / PF 1.982 / MDD -271,600 / 102T / WR 22.5%
+    Calmar 3.961 / Avg Win:Loss ratio 6.81:1 (sniper profile)
+    MDD/1M = 27.2% -> Rule #13 PASS
+    Sensitivity: Fast+Slope=86% of total, 4 exit params all LOW (<0.06)
+    MinSlope 26->28: Slope26-28 plateau (-2.4%), Slope30 cliff (-27%)
+    ZLEMA_Slow 70: narrow peak (S80=-33.5%), monitor in W5
+    Pending: W5 five-pack (Monte Carlo / Bootstrap / Stress / Regime / Robustness)
 
   v0.4 EVIDENCE (2026-07-09 backtest):
     Config: F25/S90/Slope26/QS45/MH24/StopATRx4
     Result: Net +1,059,200 / PF 1.903 / MDD $-259K / 119T / WR 26.9%
-    Structure change: TimeStop dominant (31 trades, 100% WR, avg +72K).
-      Golden Cross / ML Exit / SL all NEVER fire (0 triggers).
-    Strategy has evolved from "MA Cross" -> "Momentum Burst + 2hr Time Stop".
-    Rule #13/#18: 4/8 gates PASS (Net/PF/MDD abs/sample)
-    Rule #13 FAIL: WR 27% / Sharpe 0.46 / PF adj 1.42 / MDD % 65.6% relative
-    Time concentration warning: 95% profit in 2025-2026.
-    Deep analysis: v04_CANDIDATE_analysis_20260709.md
 
   v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
 
@@ -81,15 +84,15 @@
   SECTION 1 - INPUTS
   ============================================================ }
 inputs:
-    { ===== Group A: Entry (ZLEMA) - v0.4-CANDIDATE 2026-07-09 ===== }
+    { ===== Group A: Entry (ZLEMA) - v0.5 2026-07-09 ===== }
     ZLEMA_Fast              ( 25    ),
-    ZLEMA_Slow              ( 90    ),
-    MinSlope                ( 26    ),
+    ZLEMA_Slow              ( 70    ),
+    MinSlope                ( 28    ),
 
-    { ===== Group B: M5 Quick Stop - v0.4-CANDIDATE ===== }
+    { ===== Group B: M5 Quick Stop - v0.5 2026-07-09 ===== }
     QuickStop_On            ( True  ),
     QuickStop_MaxBars       ( 4     ),
-    QuickStop_MaxLoss_Pts   ( 45    ),
+    QuickStop_MaxLoss_Pts   ( 60    ),
 
     { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
     ML_On                   ( True  ),
@@ -110,12 +113,12 @@ inputs:
     BE_Tier2_ATR            ( 1.5   ),
     BE_Tier2_Buffer_Pts     ( 10    ),
 
-    { ===== Group E: M8 Time Stop - v0.4-CANDIDATE (KEY ALPHA DRIVER) ===== }
+    { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
     { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
     M8_On                   ( True  ),
     MaxHoldingBars          ( 24    ),
 
-    { ===== Group F: ATR SL (Frozen) - v0.4-CANDIDATE ===== }
+    { ===== Group F: ATR SL (Frozen) - v0.5 ===== }
     ATR_Len                 ( 14    ),
     StopATRMult             ( 4.0   ),
 
