@@ -1,7 +1,7 @@
 # S16_S v0.5 — Pending Decision Node (2026-07-09)
 
 **用途**：保留 2026-07-09 深度討論的結論與未定決策，供下次接續。
-**當前狀態**：Entry Layer 討論完成，執行方向未定。
+**當前狀態**：v0.5 LOCKED + W5 五件套完成。全部決策已解決。
 
 ---
 
@@ -37,53 +37,31 @@
 
 ---
 
-## 二、未定決策（PENDING）
+## 二、已解決決策（RESOLVED 2026-07-09）
 
-### D1. GA 執行方式（3 選 1）
+### D1. GA 執行方式 — RESOLVED: Genetic Algorithm
+- 執行路線：先 90-combo neighborhood Exhaustive → 再 1024-combo broad Genetic (25,920 space)
+- 結果：F25/S70/Slope28 Calmar 3.96 勝出，v0.5 鎖定
 
-| 選項 | 說明 | 時間 | 推薦度 |
-|-----|------|------|--------|
-| **A** | Phase 1 Focused Exhaustive（Fast/Slow/MinSlope 3 params, 200 組合）| 90 min | ⭐⭐⭐ |
-| B | 一次全跑 Genetic（6 params, 12,800 space, 100 pop × 40 gen = 4000 evals）| 3-5 hr | ⭐⭐ |
-| C | 先改 code（MinSlope 計算方式改「累積 N 根 slope」）再跑 | 30 min code + 90 min BT | ⭐ |
+### D2. .pla defaults — RESOLVED: v0.5 locked
+- F25/S70/Slope28 + QS(4,60) MH24 ATR4.0
+- Git commit: a212da6
 
-**用戶尚未 ruling**。
+### D3. Entry filter — RESOLVED: pure parameter calibration
+- 純參數校準，不加新 filter（用戶 ruling）
+- MinSlope 從 26→28 = 精挑旋鈕收緊
 
-### D2. .pla defaults 是否 revert？
+### D4. Rule #14 naming — RESOLVED: keep MACrossShort
+- v0.5 GoldenCross 仍只有 2 筆觸發，TimeStop 仍主導 (20 筆)
+- 但 Rule #14 naming 來自 OFFICIAL_ROADMAP (S16 = MACross)，不可改名
+- 策略哲學定位：5M momentum burst sniper，名稱保留不變
 
-**選項**：
-- 選 X：**保留 v0.4-CANDIDATE defaults**（Fast=25/Slow=90/Slope=26）→ GA sweep 值全都不含這些 → 強制回到 5M 意義範圍
-- 選 Y：Revert 為 v0.5-SANE-BASELINE（Fast=8/Slow=25/Slope=1）→ 明確策略回歸原設計
-
-**我推薦選 X**（保留 v0.4，讓 GA 自動回歸），因為避免 code churn，且 sweep range 已強制不含 v0.4 值。
-
-**用戶尚未 ruling**。
-
-### D3. Entry 端「加新 filter」vs「純參數校準」最終定案
-
-- 上一則討論已完整分析「加新 filter」的實戰劣勢
-- 用戶方向明確：**純參數校準**
-- **需保留此討論結果進 W1 strategy.md 修正 audit trail**（尚未做）
-
-### D4. Rule #14 命名決策（v0.4 已質變後）
-
-- v0.4 Golden Cross 0 觸發、ML_Exit 0 觸發、TimeStop 主導
-- 已不是「MA Cross」策略本質
-- 若 v0.5 找到 5M 合理範圍 sweet spot（讓 Golden Cross 有機會 fire）→ **可回到 MA Cross 命名**
-- 若 v0.5 也是 burst 型 → 需 Rule #14 justify 或改名
-
-**待 GA 結果後才能定案**。
-
-### D5. 成功標準修正
-
-原追求：4/8 → 6/8 Rule #13 gates PASS
-用戶新標準（07-09 討論）：
-- **核心 4 gates**：Net > 0, PF > 1.0, MDD abs < 300K, Sample ≥ 100
-- **次要**：Sharpe > 0.5, WR > 30%
-- **策略特性 gate**：與 S3_S 低相關（作 hedge sleeve）
-- **不追求 8/8**，追求**策略純度 + 合理績效**
-
-**建議**：待 GA 結果後正式寫入 strategy.md 修正版。
+### D5. Success criteria — RESOLVED: sniper-adapted thresholds
+- 原 SOP 門檻（Claude 自訂）對 low-WR sniper 結構性不適用
+- 用戶 ruling：驗證門檻須依策略類型調整
+- Sniper 門檻：破產率 < 1% + 單筆 < 5% + Kelly > 0 + 期望值 > 0
+- v0.5 結果：8/8 PASS（見 W5_fivepack_validation_20260709.md）
+- 用戶 feedback 已存入 memory: feedback_validation_precheck
 
 ---
 
@@ -148,52 +126,31 @@ Time: ~30-45 min
 
 ## 五、下次接續 SOP
 
-### 若用戶回覆「執行 Phase 1」
-
-1. 修 .pla defaults？（D2 決策）— **建議保留 v0.4，直接 sweep**
-2. 用戶跑 MC12 Exhaustive 200 combos
-3. 貼 xlsx 給 Claude
-4. Claude 分析 MinSlope sensitivity + Fast/Slow best
-5. 進 Phase 2 or 直接進 W5
-
-### 若用戶回覆「Full Genetic」
-
-1. 用戶跑 4000 evals Genetic
-2. 貼 xlsx
-3. Claude 分析 + Candidate G 決策
-
-### 若用戶回覆「先改 code」
-
-1. Claude 修改 MinSlope 計算方式（3-bar cumulative slope）
-2. ASCII verify + push
-3. 再跑 Phase 1
+**v0.5 W5 已完成。下一步：用戶 ruling on promote to live_simulation。**
 
 ---
 
-## 六、Git 狀態（本檔 commit 前）
+## 六、Git 狀態
 
-- HEAD: `64c62cd` (v0.4-CANDIDATE)
-- Working tree: clean
-- 待新增：**本 md**
+- HEAD: `a212da6` (v0.5 parameter lock)
+- W5 report: `W5_fivepack_validation_20260709.md`
 
 ---
 
 ## 七、Files Index
 
-### 今日新增文件
-- `W4_ReGA_Phase1_analysis_20260709.md`（Phase 1 全負分析）
-- `v04_CANDIDATE_analysis_20260709.md`（v0.4 深度分析）
-- `PENDING_DECISION_20260709.md`（**本檔**）
+### 今日新增/更新文件
+- `S16_S_MACrossShort.pla` — v0.5 (F25/S70/Slope28/QS60)
+- `W5_fivepack_validation_20260709.md` — 五件套完整報告
+- `PENDING_DECISION_20260709.md` — 本檔（全部 D1-D5 RESOLVED）
 
 ### 歷史關鍵文件
-- `S16_S_MACrossShort.pla`（v0.4-CANDIDATE 現行）
-- `S16_S_strategy.md`（W1 14 章，需更新哲學修正）
+- `W4_ReGA_Phase1_analysis_20260709.md`（Phase 1 全負分析）
+- `v04_CANDIDATE_analysis_20260709.md`（v0.4 深度分析）
+- `S16_S_strategy.md`（W1 14 章）
 - `S16_S_entry_exit_spec_20260708.md`（Layer 1+2+3 spec）
-- `MA_deep_research_20260707.md`（**Slow ≤ 50 硬限**依據）
-- `W0_alpha_preverify_result_20260708.md`（W0 STRONG PASS 歷史）
+- `W0_alpha_preverify_result_20260708.md`（W0 STRONG PASS）
 
 ---
 
-**End of Pending Decision — 2026-07-09 Desktop**
-
-**用戶下次來時，讀本檔即可完整接續。**
+**End of Pending Decision — 2026-07-09 (all decisions RESOLVED)**
