@@ -5,7 +5,7 @@
 
 ---
 
-## 模擬中策略清單（截至 2026-06-28）
+## 模擬中策略清單（截至 2026-07-10）
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 模擬起始 |
 |------|------|------|------|----------|----------|
@@ -13,10 +13,13 @@
 | **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 | **S3_L** VolSqueezeLong | C 類波動率（純多）| 純多 | **v1.0 (W5 PASS, 5% portfolio cap)** | `LE_VS_` / `LX_VS_` | **2026-06-23** |
 | **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.9.6-OPT-PROD (Anti-hunt + 5-param OPT, 71T / PF 1.749 / Rule#18 7/7 PASS, 3% cap)** | `SE_VS_` / `SX_VS_` / `SX_VS_1M_Exit` / `SX_VS_SP_Armed` | **2026-07-06**（升 v1.8.0→v1.9.6）|
+| **S16_S** MACrossShort | G 類動量交叉（純空）| 純空 | **v1.0-PROD (5M ZLEMA sniper, W4 WFA WFE 77.4% + Sniper 8/8 PASS, 106T / PF 1.885 / MDD 17.97% / 3% cap)** | `SE_MA_` / `SX_MA_` | **2026-07-10**（**NEW**）|
 
 ⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong_DEPLOYMENT.md)。
 
 ⚠️ **S3_S 部署 caveats (v1.9.6-OPT-PROD)**：3% 上限（沿用 v1.8.0）+ 71T/6.5y ≈ 11 trades/yr + Anti-hunt L1+L2 預設 OFF 待實戰觀察 + T68 06-08 -120K MAE Cap parallel 評估。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort_strategy.md) + [S3_S_VolSqueezeShort_BOSS_VIEW.md](S3_S_VolSqueezeShort_BOSS_VIEW.md)。
+
+⚠️ **S16_S 部署 caveats (v1.0-PROD)**：3% 上限 + 16 trades/yr sniper (低頻) + WR 22.6%（心理準備）+ Bull 主升段保險成本可達 -30% MDD（W4 WFA W6 evidence）+ 建議搭配 S3_L 補多頭。詳見 [S16_S_MACrossShort_DEPLOYMENT.md](S16_S_MACrossShort_DEPLOYMENT.md) + [S16_S_MACrossShort_BOSS_VIEW.md](S16_S_MACrossShort_BOSS_VIEW.md)。
 
 ---
 
@@ -31,6 +34,7 @@
 | **S3** RapidPullbackShort | ✅ [BOSS_VIEW](S3_RapidPullbackShort_BOSS_VIEW.md) |
 | **S3_L** VolSqueezeLong | ✅ [BOSS_VIEW](S3_VolSqueezeLong_BOSS_VIEW.md) |
 | **S3_S** VolSqueezeShort | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort_BOSS_VIEW.md) |
+| **S16_S** MACrossShort | ✅ [BOSS_VIEW](S16_S_MACrossShort_BOSS_VIEW.md) |
 | L1-L5 (live/) | ✅ 5 份 BOSS_VIEW 已補（同步 2026-06-28，見 `strategies/live/`）|
 
 ---

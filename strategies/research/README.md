@@ -11,12 +11,13 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S16_S** | **MACrossShort** | 🔵 **CURRENT — W0 STRONG PASS (2026-07-08)，Layer 1+2+3 lock，進 W1** | [`S16_MACrossShort/`](S16_MACrossShort/) |
+| _(none — S16_S 已 promote，等 roadmap next: S16_L)_ | - | - | - |
 
 ### 最近 PROMOTED (history archived)
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
+| **S16_S** | **MACrossShort** | ✅ **PROMOTED 2026-07-10 v1.0-PROD (W4 WFA WFE 77.4% + Sniper 8/8 PASS)** | [`S16_MACrossShort/`](S16_MACrossShort/)（history 保留研究資料夾）|
 | **S3_S** | **VolSqueezeShort** | ✅ **PROMOTED 2026-07-06 v1.9.6-OPT-PROD (7/7 gates PASS)** | [`S03_VolSqueezeShort/`](S03_VolSqueezeShort/)（history 保留研究資料夾）|
 | S3_L | VolSqueezeLong | ✅ Promoted 2026-06-23 → live_simulation/ | [`archive/S03_VolSqueezeLong_promoted_20260620/`](archive/S03_VolSqueezeLong_promoted_20260620/) |
 
@@ -38,7 +39,7 @@
 
 ```
 S3_L ✅PROMOTED → S3_S ✅PROMOTED → S4_L ⚰️KILLED → S4_S ⚰️KILLED
-→ S16_S 🔵CURRENT → S16_L → S5_L → S5_S → S6 → S7 → S8
+→ S16_S ✅PROMOTED → S16_L 🔵NEXT → S5_L → S5_S → S6 → S7 → S8
 → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13 → S14_L → S14_S → S15_L → S15_S
 ```
 
