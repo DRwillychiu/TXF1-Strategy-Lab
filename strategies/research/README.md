@@ -11,7 +11,7 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| _(none — S16_S 已 promote，等 roadmap next: S16_L)_ | - | - | - |
+| **S16_L** | **MACrossLong** | 🔵 **CURRENT — Stage -1 launched (2026-07-10)，鏡像 S16_S + Long-specific 調整** | [`S16_MACrossLong/`](S16_MACrossLong/) |
 
 ### 最近 PROMOTED (history archived)
 
@@ -39,7 +39,7 @@
 
 ```
 S3_L ✅PROMOTED → S3_S ✅PROMOTED → S4_L ⚰️KILLED → S4_S ⚰️KILLED
-→ S16_S ✅PROMOTED → S16_L 🔵NEXT → S5_L → S5_S → S6 → S7 → S8
+→ S16_S ✅PROMOTED → S16_L 🔵CURRENT → S5_L → S5_S → S6 → S7 → S8
 → S9_L → S9_S → S10_L → S10_S → S11 → S12_L → S12_S → S13 → S14_L → S14_S → S15_L → S15_S
 ```
 
