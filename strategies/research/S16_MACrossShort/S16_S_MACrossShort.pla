@@ -2,19 +2,19 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.6-ADAPTIVE  (2026-07-10 - MinSlope refactored to ATR-adaptive)
+  Version     : v0.5-FINAL  (2026-07-10 - Pure points MinSlope confirmed after v0.6 rejection)
 
-  v0.6 KEY CHANGE (2026-07-10):
-    Rationale: User raised valid concern about MinSlope=28 pure points
-    - Pure points do NOT adapt to volatility regime shifts
-    - TXF1 index level change (25000 vs 50000) breaks the filter
-    - Vol regime shift (2023 low vol vs 2025 high vol) breaks the filter
-    Solution: Refactor to ATR-based adaptive threshold
-      v_SlopeGate = v_ATR * MinSlope_ATRMult (adaptive) OR MinSlope (legacy)
-    New Input: UseAdaptiveSlope (default True), MinSlope_ATRMult (default 0.7)
-    Backward compat: UseAdaptiveSlope=False -> falls back to v0.5 behavior
-    Initial value guess: 0.7 (from 28 pts / ~40 pts typical ATR)
-    Needs new GA sweep on MinSlope_ATRMult after user backtest verification.
+  v0.6-REJECTED (2026-07-10):
+    ATR-based adaptive Slope threshold was tested and FAILED:
+    - Test 1 (ATRMult=0.7): Net -128K, 181 trades (over-entry)
+    - Test 2 (ATRMult=1.5): Net +59K, only 2 trades (over-filter)
+    - Root cause: ATR measures volatility (both directions),
+      not directional slope. Wrong metric for slope filter.
+    Reverted to v0.5 pure-points MinSlope=28.
+    User insight confirmed: Slope filter should be absolute points
+    to reject "flat/upward" cross signals directly.
+    TXF1 real level ~47000 (not 25000 as initially assumed) means
+    MinSlope=28 pure points is even more conservative.
 
   v0.5-FINAL EVIDENCE (2026-07-10 MC12 backtest):
     Config: F25/S70/Slope28 + QS(4,60) MH24 StopATRx4
@@ -112,14 +112,9 @@
   SECTION 1 - INPUTS
   ============================================================ }
 inputs:
-    { ===== Group A: Entry (ZLEMA) - v0.6-ADAPTIVE 2026-07-10 ===== }
+    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
-
-    { v0.6: Adaptive slope filter (default True = use ATR multiplier) }
-    { False = legacy v0.5 behavior (pure points) }
-    UseAdaptiveSlope        ( True  ),
-    MinSlope_ATRMult        ( 0.7   ),
     MinSlope                ( 28    ),
 
     { ===== Group B: M5 Quick Stop - v0.5 2026-07-09 ===== }
@@ -172,7 +167,6 @@ variables:
     v_ZLEMA_Fast            ( 0     ),
     v_ZLEMA_Slow            ( 0     ),
     v_Slope                 ( 0     ),
-    v_SlopeGate             ( 0     ),
 
     { ===== Signal detection ===== }
     v_Death_Cross           ( False ),
@@ -342,17 +336,9 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
   SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)
   ============================================================ }
 
-{ v0.6: Compute adaptive slope gate }
-{ True: gate = ATR * mult (adapts to vol regime) }
-{ False: gate = MinSlope (legacy pure points) }
-if UseAdaptiveSlope = True then
-    v_SlopeGate = v_ATR * MinSlope_ATRMult
-else
-    v_SlopeGate = MinSlope;
-
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope               > v_SlopeGate and
+   v_Slope               > MinSlope and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
