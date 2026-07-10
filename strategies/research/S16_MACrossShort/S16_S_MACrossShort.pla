@@ -2,17 +2,25 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v0.5  (2026-07-09 - Broad GA calibrated, W5 pending)
+  Version     : v0.5-FINAL  (2026-07-10 - Broad GA + W5 Sniper 8/8 PASS, LOCKED)
 
-  v0.5 EVIDENCE (2026-07-09 MC12 backtest, 1024-combo Genetic Algorithm):
-    Config: F25/S70/Slope28/QS4-60/MH24/StopATRx4
-    Result: Net +1,075,800 / PF 1.982 / MDD -271,600 / 102T / WR 22.5%
-    Calmar 3.961 / Avg Win:Loss ratio 6.81:1 (sniper profile)
-    MDD/1M = 27.2% -> Rule #13 PASS
+  v0.5-FINAL EVIDENCE (2026-07-10 MC12 backtest):
+    Config: F25/S70/Slope28 + QS(4,60) MH24 StopATRx4
+    Result: Net +1,028,600 / PF 1.885 / MDD -271,600 (17.97%) / 106T / WR 22.64%
+    Sharpe +0.463 / Calmar ~3.8 / Sniper reward:risk profile
+    W5 Sniper-adapted validation: 8/8 PASS
+      - Ruin probability 0.03%
+      - Single trade max loss < 5% capital
+      - Kelly criterion 11.2%
+      - Expected value +10,547/trade
+      - Bear PF 3.79 / Volatile PF 2.13 / Bull PF 0.70
+      - Max consecutive loss 16.2% capital
+
+  v0.5 GA (2026-07-09, 1024-combo Genetic Algorithm):
     Sensitivity: Fast+Slope=86% of total, 4 exit params all LOW (<0.06)
     MinSlope 26->28: Slope26-28 plateau (-2.4%), Slope30 cliff (-27%)
-    ZLEMA_Slow 70: narrow peak (S80=-33.5%), monitor in W5
-    Pending: W5 five-pack (Monte Carlo / Bootstrap / Stress / Regime / Robustness)
+    ZLEMA_Slow 70: narrow peak (S80=-33.5%), documented
+    Calmar 3.961 / Avg Win:Loss 6.81:1
 
   v0.4 EVIDENCE (2026-07-09 backtest):
     Config: F25/S90/Slope26/QS45/MH24/StopATRx4
@@ -20,13 +28,21 @@
 
   v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
 
-  DESIGN PHILOSOPHY:
-    Entry wide open, exit knife sharp.
-    Whipsaw acceptable if each loss strictly controlled.
-    5M timeframe, ZLEMA (Zero-Lag EMA) death cross short entry.
-    Golden cross main exit + 4-layer protection (Quick / Multi-Layer / BE / Time).
+  DESIGN PHILOSOPHY (v0.5-FINAL, evolved from W1 spec):
+    "Sniper style: entry selective, exit swift."
+    Strategy KNOWS what regime to trade (Bear + Volatile),
+    LOSES SMALL in unsuitable regime (Bull), stays profitable overall.
+    5M timeframe ZLEMA death cross + MinSlope selective entry.
+    TimeStop (24 bars = 2hr) captures momentum burst decay window.
     NO Regime Filter (user 2026-07-08 ruling Option A: pure simple).
     NO TP (feedback_trend_let_profits_run).
+
+  STRATEGY IDENTITY:
+    - Primary regime: Bear (PF 3.79) + Volatile (PF 2.13) = alpha zone
+    - Insurance cost: Bull regime (PF 0.70) = -106K over 35 trades
+    - Alpha structure: 20 TimeStop wins (100% WR, avg +105K)
+      offset 72 QuickStop losses (small, avg -15K)
+    - Sniper profile: 22.6% WR + 6.8:1 reward:risk ratio
 
   ARCHITECTURE:
     Data1 = TXF1 5M (execution + signal)
