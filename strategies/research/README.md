@@ -11,7 +11,13 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S16_L** | **MACrossLong** | 🔵 **CURRENT — Stage -1 launched (2026-07-10)，鏡像 S16_S + Long-specific 調整** | [`S16_MACrossLong/`](S16_MACrossLong/) |
+| **S16_S_10M** | **MACrossShort 10M 時框延伸** | 🔵 **CURRENT — 2026-07-10 啟動時框延伸實驗** | 待建 folder |
+
+### SUSPENDED（暫停）
+
+| 編號 | 策略 | 狀態 | 位置 |
+|------|------|------|------|
+| S16_L | MACrossLong | 🟡 SUSPENDED 2026-07-10（用戶優先做時框延伸實驗）| [`S16_MACrossLong/`](S16_MACrossLong/) |
 
 ### 最近 PROMOTED (history archived)
 

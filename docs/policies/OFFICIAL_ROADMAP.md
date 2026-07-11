@@ -76,7 +76,7 @@
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
 | **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | ✅ **PROMOTED 2026-07-10 v1.0-PROD (W4 WFA WFE 77.4% + Sniper 8/8, 106T/PF 1.885/MDD 17.97%, 3% cap)** |
-| **S16_L** | **MACrossLong** | **G 動量交叉** | **5M** | **純多** | 🔵 **CURRENT Stage-1 (2026-07-10 launched after S16_S promote)** |
+| **S16_L** | **MACrossLong** | **G 動量交叉** | **5M** | **純多** | 🟡 **SUSPENDED 2026-07-10 (用戶優先做 S16_S 時框延伸實驗 S16_S_10M)** |
 
 ⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。2026-07-07 用戶決策拆分為 S16_S + S16_L，**先 S 後 L**（override 先 L 後 S 鐵則，理由：補強做空 sleeve 為原始動機）。
 規格（2026-07-07 更新）：5M 時框（原 15M）、True Zero-Lag EMA（ZLEMA）、死亡交叉進場（S16_S）/ 黃金交叉進場（S16_L）、搭配極端行情多層停損 SOP（Rule #17）。
