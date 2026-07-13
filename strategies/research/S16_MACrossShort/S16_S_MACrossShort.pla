@@ -2,7 +2,15 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.0-PROD  (2026-07-10 - PROMOTED to live_simulation, W4 WFA STRONG PASS)
+  Version     : v1.1-PCT  (2026-07-13 - MinSlope percentage normalization)
+
+  v1.1-PCT CHANGE (2026-07-13):
+    MinSlope converted from fixed points to percentage-of-price.
+    Fixed 28pts = 0.23%/bar at TXF 12K but 0.06%/bar at TXF 47K.
+    Percentage normalizes entry strictness across all index levels.
+    Toggle: UsePercentSlope (True=pct, False=original fixed points)
+    Backward compatible: UsePercentSlope=False restores v1.0-PROD behavior.
+    Backup: S16_S_MACrossShort.pla.bak_20260713
 
   v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
     W4 WFA (9-window rolling IS 2y / OOS 6m): WFE 77.4% (>> 50% gate)
@@ -128,10 +136,12 @@
   SECTION 1 - INPUTS
   ============================================================ }
 inputs:
-    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
+    { ===== Group A: Entry (ZLEMA) - v1.1-PCT 2026-07-13 ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
     MinSlope                ( 28    ),
+    MinSlope_Pct            ( 0.06  ),
+    UsePercentSlope         ( True  ),
 
     { ===== Group B: M5 Quick Stop - v0.5 2026-07-09 ===== }
     QuickStop_On            ( True  ),
@@ -183,6 +193,8 @@ variables:
     v_ZLEMA_Fast            ( 0     ),
     v_ZLEMA_Slow            ( 0     ),
     v_Slope                 ( 0     ),
+    v_Slope_Pct             ( 0     ),
+    v_Slope_OK              ( False ),
 
     { ===== Signal detection ===== }
     v_Death_Cross           ( False ),
@@ -277,6 +289,12 @@ v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 { F2 fix: measure Fast ZLEMA downward slope for short entry (not Slow, not AbsValue) }
 { Positive value = Fast is falling = bearish momentum = good for short }
 v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
+v_Slope_Pct = (v_ZLEMA_Fast[1] - v_ZLEMA_Fast) / Close * 100;
+
+if UsePercentSlope then
+    v_Slope_OK = v_Slope_Pct > MinSlope_Pct
+else
+    v_Slope_OK = v_Slope > MinSlope;
 
 
 { ============================================================
@@ -354,7 +372,7 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
 
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope               > MinSlope and
+   v_Slope_OK            = True and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
