@@ -25,12 +25,19 @@
 - **Impact**: Safety margin is thin.
 - **Resolution**: Same as A2. Monitor during simulation.
 
-### A4. MinSlope fixed points does not scale with index level
+### A4. MinSlope fixed points does not scale with index level — CLOSED (2026-07-14)
 - 28 pts at TXF 12,000 (2020) = 0.23%/bar (very strict)
 - 28 pts at TXF 47,000 (2026) = 0.06%/bar (relatively loose)
 - **Impact**: Trade count artificially low in earlier years, higher in recent years. Profit concentration biased toward high-index periods.
-- **Attempted**: v0.6 ATR-based adaptive — REJECTED (ATR measures volatility range, not directional slope)
-- **Resolution**: Research percentage-based MinSlope approach. Not urgent — does not break current operation.
+- **Attempted #1**: v0.6 ATR-based adaptive — REJECTED (ATR measures volatility range, not directional slope)
+- **Attempted #2**: v1.1-PCT percentage-based MinSlope — REJECTED (O-1, 2026-07-14)
+  - 23-combo Exhaustive GA (MinSlope_Pct 0.03%-0.25%, step 0.01%)
+  - No single percentage value beats v1.0 across net profit + trade count + Calmar
+  - Root cause: bearish momentum absolute magnitude does not scale proportionally with index level; same 1% = 200pts at 20K vs 400pts at 40K
+  - Both percentage and fixed points share the same structural limitation: each value is optimal for specific years, no universal parameter exists
+  - Fixed 28pts accidentally provides non-proportional filtering that matches alpha distribution
+  - Full analysis: `S16_S_O1_CONCLUSION_20260714.md`
+- **Resolution**: CLOSED — maintain v1.0 MinSlope=28pts. Monitor when index reaches 55,000+ (28pts effective < 0.051%), re-evaluate with fixed-point GA at that time.
 
 ---
 
@@ -117,7 +124,7 @@
 | A1 | S16_S_10M experiment | After 10M experiment completes |
 | A2 | Live simulation data | Ongoing monitoring |
 | A3 | Live simulation data | Ongoing monitoring |
-| A4 | New filter research | Future optimization cycle |
+| A4 | O-1 percentage GA | CLOSED — 28pts maintained (2026-07-14) |
 | B1 | System uptime | Operational requirement |
 | B2 | Time + more data | WFA partially addressed |
 | B3 | Portfolio design | Managed by 3% cap |
