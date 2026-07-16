@@ -13,7 +13,7 @@
 
 ## 目錄結構（2026-06-27 審計更新）
 ```
-CLAUDE.md                          # 本檔（18 條強制規範）
+CLAUDE.md                          # 本檔（19 條強制規範）
 README.md                          # 專案總覽
 .gitignore
 
@@ -216,6 +216,20 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - Pass criteria：≥ 4/5 件套 pass 才考慮 promote
     - 對 low-frequency strategy（< 10 trades/yr）尤其重要，因短週期 WFA 不公平
     - 違反本規則 = 違反用戶 2026-06-30 明確指示
+19. **★ 強制規範**：research → live_simulation PROMOTE 必跑 PROMOTE_CHECKLIST 6 項檢查
+    - 詳見 [`docs/policies/PROMOTE_CHECKLIST.md`](docs/policies/PROMOTE_CHECKLIST.md)
+    - 觸發事件：2026-07-10 S16_S v1.0-PROD 帶著 W2 draft placeholder `v_Holiday_Block = False` 通過 PROMOTE，違反 Rule #11，直到 2026-07-16 才發現
+    - 6 項檢查：
+      1. Placeholder Scan（grep `v_*_Block = False;` / `placeholder` / `TODO` / `FIXME` / `Wx draft`）
+      2. Rule #11 Settlement_Flat 7 元素齊全（模組**有效**，不只**存在**）
+      3. Rule #12 SetStopLoss Guard 正確
+      4. Rule #15 ASCII 100%
+      5. Rule #13 10 維度 + Rule #18 5 件套
+      6. Sniper 特殊條件（若為低頻策略 <20 trades/yr）
+    - Fail Check 1-4 任一項 = **拒絕 PROMOTE**
+    - PROMOTE 後才發現 gap = 立即 patch + 版本號 +.1 + 更新 DEPLOYMENT.md + 更新 CHECKLIST（新增 lesson）+ commit/push
+    - 適用範圍：所有 research → live_simulation 動作
+    - 違反本規則 = 違反用戶 2026-07-16 明確指示（「不要又有犯錯空間」）
 
 ## 優化工作流程（Claude Code 使用時遵守）
 

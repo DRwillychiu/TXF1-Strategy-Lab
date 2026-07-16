@@ -1,10 +1,21 @@
-# S16_S MACrossShort — Deployment Guide (v1.0-PROD)
+# S16_S MACrossShort — Deployment Guide (v1.0.1-HOLIDAY)
 
-**Promote Date**: 2026-07-10
-**Version**: v1.0-PROD
+**Promote Date**: 2026-07-10 (v1.0-PROD)
+**Current Version**: v1.0.1-HOLIDAY (2026-07-16 compliance patch)
 **Signal Load Name**: `STRATEGY_GEN_S16_S_MACrossShort`
 **Portfolio Cap**: **3%**
 **Account Sleeve**: 100 萬 NTD / 1 口大台
+
+---
+
+## 🔴 Post-Promote Compliance Patch (2026-07-16)
+
+**Version bump**: v1.0-PROD → v1.0.1-HOLIDAY
+**Reason**: v1.0-PROD 帶著 W2 draft placeholder `v_Holiday_Block = False;` 通過 PROMOTE，違反 Rule #11
+**Impact**: Alpha 邏輯完全不變，僅補足假日合規（63 個 TAIFEX 假日）
+**Full details**: [S16_S_HOLIDAY_PATCH_20260716.md](../research/S16_MACrossShort/S16_S_HOLIDAY_PATCH_20260716.md)
+**Enforcement doc**: [PROMOTE_CHECKLIST.md](../../docs/policies/PROMOTE_CHECKLIST.md)
+**Action required**: 用戶 MC12 需重新載入 .pla 並重跑回測確認績效影響 < 1%
 
 ---
 

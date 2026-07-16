@@ -97,6 +97,31 @@
 
 ---
 
+## F. Compliance / Operational Risk
+
+### F1. Holiday_Block hardcoded to False — CLOSED (2026-07-16)
+- v1.0-PROD / v1.1-PCT 的 `v_Holiday_Block = False;` 是 W2 draft placeholder
+- Comment 明說「For W2 draft: hardcode Registry expiry only.」但一直未替換
+- **Impact**: 假日期間策略可能誤進場/誤持倉（潛在風險，未實際發生虧損）
+- **違反**: CLAUDE.md Rule #11 (Settlement_Flat 7 元素) + memory rule `feedback_holiday_flatten_rule`
+- **Discovery**: 2026-07-16 例行 self-audit
+- **Resolution 2026-07-16**:
+  - research 版升 v1.2-HOLIDAY (包含 UsePercentSlope toggle + HolidayFlat_v3)
+  - live_simulation 版升 v1.0.1-HOLIDAY (只加 HolidayFlat_v3，不含 UsePercentSlope)
+  - Registry 同 L1-L5 / S1 / S3_S 的 63 個 TAIFEX 假日 (2019-2027)
+  - Date arithmetic 改成 EL-standard (Year-1900) 格式
+  - Registry_Valid_Until 從 1280101 (民國) → 1270101 (EL-std, 2027-01-01)
+- **Prevention**: 建立 [`docs/policies/PROMOTE_CHECKLIST.md`](../../../docs/policies/PROMOTE_CHECKLIST.md) 6 項強制檢查
+- Full patch details: [`S16_S_HOLIDAY_PATCH_20260716.md`](S16_S_HOLIDAY_PATCH_20260716.md)
+
+### F2. Registry expiry hard limit — 2027-01-01
+- Registry_Valid_Until = 1270101 (2027-01-01)
+- 現在是 2026-07-16，Registry 剩 ~5.5 個月
+- **Action Required**: 需在 2026-12 之前從 TAIFEX 官網撈 2027-2028 假日表更新 Registry
+- **Owner**: 使用者 / Claude Code
+
+---
+
 ## E. Overall Assessment
 
 ### Strengths
@@ -133,3 +158,5 @@
 | C3 | Session-split analysis | Can be done anytime |
 | D1 | User ruling | CLOSED — current design accepted |
 | D2 | QuickStop optimization | Future optimization cycle |
+| F1 | HolidayFlat_v3 patch | CLOSED 2026-07-16 (v1.0.1-HOLIDAY / v1.2-HOLIDAY) |
+| F2 | TAIFEX 2027 calendar refresh | Required before 2026-12-31 |

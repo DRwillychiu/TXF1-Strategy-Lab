@@ -2,7 +2,23 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.0-PROD  (2026-07-10 - PROMOTED to live_simulation, W4 WFA STRONG PASS)
+  Version     : v1.0.1-HOLIDAY  (2026-07-16 - HolidayFlat_v3 compliance patch)
+
+  v1.0.1-HOLIDAY CHANGE (2026-07-16):
+    CRITICAL COMPLIANCE FIX - Rule #11 gap closure.
+    Prior v1.0-PROD had v_Holiday_Block hardcoded to False
+    (W2 draft placeholder never replaced before PROMOTE - promotion audit gap).
+    This patch installs the shared 63-entry HolidayFlat_v3 registry
+    identical to L1-L5 / S1 / S3_S / research S16_S v1.2-HOLIDAY.
+    Also changes Date arithmetic to EL-standard (Year - 1900) format
+    for cross-strategy alignment.
+    Behavior change: strategy now correctly blocks entry and force-flats
+    positions on the 63 registered TAIFEX holidays 2019-2027.
+    Alpha logic UNCHANGED - Config LOCKED (F25/S70/Slope28/QS60/MH24/StopATRx4).
+    Backtest re-run required to verify no change to core performance
+    (expected: minimal impact - most trades in normal sessions).
+
+  v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
 
   v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
     W4 WFA (9-window rolling IS 2y / OOS 6m): WFE 77.4% (>> 50% gate)
@@ -167,8 +183,10 @@ inputs:
     StopATRMult             ( 4.0   ),
 
     { ===== Group H: Rule #11 Compliance ===== }
+    { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
+    { 1270101 = 2027-01-01 (aligned with L1-L5 / S1 / S3_S registry expiry) }
     Holiday_Flat_Time       ( 415   ),
-    Registry_Valid_Until    ( 1280101 ),
+    Registry_Valid_Until    ( 1270101 ),
     Manual_Kill_Switch      ( False ),
     Settlement_Flat_Time    ( 1230  );
 
@@ -237,29 +255,80 @@ variables:
     v_Holiday_Block         ( False ),
     v_Registry_Expired      ( False ),
     v_Settlement_Day        ( False ),
+    hidx                    ( 0     ),
     ExitFired               ( 0     );
+
+arrays:
+    Holiday_Tail[80](0);
 
 
 { ============================================================
   SECTION 3 - PRIORITY 0 COMPLIANCE CHECKS
   (Rule #11 registry + kill + holiday + settlement)
-  Simplified stub - full 63-holiday table can be plugged from
-  HolidayFlat_v3 pattern used by L1-L5 / S1 / S3_S.
-  For W2 draft: hardcode Registry expiry only.
+  v1.0.1-HOLIDAY (2026-07-16): HolidayFlat_v3 registry patched in.
+  Registry synced with L1-L5 / S1 / S3_S (63 entries 2019-2027).
+  Rebuild from TAIFEX calendar before Registry_Valid_Until reached.
   ============================================================ }
 
-{ Registry expired check (year * 10000 + month * 100 + day format) }
-v_Registry_Expired = ( Year(Date) - 1911 ) * 10000
-                     + Month(Date) * 100 + DayOfMonth(Date)
-                   > Registry_Valid_Until;
+{ ---- Holiday Registry init (once on first bar) ---- }
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+end;
 
-{ Settlement day: 3rd Wednesday of month (simplified) }
+{ ---- Registry expiry check (EL-standard: Date is YYYMMDD Year-1900) ---- }
+v_Registry_Expired = False;
+if Date > Registry_Valid_Until then
+    v_Registry_Expired = True;
+
+{ ---- Holiday match: check current date against registry tail (Time <= 500) ---- }
+v_Holiday_Block = False;
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+{ ---- Registry expiry escalation: force block once expired ---- }
+if v_Registry_Expired = True then
+    v_Holiday_Block = True;
+
+{ ---- Settlement day: 3rd Wednesday of month ---- }
 v_Settlement_Day = ( DayOfWeek(Date) = 3 ) and
                    ( DayOfMonth(Date) >= 15 ) and
                    ( DayOfMonth(Date) <= 21 );
-
-{ Holiday block: placeholder, expand with HolidayFlat_v3 registry }
-v_Holiday_Block = False;
 
 
 { ============================================================
