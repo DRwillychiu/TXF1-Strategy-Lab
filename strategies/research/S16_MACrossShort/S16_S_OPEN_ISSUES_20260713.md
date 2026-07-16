@@ -120,6 +120,63 @@
 - **Action Required**: 需在 2026-12 之前從 TAIFEX 官網撈 2027-2028 假日表更新 Registry
 - **Owner**: 使用者 / Claude Code
 
+### F3. 假日前夕夜盤未封鎖（系統性 gap）
+- 現行 HolidayFlat_v3 只在假日**當天** (Time <= 500) 判 Block
+- 缺「前夕夜盤 (15:00-23:59)」封鎖邏輯
+- 實例：週三假日 → 週二 21:00 出現死叉+Slope>28 會照常進場，僅在週三 04:15 平倉
+- **範圍**: 同時存在於 S1 / L1-L5 / S3_S / S16_S，系統性 gap，非 S16_S 特有
+- **與 memory rule 對齊**: 違反 `feedback_holiday_flatten_rule`「封鎖前夕夜盤進場」
+- **Action Required**: 未來 batch 處理，全策略一次升級
+- **不阻擋**: v1.0.1-HOLIDAY 現行部署
+
+---
+
+## G. Alpha Optimization Tracks（2026-07-16 確定的 4 主線）
+
+### G1. Debug Print 漏單統計（主線 C）
+- 加 4 個 counter (DeathCross / SlopeReject / HolidayReject / Entered)
+- LastBarOnChart 印出漏單率
+- **判讀**: Slope-reject 若 >80% → 現行嚴選合理；若 40-50% → 可放寬
+- **Status**: 待實作
+- **Priority**: HIGH (診斷基線，其他優化的起點)
+
+### G2. TimeStop 對比實驗（主線 D）
+- MaxHoldingBars 12 / 24 / 36 / 48 四配置對比
+- 目的：量化「超過 2hr 的 burst」是否存在
+- **Status**: 待實作
+- **Priority**: MED
+
+### G3. BE_Trail A/B/C（主線 B，用戶洞察）
+- 用戶洞察：BE 在初始停損階段就啟用 → 該賺的賺不到
+- 3 配置：A baseline / B 全關 BE / C 延後啟動 (Trigger 2.5×ATR, Buffer 15pts)
+- **Status**: 待實作
+- **Priority**: HIGH (11 筆 BE 全虧是明確 alpha leak)
+
+### G4. D-2 進化版 — 雙 gate 抓取（主線 A）
+- 用戶洞察：空方策略在多頭環境要抓「突然高斜率」+「連續型斜率」兩類
+- Type 1: `Slope > 28 AND 加速度 >= 0`
+- Type 2: `3根均斜 > 15 AND 3根連續下彎`
+- **Status**: 待實作
+- **Priority**: HIGH (最大結構改進，但依賴 G1-G3 診斷)
+
+### G5. D-5 Post-Entry N-bar Confirmation（待 ruling）
+- 進場後 3 根若 slope 未續弱即退場（動能 based exit）
+- 與現有 QuickStop 互補（loss/time based）
+- **Status**: 待用戶 GO/NO ruling
+- **Priority**: 待定
+
+---
+
+## 已排除方向（audit trail）
+
+| Direction | 排除原因 | Rejection Date |
+|-----------|--------|---------------|
+| v0.6 ATR-scaled slope | 混淆方向與波動 | 2026-07-10 |
+| v1.1-PCT MinSlope 百分比 | O-1 GA 全 REJECTED | 2026-07-14 |
+| D-3 分年 GA + 折衷值 | 用未來預測過去 | 2026-07-16 |
+| D-4 ATR-normalized slope | 極短周期不能延遲 | 2026-07-16 |
+| D-6 單參數 GA 微調 | 過度擬合機率極高 | 2026-07-16 |
+
 ---
 
 ## E. Overall Assessment
@@ -160,3 +217,9 @@
 | D2 | QuickStop optimization | Future optimization cycle |
 | F1 | HolidayFlat_v3 patch | CLOSED 2026-07-16 (v1.0.1-HOLIDAY / v1.2-HOLIDAY) |
 | F2 | TAIFEX 2027 calendar refresh | Required before 2026-12-31 |
+| F3 | 假日前夕夜盤封鎖 (系統性 gap) | Future cross-strategy batch |
+| G1 | Debug print 漏單統計 | 主線 C，待明天實作 |
+| G2 | TimeStop 對比實驗 | 主線 D，待明天實作 |
+| G3 | BE_Trail A/B/C 對比 | 主線 B，待明天實作 |
+| G4 | D-2 進化版雙 gate | 主線 A，待明天實作 |
+| G5 | D-5 Post-Entry Confirmation | 待用戶 ruling |
