@@ -2,7 +2,13 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.2-HOLIDAY  (2026-07-16 - HolidayFlat_v3 registry patch)
+  Version     : v1.2.1-HOLIDAY  (2026-07-17 - HOTFIX UsePercentSlope default True->False)
+
+  v1.2.1 HOTFIX (2026-07-17):
+    v1.2-HOLIDAY header claimed "default False" but input still had True.
+    User MC12 backtest ran pct mode by accident: 535T / PF 0.95 / Net -194K
+    (matches O-1 REJECTED 0.06pct row: 541T). Header/code mismatch fixed.
+    Lesson: input default changes must be verified in code, not only header.
 
   v1.2-HOLIDAY CHANGE (2026-07-16):
     CRITICAL COMPLIANCE FIX - Rule #11 gap closure.
@@ -150,8 +156,10 @@ inputs:
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
     MinSlope                ( 28    ),
+    { O-1 REJECTED (2026-07-14): UsePercentSlope MUST default False. }
+    { True = pct mode = 535 trades / PF 0.95 / Net -194K (proven inferior). }
     MinSlope_Pct            ( 0.06  ),
-    UsePercentSlope         ( True  ),
+    UsePercentSlope         ( False ),
 
     { ===== Group B: M5 Quick Stop - v0.5 2026-07-09 ===== }
     QuickStop_On            ( True  ),
