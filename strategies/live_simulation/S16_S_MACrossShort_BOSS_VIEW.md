@@ -61,10 +61,12 @@ S16_S 單月 14 筆 **+264,000** — 空方對沖本職到位。
 
 ## 驗證狀態
 
-- 🚨 **W4 WFA WFE 77.4% — INVALIDATED (2026-07-18 audit)**：原版窗口日期系統性錯誤（OOS 互相重疊 + IS/OOS 污染 + 彩券單雙重計入）。v1.4 防呆重跑進行中。詳見 [`S16_S_WFA_AUDIT_20260718.md`](../research/S16_MACrossShort/S16_S_WFA_AUDIT_20260718.md)
-- **W5 Sniper 5 件套 8/8 PASS**（v1.0-era 數據，列入重跑清單）
-- **全期合規 baseline 不受影響**（無窗口切分，逐筆對帳一分不差）
-- **Rule #19 PROMOTE_CHECKLIST**：因本策略 placeholder 事件而生（2026-07-16）+ L-P6 WFA 跨度驗證鐵則（2026-07-18）
+- 原版 WFE 77.4% — INVALIDATED（窗口重疊+污染，見 [`S16_S_WFA_AUDIT_20260718.md`](../research/S16_MACrossShort/S16_S_WFA_AUDIT_20260718.md)）
+- **乾淨版 W4 WFA (v1.4)：WFE 42.5%，FAIL** — 但 FAIL 的是「滾動重最佳化」流程：同 4.5 年 OOS，滾動 -172,800 vs **固定參數 +830,800（差 100 萬）**。W6 whipsaw：滾動 -440K vs 固定 +49K。詳見 [`W4_WFA_v14_analysis_20260718.md`](../research/S16_MACrossShort/W4_WFA_v14_analysis_20260718.md)
+- **⛔ 參數凍結鐵則（2026-07-18）**：禁止定期 GA 重最佳化；重評估僅限結構性觸發（指數>55K / 紅線）
+- 主驗證框架 → **Rule #18 Non-WFA 5 件套**（v1.4 重跑進行中）+ live_simulation forward 累積
+- Forward OOS 初步：參數定案（07-10）後的 7/14-17 交易 +175,200（4 筆）
+- **Rule #19 PROMOTE_CHECKLIST** + L-P6 WFA 跨度驗證鐵則
 
 ---
 
