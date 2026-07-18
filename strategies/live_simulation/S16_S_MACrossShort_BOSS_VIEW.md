@@ -64,7 +64,7 @@ S16_S 單月 14 筆 **+264,000** — 空方對沖本職到位。
 - 原版 WFE 77.4% — INVALIDATED（窗口重疊+污染，見 [`S16_S_WFA_AUDIT_20260718.md`](../research/S16_MACrossShort/S16_S_WFA_AUDIT_20260718.md)）
 - **乾淨版 W4 WFA (v1.4)：WFE 42.5%，FAIL** — 但 FAIL 的是「滾動重最佳化」流程：同 4.5 年 OOS，滾動 -172,800 vs **固定參數 +830,800（差 100 萬）**。W6 whipsaw：滾動 -440K vs 固定 +49K。詳見 [`W4_WFA_v14_analysis_20260718.md`](../research/S16_MACrossShort/W4_WFA_v14_analysis_20260718.md)
 - **⛔ 參數凍結鐵則（2026-07-18）**：禁止定期 GA 重最佳化；重評估僅限結構性觸發（指數>55K / 紅線）
-- **Rule #18 5 件套 (v1.4 官方數據集 718)：4/5 PASS** — Bootstrap/Stress/Regime/Robustness PASS；MC (95% MDD 38.1%) FAIL 轉譯為資本配置要求。Bootstrap 2.32% 驚險過關（統計顯著性邊界）。適性 6 gates 全過。詳見 [`S16_S_v14_fivepiece_20260718.md`](../research/S16_MACrossShort/S16_S_v14_fivepiece_20260718.md)
+- **Rule #18 5 件套 (v1.4 官方數據集 718)：通用 4/5 PASS / 適性 5/5 PASS** — MC 適性重驗（月區塊 Bootstrap 保留贏虧共聚）95% MDD 26.7% 過 30% gate；冷啟動最壞開局實測 -169,800；IID 洗牌 38.1% 保留為壓力包絡。維持 1M sleeve + 3% cap + 25% 暫停紅線。詳見 [`S16_S_v14_fivepiece_20260718.md`](../research/S16_MACrossShort/S16_S_v14_fivepiece_20260718.md)
 - **官方 baseline (MaxBarsBack=200)**：**107T / +1,094,800 / PF 1.910 / MDD -228,000 / WR 27.1%**
 - **身分修正**：alpha 全在 Volatile regime (87T, PF 2.06)；Bear 僅 3 筆 —「崩盤/波動收割者」非「熊市策略」。風險告知：真實 95% DD 潛力 ≈ -380K（配置資本須承受）
 - Forward OOS 初步：參數定案（07-10）後的 7/14-17 交易 +175,200（4 筆）
