@@ -8,14 +8,18 @@
 
 ---
 
-## 🔴 Post-Promote Compliance Patch (2026-07-16)
+## 🔴 Post-Promote Compliance Patch (2026-07-16) — 已驗證 (2026-07-18)
 
 **Version bump**: v1.0-PROD → v1.0.1-HOLIDAY
 **Reason**: v1.0-PROD 帶著 W2 draft placeholder `v_Holiday_Block = False;` 通過 PROMOTE，違反 Rule #11
-**Impact**: Alpha 邏輯完全不變，僅補足假日合規（63 個 TAIFEX 假日）
-**Full details**: [S16_S_HOLIDAY_PATCH_20260716.md](../research/S16_MACrossShort/S16_S_HOLIDAY_PATCH_20260716.md)
+**Impact 實測（2026-07-17/18 用戶 MC12 重跑，逐筆 diff 驗證）**:
+- 唯一差異 = 移除 1 筆跨清明連假持倉（2025-04-03 04:45 進場，+370,200 彩券單）
+- 該筆為連假收盤前 15 分鐘進場裸空、跨關稅崩盤週末——gap 面前所有停損失效，
+  屬運氣而非 alpha；反向跳空即為單筆 -360K+
+- **MDD / 毛損完全不變** — 拿掉的是運氣，不是 alpha
+- 用戶 ruling (2026-07-18)：**接受合規 baseline**
+**Full details**: [S16_S_HOLIDAY_PATCH_20260716.md](../research/S16_MACrossShort/S16_S_HOLIDAY_PATCH_20260716.md) + [S16_S_HOLIDAY_IMPACT_20260717.md](../research/S16_MACrossShort/S16_S_HOLIDAY_IMPACT_20260717.md)
 **Enforcement doc**: [PROMOTE_CHECKLIST.md](../../docs/policies/PROMOTE_CHECKLIST.md)
-**Action required**: 用戶 MC12 需重新載入 .pla 並重跑回測確認績效影響 < 1%
 
 ---
 
@@ -44,25 +48,42 @@
 
 ---
 
-## 三、Backtest Evidence
+## 三、Backtest Evidence（v1.0.1-HOLIDAY 合規 baseline，數據至 2026-07-18）
 
-| Metric | v1.0-PROD |
-|--------|-----------|
-| Net Profit | +1,028,600 NTD |
-| PF | 1.885 |
-| MDD | -271,600 (17.97%) |
-| Trades | 106 (2020-2026) |
-| WR | 22.64% |
-| Avg Win : Avg Loss | ~6.8 : 1 |
-| Sharpe | +0.463 |
+| Metric | v1.0.1-HOLIDAY (現行) | v1.0-PROD (superseded) |
+|--------|----------------------|------------------------|
+| Net Profit | **+833,600 NTD** | +1,028,600（含彩券單）|
+| PF | **1.672** | 1.885 |
+| MDD | **-271,600 (-23.79%)** | -271,600（金額相同）|
+| Trades | **110** (2020/03-2026/07) | 106 |
+| WR | 22.73% | 22.64% |
+| Avg Win : Avg Loss | 5.68 : 1 | ~6.8 : 1 |
+| Sharpe (年化) | +0.483 | +0.463 |
+| 恢復因子 | 3.07 | 3.79 |
+| 年化報酬率 | 11.06% | 13.67% |
 
-### Regime 表現
+### 出場分佈（與 MC 淨利交叉驗證一分不差）
+
+| Exit | Trades | Net | WR |
+|------|--------|-----|-----|
+| TimeStop | 21 | +1,986,200 | 100% |
+| GoldenCross | 3 | +87,600 | 100% |
+| BE_Trail 1+2 | 11 | -54,000 | 9% (G3 檢驗中) |
+| QuickStop_Time | 30 | -209,400 | 0% |
+| QuickStop_Loss | 45 | -976,800 | 0% |
+
+### Regime 表現（W5-era 數據，含已移除彩券單，待 regime 重跑）
 
 | Regime | Net | PF |
 |--------|-----|-----|
 | Bear | +590K | 3.79 |
-| Volatile | +591K | 2.13 |
+| Volatile | +591K（含 +370K 彩券單）| 2.13 |
 | Bull | -106K | 0.70 |
+
+### 2026-07 實戰級對沖證據（模擬）
+
+台股 7 月 DD 危機（L1-L5 live 帳戶 -21.3%）期間，S16_S 單月 14 筆 **+264,000**。
+空方 sniper sleeve 在組合最需要對沖時發揮本職。
 
 ---
 
@@ -117,7 +138,7 @@ History:                From 2020-01-01 (or as available)
 
 | 項目 | 值 |
 |------|---|
-| 滑價 | 1,000 NTD round-trip |
+| 滑價 | 2,000 NTD / 趟（實測 110 筆共 220,000，逐筆驗證）|
 | 手續費 | 已含在滑價 |
 | 每點值 | 200 NTD (大台) |
 | 帳戶乘數 | 固定 1 口 |
@@ -168,7 +189,7 @@ live_simulation → live：
 - 回測偏離度 ≤ 30%
 ```
 
-**預估模擬期**：**約 24 個月**（每年 16 trades，需累積 30 筆）
+**預估模擬期**：**約 21 個月**（每年 ~17 trades，需累積 30 筆；高波動年更快）
 
 ---
 
@@ -189,8 +210,10 @@ live_simulation → live：
 
 ## 十二、Related Files
 
-- Strategy PLA: `S16_S_MACrossShort.pla` (v1.0-PROD)
-- Strategy Definition: `../research/S16_MACrossShort/S16_S_strategy.md`
+- Strategy PLA: `S16_S_MACrossShort.pla` (**v1.0.1-HOLIDAY**)
+- Strategy Text: `../research/S16_MACrossShort/S16_S_STRATEGY_TEXT_20260718.md`（現行版）
+- Holiday impact: `../research/S16_MACrossShort/S16_S_HOLIDAY_IMPACT_20260717.md`
+- Risk Register: `../research/S16_MACrossShort/S16_S_OPEN_ISSUES_20260713.md`（A-G 全議題）
 - W4 WFA report: `../research/S16_MACrossShort/W4_WFA_analysis_20260710.md`
 - W5 5-piece: `../research/S16_MACrossShort/W5_fivepack_validation_20260709.md`
 - Final Summary: `../research/S16_MACrossShort/S16_S_FINAL_SUMMARY_20260710.md`
@@ -198,4 +221,4 @@ live_simulation → live：
 
 ---
 
-**Deployment Ready — 2026-07-10** 🎯
+**Deployment Ready — 2026-07-10 / Compliance-verified baseline — 2026-07-18** 🎯

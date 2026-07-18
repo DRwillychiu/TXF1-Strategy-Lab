@@ -120,12 +120,13 @@
 - **Action Required**: 需在 2026-12 之前從 TAIFEX 官網撈 2027-2028 假日表更新 Registry
 - **Owner**: 使用者 / Claude Code
 
-### F1-b. Holiday patch 績效衝擊實測 — VERIFIED (2026-07-17)
-- 用戶 MC12 重跑 v1.2.1 (UsePercentSlope=False)：Net +658,400 / 105T / PF 1.566 / MDD -271,600
-- 逐筆 diff vs baseline：**唯一差異 = 移除 1 筆跨清明連假的 +371,200 彩券單**（2025-04-03 04:45 進場，連假收盤前 15 分鐘裸空，跨關稅崩盤週末）
+### F1-b. Holiday patch 績效衝擊實測 — VERIFIED + 用戶 ACCEPTED (2026-07-18)
+- 逐筆 diff vs v1.0-PROD：**唯一差異 = 移除 1 筆跨清明連假的 +370,200 彩券單**（2025-04-03 04:45 進場，連假收盤前 15 分鐘裸空，跨關稅崩盤週末）
 - 該單違反假日鐵律，gap 可雙向 — 若反向跳空 = 單筆 -360K+，patch 行為 100% 正確
-- **新合規 baseline: +658,400 / PF 1.566（此後所有優化以此為準）**
-- 詳見 `S16_S_HOLIDAY_IMPACT_20260717.md`
+- 用戶 2026-07-18 ruling：**接受合規 baseline**
+- **FINAL 合規 baseline（數據回補至 2026-07-18）: Net +833,600 / 110T / PF 1.672 / MDD -271,600 / TimeStop 21 筆 +1,986,200**
+- 2026-07 單月 14 筆 +264,000（DD 危機對沖實證，模擬）
+- 詳見 `S16_S_HOLIDAY_IMPACT_20260717.md`（含 KPI 重錨定）+ `S16_S_STRATEGY_TEXT_20260718.md`（現行策略文字說明）
 
 ### F4. 週六清晨進場 → 跨週末持倉（理論 gap，7.5 年 0 筆實測）
 - Holiday registry 不涵蓋普通週末；週六 03:00-05:00 進場 + MaxHold 24 根 → 可能持倉到週一
