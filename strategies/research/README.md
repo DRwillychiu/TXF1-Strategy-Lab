@@ -11,7 +11,7 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S16_S_10M** | **MACrossShort 10M 時框延伸** | 🔵 **CURRENT — 2026-07-10 啟動時框延伸實驗** | 待建 folder |
+| **S16_S_10M** | **MACrossShort 10M 時框延伸** | 🔵 **CURRENT — 2026-07-18 重啟 Stage-1 討論（S16_S v1.4 收官上架後主線）** | 待建 folder |
 
 ### SUSPENDED（暫停）
 
@@ -23,7 +23,7 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S16_S** | **MACrossShort** | ✅ **PROMOTED 2026-07-10 v1.0-PROD (W4 WFA WFE 77.4% + Sniper 8/8 PASS)** | [`S16_MACrossShort/`](S16_MACrossShort/)（history 保留研究資料夾）|
+| **S16_S** | **MACrossShort** | ✅ **v1.4-BELATE 正式上架 2026-07-18**（718 baseline 107T/+1,094,800/PF 1.91；5件套通用4/5 適性5/5；參數凍結鐵則；原 WFE 77.4% 已作廢見 WFA_AUDIT）| [`S16_MACrossShort/`](S16_MACrossShort/)（完整研發史 26 份文件保留）|
 | **S3_S** | **VolSqueezeShort** | ✅ **PROMOTED 2026-07-06 v1.9.6-OPT-PROD (7/7 gates PASS)** | [`S03_VolSqueezeShort/`](S03_VolSqueezeShort/)（history 保留研究資料夾）|
 | S3_L | VolSqueezeLong | ✅ Promoted 2026-06-23 → live_simulation/ | [`archive/S03_VolSqueezeLong_promoted_20260620/`](archive/S03_VolSqueezeLong_promoted_20260620/) |
 
