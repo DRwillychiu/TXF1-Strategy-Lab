@@ -2,7 +2,15 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.2.1-HOLIDAY  (2026-07-17 - HOTFIX UsePercentSlope default True->False)
+  Version     : v1.2.2-CLEAN  (2026-07-18 - pct code removed, unified with live_sim)
+
+  v1.2.2-CLEAN (2026-07-18, user ruling):
+    ALL UsePercentSlope / MinSlope_Pct code REMOVED. Research and
+    live_simulation .pla are now behaviorally identical, eliminating
+    the shared-MC-Load-Name collision hazard that caused the 07-17
+    accidental pct-mode backtest (535T / PF 0.95 / Net -194K).
+    O-1 percentage experiment fully documented in
+    S16_S_O1_CONCLUSION_20260714.md - code retention not needed.
 
   v1.2.1 HOTFIX (2026-07-17):
     v1.2-HOLIDAY header claimed "default False" but input still had True.
@@ -155,11 +163,10 @@ inputs:
     { ===== Group A: Entry (ZLEMA) - v1.1-PCT 2026-07-13 ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
+    { MinSlope is PURE POINTS by design. Percentage variant was tested }
+    { and REJECTED (O-1, 2026-07-14): no pct value beat fixed 28pts.   }
+    { See S16_S_O1_CONCLUSION_20260714.md - do not re-add pct code.    }
     MinSlope                ( 28    ),
-    { O-1 REJECTED (2026-07-14): UsePercentSlope MUST default False. }
-    { True = pct mode = 535 trades / PF 0.95 / Net -194K (proven inferior). }
-    MinSlope_Pct            ( 0.06  ),
-    UsePercentSlope         ( False ),
 
     { ===== Group B: M5 Quick Stop - v0.5 2026-07-09 ===== }
     QuickStop_On            ( True  ),
@@ -213,8 +220,6 @@ variables:
     v_ZLEMA_Fast            ( 0     ),
     v_ZLEMA_Slow            ( 0     ),
     v_Slope                 ( 0     ),
-    v_Slope_Pct             ( 0     ),
-    v_Slope_OK              ( False ),
 
     { ===== Signal detection ===== }
     v_Death_Cross           ( False ),
@@ -360,12 +365,6 @@ v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 { F2 fix: measure Fast ZLEMA downward slope for short entry (not Slow, not AbsValue) }
 { Positive value = Fast is falling = bearish momentum = good for short }
 v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
-v_Slope_Pct = (v_ZLEMA_Fast[1] - v_ZLEMA_Fast) / Close * 100;
-
-if UsePercentSlope then
-    v_Slope_OK = v_Slope_Pct > MinSlope_Pct
-else
-    v_Slope_OK = v_Slope > MinSlope;
 
 
 { ============================================================
@@ -443,7 +442,7 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
 
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope_OK            = True and
+   v_Slope               > MinSlope and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
