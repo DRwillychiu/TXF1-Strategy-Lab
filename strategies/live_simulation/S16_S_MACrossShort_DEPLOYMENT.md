@@ -1,7 +1,8 @@
-# S16_S MACrossShort — Deployment Guide (v1.3-TIMEGUARD)
+# S16_S MACrossShort — Deployment Guide (v1.4-BELATE)
 
 **Promote Date**: 2026-07-10 (v1.0-PROD)
-**Current Version**: v1.3-TIMEGUARD (2026-07-18 tail time guard, MC12 verified)
+**Current Version**: v1.4-BELATE (2026-07-18 BE late activation, plateau-verified, MC12 verified)
+**Current Baseline**: **Net +1,073,200 / PF 1.876 / MDD -228,000 (-18.63%) / 109T / Sortino 0.98 / 恢復因子 4.71**
 **Signal Load Name**: `STRATEGY_GEN_S16_S_MACrossShort`
 **Portfolio Cap**: **3%**
 **Account Sleeve**: 100 萬 NTD / 1 口大台
@@ -43,8 +44,12 @@
 | ZLEMA_Slow | **70** | 5M 中期基準（350 分鐘）|
 | MinSlope | **28** | Fast ZLEMA 每 K 下跌 ≥ 28 pts（純點數）|
 | QuickStop_MaxLoss_Pts | 60 | 快速止血 |
-| MaxHoldingBars | 24 | 2 小時強制平倉 |
+| MaxHoldingBars | **24** | 2hr 強制平倉（G2 雙向實證最優：12/36/48 全劣）|
 | StopATRMult | 4.0 | 最後防線 SL 距離 |
+| **BE_Trigger_ATR (v1.4)** | **2.5** | 保本延後啟動（高原 2.0-3.0 平坦，勿低於 2.0）|
+| **BE_Tier2_ATR (v1.4)** | **3.5** | 二層保本 |
+| **BE_Buffer_Pts (v1.4)** | **15 / 20** | Tier 1/2 緩衝（脫離雜訊帶）|
+| Tail_LastEntry / ForceExit (v1.3) | 430 / 440 | 時間護欄，絕不跨休市 |
 
 ---
 

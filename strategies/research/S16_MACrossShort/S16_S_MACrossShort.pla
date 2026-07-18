@@ -2,7 +2,24 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.3.1-G1DEBUG  (2026-07-18 - G1 entry funnel instrumentation)
+  Version     : v1.4-BELATE  (2026-07-18 - BE late activation, plateau-verified)
+
+  v1.4-BELATE (2026-07-18, G3 track result, user pre-test thesis CONFIRMED):
+    BE trailing tiers re-timed from early (1.0/1.5 ATR) to late
+    (2.5/3.5 ATR) activation with wider buffers (15/20 pts).
+    User thesis proven: early BE armed inside the momentum window
+    was strangling winners (3 would-be TimeStop wins intercepted).
+    MC12 evidence (109T, data to 2026-07-18):
+      Net 888,400 -> 1,073,200 (+184,800, +20.8%)
+      PF 1.736 -> 1.876 / MDD -249,600 -> -228,000 (-18.63%)
+      Sortino 0.529 -> 0.979 / Recovery factor 3.56 -> 4.71
+      TimeStop 21 -> 23 wins (+2,187,600)
+    Plateau verified (CLAUDE.md gate): trigger 2.0/2.5/3.0 within
+    0.6% of each other; boundary BE_Off = 1,022K; only 1.0 slumps.
+    2.5/3.5 chosen = plateau center. Fast-loss response UNCHANGED
+    (QuickStop/ML/SetStopLoss active from entry bar as before).
+    G2 also CLOSED same day: MaxHold 12/36/48 all inferior to 24
+    (36/48 double MDD to -575K; 2hr momentum window confirmed).
 
   v1.3.1-G1DEBUG (2026-07-18):
     G1 diagnostic: counts every death cross and classifies the
@@ -215,12 +232,16 @@ inputs:
     ML_ATR_LongLen          ( 90    ),
     ML_ATR_Ratio            ( 2.5   ),
 
-    { ===== Group D: M7 Breakeven Trailing ===== }
+    { ===== Group D: M7 Breakeven Trailing - v1.4 LATE activation ===== }
+    { v1.4 (2026-07-18): tiers re-timed 1.0/1.5 -> 2.5/3.5 ATR.     }
+    { Early BE strangled winners inside the 2hr momentum window.    }
+    { Plateau verified: 2.0/2.5/3.0 flat within 0.6%. Do NOT lower  }
+    { trigger below 2.0 (1.0 = -185K vs current).                   }
     BE_On                   ( True  ),
-    BE_Trigger_ATR          ( 1.0   ),
-    BE_Buffer_Pts           ( 5     ),
-    BE_Tier2_ATR            ( 1.5   ),
-    BE_Tier2_Buffer_Pts     ( 10    ),
+    BE_Trigger_ATR          ( 2.5   ),
+    BE_Buffer_Pts           ( 15    ),
+    BE_Tier2_ATR            ( 3.5   ),
+    BE_Tier2_Buffer_Pts     ( 20    ),
 
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
     { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }

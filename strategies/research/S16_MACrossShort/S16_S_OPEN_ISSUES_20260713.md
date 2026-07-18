@@ -177,17 +177,20 @@ Compliance reject:     8 / Tail reject: 1 / WOULD ENTER: 109 ✓
 - **決策影響**: **G4 從 HIGH 降為 MED-LOW**，排到 G2/G3 之後，驗收從嚴（Type 2 子集必須獨立正期望 + 不拖 PF < 1.60）
 - Debug_On 已改回 False（code 保留供未來重跑）
 
-### G2. TimeStop 對比實驗（主線 D）
-- MaxHoldingBars 12 / 24 / 36 / 48 四配置對比
-- 目的：量化「超過 2hr 的 burst」是否存在
-- **Status**: 待實作
-- **Priority**: MED
+### G2. TimeStop 對比實驗 — CLOSED (2026-07-18, 24 雙向實證最優)
+- MC12 實測: 12→443K / **24→888K (v1.3 基準)** / 36→622K / 48→641K
+- **36/48 的 MDD 爆炸至 -575K（2.3 倍）**：延長持倉後交易改等金叉出場，金叉總獲利 (+1,586K@48) 反而低於 2hr 硬砍 (+1,986K@24) — burst 動能 2hr 後衰竭回吐
+- 12 太短：贏家跑一半被砍，Net 腰斬
+- **結論：「momentum burst 動能窗口約 2 小時」獲得雙向實證。MaxHoldingBars=24 LOCKED，永久結案**
 
-### G3. BE_Trail A/B/C（主線 B，用戶洞察）
-- 用戶洞察：BE 在初始停損階段就啟用 → 該賺的賺不到
-- 3 配置：A baseline / B 全關 BE / C 延後啟動 (Trigger 2.5×ATR, Buffer 15pts)
-- **Status**: 待實作
-- **Priority**: HIGH (11 筆 BE 全虧是明確 alpha leak)
+### G3. BE_Trail 延後啟動 — CLOSED + ADOPTED as v1.4 (2026-07-18)
+- 用戶事前洞察（測試前從第一性原理預測）：BE 在初始停損階段啟用 → 截斷該賺的獲利 — **100% 命中**
+- MC12 實測: 現行(1.0ATR)→888K / BE_Off→1,022K / **BE_Late(2.5ATR)→1,073,200 勝出**
+- 舊 BE 攔截了 3 筆本該進 TimeStop 的大贏（21→23 筆，+201K）；延後版保留晚期守門功能（3 筆觸發 +600，並在一筆大虧單省 42.6K）
+- **高原驗證（CLAUDE.md 品質門檻）**: trigger 2.0→1,080K / 2.5→1,073K / 3.0→1,073K，差距 0.6%；邊界 BE_Off=1,022K。**確認高原非尖峰**，取中心 2.5/3.5
+- 快速止損反應不變（QuickStop/ML/SetStopLoss 從進場即武裝，QuickStop_Loss 45→47 筆自動接手）
+- **v1.4-BELATE 採納**: BE_Trigger 2.5 / Tier2 3.5 / Buffer 15/20，兩版 .pla 預設已回寫（code=deploy=docs 三一致）
+- 實戰揭露：帳面獲利回吐變大（+2.4ATR 反轉全吐回），預估每年 1-2 次「+40K 變 -12K」體驗；模擬期監控條款：連續 3 筆大幅回吐型出場 → review
 
 ### G4. D-2 進化版 — 雙 gate 抓取（主線 A）
 - 用戶洞察：空方策略在多頭環境要抓「突然高斜率」+「連續型斜率」兩類
@@ -254,9 +257,11 @@ Compliance reject:     8 / Tail reject: 1 / WOULD ENTER: 109 ✓
 | D2 | QuickStop optimization | Future optimization cycle |
 | F1 | HolidayFlat_v3 patch | CLOSED 2026-07-16 (v1.0.1-HOLIDAY / v1.2-HOLIDAY) |
 | F2 | TAIFEX 2027 calendar refresh | Required before 2026-12-31 |
-| F3 | 假日前夕夜盤封鎖 (系統性 gap) | Future cross-strategy batch |
-| G1 | Debug print 漏單統計 | 主線 C，待明天實作 |
-| G2 | TimeStop 對比實驗 | 主線 D，待明天實作 |
-| G3 | BE_Trail A/B/C 對比 | 主線 B，待明天實作 |
-| G4 | D-2 進化版雙 gate | 主線 A，待明天實作 |
-| G5 | D-5 Post-Entry Confirmation | 待用戶 ruling |
+| F3 | 假日前夕夜盤封鎖 | CLOSED-BY-DESIGN (G6 出場端結構保證) |
+| F4 | 跨週末持倉 | CLOSED (G6 v1.3-TIMEGUARD) |
+| G6 | 時間護欄 | CLOSED — v1.3, +54.8K, MC12 verified |
+| G1 | 進場漏斗統計 | CLOSED — 98.5% 拒絕率，嚴選確認 |
+| G2 | TimeStop 對比 | CLOSED — 24 雙向實證最優 |
+| G3 | BE_Trail 延後 | **CLOSED + ADOPTED v1.4 (+184.8K, 高原verified)** |
+| G4 | D-2 雙 gate | ⏸️ MED-LOW（天花板 20-60 筆），待 ruling |
+| G5 | D-5 Post-Entry Confirmation | 待用戶 ruling（v1.4 後效益預期更低）|
