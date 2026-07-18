@@ -2,7 +2,26 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.2.2-CLEAN  (2026-07-18 - pct code removed, unified with live_sim)
+  Version     : v1.3-TIMEGUARD  (2026-07-18 - tail time guard, user design ruling)
+
+  v1.3-TIMEGUARD (2026-07-18, user design):
+    "Latest entry + latest exit" tail guard. Positions can NEVER
+    survive into any market closure (morning break 0500-0845,
+    weekend, holiday).
+    - Tail_LastEntry_Time (430): last entry SIGNAL bar 0430
+      (fill 04:30). Entries allowed all night up to here - future
+      pre-close bursts remain catchable (user ruling: exits protect
+      tail entries same as any entry; do not over-block).
+    - Tail_ForceExit_Time (440): force-flat signal at 0440 bar
+      close, fill 04:40 (445-bar open). 20-min buffer to close.
+    Verified vs 110-trade baseline:
+    - Blocks 2025-03-05 05:00 entry (-32,800, held across morning
+      break = the exact hazard class this closes) -> baseline +32.8K
+    - 2026-03-07 exit moves 04:50 -> 04:40 (was -600, delta tiny)
+    - 2026-06-06 +292,600 TimeStop at 04:35 UNTOUCHED (validates
+      440 default - do not set earlier)
+    Expected new baseline: ~109T / ~+866K, pending MC12 verify.
+    Closes issues F3/F4. Version unified with live_sim (both v1.3).
 
   v1.2.2-CLEAN (2026-07-18, user ruling):
     ALL UsePercentSlope / MinSlope_Pct code REMOVED. Research and
@@ -146,6 +165,7 @@
     SX_MA_Registry           : P0 registry expired
     SX_MA_Holiday            : P0 holiday block
     SX_MA_Settlement         : P0 settlement flat
+    SX_MA_TailFlat           : P0.5 tail force exit (v1.3 time guard)
 
   CHART SETUP REQUIRED:
     Data1 = TXF1 5M
@@ -207,7 +227,15 @@ inputs:
     Holiday_Flat_Time       ( 415   ),
     Registry_Valid_Until    ( 1270101 ),
     Manual_Kill_Switch      ( False ),
-    Settlement_Flat_Time    ( 1230  );
+    Settlement_Flat_Time    ( 1230  ),
+
+    { ===== Group I: Tail Time Guard - v1.3 2026-07-18 ===== }
+    { Never hold into ANY closure. LastEntry = last legal entry   }
+    { SIGNAL bar stamp (fill = that bar close). ForceExit signal  }
+    { bar stamp (fill = next bar open, ~04:40). Both tail-only:   }
+    { conditions bounded by Time <= 500 (MC 24hr pitfall rule).   }
+    Tail_LastEntry_Time     ( 430   ),
+    Tail_ForceExit_Time     ( 440   );
 
 
 { ============================================================
@@ -440,9 +468,12 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
   SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)
   ============================================================ }
 
+{ v1.3: tail entry cutoff - allow evening/night entries up to the  }
+{ LastEntry signal bar; block only the final pre-close window.     }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
    v_Slope               > MinSlope and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
@@ -483,6 +514,18 @@ if MarketPosition = -1 then begin
     if ExitFired = 0 and v_Settlement_Day = True and
        Time >= Settlement_Flat_Time then begin
         buy to cover ( "SX_MA_Settlement" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0.5: Tail Force Exit (v1.3) - flat before session close ---- }
+    { Signal at 0440 bar close -> fill 04:40 (445-bar open).            }
+    { Guarantees no position ever crosses morning break / weekend /     }
+    { holiday closure. Holiday flat at 0415 fires earlier as backstop   }
+    { on registered holiday tails. Required BEFORE any G2 MaxHold       }
+    { extension experiment (36/48 bars breaks 2hr self-resolution).     }
+    if ExitFired = 0 and
+       Time >= Tail_ForceExit_Time and Time <= 500 then begin
+        buy to cover ( "SX_MA_TailFlat" ) next bar at market;
         ExitFired = 1;
     end;
 
