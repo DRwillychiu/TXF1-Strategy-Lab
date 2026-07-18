@@ -447,7 +447,7 @@ if MarketPosition >= 0 then
 
 { ============================================================
   SECTION 8 - M6 MULTI-LAYER INDICATOR PRECOMPUTE
-  5 categories, 1 factor each. Kept lightweight for W2 draft.
+  5 categories, 1 factor each. Lightweight by design.
   ============================================================ }
 
 v_ML_AvgVol    = Average( Volume, ML_VolAvgLen );

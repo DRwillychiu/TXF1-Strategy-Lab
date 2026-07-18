@@ -1,8 +1,36 @@
 # S16_S MACrossShort — Deployment Guide (v1.4-BELATE)
 
-**Promote Date**: 2026-07-10 (v1.0-PROD)
-**Current Version**: v1.4-BELATE (2026-07-18 BE late activation, plateau-verified, MC12 verified)
-**Current Baseline**: **Net +1,073,200 / PF 1.876 / MDD -228,000 (-18.63%) / 109T / Sortino 0.98 / 恢復因子 4.71**
+**Promote Date**: 2026-07-10 (v1.0-PROD) / **正式上架 (v1.4 official deployment): 2026-07-18**
+**Current Version**: v1.4-BELATE (BE late activation, plateau-verified)
+**Official Baseline (718, MaxBarsBack=200)**: **107T / Net +1,094,800 / PF 1.910 / MDD -228,000 / WR 27.1%**
+
+---
+
+## ✅ 正式上架宣告 (2026-07-18, Rule #19 CHECKLIST 全過)
+
+| Check | 結果 |
+|-------|------|
+| 1 Placeholder scan | PASS（v_Holiday_Block reset+loop 覆寫為合法模式）|
+| 2 Rule #11 有效性 | PASS（63 假日 registry 實測擋單證明有效）|
+| 3 Rule #12 SetStopLoss | PASS（MP>=0 guard）|
+| 4 Rule #15 ASCII | 27/27 PASS |
+| 5 Rule #13/#18 | 5 件套通用 4/5 / 適性 5/5；WFA 轉化為參數凍結鐵則 |
+| 6 Sniper 特殊條件 | 破產率 0.02% / 單筆最大虧 4.26% / EV +10,232 全過 |
+
+**模擬時鐘自 2026-07-18 起算**（v1.4 為凍結版本，改 code = 30 筆重計時）。
+
+### 上架操作（MC12 端）
+1. `git pull` → 重新編譯 live_simulation 版 .pla（header 同步至 v1.4-BELATE）
+2. 策略屬性恢復預設值 + 確認「策略運算最大使用K棒數量 = 200」
+3. 滑價 1000/邊、初始資金 1,000,000、固定 1 口 — 與 718 對帳設定一致
+4. 全期回測 sanity：應重現 107T / +1,094,800
+
+### 模擬期監控（30 筆檢討前不動 code）
+- 🚨 暫停：累計 MDD > 25% / 單月連虧 > 8 筆 / PF < 0.8 連 3 月
+- ⚠️ Review：月 trade > 15 / 連續 3 筆大幅回吐型出場（BE_Late 監控條款）
+- 升 live 門檻：模擬 ≥ 30 筆 + PF ≥ 1.2 + 回測偏離度 ≤ 30%
+- ⛔ 參數凍結鐵則：任何定期重最佳化禁止；重評估僅限指數 >55K 或紅線觸發
+- 📅 2026-12 前 refresh 2027-2028 假日 registry (F2)
 **Signal Load Name**: `STRATEGY_GEN_S16_S_MACrossShort`
 **Portfolio Cap**: **3%**
 **Account Sleeve**: 100 萬 NTD / 1 口大台
