@@ -2,7 +2,17 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.3-TIMEGUARD  (2026-07-18 - tail time guard, user design ruling)
+  Version     : v1.3.1-G1DEBUG  (2026-07-18 - G1 entry funnel instrumentation)
+
+  v1.3.1-G1DEBUG (2026-07-18):
+    G1 diagnostic: counts every death cross and classifies the
+    filter outcome (slope buckets / compliance / tail / in-position
+    / would-enter). Observation ONLY - trading logic identical to
+    v1.3-TIMEGUARD. Debug_On input gates the counters and the
+    one-time funnel Print at LastBarOnChart. Purpose: quantify the
+    miss rate of MinSlope=28 and map the rejected-slope distribution
+    to design G4 Type-2 (sustained-slope) gate ranges from real data.
+    Set Debug_On = False after the G1 run concludes.
 
   v1.3-TIMEGUARD (2026-07-18, user design):
     "Latest entry + latest exit" tail guard. Positions can NEVER
@@ -235,7 +245,14 @@ inputs:
     { bar stamp (fill = next bar open, ~04:40). Both tail-only:   }
     { conditions bounded by Time <= 500 (MC 24hr pitfall rule).   }
     Tail_LastEntry_Time     ( 430   ),
-    Tail_ForceExit_Time     ( 440   );
+    Tail_ForceExit_Time     ( 440   ),
+
+    { ===== Group J: G1 Entry Funnel Debug - 2026-07-18 ===== }
+    { Pure observation - counts every death cross and why it was }
+    { (or was not) filtered. ZERO effect on trading logic.       }
+    { Prints funnel once at LastBarOnChart to the Output window. }
+    { Set False after the G1 diagnostic run concludes.           }
+    Debug_On                ( True  );
 
 
 { ============================================================
@@ -303,7 +320,20 @@ variables:
     v_Registry_Expired      ( False ),
     v_Settlement_Day        ( False ),
     hidx                    ( 0     ),
-    ExitFired               ( 0     );
+    ExitFired               ( 0     ),
+
+    { ===== G1 Entry Funnel Debug counters (observation only) ===== }
+    v_DbgDeathCross         ( 0     ),
+    v_DbgSlopeRej           ( 0     ),
+    v_DbgSlopeB0            ( 0     ),  { slope <= 0  : flat/upward cross }
+    v_DbgSlopeB1            ( 0     ),  { 0  < s <= 7  }
+    v_DbgSlopeB2            ( 0     ),  { 7  < s <= 14 }
+    v_DbgSlopeB3            ( 0     ),  { 14 < s <= 21 }
+    v_DbgSlopeB4            ( 0     ),  { 21 < s <= 28 : near-miss zone }
+    v_DbgCompRej            ( 0     ),
+    v_DbgTailRej            ( 0     ),
+    v_DbgInPosSkip          ( 0     ),
+    v_DbgWouldEnter         ( 0     );
 
 arrays:
     Holiday_Tail[80](0);
@@ -406,6 +436,60 @@ v_Death_Cross  = v_ZLEMA_Fast[1] >= v_ZLEMA_Slow[1] and
 
 v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
                  v_ZLEMA_Fast    >  v_ZLEMA_Slow;
+
+
+{ ============================================================
+  SECTION 5.5 - G1 ENTRY FUNNEL DEBUG (observation only)
+  Counts every death cross and classifies WHY it did or did not
+  become an entry. First matching blocker wins (priority order
+  mirrors the entry gate). ZERO effect on trading logic.
+  ============================================================ }
+
+if Debug_On = True and v_Death_Cross = True then begin
+
+    v_DbgDeathCross = v_DbgDeathCross + 1;
+
+    if v_Slope <= MinSlope then begin
+        { Blocked by slope filter - bucket the rejected slope }
+        v_DbgSlopeRej = v_DbgSlopeRej + 1;
+        if v_Slope <= 0 then
+            v_DbgSlopeB0 = v_DbgSlopeB0 + 1
+        else if v_Slope <= 7 then
+            v_DbgSlopeB1 = v_DbgSlopeB1 + 1
+        else if v_Slope <= 14 then
+            v_DbgSlopeB2 = v_DbgSlopeB2 + 1
+        else if v_Slope <= 21 then
+            v_DbgSlopeB3 = v_DbgSlopeB3 + 1
+        else
+            v_DbgSlopeB4 = v_DbgSlopeB4 + 1;
+    end
+    else if v_Settlement_Day = True or v_Holiday_Block = True or
+            v_Registry_Expired = True or Manual_Kill_Switch = True then
+        v_DbgCompRej = v_DbgCompRej + 1
+    else if Time > Tail_LastEntry_Time and Time <= 500 then
+        v_DbgTailRej = v_DbgTailRej + 1
+    else if MarketPosition <> 0 then
+        v_DbgInPosSkip = v_DbgInPosSkip + 1
+    else
+        v_DbgWouldEnter = v_DbgWouldEnter + 1;
+end;
+
+{ ---- Funnel report: printed once on the last bar ---- }
+if Debug_On = True and LastBarOnChart = True then begin
+    Print("=== S16_S G1 ENTRY FUNNEL ===");
+    Print("DeathCross total    : ", v_DbgDeathCross:6:0);
+    Print("Slope reject (<=", MinSlope:2:0, "): ", v_DbgSlopeRej:6:0);
+    Print("  bucket slope <= 0 : ", v_DbgSlopeB0:6:0, "  (flat/up cross = noise)");
+    Print("  bucket  0 - 7     : ", v_DbgSlopeB1:6:0);
+    Print("  bucket  7 - 14    : ", v_DbgSlopeB2:6:0);
+    Print("  bucket 14 - 21    : ", v_DbgSlopeB3:6:0);
+    Print("  bucket 21 - 28    : ", v_DbgSlopeB4:6:0, "  (near-miss zone for G4)");
+    Print("Compliance reject   : ", v_DbgCompRej:6:0, "  (settle/holiday/registry/kill)");
+    Print("Tail-window reject  : ", v_DbgTailRej:6:0, "  (after ", Tail_LastEntry_Time:4:0, ")");
+    Print("In-position skip    : ", v_DbgInPosSkip:6:0, "  (cross while already short)");
+    Print("WOULD ENTER         : ", v_DbgWouldEnter:6:0, "  (sanity: should = trade count)");
+    Print("=== END G1 FUNNEL ===");
+end;
 
 
 { ============================================================
