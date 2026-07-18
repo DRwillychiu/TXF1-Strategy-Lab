@@ -96,6 +96,7 @@ python scripts/verify_pla_ascii.py --strict
 | L-P3 | ASCII verification 不足以做 promotion gate，需擴充語意 lint |
 | L-P4 | 每個 hardcoded `v_X = False;` 都應該有 justification comment（如「short strategy, MP=1 impossible」）|
 | L-P5 | PROMOTE 是「合規契約」，不只是「績效通過」— 兩者缺一不可 |
+| **L-P6** | **WFA 分析第一步 = 從交易明細驗證每個窗口實際日期跨度**（IS/OOS 不重疊、OOS 彼此不重疊、長度≈設計值）。跨度不過 = 拒算 WFE。標籤與檔名不可信，只有交易明細日期可信。（2026-07-18 S16_S audit：原版 WFE 77.4% 因窗口重疊+污染作廢）|
 
 ---
 

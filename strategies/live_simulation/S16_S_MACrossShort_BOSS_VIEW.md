@@ -61,9 +61,10 @@ S16_S 單月 14 筆 **+264,000** — 空方對沖本職到位。
 
 ## 驗證狀態
 
-- **W4 WFA WFE 77.4%**（9 windows，v1.0-PROD 時代數據，一個 OOS window 含彩券單 → 數字偏樂觀，結構結論仍成立）
-- **W5 Sniper 5 件套 8/8 PASS**（同上註記）
-- **Rule #19 PROMOTE_CHECKLIST**：因本策略 placeholder 事件而生（2026-07-16）
+- 🚨 **W4 WFA WFE 77.4% — INVALIDATED (2026-07-18 audit)**：原版窗口日期系統性錯誤（OOS 互相重疊 + IS/OOS 污染 + 彩券單雙重計入）。v1.4 防呆重跑進行中。詳見 [`S16_S_WFA_AUDIT_20260718.md`](../research/S16_MACrossShort/S16_S_WFA_AUDIT_20260718.md)
+- **W5 Sniper 5 件套 8/8 PASS**（v1.0-era 數據，列入重跑清單）
+- **全期合規 baseline 不受影響**（無窗口切分，逐筆對帳一分不差）
+- **Rule #19 PROMOTE_CHECKLIST**：因本策略 placeholder 事件而生（2026-07-16）+ L-P6 WFA 跨度驗證鐵則（2026-07-18）
 
 ---
 
