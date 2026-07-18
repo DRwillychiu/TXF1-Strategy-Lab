@@ -1,7 +1,7 @@
-# S16_S MACrossShort — Deployment Guide (v1.0.1-HOLIDAY)
+# S16_S MACrossShort — Deployment Guide (v1.3-TIMEGUARD)
 
 **Promote Date**: 2026-07-10 (v1.0-PROD)
-**Current Version**: v1.0.1-HOLIDAY (2026-07-16 compliance patch)
+**Current Version**: v1.3-TIMEGUARD (2026-07-18 tail time guard, MC12 verified)
 **Signal Load Name**: `STRATEGY_GEN_S16_S_MACrossShort`
 **Portfolio Cap**: **3%**
 **Account Sleeve**: 100 萬 NTD / 1 口大台
@@ -48,29 +48,37 @@
 
 ---
 
-## 三、Backtest Evidence（v1.0.1-HOLIDAY 合規 baseline，數據至 2026-07-18）
+## 三、Backtest Evidence（v1.3-TIMEGUARD FINAL baseline，數據至 2026-07-18，MC12 實測）
 
-| Metric | v1.0.1-HOLIDAY (現行) | v1.0-PROD (superseded) |
-|--------|----------------------|------------------------|
-| Net Profit | **+833,600 NTD** | +1,028,600（含彩券單）|
-| PF | **1.672** | 1.885 |
-| MDD | **-271,600 (-23.79%)** | -271,600（金額相同）|
-| Trades | **110** (2020/03-2026/07) | 106 |
-| WR | 22.73% | 22.64% |
-| Avg Win : Avg Loss | 5.68 : 1 | ~6.8 : 1 |
-| Sharpe (年化) | +0.483 | +0.463 |
-| 恢復因子 | 3.07 | 3.79 |
-| 年化報酬率 | 11.06% | 13.67% |
+| Metric | **v1.3-TIMEGUARD (現行)** | v1.0.1-HOLIDAY | v1.0-PROD (superseded) |
+|--------|---------------------------|-----------------|------------------------|
+| Net Profit | **+888,400 NTD** | +833,600 | +1,028,600（含彩券單）|
+| PF | **1.736** | 1.672 | 1.885 |
+| MDD | **-249,600 (-21.25%)** | -271,600 | -271,600 |
+| Trades | **109** (2020/03-2026/07) | 110 | 106 |
+| WR | 23.85% | 22.73% | 22.64% |
+| Avg Win : Avg Loss | 5.54 : 1 | 5.68 : 1 | ~6.8 : 1 |
+| Sharpe (年化) | +0.530 | +0.483 | +0.463 |
+| Sortino | 0.529 | 0.411 | 0.66 |
+| 恢復因子 | 3.56 | 3.07 | 3.79 |
+| 最大連虧 | **10 次 / -159,600** | 13 次 / -162,400 | 13 次 |
+| 年化報酬率 | 11.78% | 11.06% | 13.67% |
 
-### 出場分佈（與 MC 淨利交叉驗證一分不差）
+### v1.3 vs v1.0.1 逐筆 diff（109/110 完全一致）
+- 擋掉 `2025-03-05 05:00` 進場（-32,800，該筆持倉跨 05:00-08:45 早盤空窗吃 gap 虧損）
+- `2026-03-07` 出場 04:50 BE_Trail2 (-600) → 04:45 TailFlat (+21,400)
+- 總變動 +54,800，對帳一分不差
+
+### 出場分佈（與 MC 淨利 888,400 交叉驗證一分不差）
 
 | Exit | Trades | Net | WR |
 |------|--------|-----|-----|
 | TimeStop | 21 | +1,986,200 | 100% |
 | GoldenCross | 3 | +87,600 | 100% |
-| BE_Trail 1+2 | 11 | -54,000 | 9% (G3 檢驗中) |
+| TailFlat (v1.3) | 1 | +21,400 | 100% |
+| BE_Trail 1+2 | 10 | -53,400 | 10% (G3 檢驗中) |
 | QuickStop_Time | 30 | -209,400 | 0% |
-| QuickStop_Loss | 45 | -976,800 | 0% |
+| QuickStop_Loss | 44 | -944,000 | 0% |
 
 ### Regime 表現（W5-era 數據，含已移除彩券單，待 regime 重跑）
 
