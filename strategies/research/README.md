@@ -11,7 +11,7 @@
 
 | 編號 | 策略 | 狀態 | 位置 |
 |------|------|------|------|
-| **S16_S_10M** | **MACrossShort 10M 時框延伸** | 🔵 **CURRENT — 2026-07-18 重啟 Stage-1 討論（S16_S v1.4 收官上架後主線）** | 待建 folder |
+| **S16_S_10M** | **MACrossShort 10M 時框延伸** | ✅ **實驗完結 2026-07-18 — 目標達成正面收案不部署**（10M 獨立 PF 1.61 證明架構 robust；5M 粒度優勢全維度實證；corr 0.89 排除第二 sleeve）| [`S16_MACrossShort_10M/`](S16_MACrossShort_10M/) |
 
 ### SUSPENDED（暫停）
 
