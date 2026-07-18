@@ -157,12 +157,25 @@
 
 ## G. Alpha Optimization Tracks（2026-07-16 確定的 4 主線）
 
-### G1. Debug Print 漏單統計（主線 C）
-- 加 4 個 counter (DeathCross / SlopeReject / HolidayReject / Entered)
-- LastBarOnChart 印出漏單率
-- **判讀**: Slope-reject 若 >80% → 現行嚴選合理；若 40-50% → 可放寬
-- **Status**: 待實作
-- **Priority**: HIGH (診斷基線，其他優化的起點)
+### G1. Debug Print 漏單統計 — CLOSED (2026-07-18, 實測完成)
+- **實測結果（v1.3.1-G1DEBUG，MC12 全期回測）**:
+```
+DeathCross total : 7,746  (6.3 年，約 1,226 次/年)
+Slope reject     : 7,628  (98.5%)
+  slope <= 0     :   556  (7.2%，平/上彎叉 = 純雜訊)
+  0 - 7          : 5,850  (75.5%，接近零斜率 = 雜訊主體)
+  7 - 14         :   868  (11.2%)
+  14 - 21        :   248  (3.2%)
+  21 - 28        :   106  (1.4%，near-miss zone)
+Compliance reject:     8 / Tail reject: 1 / WOULD ENTER: 109 ✓
+```
+- **Sanity PASS**: WOULD ENTER = 109 = 實際交易數，加總一分不差
+- **核心結論**:
+  1. **死叉本身幾乎零資訊量** — 83% 的死叉斜率 <= 7 點。策略的真實身分不是「均線交叉策略」，而是「陡峭斜率 burst 偵測器」，死叉只是 timing trigger。98.5% 拒絕率就是與大眾化 MA cross 的差異化本體
+  2. **通過率 1.41%（109/7,746）**，per 判讀矩陣落在「reject >= 85% = 嚴選正確」區
+  3. **G4 效益上限量化**: near-miss (21-28) 僅 106 個候選 ≈ 現有進場數；14-28 合計 354。加上 3 根連續性要求後，Type 2 gate 預估僅能新增 20-60 筆 — 且 v0.5 GA 已證明無腦降門檻為負（plateau 26-28，更低為 GA 淘汰區）
+- **決策影響**: **G4 從 HIGH 降為 MED-LOW**，排到 G2/G3 之後，驗收從嚴（Type 2 子集必須獨立正期望 + 不拖 PF < 1.60）
+- Debug_On 已改回 False（code 保留供未來重跑）
 
 ### G2. TimeStop 對比實驗（主線 D）
 - MaxHoldingBars 12 / 24 / 36 / 48 四配置對比

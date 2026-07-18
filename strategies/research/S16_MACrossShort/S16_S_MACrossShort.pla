@@ -251,8 +251,9 @@ inputs:
     { Pure observation - counts every death cross and why it was }
     { (or was not) filtered. ZERO effect on trading logic.       }
     { Prints funnel once at LastBarOnChart to the Output window. }
-    { Set False after the G1 diagnostic run concludes.           }
-    Debug_On                ( True  );
+    { G1 run COMPLETED 2026-07-18 - results in OPEN_ISSUES G1.   }
+    { Funnel: 7746 crosses -> 98.5% slope-rejected -> 109 enter. }
+    Debug_On                ( False );
 
 
 { ============================================================
