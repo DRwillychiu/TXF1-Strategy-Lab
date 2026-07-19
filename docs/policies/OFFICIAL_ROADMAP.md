@@ -75,8 +75,9 @@
 ### Batch 04 — User-added MA Cross（2026-06-28 ruling, 2026-07-07 split L/S）
 | # | 策略名稱 | 類別 | 主週期 | 方向 | 狀態 |
 |---|---------|------|--------|------|------|
-| **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | ✅ **PROMOTED 2026-07-10 v1.0-PROD (W4 WFA WFE 77.4% + Sniper 8/8, 106T/PF 1.885/MDD 17.97%, 3% cap)** |
-| **S16_L** | **MACrossLong** | **G 動量交叉** | **5M** | **純多** | 🟡 **SUSPENDED 2026-07-10 (用戶優先做 S16_S 時框延伸實驗 S16_S_10M)** |
+| **S16_S** | **MACrossShort** | **G 動量交叉** | **5M** | **純空** | ✅ **v1.4-BELATE 正式上架 2026-07-18（官方 718: 107T/+1,094,800/PF 1.91/MDD -18.3%；5件套通用4/5適性5/5；原WFE 77.4%作廢見WFA_AUDIT；參數凍結鐵則）** |
+| **S16_L** | **MACrossLong** | **G 動量交叉** | **5M** | **純多** | 🟡 SUSPENDED（10M 實驗已完結：正面收案不部署，容量擴充模組封存）|
+| **S17_S** | **SwingShort60M（暫名）** | **中速空方 swing** | **60M+日線** | **純空** | 🔵 **CURRENT — 2026-07-18 用戶 override 立案，Stage-1 討論中** |
 
 ⚠️ **S16 是用戶 2026-06-28 explicit override Rule R-1 加入**。2026-07-07 用戶決策拆分為 S16_S + S16_L，**先 S 後 L**（override 先 L 後 S 鐵則，理由：補強做空 sleeve 為原始動機）。
 規格（2026-07-07 更新）：5M 時框（原 15M）、True Zero-Lag EMA（ZLEMA）、死亡交叉進場（S16_S）/ 黃金交叉進場（S16_L）、搭配極端行情多層停損 SOP（Rule #17）。
@@ -218,3 +219,6 @@ S3 完成 → S4 MACDDivergence。S4 完成 → S5 SettlementWeek。依此類推
 | 2026-07-10 | S16_S W6 v0.6-ADAPTIVE 拒絕 (ATR 用錯方向), revert v0.5 | ATR is volatility range (both dir), not directional slope; user insight confirmed |
 | 2026-07-10 | S16_S W4 WFA STRONG PASS | WFE 77.4% (gate>50%), 9 windows / 416 OOS trades / +1.74M / 7-9 PASS |
 | 2026-07-10 | **S16_S v1.0-PROD PROMOTED to live_simulation** | 3% cap, Bull whipsaw insurance cost disclosed, sniper hedge role |
+| 2026-07-16~18 | S16_S 三日大修：Holiday 合規 → 彩券單移除 → 時間護欄 v1.3 → BE 延後 v1.4 → 官方 718 baseline 正式上架 | Rule #19 誕生、原 WFA 77.4% 作廢（窗口污染）、乾淨 WFA 轉化為參數凍結鐵則（固定勝滾動 +100 萬）、5 件套通用 4/5 適性 5/5 |
+| 2026-07-18 | S16_S_10M 時框實驗完結：正面收案不部署 | robustness 達成（獨立 PF 1.61）+ 5M 粒度優勢全維度實證；corr 0.89 排除第二 sleeve；封存為容量擴充模組 |
+| 2026-07-18 | **S17_S SwingShort60M 用戶 override 立案（Option A ruling）** | 理由：7 月 DD post-mortem 文件化「中速空方」結構洞（L2 13週SMA 2026 全年 0 筆 + L4 禁空殘留 + S16_S 只抓暴力段/2022 慢熊僅 3 筆）；saturation acceptance 例外依據 = 修組合已知洞非開新 alpha；60M+ 間距符合機構週期階梯法則；Stage-1 討論先行（S16_L 教訓：不跳步）|
