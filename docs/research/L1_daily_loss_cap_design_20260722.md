@@ -4,7 +4,7 @@
 - **Strategy**: L1_TrendLong V2.7 -> V2.8
 - **Problem**: P3 (structural audit) — no per-strategy daily loss limit
 - **Prerequisite**: `L1-L5_structural_audit_20260721.md`, `L1-L5_optimization_user_review_20260722.md`
-- **Status**: Design complete, code implemented, pending MC9 verification
+- **Status**: **REJECTED by backtest** — V2.8 net harmful (-167K NTD, MDD +100K worse). See `L1_V28_backtest_verdict_20260722.md`. Pending points-based redesign discussion.
 
 ---
 
