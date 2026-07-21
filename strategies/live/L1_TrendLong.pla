@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.7 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop
+  Version     : V2.8 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop + DailyLossCap
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -77,6 +77,16 @@
             net negative. Re-entry positions hit SL at worse prices
             than original breakout entries.
           - Decision: Plan A only. Plan C code removed.
+          - Deploy only when flat.
+    V2.8  (2026-07-22) P8 Daily Loss Cap:
+          - Dual trigger: count-based (3 losses) OR NTD-based
+            (100K) per trading day window (15:00-next 13:45).
+          - Blocks new entries only; exits unchanged.
+          - Window resets at first bar of each night session.
+          - Uses v_Prev_MP pattern for trade detection + NetProfit
+            for NTD tracking (catches same-bar SetStopLoss exits).
+          - Inputs: DailyLoss_Enable / MaxCount / MaxNTD.
+          - MC12 backtest required before MC9 deployment.
           - Deploy only when flat.
     V2.6+ (2026-06-18) P3b Immediate Stop Guard:
           - SetStopLoss = MC engine-level stop, active on the
@@ -159,7 +169,12 @@ Inputs:
 
     { P6: Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
-    Weekly_MA_Slow(60);
+    Weekly_MA_Slow(60),
+
+    { P8: Daily Loss Cap (V2.8) }
+    DailyLoss_Enable(True),
+    DailyLoss_MaxCount(3),
+    DailyLoss_MaxNTD(100000);
 
 Variables:
     maBase(0),
@@ -204,7 +219,13 @@ Variables:
     { P6: Weekly Filter Variables }
     v_Weekly_MA_Fast(0),
     v_Weekly_MA_Slow(0),
-    v_Weekly_Filter(false);
+    v_Weekly_Filter(false),
+
+    { P8: Daily Loss Cap Variables }
+    v_DayLoss_Count(0),
+    v_DayLoss_NetProfit_Snap(0),
+    v_DailyLoss_Block(False),
+    v_Prev_MP(0);
 
 Array:
     Holiday_Tail[80](0);
@@ -399,11 +420,38 @@ if LastBarOnChart and
 end;
 
 { ==========================================
-  2. Entry Logic (gated by Holiday Tail)
+  P8: Daily Loss Cap Module (V2.8)
+  Dual trigger: count (3 losses) OR NTD (100K) per window.
+  Window: 15:00 -> next day 13:45 (one TXF1 trading day).
+  Resets at first bar of each night session.
+  Only blocks entries; exits are unchanged.
   ========================================== }
 
-Cond_Breakout = (Close Crosses Over Breakout_Level);
 MP = MarketPosition;
+Cond_Breakout = (Close Crosses Over Breakout_Level);
+
+{ Window reset: first bar of night session (Time ~15:45, prev ~13:15) }
+if Time >= 1500 and Time <= 1600 and Time[1] <= 1400 then begin
+    v_DayLoss_Count = 0;
+    v_DayLoss_NetProfit_Snap = NetProfit;
+end;
+
+{ Detect closed losing trade via position state change }
+if v_Prev_MP > 0 and MP = 0 then begin
+    if PositionProfit(1) < 0 then
+        v_DayLoss_Count = v_DayLoss_Count + 1;
+end;
+
+{ Block gate: either trigger blocks new entries }
+if DailyLoss_Enable then
+    v_DailyLoss_Block = (v_DayLoss_Count >= DailyLoss_MaxCount) or
+                         ((NetProfit - v_DayLoss_NetProfit_Snap) <= -DailyLoss_MaxNTD)
+else
+    v_DailyLoss_Block = False;
+
+{ ==========================================
+  2. Entry Logic (gated by Holiday Tail + Daily Loss Cap)
+  ========================================== }
 
 { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
   SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
@@ -416,7 +464,8 @@ if MP = 0 and
    Cond_Breakout and
    (v_Weekly_Filter = true) and
    (v_Holiday_Block = false) and
-   (v_Settlement_Day = false) then begin
+   (v_Settlement_Day = false) and
+   (v_DailyLoss_Block = false) then begin
     Buy ("TL_Entry") next bar at Market;
 end;
 
@@ -563,3 +612,6 @@ if Year(Date) = Current_Year_Log then begin
     if Year_DD > Year_Max_DD then
         Year_Max_DD = Year_DD;
 end;
+
+{ P8: Track previous bar position for loss detection (Rule #8) }
+v_Prev_MP = MP;
