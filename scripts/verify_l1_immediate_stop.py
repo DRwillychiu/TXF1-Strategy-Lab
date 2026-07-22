@@ -5,12 +5,17 @@ Checks:
   2. Changelog has V2.6+ P3b entry
   3. Header STRATEGY LOGIC has P3b Guard line
   4. SetStopLoss call exists with correct formula
+     (V2.9: MinList of distances = the TIGHTER leg, mirroring P3
+      which takes MaxList of PRICES. The pre-V2.9 verifier asserted
+      MaxList of distances -- it encoded the bug as the standard.
+      Lesson: assert SEMANTICS (which leg), not formula shape.)
   5. SetStopLoss guarded by MP <= 0 (freeze when in position)
   6. SetStopLoss placed BEFORE entry block (MP = 0)
   7. SetStopLoss uses same variables as P3 Frozen SL
   8. BigPointValue used (MC reserved word for TXF1 = 200)
   9. Existing Frozen SL (v_SL_Locked) still intact
   10. Settlement_Flat module still intact
+  13. SetStopContract declared (per-contract basis, lot-count invariant)
 """
 import re, sys, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -46,14 +51,18 @@ chk('V-3: Header has P3b Guard line',
     bool(re.search(r'P3b\s+Guard\s*:.*SetStopLoss', raw)),
     'checking strategy logic block')
 
-# --- 4. SetStopLoss call exists with correct formula ---
+# --- 4. SetStopLoss call exists with correct formula (V2.9: MinList) ---
 ssl_match = re.search(
-    r'SetStopLoss\s*\(\s*MaxList\s*\(\s*Current_ATR\s*\*\s*SL_Multiplier\s*,'
+    r'SetStopLoss\s*\(\s*MinList\s*\(\s*Current_ATR\s*\*\s*SL_Multiplier\s*,'
     r'\s*Daily_ATR\s*\*\s*Daily_Cap_Multiplier\s*\)\s*\*\s*BigPointValue\s*\)',
     raw)
-chk('V-4: SetStopLoss formula matches P3 (MaxList(ATR*SL, DATR*Cap)*BPV)',
+chk('V-4: SetStopLoss = MinList(ATR*SL, DATR*Cap)*BPV (TIGHTER leg, mirrors P3)',
     bool(ssl_match),
     'exact formula match')
+# V-4b: the buggy MaxList form must be GONE from executable code
+chk('V-4b: no MaxList inside SetStopLoss (pre-V2.9 bug absent)',
+    not re.search(r'SetStopLoss\s*\(\s*MaxList', raw),
+    'looser-leg form eliminated')
 
 # --- 5. Guarded by MP <= 0 ---
 mp_guard = re.search(r'if\s+MP\s*<=\s*0\s+then\s*\n\s*SetStopLoss', raw)
@@ -65,9 +74,11 @@ chk('V-5: SetStopLoss guarded by MP <= 0',
 ssl_line = None
 entry_line = None
 for i, line in enumerate(lines):
-    if 'SetStopLoss' in line and 'MaxList' in line:
+    if 'SetStopLoss' in line and 'MinList' in line:
         ssl_line = i
-    if 'if MP = 0 then begin' in line and entry_line is None:
+    # semantic anchor: the actual entry order statement (the old literal
+    # 'if MP = 0 then begin' never matched the multi-line entry gate)
+    if 'Buy ("TL_Entry")' in line and entry_line is None:
         entry_line = i
 chk('V-6: SetStopLoss placed before entry block',
     ssl_line is not None and entry_line is not None and ssl_line < entry_line,
@@ -126,6 +137,11 @@ chk('V-11: Exactly 1 SetStopLoss call (outside comments)',
 chk('V-12: IntrabarOrderGeneration = false confirmed',
     bool(re.search(r'IntrabarOrderGeneration\s*=\s*false', raw, re.IGNORECASE)),
     'IOG=false = entry bar unprotected without SetStopLoss')
+
+# --- 13. SetStopContract declared (V2.9: lot-count invariance) ---
+chk('V-13: SetStopContract declared before SetStopLoss',
+    bool(re.search(r'SetStopContract\s*;[\s\S]*?SetStopLoss\s*\(', clean)),
+    'per-contract basis; per-position default halves distance at 2 lots')
 
 # Summary
 print()

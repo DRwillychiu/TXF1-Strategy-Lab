@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.7 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStop
+  Version     : V2.9 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -84,8 +84,9 @@
             structural 45-minute unprotected window between fill
             and first custom stop order (IOG=false -> script
             evaluates at bar close only).
-          - Distance = same as P3 frozen SL: MaxList(ATR x 1.5,
-            Daily_ATR x 0.5) x BigPointValue.
+          - Distance = same as P3 frozen SL. (V2.6+..V2.7 shipped
+            MaxList of DISTANCES here = the LOOSER leg, a doc-
+            propagated paraphrase bug fixed in V2.9 -> MinList.)
           - Called only when flat (MP<=0) -> freezes automatically
             when position established (same principle as V2.5
             Frozen SL via v_SL_Locked).
@@ -93,14 +94,53 @@
             stops tighten beyond SetStopLoss, engine picks the
             tighter level. SetStopLoss becomes dormant backup.
           - Deploy only when flat.
+    V2.9  (2026-07-22) P3b leg-selection fix + explicit contract basis:
+          - ROOT CAUSE (doc-propagated bug): P3 code freezes
+            MaxList of the two stop PRICES = Entry - MinList of
+            the two DISTANCES = the TIGHTER leg; the cap leg
+            (Daily_Cap_Multiplier) exists to LIMIT the distance.
+            The old header wrongly paraphrased this as "entry -
+            MaxList(distances)"; V2.6+ P3b copied that formula
+            shape, so the entry-bar engine stop took the LOOSER
+            leg: 1.6-2.8x wider than design intent on every entry.
+          - Forensics (1M-bar reconstruction of ATR45/DailyATR,
+            456 trades, frozen-distance prediction error p90 =
+            1 pt): tight leg = ATR leg at 99-100 pct of entries;
+            12 same-bar deaths filled at the wide leg (-460 pts
+            excess); 2 legacy winners (#66 2020-12, #95 2021-05)
+            survived the entry bar only because of the wide leg
+            (-584 pts if killed). Expected net impact approx
+            -124 pts / 6.5y (excl. re-entry) = EV-neutral
+            insurance fix. At 2026-07-22 volatility: wide leg
+            736 pts vs intended 266 pts (2.77x) -> fix removes
+            ~470 pts unintended entry-bar exposure per entry.
+          - SetStopContract declared explicitly: SetStopLoss
+            amount is per-CONTRACT, invariant to lot count.
+            Without it (per-position default) a 2-lot live
+            deployment halves the effective stop distance; with
+            MinList that would fire at half the frozen distance
+            (a new bug). 1-lot backtests identical either way.
+          - Verifier fixed in the same commit: the old
+            verify_l1_immediate_stop.py V-4 asserted the buggy
+            MaxList shape -- the bug passed verification because
+            the verifier encoded the bug. Now asserts MinList +
+            SetStopContract semantics.
+          - V2.8 number skipped (daily-loss-cap experiment,
+            REJECTED and reverted 2026-07-22).
+          - MC12 gate BEFORE MC9 deploy: V2.7 vs V2.9 trade-list
+            diff must concentrate in <= 52 candidate trades and
+            every diff must be explained. Deploy only when flat.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
-    P3 Stop   : Frozen at entry - MaxList(ATR x SL_Mult,
-                Daily_ATR x Cap_Mult), locked for the whole trade
+    P3 Stop   : Frozen at entry: MaxList of the two stop PRICES
+                = Entry - MinList(ATR x SL_Mult, Daily_ATR x
+                Cap_Mult) -> the TIGHTER leg (cap semantics),
+                locked for the whole trade
     P3b Guard : SetStopLoss (engine-level, active on entry bar)
                 Covers the 45min IOG=false gap between fill and
-                first custom stop order. Same distance as P3.
+                first custom stop order. V2.9: MinList distance
+                (true mirror of P3) on SetStopContract basis.
     P4 Trail  : MA55 - TrailOffset (breathing trail, let trend run)
     P7 Guard  : Stop Profit - armed at +500 pts close-based, lock
                 floor = Entry + peak x 45 pct, ratchets up only
@@ -407,9 +447,16 @@ MP = MarketPosition;
 
 { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
   SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-  Only called when flat -> freezes at signal-bar ATR once position opens. }
+  Only called when flat -> freezes at signal-bar ATR once position opens.
+  V2.9 (2026-07-22): MaxList -> MinList. MinList of DISTANCES is the
+  TIGHTER leg = exactly what P3 freezes below (MaxList of PRICES).
+  The old MaxList picked the LOOSER leg: entry-bar risk ran 1.6-2.8x
+  wider than the frozen SL for the whole V2.6+ era.
+  SetStopContract makes the amount per-CONTRACT (lot-count invariant);
+  per-position default would halve the distance at 2 lots. }
+SetStopContract;
 if MP <= 0 then
-    SetStopLoss(MaxList(Current_ATR * SL_Multiplier,
+    SetStopLoss(MinList(Current_ATR * SL_Multiplier,
                         Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 
 if MP = 0 and
