@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V2.9 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
+  Version     : V2.9.1 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -130,6 +130,27 @@
           - MC12 gate BEFORE MC9 deploy: V2.7 vs V2.9 trade-list
             diff must concentrate in <= 52 candidate trades and
             every diff must be explained. Deploy only when flat.
+            GATE RESULT (2026-07-22): PASS. 65 diffs all explained
+            (12/12 same-bar saves, 2/2 predicted kills, 7 borderline
+            grazes, 6 chain re-entries). Net -36 pts / 6.5y, closed
+            MDD unchanged at 2,038 pts.
+    V2.9.1 (2026-07-22) Exit-label taxonomy fix (labels only, no logic):
+          - User ruling: loss-stop labels may ONLY mark losing
+            exits; profit-taking must use separate labels. Old
+            routing broke this twice: TL_TP (trail) could fire
+            below entry (#452 -444 pts, 2026-07-07), and
+            TL_SL_Gap could fire above entry (SP-lock gap-downs).
+          - New routing = leg x side-of-entry:
+            loss side  : Stop Loss (P3b engine, entry bar only),
+                         TL_SL (frozen stop), TL_SL_Gap (gap,
+                         level < entry), TL_TSL (trail < entry)
+            profit side: TL_TP (trail >= entry), TL_SP (SP lock),
+                         TL_SP_Gap (gap, level >= entry)
+          - Labels are assigned at order placement; a gap through
+            the entry price can still fill a profit-labeled order
+            at a small loss (documented edge, not an overlap).
+          - Zero P&L impact by construction. Re-gate: MC12 rerun
+            must show IDENTICAL numbers, labels redistributed.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
@@ -508,17 +529,24 @@ if MP > 0 then begin
     Final_Exit_Price = MaxList(Exit_Price_Trail,
                        MaxList(Exit_Price_SL, stopProfitPrice_L));
 
-    { Execution with unified TL_ labels }
+    { Execution with unified TL_ labels.
+      V2.9.1: loss side and profit side never share a label; the
+      side is judged at order placement by exit level vs entry. }
     if Close < Final_Exit_Price then begin
-        Sell ("TL_SL_Gap") next bar at Market;
+        if Final_Exit_Price >= Entry_P then
+            Sell ("TL_SP_Gap") next bar at Market
+        else
+            Sell ("TL_SL_Gap") next bar at Market;
     end else begin
         if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then
             Sell ("TL_SL") next bar at Final_Exit_Price Stop
         else if stopProfitPrice_L > 0 and
                 AbsValue(Final_Exit_Price - stopProfitPrice_L) < 0.001 then
             Sell ("TL_SP") next bar at Final_Exit_Price Stop
+        else if Exit_Price_Trail >= Entry_P then
+            Sell ("TL_TP") next bar at Final_Exit_Price Stop
         else
-            Sell ("TL_TP") next bar at Final_Exit_Price Stop;
+            Sell ("TL_TSL") next bar at Final_Exit_Price Stop;
     end;
 
 end else begin
