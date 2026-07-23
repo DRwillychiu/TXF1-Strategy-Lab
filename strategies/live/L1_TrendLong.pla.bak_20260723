@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V3.0 IOG + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
+  Version     : V2.9.1 + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -151,30 +151,6 @@
             at a small loss (documented edge, not an overlap).
           - Zero P&L impact by construction. Re-gate: MC12 rerun
             must show IDENTICAL numbers, labels redistributed.
-    V3.0  (2026-07-23) IOG migration: tick-level strategy evaluation.
-          - IntrabarOrderGeneration = true. Script evaluates on every
-            Data1 tick instead of only at 45M bar close.
-          - BarStatus(1) = 2 guards on: indicators, weekly filter,
-            holiday/settlement detection, entry (Crosses Over), P3
-            frozen SL lock, MDD visualizer. These run at bar close
-            only, preserving V2.9.1 semantics.
-          - P7 now tracks intrabar peaks in real-time. Threshold
-            lowered 500 -> 200 pts (IOG makes lower viable).
-          - P4 trail upgraded to uni-directional ratchet (v_Trail_High
-            via MaxList, never descends). Old bi-directional breathing
-            let the effective stop sag during pullbacks.
-          - IntraBarPersist added to posbleProfit_Long, stopProfitPrice_L,
-            v_Trail_High -- without it these reset to bar-open on each tick.
-          - Gap detection moved from every-tick to BarStatus=2 (bar close
-            indicator recalc can push stop above Close; BarStatus=0 was
-            dead code -- pending stop fills before script at bar open).
-          - Daily_ATR [1] fix: references previous completed daily bar.
-          - Code restructured: MP + SetStop moved before BarStatus=2 guard
-            around entry logic (no data dependency between groups).
-          - Backtest requires Bar Magnifier (1 min minimum).
-          - 33/33 adversarial audit tests PASS (2 rounds).
-          - GATE: MC12 entry count must match V2.9.1 (same period/params).
-            Deploy only when flat.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
@@ -186,9 +162,9 @@
                 Covers the 45min IOG=false gap between fill and
                 first custom stop order. V2.9: MinList distance
                 (true mirror of P3) on SetStopContract basis.
-    P4 Trail  : MA55 - TrailOffset, uni-directional ratchet (V3.0)
-    P7 Guard  : Stop Profit - armed at +200 pts tick-based (V3.0 IOG),
-                lock floor = Entry + peak x 45 pct, ratchets up only
+    P4 Trail  : MA55 - TrailOffset (breathing trail, let trend run)
+    P7 Guard  : Stop Profit - armed at +500 pts close-based, lock
+                floor = Entry + peak x 45 pct, ratchets up only
     P5 v3     : Pre-holiday flat rule (block entries on tail bars,
                 forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
@@ -205,7 +181,7 @@
     Backtest      : 2019/12/16 - 2026/07/02
   ============================================================ }
 
-[IntrabarOrderGeneration = true]
+[IntrabarOrderGeneration = false]
 
 Inputs:
     { P2: Attack Engine (Data1) }
@@ -221,7 +197,7 @@ Inputs:
     TrailOffset(50),
 
     { P7: Stop Profit Guard (ported from L2 Trendbearish_V1) }
-    stopProfitPoints_Long(200),    { activation: tick-based profit >= this many points (V3.0: 500->200, IOG) }
+    stopProfitPoints_Long(500),    { activation: close-based profit >= this many points (V2.7: 250->500) }
     profitReturnPrcnt_Long(55),    { allowed giveback pct of peak profit }
 
     ATR_Length(20),
@@ -262,6 +238,8 @@ Variables:
     Final_Exit_Price(0),
     v_SL_Locked(False),
     v_Frozen_SL(0),
+    posbleProfit_Long(0),
+    stopProfitPrice_L(0),
 
     { P5 v3 Module Variables }
     Init_Done(False),
@@ -288,11 +266,6 @@ Variables:
     v_Weekly_MA_Fast(0),
     v_Weekly_MA_Slow(0),
     v_Weekly_Filter(false);
-
-Variables: IntraBarPersist
-    posbleProfit_Long(0),
-    stopProfitPrice_L(0),
-    v_Trail_High(0);
 
 Array:
     Holiday_Tail[80](0);
@@ -407,15 +380,13 @@ end;
   1. Core Indicators Calculation
   ========================================== }
 
-if BarStatus(1) = 2 then begin
-    maBase  = Average(Close, Length60);
-    maTrail = Average(Close, Length20);
+maBase  = Average(Close, Length60);
+maTrail = Average(Close, Length20);
 
-    Current_ATR = AvgTrueRange(ATR_Length) of Data1;
-    Daily_ATR   = AvgTrueRange(ATR_Length)[1] of Data2;
+Current_ATR = AvgTrueRange(ATR_Length) of Data1;
+Daily_ATR   = AvgTrueRange(ATR_Length) of Data2;
 
-    Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
-end;
+Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
 
 { ==========================================
   P6: Weekly Filter Logic (Data3 - Weekly)
@@ -424,16 +395,14 @@ end;
   AND logic would miss the early bull phase.
   ========================================== }
 
-if BarStatus(1) = 2 then begin
-    v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
-    v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
+v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
 
-    if (Close of Data3 > v_Weekly_MA_Fast) or
-       (Close of Data3 > v_Weekly_MA_Slow) then
-        v_Weekly_Filter = true
-    else
-        v_Weekly_Filter = false;
-end;
+if (Close of Data3 > v_Weekly_MA_Fast) or
+   (Close of Data3 > v_Weekly_MA_Slow) then
+    v_Weekly_Filter = true
+else
+    v_Weekly_Filter = false;
 
 { ==========================================
   1b. P5 v3: Holiday Tail Detection
@@ -443,27 +412,25 @@ end;
   the current bar's state, not the prior bar's.
   ========================================== }
 
-if BarStatus(1) = 2 then begin
-    v_Holiday_Block = False;
+v_Holiday_Block = False;
 
-    if Time <= 500 then begin
-        for idx = 1 to 80 begin
-            if Date = Holiday_Tail[idx] then
-                v_Holiday_Block = True;
-        end;
+if Time <= 500 then begin
+    for idx = 1 to 80 begin
+        if Date = Holiday_Tail[idx] then
+            v_Holiday_Block = True;
     end;
+end;
 
-    { Fail-safe: beyond the verified registry horizon the future
-      holiday schedule is UNKNOWN (next TAIFEX annual calendar not
-      yet published / not yet loaded). Never trade unverified dates:
-      block all entries and flatten any position. }
+{ Fail-safe: beyond the verified registry horizon the future
+  holiday schedule is UNKNOWN (next TAIFEX annual calendar not
+  yet published / not yet loaded). Never trade unverified dates:
+  block all entries and flatten any position. }
 
-    v_Registry_Expired = False;
+v_Registry_Expired = False;
 
-    if Date > Registry_Valid_Until then begin
-        v_Registry_Expired = True;
-        v_Holiday_Block    = True;
-    end;
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = True;
+    v_Holiday_Block    = True;
 end;
 
 { ==========================================
@@ -496,6 +463,7 @@ end;
   2. Entry Logic (gated by Holiday Tail)
   ========================================== }
 
+Cond_Breakout = (Close Crosses Over Breakout_Level);
 MP = MarketPosition;
 
 { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
@@ -512,16 +480,12 @@ if MP <= 0 then
     SetStopLoss(MinList(Current_ATR * SL_Multiplier,
                         Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 
-if BarStatus(1) = 2 then begin
-    Cond_Breakout = (Close Crosses Over Breakout_Level);
-
-    if MP = 0 and
-       Cond_Breakout and
-       (v_Weekly_Filter = true) and
-       (v_Holiday_Block = false) and
-       (v_Settlement_Day = false) then begin
-        Buy ("TL_Entry") next bar at Market;
-    end;
+if MP = 0 and
+   Cond_Breakout and
+   (v_Weekly_Filter = true) and
+   (v_Holiday_Block = false) and
+   (v_Settlement_Day = false) then begin
+    Buy ("TL_Entry") next bar at Market;
 end;
 
 { ==========================================
@@ -536,7 +500,7 @@ if MP > 0 then begin
       Computed ONCE on the entry bar close and locked for the
       whole trade. The old per-bar recalculation let the floor
       drift with ATR during the holding period. }
-    if BarStatus(1) = 2 and v_SL_Locked = False then begin
+    if v_SL_Locked = False then begin
         Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
         Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
         v_Frozen_SL    = MaxList(Exit_Price_ATR, Exit_Price_Cap);
@@ -556,18 +520,19 @@ if MP > 0 then begin
             (posbleProfit_Long * (1.0 - profitReturnPrcnt_Long / 100.0));
     end;
 
-    { P4 V3.0: MA55 trail with uni-directional ratchet.
-      v_Trail_High only moves up (MaxList prevents descent).
-      maTrail updates at bar close only (BarStatus=2 guarded). }
-    v_Trail_High = MaxList(v_Trail_High, maTrail - TrailOffset);
-    Exit_Price_Trail = v_Trail_High;
+    { P4: MA55 trail keeps updating BY DESIGN (let profits run).
+      Final stop = highest of three components. The frozen SL and
+      the SP lock never loosen; the trail component breathes both
+      ways, so the effective stop may sag - but only within the
+      band ABOVE the two locked floors, never below them. }
+    Exit_Price_Trail = maTrail - TrailOffset;
     Final_Exit_Price = MaxList(Exit_Price_Trail,
                        MaxList(Exit_Price_SL, stopProfitPrice_L));
 
     { Execution with unified TL_ labels.
       V2.9.1: loss side and profit side never share a label; the
       side is judged at order placement by exit level vs entry. }
-    if BarStatus(1) = 2 and Close < Final_Exit_Price then begin
+    if Close < Final_Exit_Price then begin
         if Final_Exit_Price >= Entry_P then
             Sell ("TL_SP_Gap") next bar at Market
         else
@@ -590,7 +555,6 @@ end else begin
     v_Frozen_SL       = 0;
     posbleProfit_Long = 0;
     stopProfitPrice_L = 0;
-    v_Trail_High      = 0;
 end;
 
 { ==========================================
@@ -627,8 +591,6 @@ end;
   5. Annual MDD Visualizer Module
   No label changes needed in this section.
   ========================================== }
-
-if BarStatus(1) = 2 then begin
 
 if CurrentBar = 1 then begin
     Current_Year_Log  = Year(Date);
@@ -675,6 +637,4 @@ if Year(Date) = Current_Year_Log then begin
     Year_DD = Year_High_Equity - MyEquity;
     if Year_DD > Year_Max_DD then
         Year_Max_DD = Year_DD;
-end;
-
 end;
