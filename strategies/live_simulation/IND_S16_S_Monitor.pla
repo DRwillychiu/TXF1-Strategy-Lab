@@ -1,0 +1,104 @@
+{ ================================================================
+  IND_S16_S_Monitor v1.0
+  Overlay indicator for S16_S MACrossShort signal diagnosis.
+
+  Shows ZLEMA(25/70) lines on price chart with annotated markers:
+    Green arrow  = valid entry (death cross + slope > 28)
+    Red cross    = blocked death cross (slope too low)
+    Magenta arrow = golden cross (main exit signal)
+  Text label at each death cross shows actual slope value.
+
+  CHART SETUP:
+    Data1        : TXF1 5 Minutes
+    Scaling      : Same as Price Data
+    MaxBarsBack  : >= 200
+    Plot1 (ZLEMA_F)  : Solid, Cyan, Width 2
+    Plot2 (ZLEMA_S)  : Solid, Yellow, Width 2
+    Plot3 (Entry)    : DownArrow, Green, Width 3
+    Plot4 (Blocked)  : Cross, Red, Width 2
+    Plot5 (GoldenX)  : UpArrow, Magenta, Width 2
+================================================================ }
+
+[IntrabarOrderGeneration = False]
+
+inputs:
+    ZLEMA_Fast_Len       ( 25    ),
+    ZLEMA_Slow_Len       ( 70    ),
+    MinSlope_Threshold   ( 28    ),
+    Arrow_Offset_Pts     ( 80    ),
+    Show_Blocked         ( True  ),
+    Show_Slope_Text      ( True  );
+
+variables:
+    v_Fast_Lag           ( 0     ),
+    v_Slow_Lag           ( 0     ),
+    v_ZLEMA_Fast         ( 0     ),
+    v_ZLEMA_Slow         ( 0     ),
+    v_Slope              ( 0     ),
+    v_Death_Cross        ( False ),
+    v_Golden_Cross       ( False ),
+    v_TID                ( 0     );
+
+
+{ ---- ZLEMA (identical formula to S16_S strategy) ---- }
+v_Fast_Lag = IntPortion( ( ZLEMA_Fast_Len - 1 ) / 2 );
+v_Slow_Lag = IntPortion( ( ZLEMA_Slow_Len - 1 ) / 2 );
+
+v_ZLEMA_Fast = XAverage( 2 * Close - Close[v_Fast_Lag], ZLEMA_Fast_Len );
+v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow_Len );
+
+v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
+
+
+{ ---- Cross Detection ---- }
+v_Death_Cross  = v_ZLEMA_Fast[1] >= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    <  v_ZLEMA_Slow;
+
+v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    >  v_ZLEMA_Slow;
+
+
+{ ---- ZLEMA Lines ---- }
+Plot1( v_ZLEMA_Fast, "ZLEMA_F" );
+Plot2( v_ZLEMA_Slow, "ZLEMA_S" );
+
+
+{ ---- Death Cross Markers + Slope Label ---- }
+if v_Death_Cross then begin
+
+    if v_Slope > MinSlope_Threshold then begin
+        Plot3( Low - Arrow_Offset_Pts, "Entry" );
+        SetPlotColor( 3, Green );
+        if Show_Slope_Text then begin
+            v_TID = Text_New( Date, Time,
+                              Low - Arrow_Offset_Pts * 2,
+                              "S=" + NumToStr( v_Slope, 1 ) );
+            Text_SetColor( v_TID, Green );
+        end;
+    end
+
+    else if Show_Blocked then begin
+        Plot4( High + Arrow_Offset_Pts, "Blocked" );
+        SetPlotColor( 4, Red );
+        if Show_Slope_Text then begin
+            v_TID = Text_New( Date, Time,
+                              High + Arrow_Offset_Pts * 2,
+                              "S=" + NumToStr( v_Slope, 1 ) );
+            Text_SetColor( v_TID, Red );
+        end;
+    end;
+
+end
+else begin
+    NoPlot( 3 );
+    NoPlot( 4 );
+end;
+
+
+{ ---- Golden Cross Marker (main exit reference) ---- }
+if v_Golden_Cross then begin
+    Plot5( High + Arrow_Offset_Pts, "GoldenX" );
+    SetPlotColor( 5, Magenta );
+end
+else
+    NoPlot( 5 );
