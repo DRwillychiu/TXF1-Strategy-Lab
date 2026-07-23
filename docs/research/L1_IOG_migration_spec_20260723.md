@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | DRAFT v2 — gap detection fix applied, adversarial audit 22/22 PASS |
+| Status | DRAFT v3 — 2-round adversarial audit (22+11 tests), all PASS |
 | Date | 2026-07-23 |
 | Target | L1_TrendLong.pla V2.9.1 → V3.0 |
 | Prerequisite | None (spec only, no code changes) |
@@ -198,6 +198,35 @@ end;
 
 `Crosses Over` in IOG uses tick-to-tick comparison = extreme noise.
 BarStatus=2 guard restores bar-close-to-bar-close comparison.
+
+**Code restructuring required** (lines 466-489): Current code has
+SetStopContract/SetStopLoss (L478-481) between Cond_Breakout (L466)
+and entry (L483). These must stay outside the BarStatus=2 guard.
+Implementation reorders to:
+
+```
+MP = MarketPosition;
+
+SetStopContract;
+if MP <= 0 then
+    SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                        Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
+
+if BarStatus(1) = 2 then begin
+    Cond_Breakout = (Close Crosses Over Breakout_Level);
+    if MP = 0 and
+       Cond_Breakout and
+       (v_Weekly_Filter = true) and
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
+        Buy ("TL_Entry") next bar at Market;
+    end;
+end;
+```
+
+This reorder is safe: SetStop does not depend on Cond_Breakout,
+and Cond_Breakout does not depend on SetStop. No data dependency
+between the groups.
 
 #### 3.3d P3 Frozen SL Lock (lines 503-508)
 
@@ -561,10 +590,62 @@ Zero risk tolerance. 22 tests across 7 categories. 22 PASS / 0 FINDING.
 - G1: "next bar" = next tick in IOG, entries guarded to BarStatus=2 — PASS
 - G2: "this bar" orders not used anywhere — PASS
 
-### Audit Note
+### Round 2: Deep Adversarial Attack (11 hypotheses, 11 PASS)
 
-Original v1 draft had 21 PASS / 1 FINDING (F1: BarStatus=0 dead code).
-v2 fix applied BarStatus=2 guard. Re-audit confirms 22/22 PASS.
+Performed with full code read (641 lines) + variable audit (33 vars).
+
+- H1: v_SL_Locked needs IntraBarPersist? — NO. Only written at
+  BarStatus=2; bar-open reset preserves correct value; flat block
+  self-heals on every tick when MP=0. PASS
+- H2: v_Frozen_SL needs IntraBarPersist? — NO. Same logic as H1.
+  Only written inside v_SL_Locked guard at BarStatus=2. PASS
+- H3: 6 unreset vars in flat block (Entry_P, Exit_Price_ATR/Cap/SL,
+  Exit_Price_Trail, Final_Exit_Price) — stale values SAFE. All are
+  consumed only inside `if MP > 0` and reassigned on first MP>0 tick.
+  Entry_P from EntryPrice; Exit_Price_SL from v_Frozen_SL (=0 after
+  flat reset); v_Trail_High from MaxList(0, maTrail-offset). PASS
+- H4: Same-bar exit + re-entry race — IMPOSSIBLE. Entries guarded
+  by BarStatus=2; Buy fills next tick (next bar). Cannot enter and
+  exit in same tick. PASS
+- H5: Label conflict across ticks — IMPOSSIBLE. "next bar" = one-shot
+  in IOG. Each tick's order expires if not filled; only one pending
+  exit order at any time. PASS
+- H6: P3 lock timing gap (fill tick to bar close) — SAFE. P3b
+  SetStopLoss engine-level active from fill tick. Trail stop at
+  maTrail-offset provides reasonable coverage. Gap identical to
+  V2.9.1 (P3 locks at bar close in both versions). PASS
+- H7: v_Trail_High initialization on fill tick — CORRECT. Starts at 0
+  (IntraBarPersist, properly reset). First tick: MaxList(0, maTrail-50)
+  = reasonable trail level. PASS
+- H8: P7 arm/disarm within bar — SAFE. Once posbleProfit_Long > 0
+  (IntraBarPersist), it never decreases. If price drops below threshold,
+  the `if` block simply doesn't execute; existing floor persists. PASS
+- H9: SetStopLoss on every tick when flat — CORRECT. Uses stable
+  bar-open ATR values (BarStatus=2 guarded indicators). Repeated calls
+  with same values; wasteful but harmless. PASS
+- H10: Double exit race (gap + forced flat on same BarStatus=2 tick) —
+  EDGE CASE, exists in V2.9.1. Gap detection at L535 runs before forced
+  flat at L572; gap label wins. Position closes either way. PASS
+- H11: Code restructuring (SetStop between Cond_Breakout and entry) —
+  Spec §3.3c requires reorder. SetStop moved before BarStatus=2 guard.
+  No data dependencies broken. See §3.3c implementation note. PASS
+
+### Audit Summary
+
+| Round | Tests | PASS | FINDING | Fixed |
+|-------|-------|------|---------|-------|
+| 1 (structural) | 22 | 21 | 1 (F1 gap dead code) | v2 BarStatus=2 fix |
+| 2 (adversarial) | 11 | 11 | 0 | — |
+| **Total** | **33** | **33** | **0 outstanding** | |
+
+Variables confirmed NOT needing IntraBarPersist (with reasoning):
+- v_SL_Locked, v_Frozen_SL: BarStatus=2 write + flat self-heal
+- Entry_P: reassigned from EntryPrice every tick
+- Exit_Price_SL: reassigned from v_Frozen_SL every tick
+- Exit_Price_Trail: reassigned from v_Trail_High every tick
+- Final_Exit_Price: recalculated from above every tick
+- v_Holiday_Block, v_Settlement_Day: BarStatus=2 write, bar-open stable
+- All MDD vars: BarStatus=2 guarded block
 
 ## 11. Source References
 
