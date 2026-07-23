@@ -142,8 +142,12 @@ Median SL: -73 pts. SL mechanism effectively controls per-trade risk.
 
 ## Next Steps (Updated Priority)
 
-1. **P3 initial stop optimization** — SL_Multiplier and Daily_Cap_Multiplier sweep,
-   non-ATR alternatives, R:R framework analysis
+1. **P3 initial stop optimization** — 4-Layer architecture designed (2026-07-23):
+   - Layer 0: ATR outer wall (black swan, existing formula retained)
+   - Layer 1: Primary SL based on recent 10-day pullback amplitude (replaces ATR as primary)
+   - Layer 1b: Behavioral tightening (連三黑 OR engulfing → SL halved, one-time)
+   - Pending: exact formulas, floor/ratio params, backtest validation
+   - See: `L1_P3_initial_SL_architecture_20260723.md`
 2. **P4 trailing stop optimization** — MA type (SMA/EMA/ZLEMA), length sweep 30-80,
    TrailOffset sensitivity
 3. P7 threshold sweep — DEPRIORITIZED (only if P3/P4 results warrant revisit)
