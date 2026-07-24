@@ -1,10 +1,10 @@
 { ============================================================
   ADAPTIVE FARMER - TREND LONG STRATEGY
-  Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V3_1_L1c
+  Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V3.1 L1_c Primary SL + V3.0 Layer 0/2/3 preserved
+  Version     : V3.1 research (V3.0 base + SL_Pct percentage cap)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
-  Platform    : MultiCharts 12 PowerLanguage x64
+  Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
                 (NOTE: strategy name says 60M but Excel report
                  confirms compression = 45 Minutes. Name kept for
@@ -175,74 +175,38 @@
           - 33/33 adversarial audit tests PASS (2 rounds).
           - GATE: MC12 entry count must match V2.9.1 (same period/params).
             Deploy only when flat.
-    V3.1  (2026-07-24) L1_c primary SL replacing ATR-based Layer 1:
-          - Layer 1 (primary SL) now driven by L1_c: max close-to-
-            close drawdown over the last 10 completed Daily bars
-            (from Data2, computed at BarStatus(1)=2), multiplied
-            by L1c_Ratio, with an optional Floor_Points minimum.
-          - Layer 0 (ATR wall) preserved unchanged as hard cap:
-            MinList(Current_ATR * SL_Multiplier,
-                    Daily_ATR   * Daily_Cap_Multiplier).
-          - Final SL distance = MinList(Layer 1, Layer 0). Locked
-            at entry via v_Frozen_SL_dist_locked (freeze mechanism
-            mirrors V2.5 principle, translated to distance space).
-          - Bug-1 fix: fallback triggers on BOTH cold-start
-            (v_L1c_ready = false, Data2 < 11 bars) AND L1_c = 0
-            (10-day all-up regime). Fallback distance =
-            Current_ATR * SL_Multiplier (V3.0-equivalent Layer 1).
-            Prevents SL price from collapsing onto EntryPrice.
-          - Layer 1b (behavioral tightening / dynamic SL modification
-            post-entry) KILLED. See
-            docs/research/L1_Layer1b_kill_summary_20260724.md:
-            framework constraint + sealed-list + L33 principle.
-          - Layer 2 (P7 T200 profit lock) UNCHANGED from V3.0.
-          - Layer 3 (P4 MA55 trail, TrailOffset=50, uni-directional
-            ratchet) UNCHANGED from V3.0.
-          - New inputs: L1c_Ratio (default 0.7), Floor_Points
-            (default 0). Both are Optimizer sweep dimensions
-            (56 combos: 14 Ratio x 4 Floor). See spec Section 4.
-          - Sanity case (L1c_Ratio = 999): Layer 1 * 999 always
-            exceeds Layer 0; Layer 0 binds; behavior equivalent to
-            V3.0 T200 baseline (regression test per spec Section
-            4.2.1).
-          - P3b Immediate Stop Guard updated to mirror the same
-            L1_c + fallback logic (per spec Section 6.2). Both
-            P3b and Frozen SL blocks use identical Bug-1 fix
-            condition: (v_L1c_ready AND v_L1c_raw > 0).
-          - Diagnostic Print at entry-bar freeze: logs
-            Date, Time, EntryPrice, v_L1c_raw, v_L1c_ready,
-            v_Layer1_dist, v_Layer0_dist, v_Frozen_SL_dist
-            to v31_sl_log.txt. Post-hoc diagnosis for Optimizer
-            anomaly investigation (New-4 recommendation).
-          - Baseline: V3.0 T200 at commit 18facd4 (2026-07-23).
-          - Spec: strategies/research/L1_v31/L1_v31_spec_20260724.md
-          - Non-goal: NOT a smarter tightening layer, NOT a regime
-            classifier, NOT a dynamic post-entry SL modification.
+    V3.1  (2026-07-24) P3 percentage-based SL cap (research):
+          - New input SL_Pct: fixed percentage stop distance.
+            Leg 3 = Entry * SL_Pct / 100.
+          - P3 becomes triple-layered: MaxList(ATR leg, Cap leg, Pct leg).
+            Pct leg caps the stop at a fixed % of entry price,
+            solving the high-index problem (ATR scales non-linearly
+            with index level; % scales linearly).
+          - SL_Pct = 0 disables Leg 3 (exact V3.0 behavior).
+          - P3b mirror updated: MinList adds Pct distance when > 0.
+          - Base code = V3.0 (no L1_c, no Layer 1b).
 
-  STRATEGY LOGIC (V3.1):
+  STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
-    P3 Stop   : 4-Layer defense.
-                Layer 0 (hard cap): MinList(Current_ATR * SL_Mult,
-                                            Daily_ATR   * Cap_Mult)
-                Layer 1 (primary) : MaxList(v_L1c_raw * L1c_Ratio,
-                                            Floor_Points)
-                                    Cold-start / L1_c=0 fallback:
-                                    Current_ATR * SL_Multiplier
-                Frozen SL distance = MinList(Layer 0, Layer 1),
-                locked at entry. Frozen SL price = Entry - distance.
-    P3b Guard : SetStopLoss (engine-level, active on entry bar).
-                Distance mirrors P3 formula. SetStopContract basis.
+    P3 Stop   : Frozen at entry: MaxList of THREE stop PRICES
+                Leg 1: Entry - ATR x SL_Mult (intraday vol)
+                Leg 2: Entry - Daily_ATR x Cap_Mult (daily cap)
+                Leg 3: Entry - Entry x SL_Pct / 100 (pct cap, V3.1)
+                MaxList = TIGHTEST leg, locked for the whole trade.
+                SL_Pct = 0 disables Leg 3 (V3.0 two-leg mode).
+    P3b Guard : SetStopLoss (engine-level, active on entry bar)
+                Covers the 45min IOG=false gap between fill and
+                first custom stop order. V2.9: MinList distance
+                (true mirror of P3) on SetStopContract basis.
     P4 Trail  : MA55 - TrailOffset, uni-directional ratchet (V3.0)
     P7 Guard  : Stop Profit - armed at +200 pts tick-based (V3.0 IOG),
                 lock floor = Entry + peak x 45 pct, ratchets up only
     P5 v3     : Pre-holiday flat rule (block entries on tail bars,
                 forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
-    P6 Settle : Monthly Settlement flat rule (3rd Wed 12:30 exit)
     Exit      : single stop at Max(P4 trail, P3 frozen, P7 lock)
 
-  PERFORMANCE (V3.0 baseline reference, Excel Report 2026/07/02,
-               SP 500, Initial Capital 1M):
+  PERFORMANCE (Excel Report 2026/07/02, SP 500, Initial Capital 1M):
     Net Profit    : 3,018,400 TWD
     Profit Factor : 1.496
     Win Rate      : 31.3%
@@ -251,8 +215,6 @@
     Total Trades  : 476
     Avg Trade     : +6,341 TWD
     Backtest      : 2019/12/16 - 2026/07/02
-
-  V3.1 metrics: pending 56-combo MC12 Optimizer sweep.
   ============================================================ }
 
 [IntrabarOrderGeneration = true]
@@ -265,10 +227,7 @@ Inputs:
     { P3: Defense Engine (Strict Stop-Loss) }
     SL_Multiplier(1.5),
     Daily_Cap_Multiplier(0.5),
-
-    { P3 V3.1: L1_c Primary SL (Layer 1) sweep dimensions }
-    L1c_Ratio(0.7),               { multiplier on L1_c 10-day max C2C drawdown; sweep 0.3-1.5 step 0.1; sanity = 999 }
-    Floor_Points(0),              { distance-space floor for Layer 1; sweep {0, 100, 150, 200}; 0 = no floor }
+    SL_Pct(0),                         { V3.1: %-based SL cap. distance = Entry * SL_Pct / 100. 0 = disabled (V3.0 mode). }
 
     { P4: Trailing Engine (Legacy MA55) }
     Length20(55),
@@ -311,22 +270,12 @@ Variables:
     Entry_P(0),
     Exit_Price_ATR(0),
     Exit_Price_Cap(0),
+    Exit_Price_Pct(0),
     Exit_Price_SL(0),
     Exit_Price_Trail(0),
     Final_Exit_Price(0),
     v_SL_Locked(False),
     v_Frozen_SL(0),
-
-    { P3 V3.1: L1_c Layer 1 computation and freeze machinery }
-    v_L1c_raw(0),                 { L1_c value = max 10-day C2C drawdown from Data2 }
-    v_L1c_ready(False),           { true when Data2 has >= 11 completed bars }
-    v_L1c_running_max(0),         { helper: rolling max Close in the 10-bar window }
-    v_L1c_drop(0),                { helper: current C2C drop under running max }
-    v_L1c_i(0),                   { helper: loop counter }
-    v_Layer0_dist(0),             { ATR-based hard cap distance (V3.0 formula) }
-    v_Layer1_dist(0),             { L1_c-based primary SL distance }
-    v_p3b_dist(0),                { P3b SetStopLoss distance mirror }
-    v_L1c_ready_int(0),           { Discrepancy-3 fix v2: numeric mirror of v_L1c_ready boolean for Print (PL has no IIff, that was VB syntax) }
 
     { P5 v3 Module Variables }
     Init_Done(False),
@@ -357,9 +306,7 @@ Variables:
 Variables: IntraBarPersist
     posbleProfit_Long(0),
     stopProfitPrice_L(0),
-    v_Trail_High(0),
-    v_Frozen_SL_dist(0),          { V3.1: frozen SL distance in points (Layer 0/1 combined) }
-    v_Frozen_SL_dist_locked(False);{ V3.1: true after freeze on first bar in position }
+    v_Trail_High(0);
 
 Array:
     Holiday_Tail[80](0);
@@ -484,45 +431,6 @@ if BarStatus(1) = 2 then begin
     Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
 end;
 
-{ ============================================================
-  1a. V3.1: L1_c Rolling 10-day Max Close-to-Close Drawdown
-      (from Data2, computed at BarStatus(1)=2)
-
-  L1_c[t] = max( Close[i] of Data2 - Close[j] of Data2 )
-            for i in [2..10], j in [1..i-1]
-
-  Semantics: over the last 10 completed Daily bars (Rule #3:
-  Data2 current bar excluded, use [1] as newest), find the
-  maximum peak-to-trough drawdown measured close-to-close.
-
-  Rolling implementation: walk from oldest bar to newest,
-  track running max Close, compute drop under running max.
-  O(10) per bar, single-pass.
-
-  Cold-start: if Data2 has < 11 completed bars, v_L1c_ready
-  stays False and the freeze block falls back to
-  Current_ATR * SL_Multiplier (V3.0-equivalent Layer 1).
-  ============================================================ }
-
-if BarStatus(1) = 2 then begin
-    if CurrentBar of Data2 >= 11 then begin
-        v_L1c_raw = 0;
-        v_L1c_running_max = -999999;
-        for v_L1c_i = 10 downto 1 begin
-            if Close[v_L1c_i] of Data2 > v_L1c_running_max then
-                v_L1c_running_max = Close[v_L1c_i] of Data2;
-            v_L1c_drop = v_L1c_running_max - Close[v_L1c_i] of Data2;
-            if v_L1c_drop > v_L1c_raw then
-                v_L1c_raw = v_L1c_drop;
-        end;
-        v_L1c_ready = True;
-    end
-    else begin
-        v_L1c_raw = 0;
-        v_L1c_ready = False;
-    end;
-end;
-
 { ==========================================
   P6: Weekly Filter Logic (Data3 - Weekly)
   OR logic: either MA condition allows long entries.
@@ -604,38 +512,24 @@ end;
 
 MP = MarketPosition;
 
-{ P3b V3.1: Immediate Stop Guard -- entry-bar protection.
-  SetStopLoss is MC engine-level: active on entry bar, no IOG
-  dependency. Only called when flat (MP <= 0) -> freezes
-  automatically when position established.
-
-  Distance mirrors V3.1 Frozen SL formula (per spec Section 6.2):
-      if v_L1c_ready AND v_L1c_raw > 0:
-          Layer 1 = MaxList(v_L1c_raw * L1c_Ratio, Floor_Points)
-      else (Bug-1 fix: cold-start OR L1_c = 0):
-          Layer 1 = Current_ATR * SL_Multiplier
-      Layer 0 = MinList(Current_ATR * SL_Multiplier,
-                        Daily_ATR   * Daily_Cap_Multiplier)
-      v_p3b_dist = MinList(Layer 1, Layer 0)
-
-  SetStopContract inside the guard makes SetStopLoss amount
-  per-CONTRACT (lot-count invariant); per-position default would
-  halve the effective distance at 2 lots. }
-
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when flat -> freezes at signal-bar ATR once position opens.
+  V2.9 (2026-07-22): MaxList -> MinList. MinList of DISTANCES is the
+  TIGHTER leg = exactly what P3 freezes below (MaxList of PRICES).
+  The old MaxList picked the LOOSER leg: entry-bar risk ran 1.6-2.8x
+  wider than the frozen SL for the whole V2.6+ era.
+  SetStopContract makes the amount per-CONTRACT (lot-count invariant);
+  per-position default would halve the distance at 2 lots. }
+SetStopContract;
 if MP <= 0 then begin
-    if v_L1c_ready and v_L1c_raw > 0 then begin
-        v_p3b_dist = MinList(
-            MaxList(v_L1c_raw * L1c_Ratio, Floor_Points),
-            MinList(Current_ATR * SL_Multiplier,
-                    Daily_ATR   * Daily_Cap_Multiplier)
-        );
-    end
-    else begin
-        v_p3b_dist = MinList(Current_ATR * SL_Multiplier,
-                             Daily_ATR   * Daily_Cap_Multiplier);
-    end;
-    SetStopContract;
-    SetStopLoss(v_p3b_dist * BigPointValue);
+    if SL_Pct > 0 then
+        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                            MinList(Daily_ATR * Daily_Cap_Multiplier,
+                                    Close * SL_Pct / 100)) * BigPointValue)
+    else
+        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                            Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 end;
 
 if BarStatus(1) = 2 then begin
@@ -650,93 +544,30 @@ if BarStatus(1) = 2 then begin
     end;
 end;
 
-{ ============================================================
-  3. Frozen SL Freeze Block (V3.1, per spec Section 3.3)
-
-  Two top-level statements:
-    (a) MP = 0  -> reset freeze flag and distance (flat state)
-    (b) MP > 0 AND locked = false -> freeze once at entry
-
-  Freeze uses last-completed-bar values of L1_c and ATR
-  (Data2 [1] semantics for L1_c; Current_ATR from BarStatus=2
-  block). No BarStatus guard on the freeze itself: the freeze
-  fires on the first tick where MP transitions to positive,
-  using the signal-bar closing values.
-
-  Bug-1 fix (per spec): fallback triggers on BOTH cold-start
-  AND L1_c = 0 (10-day all-up regime). Condition:
-    if v_L1c_ready and v_L1c_raw > 0 then ...
-    else v_Layer1_dist = Current_ATR * SL_Multiplier
-  Prevents SL price collapsing onto EntryPrice.
-  ============================================================ }
-
-if MP = 0 then begin
-    v_Frozen_SL_dist_locked = False;
-    v_Frozen_SL_dist = 0;
-end;
-
-if BarStatus(1) = 2 and MP > 0 and v_Frozen_SL_dist_locked = False then begin
-    { Discrepancy-2 fix (Q-USER-20 = A): BarStatus(1)=2 guard added for
-      regression parity with V3.0 freeze timing (entry bar close, not tick). }
-
-    { Layer 1: L1_c primary (or fallback) }
-    if v_L1c_ready and v_L1c_raw > 0 then
-        v_Layer1_dist = MaxList(v_L1c_raw * L1c_Ratio, Floor_Points)
-    else
-        v_Layer1_dist = Current_ATR * SL_Multiplier;
-
-    { Layer 0: ATR hard cap (V3.0 formula, MinList = tighter leg) }
-    v_Layer0_dist = MinList(Current_ATR * SL_Multiplier,
-                            Daily_ATR   * Daily_Cap_Multiplier);
-
-    { Final frozen SL distance = tighter of Layer 0 and Layer 1 }
-    v_Frozen_SL_dist = MinList(v_Layer1_dist, v_Layer0_dist);
-
-    v_Frozen_SL_dist_locked = True;
-
-    { Discrepancy-3 fix v2: PowerLanguage has no IIff (VB syntax). Use helper var. }
-    if v_L1c_ready then v_L1c_ready_int = 1 else v_L1c_ready_int = 0;
-
-    { Diagnostic log: SL layers at entry - post-hoc diagnosis }
-    Print(File("C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\strategies\research\L1_v31\v31_sl_log.txt"),
-        NumToStr(Date, 0), ",", NumToStr(Time, 0), ",",
-        NumToStr(EntryPrice, 2), ",",
-        NumToStr(v_L1c_raw, 2), ",",
-        NumToStr(v_L1c_ready_int, 0), ",",
-        NumToStr(v_Layer1_dist, 2), ",",
-        NumToStr(v_Layer0_dist, 2), ",",
-        NumToStr(v_Frozen_SL_dist, 2), NewLine);
-end;
-
 { ==========================================
-  4. Exit Management (P3 / P4 / P7 Integrated)
+  3. Exit Management (P3 and P4 Integrated)
   ========================================== }
 
 if MP > 0 then begin
 
     Entry_P = EntryPrice;
 
-    { V3.1: Frozen SL price derived from distance space.
-      Freeze happens in the standalone block above; here we
-      convert to price for the taxonomy branches unchanged.
-
-      Bug fix v3 (same-point-entry-exit): entry-bar sub-bars run this
-      block BEFORE the BarStatus(1)=2 guarded freeze fires at bar close.
-      If v_Frozen_SL_dist is still 0 at that point, Exit_Price_SL would
-      equal Entry_P and IOG + Bar Magnifier would trigger an intra-bar
-      same-price SL. Match V3.0 safe semantics: unfrozen -> Exit_Price_SL=0
-      (stop at 0 never triggers). }
-    if v_Frozen_SL_dist_locked = True then begin
-        Exit_Price_ATR = Entry_P - v_Layer0_dist;   { ATR cap leg (Layer 0) }
-        Exit_Price_Cap = Entry_P - v_Layer1_dist;   { L1_c leg (Layer 1) }
-        v_Frozen_SL    = Entry_P - v_Frozen_SL_dist;
-    end
-    else begin
-        Exit_Price_ATR = 0;
-        Exit_Price_Cap = 0;
-        v_Frozen_SL    = 0;
+    { P3 V3.1: Triple-Layered Initial Stop, FROZEN at entry.
+      Leg 1: 45M ATR * multiplier (intraday vol).
+      Leg 2: Daily ATR * cap multiplier (daily vol ceiling).
+      Leg 3: Entry * SL_Pct / 100 (percentage cap, V3.1 new).
+      MaxList picks the TIGHTEST (highest price for long).
+      SL_Pct = 0 disables Leg 3 (V3.0 compatible mode). }
+    if BarStatus(1) = 2 and v_SL_Locked = False then begin
+        Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
+        Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
+        if SL_Pct > 0 then
+            Exit_Price_Pct = Entry_P - (Entry_P * SL_Pct / 100)
+        else
+            Exit_Price_Pct = 0;
+        v_Frozen_SL    = MaxList(Exit_Price_ATR, MaxList(Exit_Price_Cap, Exit_Price_Pct));
+        v_SL_Locked    = True;
     end;
-    v_SL_Locked = v_Frozen_SL_dist_locked;       { legacy flag mirrored for compatibility }
 
     Exit_Price_SL = v_Frozen_SL;
 
@@ -780,9 +611,7 @@ if MP > 0 then begin
     end;
 
 end else begin
-    { Flat: release remaining locks for the next trade.
-      Note: v_Frozen_SL_dist / v_Frozen_SL_dist_locked reset in
-      the V3.1 freeze block above (MP = 0 branch). }
+    { Flat: release locks for the next trade }
     v_SL_Locked       = False;
     v_Frozen_SL       = 0;
     posbleProfit_Long = 0;
@@ -791,7 +620,7 @@ end else begin
 end;
 
 { ==========================================
-  5. P5 v3: Pre-Holiday Forced Flat (Iron Rule)
+  4. P5 v3: Pre-Holiday Forced Flat (Iron Rule)
   On tail bars, force a market exit from
   Holiday_Flat_Time (03:45) onward:
     45M grid -> trigger on the 03:45 bar, fill at
@@ -821,7 +650,7 @@ if MP > 0 then begin
 end;
 
 { ==========================================
-  6. Annual MDD Visualizer Module
+  5. Annual MDD Visualizer Module
   No label changes needed in this section.
   ========================================== }
 
