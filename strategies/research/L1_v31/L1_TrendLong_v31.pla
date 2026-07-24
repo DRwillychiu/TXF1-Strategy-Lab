@@ -718,11 +718,25 @@ if MP > 0 then begin
 
     { V3.1: Frozen SL price derived from distance space.
       Freeze happens in the standalone block above; here we
-      convert to price for the taxonomy branches unchanged. }
-    Exit_Price_ATR = Entry_P - v_Layer0_dist;   { ATR cap leg (Layer 0) }
-    Exit_Price_Cap = Entry_P - v_Layer1_dist;   { L1_c leg (Layer 1) }
-    v_Frozen_SL    = Entry_P - v_Frozen_SL_dist;
-    v_SL_Locked    = True;                       { legacy flag mirrored for compatibility }
+      convert to price for the taxonomy branches unchanged.
+
+      Bug fix v3 (same-point-entry-exit): entry-bar sub-bars run this
+      block BEFORE the BarStatus(1)=2 guarded freeze fires at bar close.
+      If v_Frozen_SL_dist is still 0 at that point, Exit_Price_SL would
+      equal Entry_P and IOG + Bar Magnifier would trigger an intra-bar
+      same-price SL. Match V3.0 safe semantics: unfrozen -> Exit_Price_SL=0
+      (stop at 0 never triggers). }
+    if v_Frozen_SL_dist_locked = True then begin
+        Exit_Price_ATR = Entry_P - v_Layer0_dist;   { ATR cap leg (Layer 0) }
+        Exit_Price_Cap = Entry_P - v_Layer1_dist;   { L1_c leg (Layer 1) }
+        v_Frozen_SL    = Entry_P - v_Frozen_SL_dist;
+    end
+    else begin
+        Exit_Price_ATR = 0;
+        Exit_Price_Cap = 0;
+        v_Frozen_SL    = 0;
+    end;
+    v_SL_Locked = v_Frozen_SL_dist_locked;       { legacy flag mirrored for compatibility }
 
     Exit_Price_SL = v_Frozen_SL;
 
