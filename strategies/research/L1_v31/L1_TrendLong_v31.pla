@@ -326,6 +326,7 @@ Variables:
     v_Layer0_dist(0),             { ATR-based hard cap distance (V3.0 formula) }
     v_Layer1_dist(0),             { L1_c-based primary SL distance }
     v_p3b_dist(0),                { P3b SetStopLoss distance mirror }
+    v_L1c_ready_int(0),           { Discrepancy-3 fix v2: numeric mirror of v_L1c_ready boolean for Print (PL has no IIff, that was VB syntax) }
 
     { P5 v3 Module Variables }
     Init_Done(False),
@@ -693,12 +694,15 @@ if BarStatus(1) = 2 and MP > 0 and v_Frozen_SL_dist_locked = False then begin
 
     v_Frozen_SL_dist_locked = True;
 
+    { Discrepancy-3 fix v2: PowerLanguage has no IIff (VB syntax). Use helper var. }
+    if v_L1c_ready then v_L1c_ready_int = 1 else v_L1c_ready_int = 0;
+
     { Diagnostic log: SL layers at entry - post-hoc diagnosis }
     Print(File("C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\strategies\research\L1_v31\v31_sl_log.txt"),
         NumToStr(Date, 0), ",", NumToStr(Time, 0), ",",
         NumToStr(EntryPrice, 2), ",",
         NumToStr(v_L1c_raw, 2), ",",
-        NumToStr(IIff(v_L1c_ready, 1, 0), 0), ",",   { Discrepancy-3 fix (Q-USER-21 = A): IIff wraps boolean to numeric }
+        NumToStr(v_L1c_ready_int, 0), ",",
         NumToStr(v_Layer1_dist, 2), ",",
         NumToStr(v_Layer0_dist, 2), ",",
         NumToStr(v_Frozen_SL_dist, 2), NewLine);
