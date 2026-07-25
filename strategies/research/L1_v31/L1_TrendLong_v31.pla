@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V3.1 research (V3.0 base + SL_Pct percentage cap)
+  Version     : V3.1 (V3.0 base + SL_Pct percentage cap)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -227,7 +227,7 @@ Inputs:
     { P3: Defense Engine (Strict Stop-Loss) }
     SL_Multiplier(1.5),
     Daily_Cap_Multiplier(0.5),
-    SL_Pct(0),                         { V3.1: %-based SL cap. distance = Entry * SL_Pct / 100. 0 = disabled (V3.0 mode). }
+    SL_Pct(0.5),                       { V3.1: %-based SL cap. distance = Entry * SL_Pct / 100. 0 = disabled (V3.0 mode). }
 
     { P4: Trailing Engine (Legacy MA55) }
     Length20(55),

@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V3.1 (V3.0 base + SL_Pct percentage cap)
+  Version     : V3.0 IOG + StopProfit + FrozenSL + HolidayFlat_v3 + ImmediateStopFix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
@@ -175,25 +175,13 @@
           - 33/33 adversarial audit tests PASS (2 rounds).
           - GATE: MC12 entry count must match V2.9.1 (same period/params).
             Deploy only when flat.
-    V3.1  (2026-07-24) P3 percentage-based SL cap (research):
-          - New input SL_Pct: fixed percentage stop distance.
-            Leg 3 = Entry * SL_Pct / 100.
-          - P3 becomes triple-layered: MaxList(ATR leg, Cap leg, Pct leg).
-            Pct leg caps the stop at a fixed % of entry price,
-            solving the high-index problem (ATR scales non-linearly
-            with index level; % scales linearly).
-          - SL_Pct = 0 disables Leg 3 (exact V3.0 behavior).
-          - P3b mirror updated: MinList adds Pct distance when > 0.
-          - Base code = V3.0 (no L1_c, no Layer 1b).
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
-    P3 Stop   : Frozen at entry: MaxList of THREE stop PRICES
-                Leg 1: Entry - ATR x SL_Mult (intraday vol)
-                Leg 2: Entry - Daily_ATR x Cap_Mult (daily cap)
-                Leg 3: Entry - Entry x SL_Pct / 100 (pct cap, V3.1)
-                MaxList = TIGHTEST leg, locked for the whole trade.
-                SL_Pct = 0 disables Leg 3 (V3.0 two-leg mode).
+    P3 Stop   : Frozen at entry: MaxList of the two stop PRICES
+                = Entry - MinList(ATR x SL_Mult, Daily_ATR x
+                Cap_Mult) -> the TIGHTER leg (cap semantics),
+                locked for the whole trade
     P3b Guard : SetStopLoss (engine-level, active on entry bar)
                 Covers the 45min IOG=false gap between fill and
                 first custom stop order. V2.9: MinList distance
@@ -227,7 +215,6 @@ Inputs:
     { P3: Defense Engine (Strict Stop-Loss) }
     SL_Multiplier(1.5),
     Daily_Cap_Multiplier(0.5),
-    SL_Pct(0.5),                       { V3.1: %-based SL cap. distance = Entry * SL_Pct / 100. 0 = disabled (V3.0 mode). }
 
     { P4: Trailing Engine (Legacy MA55) }
     Length20(55),
@@ -270,7 +257,6 @@ Variables:
     Entry_P(0),
     Exit_Price_ATR(0),
     Exit_Price_Cap(0),
-    Exit_Price_Pct(0),
     Exit_Price_SL(0),
     Exit_Price_Trail(0),
     Final_Exit_Price(0),
@@ -522,15 +508,9 @@ MP = MarketPosition;
   SetStopContract makes the amount per-CONTRACT (lot-count invariant);
   per-position default would halve the distance at 2 lots. }
 SetStopContract;
-if MP <= 0 then begin
-    if SL_Pct > 0 then
-        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
-                            MinList(Daily_ATR * Daily_Cap_Multiplier,
-                                    Close * SL_Pct / 100)) * BigPointValue)
-    else
-        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
-                            Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
-end;
+if MP <= 0 then
+    SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                        Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
 
 if BarStatus(1) = 2 then begin
     Cond_Breakout = (Close Crosses Over Breakout_Level);
@@ -552,20 +532,14 @@ if MP > 0 then begin
 
     Entry_P = EntryPrice;
 
-    { P3 V3.1: Triple-Layered Initial Stop, FROZEN at entry.
-      Leg 1: 45M ATR * multiplier (intraday vol).
-      Leg 2: Daily ATR * cap multiplier (daily vol ceiling).
-      Leg 3: Entry * SL_Pct / 100 (percentage cap, V3.1 new).
-      MaxList picks the TIGHTEST (highest price for long).
-      SL_Pct = 0 disables Leg 3 (V3.0 compatible mode). }
+    { P3 V2.5: Double-Layered Initial Stop, FROZEN at entry.
+      Computed ONCE on the entry bar close and locked for the
+      whole trade. The old per-bar recalculation let the floor
+      drift with ATR during the holding period. }
     if BarStatus(1) = 2 and v_SL_Locked = False then begin
         Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
         Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
-        if SL_Pct > 0 then
-            Exit_Price_Pct = Entry_P - (Entry_P * SL_Pct / 100)
-        else
-            Exit_Price_Pct = 0;
-        v_Frozen_SL    = MaxList(Exit_Price_ATR, MaxList(Exit_Price_Cap, Exit_Price_Pct));
+        v_Frozen_SL    = MaxList(Exit_Price_ATR, Exit_Price_Cap);
         v_SL_Locked    = True;
     end;
 
