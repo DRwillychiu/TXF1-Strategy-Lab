@@ -75,13 +75,20 @@ following offshore cues. This is why night PF (1.32) >> day PF (1.03).
 
 ## Remaining Consolidation Strategy Structural Issues
 
-Documented here for future reference, NOT yet actioned:
+### 1. Whipsaw / Multi-Loss Days (MDD Driver) — RESEARCHED, NO ACTION
+- 25 days with 2+ trades, first trade of multi-trade day: 0/25 win rate (always loses)
+- 2+ trade/day avg P&L: -37,524. 3+ trade/day: -241,600
+- Last trade of 5-trade days wins 100% (+240,000 avg) — pattern shows recovery
+- **Decision**: no daily limit. Future multi-trade days could be consecutively profitable.
+  Historical whipsaw pattern is not predictive. Limiting trades would also cut recovery wins.
+  Focus should be on stop loss architecture, not trade count limits.
 
-### 1. Whipsaw / Multi-Loss Days (MDD Driver)
-- 16 days with 2+ losses, 22 excess trades, -1.4M excess loss
-- Max consecutive losses: 13 trades
-- Potential fix: daily max-1 loss limit (discussed but not implemented)
-- Risk: max-1 limit could miss recovery entries on reversal days
+### 1b. Breakeven Mechanism — RESEARCHED, REJECTED (see Lesson L27)
+- MFE analysis: 69% of losers had unrealized profit before reversal (theoretical +4.8M)
+- MC9 optimization (BE_Trigger_Pct 0.00-0.40): NO value beats baseline PF 1.25
+- Root cause: BE exit at entry price -> re-entry whipsaw loop (945T vs 375T at 0.01%)
+- Structural incompatibility: consolidation strategies oscillate around entry, trend strategies don't
+- All three exit mechanisms researched complete: SL_Pct (live), BE (rejected), trailing (not needed)
 
 ### 2. Day Session Alpha Deficit
 - Day PF 1.03 is barely breakeven even after opening block
