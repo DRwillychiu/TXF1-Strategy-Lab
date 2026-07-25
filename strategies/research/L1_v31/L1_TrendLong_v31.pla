@@ -278,7 +278,8 @@ Inputs:
     Weekly_MA_Slow(60),
 
     { X4: Breakout Quality Filter (V3.2) }
-    X4_Enable(True);
+    X4_Enable(True),
+    X4_Debug(False);
 
 Variables:
     maBase(0),
@@ -334,7 +335,8 @@ Variables:
     v_Flirt_Count(0),
     v_Asc_Count(0),
     v_Bin_Min(0),
-    jdx(0);
+    jdx(0),
+    v_Debug_Header(False);
 
 Variables: IntraBarPersist
     posbleProfit_Long(0),
@@ -632,6 +634,35 @@ end;
 
 if BarStatus(1) = 2 then begin
     Cond_Breakout = (Close Crosses Over Breakout_Level);
+
+    { X4 Debug: CSV output for every potential entry (all gates pass except X4) }
+    if X4_Debug and Cond_Breakout and MP = 0 and
+       (v_Weekly_Filter = true) and
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
+        if not v_Debug_Header then begin
+            Print("Date,Time,Close45M,MA61,ATR,BO_Level,D4_Close,D4_Close44,F_Mom,FlirtCnt,F_Flirt,AscCnt,F_Asc,Score,Night,Pass");
+            v_Debug_Header = True;
+        end;
+        Print(
+            NumToStr(Date, 0) + "," +
+            NumToStr(Time, 0) + "," +
+            NumToStr(Close, 2) + "," +
+            NumToStr(maBase, 2) + "," +
+            NumToStr(Current_ATR, 2) + "," +
+            NumToStr(Breakout_Level, 2) + "," +
+            NumToStr(Close of Data4, 2) + "," +
+            NumToStr(Close of Data4[44], 2) + "," +
+            NumToStr(v_F_Mom, 0) + "," +
+            NumToStr(v_Flirt_Count, 0) + "," +
+            NumToStr(v_F_Flirt, 0) + "," +
+            NumToStr(v_Asc_Count, 0) + "," +
+            NumToStr(v_F_Asc, 0) + "," +
+            NumToStr(v_X4_Score, 0) + "," +
+            NumToStr(IFF(v_X4_Night, 1, 0), 0) + "," +
+            NumToStr(IFF(v_X4_Pass, 1, 0), 0)
+        );
+    end;
 
     if MP = 0 and
        Cond_Breakout and
