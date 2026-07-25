@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v15.0 research (v14.1 base + SetStopContract + SL_Pct 0.55% + Opening Block + Min R:R)
+ Version     : v15.1 research (v15.0 base + BE_Trigger_Pct breakeven mechanism)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -66,6 +66,15 @@
      36-1188 pts but SL_Pct cap is nearly fixed, so narrow boxes create
      structurally negative expected value entries. Optimizable parameter.
 
+ V15.1 CHANGES (2026-07-25, breakeven mechanism):
+   BE_Trigger_Pct: percentage-based breakeven trigger (replaces BE_Trigger_Pts).
+     MFE analysis: 69% of losing trades (139/202) had unrealized profit before
+     reversal. At 0.15% trigger, 103 losers saved (+4.86M) vs 7 winners at risk
+     (-18K). Sweet spot 0.10%-0.20%. Percentage-based auto-scales with index
+     level (0.15% = 18pt @12K, 68pt @45K), unlike fixed-point which becomes
+     too tight at high levels. BE_Offset_Pts kept at 5 (slippage cover).
+     Default 0 = disabled. Optimizable in MC9 sweep 0.05-0.40 step 0.01.
+
  PERFORMANCE (V15.0 w/ OB945, MC9 2026/07/25, 2-lot 2M capital, 1000 slip):
    Net Profit    : 2,446,000 TWD
    Profit Factor : 1.255
@@ -127,8 +136,8 @@ inputs:
     { --- Frozen SL (v13.2, always-on in v14) --- }
     Freeze_SL_On(true),
 
-    { --- BE layer (DISABLED for range strategies, kept for compat) --- }
-    BE_Trigger_Pts(0),
+    { --- V15.1 Breakeven Mechanism (percentage-based) --- }
+    BE_Trigger_Pct(0),          { V15.1: pct of entry price to arm BE. 0 = disabled. Optimize 0.05-0.40 }
     BE_Offset_Pts(5);
 
 variables:
@@ -412,10 +421,10 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
                 v_Work_Target = v_Box_Top;
         end;
 
-        { BE layer (disabled by default, kept for compat) }
+        { V15.1 Breakeven: arm when unrealized profit >= BE_Trigger_Pct% of entry }
         v_BE_IsFloor = false;
-        if BE_Trigger_Pts > 0 then begin
-            if (Close - EntryPrice) >= BE_Trigger_Pts then
+        if BE_Trigger_Pct > 0 then begin
+            if (Close - EntryPrice) >= EntryPrice * BE_Trigger_Pct / 100 then
                 v_BE_Armed = true;
             if v_BE_Armed and
                (EntryPrice + BE_Offset_Pts > v_Work_SL) then begin
