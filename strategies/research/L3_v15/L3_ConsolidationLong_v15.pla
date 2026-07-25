@@ -52,11 +52,22 @@
      Entry via Stop at Box_Btm fills near Close when Close > Box_Btm.
      Close-based distance is a conservative approximation. Combined with
      SL_Pct cap, the engine stop is always a valid safety net.
-   FILTER: Opening volatility block (08:45-09:30, Open_Block_End=930).
-     Day-session open 48 trades PF 0.73, WR 29%, Net -452K. 6/9 engine stops
-     occur in this window. Blocks entry SIGNALS whose fills would land in the
-     forbidden zone: Time=500 (night session last bar -> 09:00 fill) and
-     Time 900 to Open_Block_End-15 (-> 09:15..09:30 fills).
+   FILTER: Opening volatility block (08:45-09:45, Open_Block_End=945).
+     Day-session open entries are structurally toxic for consolidation strategies:
+     institutions probe/hunt box bottoms at open, invalidating support logic.
+     OB930 first pass removed 08:45-09:30 but cascade pushed 19T to 09:45
+     (WR 10.5%, -604K). OB945 eliminates cascade; 10:xx is the first
+     profitable slot (WR 41%, +134K). Blocks entry SIGNALS whose fills
+     would land in the forbidden zone: Time=500 (night session last bar
+     -> 09:00 fill) and Time 900..930 (-> 09:15..09:45 fills).
+
+ PERFORMANCE (V15.0 w/ OB945, MC9 2026/07/25, 2-lot 2M capital, 1000 slip):
+   Net Profit    : 2,446,000 TWD
+   Profit Factor : 1.255
+   Max Drawdown  : -810,800 (29.4%)
+   Win Rate      : 46.3%
+   Total Trades  : 376
+   Day PF 1.03 / Night PF 1.32
 
  PERFORMANCE (v14.1 OPTIMIZED, MC9 Excel 2026/07/04, Initial Capital 1M):
    Net Profit    : 2,048,000 TWD (+194% vs v13.4)
@@ -93,7 +104,7 @@ inputs:
     ATR_Length(9),
     ATR_Stop_Mult(3.0),
     SL_Pct(0.55),               { V15: percentage stop cap. 0 = disabled. E.g. 0.55 = 0.55% of entry }
-    Open_Block_End(930),        { V15: block entries filling before this MC time. 0 = disabled }
+    Open_Block_End(945),        { V15: block entries filling before this MC time. 0 = disabled }
 
     { --- Data3 (Daily) Filter Settings --- }
     Daily_MA_Fast(20),
