@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v19_9_BreakoutLong
  MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
  Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
- Version     : v19.9 research + SetStopContract + SL_Pct + HolidayFlat_v3 + FrozenSL + ImmediateStop
+ Version     : v19.9 + SetStopContract + SL_Pct + HolidayFlat_v3 + FrozenSL + ImmediateStop
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
@@ -214,7 +214,7 @@ inputs:
     ATR_Stop_Mult(4.5),
     FrontRun_Ticks(5),
     Time_Stop_Bars(31),
-    SL_Pct(0),                     { 0 = off. Pct stop cap, scan 0.6-1.8 in MC9 }
+    SL_Pct(1.0),                   { Pct stop cap. MC9 sweep 0.0-1.8: 1.0 optimal }
 
     { [SEC-4] Scale-Out Settings }
     ScaleOut_Percent(0.4),

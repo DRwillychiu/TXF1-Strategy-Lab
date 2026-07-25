@@ -1,8 +1,8 @@
 {================================================================================
- Script Name : _Live_Adaptive_Farmer_v19_8_BreakoutLong
+ Script Name : _Live_Adaptive_Farmer_v19_9_BreakoutLong
  MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
  Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
- Version     : v19.8 + Pre-Trail SP + HolidayFlat_v3 + FrozenSL + ImmediateStop
+ Version     : v19.9 + SetStopContract + SL_Pct + HolidayFlat_v3 + FrozenSL + ImmediateStop
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
@@ -179,6 +179,25 @@
             block -> freezes when position opens.
           - Dormant backup once custom stops tighten.
           - Deploy only when flat.
+
+   v19.9  (2026-07-25) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+
+          BUG FIX - SetStopContract MISSING:
+            SetStopLoss without SetStopContract = stop dollar amount
+            applied to ENTIRE position, not per-contract. With 2 lots:
+            per-contract stop = half intended (4.5*ATR -> 2.25*ATR).
+            SetStopContract makes SetStopLoss PER-CONTRACT (lot-invariant).
+
+          NEW - SL_Pct Percentage Stop Cap:
+            ATR_Stop_Mult=4.5 at high-vol ATR creates stops > 2% of entry.
+            Historical worst: 2026-06-10 lost 2.87% (-504,400 NTD).
+            SL_Pct caps max initial stop as pct of entry price.
+            Dual-layer: actual stop = min(ATR distance, Pct distance).
+            Applied to: (1) P3b SetStopLoss guard, (2) Stage 1 base SL.
+            NOT applied to Stage 2/3 runner (protected by BE/Trail).
+            SL_Pct(0) = off (default for MC9 scan 0.6-1.8).
+
+          DEPLOY ONLY WHEN FLAT.
 ================================================================================}
 
 inputs:
@@ -195,6 +214,7 @@ inputs:
     ATR_Stop_Mult(4.5),
     FrontRun_Ticks(5),
     Time_Stop_Bars(31),
+    SL_Pct(1.0),                   { Pct stop cap. MC9 sweep 0.0-1.8: 1.0 optimal }
 
     { [SEC-4] Scale-Out Settings }
     ScaleOut_Percent(0.4),
@@ -298,7 +318,8 @@ variables:
     v_SP_Armed(false),
     v_SP_Floor(0),
     v_Bot_Base_Stop(0),            { Stage 1 base SL for Bot leg }
-    v_Mid_Base_Stop(0);            { Stage 1 base SL for Mid leg }
+    v_Mid_Base_Stop(0),            { Stage 1 base SL for Mid leg }
+    v_SL_Pct_Floor(0);             { v19.9: SL_Pct stop price floor }
 
 arrays:
     Holiday_Tail[80](0);
@@ -485,12 +506,14 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
     v_Target_Bot = v_Mid_Line - (FrontRun_Ticks * v_TickSize);
     v_Target_Mid = v_Box_Top  - (FrontRun_Ticks * v_TickSize);
 
-    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
-      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-      Uses WIDER Bot-leg stop for both entry legs (conservative). }
-    if MarketPosition <= 0 then
-        SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
-                    * BigPointValue);
+    { P3b: Immediate Stop Guard (2026-06-18) + v19.9 SetStopContract + SL_Pct }
+    SetStopContract;
+    if MarketPosition <= 0 then begin
+        Value1 = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
+        if SL_Pct > 0 then
+            Value1 = MinList(Value1, Close * SL_Pct / 100);
+        SetStopLoss(Value1 * BigPointValue);
+    end;
 
     if MarketPosition = 0 and v_Allow_Entry then begin
         if (v_Trend_Dir = 1) and
@@ -578,6 +601,13 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
             end else begin
                 v_Bot_Base_Stop = v_Box_Btm  - v_ATR_Buffer;
                 v_Mid_Base_Stop = v_Mid_Line - v_ATR_Buffer;
+            end;
+
+            { v19.9: SL_Pct percentage cap on initial stop }
+            if SL_Pct > 0 then begin
+                v_SL_Pct_Floor = EntryPrice * (1 - SL_Pct / 100);
+                v_Bot_Base_Stop = MaxList(v_Bot_Base_Stop, v_SL_Pct_Floor);
+                v_Mid_Base_Stop = MaxList(v_Mid_Base_Stop, v_SL_Pct_Floor);
             end;
 
             { v19.8: emit BL_SP_* when SP binds higher than base SL,
@@ -692,4 +722,5 @@ if MarketPosition = 0 then begin
     v_SP_Floor            = 0;
     v_Bot_Base_Stop       = 0;
     v_Mid_Base_Stop       = 0;
+    v_SL_Pct_Floor        = 0;
 end;
