@@ -2,13 +2,14 @@
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
   MC Load Name: WILLY_ATR_LONG_60M
-  Version     : V3.1 research (V3.0 base + SL_Pct percentage cap)
+  Version     : V3.2 research (V3.1 + X4 Breakout Quality Filter)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
-  Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
+  Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly / Data4 = 1M
                 (NOTE: strategy name says 60M but Excel report
                  confirms compression = 45 Minutes. Name kept for
-                 live continuity; actual chart is 45M.)
+                 live continuity; actual chart is 45M.
+                 Data4 = 1M added for X4 breakout quality filter.)
 
   CHANGELOG:
     V2.3  Label unification (TL_ prefix). No logic changes.
@@ -185,6 +186,21 @@
           - SL_Pct = 0 disables Leg 3 (exact V3.0 behavior).
           - P3b mirror updated: MinList adds Pct distance when > 0.
           - Base code = V3.0 (no L1_c, no Layer 1b).
+    V3.2  (2026-07-25) X4: Breakout Quality Filter (research):
+          - Data4 = 1M added as observation source.
+          - 3-feature score computed on 45min window (current bar
+            1M data): momentum (close delta >= 0), flirtation
+            (1M bars touching BO level >= 22), ascending lows
+            (5-bar bin trend >= 40%).
+          - Gate: Night score <= 2 skip, Day score <= 1 skip.
+            Structural basis: night liquidity/volatility demands
+            higher breakout confidence.
+          - No re-entry (0% marginal contribution, proven
+            redundant vs score gate alone).
+          - Python projection: 283 trades, +3,894,000, PF 2.614,
+            WR 47.7%, MDD -280,800. Expect +/-10-15% deviation
+            from actual MC12 backtest.
+          - Base code = V3.1.
 
   STRATEGY LOGIC:
     P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
@@ -204,6 +220,8 @@
     P5 v3     : Pre-holiday flat rule (block entries on tail bars,
                 forced market exit from Holiday_Flat_Time)
     P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
+    X4 Filter : 3-feature score on Data4 (1M), 45min window.
+                Night: require score=3. Day: require score>=2.
     Exit      : single stop at Max(P4 trail, P3 frozen, P7 lock)
 
   PERFORMANCE (Excel Report 2026/07/02, SP 500, Initial Capital 1M):
@@ -257,7 +275,10 @@ Inputs:
 
     { P6: Data3 (Weekly) Filter Settings }
     Weekly_MA_Fast(20),
-    Weekly_MA_Slow(60);
+    Weekly_MA_Slow(60),
+
+    { X4: Breakout Quality Filter (V3.2) }
+    X4_Enable(True);
 
 Variables:
     maBase(0),
@@ -301,7 +322,19 @@ Variables:
     { P6: Weekly Filter Variables }
     v_Weekly_MA_Fast(0),
     v_Weekly_MA_Slow(0),
-    v_Weekly_Filter(false);
+    v_Weekly_Filter(false),
+
+    { X4: Breakout Quality Filter (V3.2) }
+    v_X4_Night(False),
+    v_X4_Pass(True),
+    v_X4_Score(0),
+    v_F_Mom(0),
+    v_F_Flirt(0),
+    v_F_Asc(0),
+    v_Flirt_Count(0),
+    v_Asc_Count(0),
+    v_Bin_Min(0),
+    jdx(0);
 
 Variables: IntraBarPersist
     posbleProfit_Long(0),
@@ -309,7 +342,8 @@ Variables: IntraBarPersist
     v_Trail_High(0);
 
 Array:
-    Holiday_Tail[80](0);
+    Holiday_Tail[80](0),
+    Bin_Lows[9](0);
 
 { ==========================================
   0. P5 v3: Holiday Tail Registry (2019-2026)
@@ -507,7 +541,71 @@ if LastBarOnChart and
 end;
 
 { ==========================================
-  2. Entry Logic (gated by Holiday Tail)
+  1c. X4: Breakout Quality Filter (V3.2)
+  3-feature score using Data4 (1M), 45min window.
+  Night session requires higher confidence (score=3)
+  due to thinner liquidity and wider spreads.
+  ========================================== }
+
+if BarStatus(1) = 2 then begin
+
+    if X4_Enable and Close of Data4[44] > 0 then begin
+
+        v_X4_Night = (Time >= 1500) or (Time < 500);
+
+        { Feature 1: Pre-bar momentum (close delta over 45 bars) }
+        if Close of Data4 - Close of Data4[44] >= 0 then
+            v_F_Mom = 1
+        else
+            v_F_Mom = 0;
+
+        { Feature 2: Flirtation (1M bars with High >= BO level) }
+        v_Flirt_Count = 0;
+        for idx = 0 to 44 begin
+            if High of Data4[idx] >= Breakout_Level then
+                v_Flirt_Count = v_Flirt_Count + 1;
+        end;
+        if v_Flirt_Count >= 22 then
+            v_F_Flirt = 1
+        else
+            v_F_Flirt = 0;
+
+        { Feature 3: Ascending lows (9 bins x 5 bars, >= 4/8 rising) }
+        for idx = 0 to 8 begin
+            v_Bin_Min = Low of Data4[44 - idx * 5];
+            for jdx = 1 to 4 begin
+                if Low of Data4[44 - idx * 5 - jdx] < v_Bin_Min then
+                    v_Bin_Min = Low of Data4[44 - idx * 5 - jdx];
+            end;
+            Bin_Lows[idx + 1] = v_Bin_Min;
+        end;
+
+        v_Asc_Count = 0;
+        for idx = 2 to 9 begin
+            if Bin_Lows[idx] > Bin_Lows[idx - 1] then
+                v_Asc_Count = v_Asc_Count + 1;
+        end;
+        if v_Asc_Count >= 4 then
+            v_F_Asc = 1
+        else
+            v_F_Asc = 0;
+
+        { Score and session-calibrated gate }
+        v_X4_Score = v_F_Mom + v_F_Flirt + v_F_Asc;
+
+        if v_X4_Night then
+            v_X4_Pass = (v_X4_Score >= 3)
+        else
+            v_X4_Pass = (v_X4_Score >= 2);
+
+    end else begin
+        v_X4_Pass = True;
+    end;
+
+end;
+
+{ ==========================================
+  2. Entry Logic (gated by Holiday/Settlement/X4)
   ========================================== }
 
 MP = MarketPosition;
@@ -539,7 +637,8 @@ if BarStatus(1) = 2 then begin
        Cond_Breakout and
        (v_Weekly_Filter = true) and
        (v_Holiday_Block = false) and
-       (v_Settlement_Day = false) then begin
+       (v_Settlement_Day = false) and
+       (v_X4_Pass = true) then begin
         Buy ("TL_Entry") next bar at Market;
     end;
 end;
