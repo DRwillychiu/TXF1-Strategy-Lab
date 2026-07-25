@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v15.0 (v14.1 base + SetStopContract + SL_Pct 0.55% + Opening Block + Min R:R)
+ Version     : v14.1 Matrix Range Capture + ImmediateStop (OPTIMIZED)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -37,42 +37,7 @@
                 FrozenSL, BreakExit, Registry fail-safe, Manual Kill)
      - KEPT:    BE mechanism code (disabled, BE_Trigger_Pts=0)
 
- V15.0 CHANGES (2026-07-25, stop loss hardening):
-   BUG-1 FIX: Added SetStopContract declaration.
-     Without it, 2-lot deployment halves the per-contract stop distance.
-     SetStopContract makes SetStopLoss amount per-CONTRACT (lot-invariant).
-   BUG-2 FIX: Added SL_Pct percentage-based stop distance cap.
-     ATR buffer scales non-linearly with index level. At high ATR, a single
-     stop can exceed any reasonable per-trade risk budget. SL_Pct caps the
-     maximum stop distance as a percentage of entry price.
-     Frozen SL becomes dual-layer: MaxList(ATR_leg, Pct_leg) = tightest.
-     SetStopLoss mirrors: MinList(ATR_distance, Pct_distance) = tightest.
-     SL_Pct = 0 disables the percentage leg (v14.1 compatible mode).
-   BUG-3 FIX: SetStopLoss distance formula unchanged (Close-based proxy).
-     Entry via Stop at Box_Btm fills near Close when Close > Box_Btm.
-     Close-based distance is a conservative approximation. Combined with
-     SL_Pct cap, the engine stop is always a valid safety net.
-   FILTER: Opening volatility block (08:45-09:45, Open_Block_End=945).
-     Day-session open entries are structurally toxic for consolidation strategies:
-     institutions probe/hunt box bottoms at open, invalidating support logic.
-     OB930 first pass removed 08:45-09:30 but cascade pushed 19T to 09:45
-     (WR 10.5%, -604K). OB945 eliminates cascade; 10:xx is the first
-     profitable slot (WR 41%, +134K). Blocks entry SIGNALS whose fills
-     would land in the forbidden zone: Time=500 (night session last bar
-     -> 09:00 fill) and Time 900..930 (-> 09:15..09:45 fills).
-   FILTER: Minimum R:R gate (Min_RR=1.0, requires SL_Pct > 0).
-     Rejects entries where Box_Range < Min_RR * Box_Bottom * SL_Pct/100.
-     27% of CL_TP trades had R:R < 1.0 (reward < risk). Box width varies
-     36-1188 pts but SL_Pct cap is nearly fixed, so narrow boxes create
-     structurally negative expected value entries. Optimizable parameter.
-
- PERFORMANCE (V15.0 w/ OB945, MC9 2026/07/25, 2-lot 2M capital, 1000 slip):
-   Net Profit    : 2,446,000 TWD
-   Profit Factor : 1.255
-   Max Drawdown  : -810,800 (29.4%)
-   Win Rate      : 46.3%
-   Total Trades  : 376
-   Day PF 1.03 / Night PF 1.32
+ Prior versions preserved in git history + annotated.md.
 
  PERFORMANCE (v14.1 OPTIMIZED, MC9 Excel 2026/07/04, Initial Capital 1M):
    Net Profit    : 2,048,000 TWD (+194% vs v13.4)
@@ -108,9 +73,6 @@ inputs:
     { --- Risk Management (15M) --- }
     ATR_Length(9),
     ATR_Stop_Mult(3.0),
-    SL_Pct(0.55),               { V15: percentage stop cap. 0 = disabled. E.g. 0.55 = 0.55% of entry }
-    Open_Block_End(945),        { V15: block entries filling before this MC time. 0 = disabled }
-    Min_RR(1.0),                { V15: min reward/risk for entry. 0 = disabled. Optimizable }
 
     { --- Data3 (Daily) Filter Settings --- }
     Daily_MA_Fast(20),
@@ -160,9 +122,6 @@ variables:
     { --- Data1 (15M) Execution --- }
     v_Current_ATR(0),
     v_ATR_Buffer(0),
-    v_SL_Distance(0),          { V15: SetStopLoss distance (engine level) }
-    v_Opening_Block(false),    { V15: true during day-session opening no-trade window }
-    v_RR_Qualified(true),      { V15: true when box R:R meets Min_RR threshold }
 
     { --- Holiday / Settlement --- }
     v_Holiday_Block(false),
@@ -177,7 +136,6 @@ variables:
     v_Frozen_Target(0),
     v_Work_SL(0),
     v_Work_Target(0),
-    v_SL_Pct_Floor(0),        { V15: percentage leg SL price }
     v_BE_Armed(false),
     v_BE_IsFloor(false);
 
@@ -330,40 +288,17 @@ else
 
 if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
-    { P3b Immediate Stop Guard (Rule #12)
-      V15: SetStopContract makes amount per-CONTRACT (lot-invariant).
-      V15: SL_Pct caps the engine stop distance as percentage of Close.
-      MinList of distances = tightest stop (same logic as L1 V3.1). }
-    SetStopContract;
-    if v_Box_Qualified and MarketPosition <= 0 then begin
-        v_SL_Distance = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
-        if SL_Pct > 0 then
-            v_SL_Distance = MinList(v_SL_Distance, Close * SL_Pct / 100);
-        SetStopLoss(v_SL_Distance * BigPointValue);
-    end;
-
-    { --- V15 Opening Volatility Filter --- }
-    v_Opening_Block = false;
-    if Open_Block_End > 0 then begin
-        if Time = 500 then v_Opening_Block = true;
-        if Time >= 900 and Time < Open_Block_End then v_Opening_Block = true;
-    end;
-
-    { --- V15 Reward/Risk Qualification --- }
-    v_RR_Qualified = true;
-    if Min_RR > 0 and SL_Pct > 0 and v_Box_Range > 0 then begin
-        if v_Box_Range < Min_RR * v_Box_Btm * SL_Pct / 100 then
-            v_RR_Qualified = false;
-    end;
+    { P3b Immediate Stop Guard (Rule #12) -- only when flat + box qualified }
+    if v_Box_Qualified and MarketPosition <= 0 then
+        SetStopLoss(AbsValue(Close - (v_Box_Btm - v_ATR_Buffer))
+                    * BigPointValue);
 
     { --- V14 Entry (Dim 2: Unified Support Zone) --- }
     if v_Box_Qualified and MarketPosition = 0 then begin
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
            (v_Holiday_Block = false) and
-           (v_Settlement_Day = false) and
-           (v_Opening_Block = false) and
-           (v_RR_Qualified = true) then begin
+           (v_Settlement_Day = false) then begin
 
             if (Close < v_Support_Zone) and
                (Close > v_Box_Btm - v_ATR_Buffer) then
@@ -379,13 +314,6 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
             if v_SL_Locked = false then begin
                 v_Frozen_SL = v_Box_Btm - v_ATR_Buffer;
 
-                { V15: SL_Pct percentage leg (dual-layer frozen SL).
-                  MaxList picks the highest price = tightest for long. }
-                if SL_Pct > 0 then begin
-                    v_SL_Pct_Floor = EntryPrice - (EntryPrice * SL_Pct / 100);
-                    v_Frozen_SL = MaxList(v_Frozen_SL, v_SL_Pct_Floor);
-                end;
-
                 v_Swing_High = Highest(High, Swing_Lookback);
                 v_Frozen_Target = MinList(v_Swing_High, v_Box_Top);
                 if v_Frozen_Target < v_Mid_Line + v_Current_ATR then
@@ -399,13 +327,6 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
         end else begin
             v_Work_SL     = v_Box_Btm - v_ATR_Buffer;
-
-            { V15: SL_Pct percentage leg (non-frozen path) }
-            if SL_Pct > 0 then begin
-                v_SL_Pct_Floor = EntryPrice - (EntryPrice * SL_Pct / 100);
-                v_Work_SL = MaxList(v_Work_SL, v_SL_Pct_Floor);
-            end;
-
             v_Swing_High  = Highest(High, Swing_Lookback);
             v_Work_Target = MinList(v_Swing_High, v_Box_Top);
             if v_Work_Target < v_Mid_Line + v_Current_ATR then
@@ -443,7 +364,7 @@ end else begin
 end;
 
 { ==========================================
-  6. Safety Exits (Priority 0, always active)
+  7. Safety Exits (Priority 0, always active)
   ========================================== }
 
 if MarketPosition = 1 then begin
@@ -461,14 +382,13 @@ if MarketPosition = 1 then begin
 end;
 
 { ==========================================
-  7. State Reset (flat)
+  8. State Reset (flat)
   ========================================== }
 
 if MarketPosition = 0 then begin
     v_SL_Locked     = false;
     v_Frozen_SL     = 0;
     v_Frozen_Target = 0;
-    v_SL_Pct_Floor  = 0;
     v_BE_Armed      = false;
     v_BE_IsFloor    = false;
 end;
