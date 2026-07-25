@@ -1,0 +1,726 @@
+{================================================================================
+ Script Name : _Live_Adaptive_Farmer_v19_9_BreakoutLong
+ MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
+ Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
+ Version     : v19.9 research + SetStopContract + SL_Pct + HolidayFlat_v3 + FrozenSL + ImmediateStop
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
+
+ CHANGELOG:
+   v19.6  Prior production: God Mode + Daily Commander + Weekly AND Filter
+          + Scale-Out + MFE 3-tier dynamic trail.
+
+   v19.7  (2026-06-13) Three structural fixes (safety upgrades):
+          DOW=7 dead code removed; HolidayFlat_v3 added; FrozenSL added.
+
+   v19.8  (2026-06-13) PRE-TRAIL STOPPROFIT MODULE (A/B engine,
+          input-switched, defaults OFF = regression-safe to v19.7):
+
+          USER REQUEST:
+            L5 is a hybrid - L3 entry (box bottom/mid catch) with
+            extension intent (trail to ride breakouts). v19.7 had
+            L3 entry but NOT L1's "don't give back profit you've
+            already earned" philosophy. Old-Excel evidence:
+              - 58 trades with MFE>0 ended <=0
+              - 1,826,000 NTD wasted (per contract, 4.8 years)
+              - Worst case (2024-05-03): MFE +244 pts -> BE -10 pts
+                (244 pts entirely given back via BL_BE protection
+                that only locks 0 profit, not peak retention)
+            v19.7 BL_BE = EntryPrice (locks 0 profit)
+            v19.8 BL_SP = EntryPrice + Peak * (1 - Retain pct)
+                          (locks % of peak profit, L1-style)
+
+          INSPIRATION (L1 V2.6 StopProfit module ported):
+            stopProfitPoints_Long(250), profitReturnPrcnt_Long(55)
+            Floor = EntryPrice + posbleProfit_Long * (1 - 55/100)
+            Close-based peak tracking, never disarms once flat.
+
+          MECHANISM (close-based, never disarms until flat):
+            1. Track v_Peak_Profit = max(close - EntryPrice).
+            2. Once v_Peak_Profit >= SP_Trigger_Pts: v_SP_Armed = true.
+            3. v_SP_Floor = EntryPrice + v_Peak_Profit *
+                            (1 - SP_Retain_Pct / 100).
+            4. SP floor used as:
+               - Stage 1 (full position): replaces base initial SL
+                 IF v_SP_Floor > base SL. Label switches to BL_SP_*.
+               - Stage 2/3 (post scale-out): replaces BL_BE
+                 floor (EntryPrice) IF v_SP_Floor > EntryPrice.
+                 Trail still wins if v_Dynamic_Stop > v_SP_Floor.
+            5. Priority: Trail > SP > BE > base SL (highest stop
+               wins for LONG = tightest floor).
+            6. Stop labels are mutually exclusive per leg per bar:
+               Stage 1: BL_SP_Bot vs BL_SL_Bot (one or the other)
+               Stage 2/3: BL_Trail_Bot vs BL_SP_Bot vs BL_BE_Bot
+               Same for Mid leg.
+
+          INPUT SWITCHES (all default to OFF = v19.7 behavior):
+            SP_Trigger_Pts(0)    { 0 = off. Try 60/80/100 in A/B. }
+            SP_Retain_Pct(50)    { 0-100. L1 uses 55, L5 starts 50. }
+
+          NAMED VARIANTS for MC9 A/B testing:
+            A baseline    : SP=0 (= v19.7 regression check)
+            B SP-Aggressive : SP=60, Retain=50 (early protection)
+            C SP-Mid      : SP=80, Retain=50
+            D SP-Conservative : SP=100, Retain=50 (high threshold)
+            E SP-LessRetain : SP=80, Retain=40 (more giveback room)
+            F SP-L1-Like  : SP=100, Retain=55 (mirror L1)
+
+          NEW EXIT LABELS:
+            BL_SP_Bot, BL_SP_Mid (mutually exclusive with BL_SL /
+            BL_BE / BL_Trail on the same leg/bar)
+
+          ACCEPTANCE per variant (per L4 v14.2 framework):
+            PASS: net > v19.7 AND BL_SP WR >= 50 pct AND Top-10
+                  winner retention >= 80 pct AND MDD not worse
+                  by > 10 pct
+            FAIL: BL_SP WR < 30 pct (L3/L4 trap reborn), OR
+                  Top-10 retention < 70 pct, OR net < v19.7
+
+          L4 v14.2 LESSON BAKED IN:
+            L4 BE/SP failed because direct attachment after entry
+            with no scale-out cushion truncated multi-stage
+            winners. L5 differs:
+              - Scale-out (40 pct) already locks partial profit.
+              - SP applies to remaining 60 pct runner.
+              - Trail still wins when active.
+              - So SP truncation risk is on runner only, not the
+                full position.
+            But the trap can still reborn - hence the A/B test.
+
+          REFERENCES:
+            strategies/live/L1_TrendLong.pla - V2.6 SP source
+            docs/L4_v142_variant_results.md  - what to avoid
+
+          DEPLOY ONLY WHEN FLAT. Production default = OFF.
+
+   v19.7  (2026-06-13) Three structural fixes (no logic change to
+          God Mode engine; safety + correctness upgrades):
+
+   FIX 1 - DayOfWeek = 7 DEAD CODE REMOVED:
+     v19.6 had 3 references to DayOfWeek(Date) = 7, but in
+     PowerLanguage / MultiCharts DayOfWeek returns 0-6
+     (Sun=0, Mon=1, ..., Sat=6). The value 7 is NEVER true.
+     - Line 103 (entry block on DOW=7) was harmless no-op
+       (Sunday has no TXF1 bars anyway).
+     - Lines 109-114 (BL_SatClose_Bot/Mid market exit at
+       DOW=7 + Time>=400) was DEAD CODE. The original intent
+       was to force-flat on Saturday morning (TXF1 night
+       session ends Sat 05:00) but this never fired.
+     Verified against older AND backtest (4.8yr / 152 trades):
+       BL_SatClose_Bot = 0 fires, BL_SatClose_Mid = 0 fires.
+     v19.7 removes all three DOW=7 references. The existing
+     DOW=6 + Time>=1330 entry block (which IS correct
+     Saturday) is preserved. Weekend gap risk relies on
+     trail/SL catching the runner, same as v19.6 effective
+     behavior (since the SatClose was always dead).
+
+   FIX 2 - HOLIDAY FLAT RULE v3 added:
+     v19.6 had ZERO holiday protection. v19.7 installs the
+     same module that L1/L2/L3/L4 already use:
+       - Holiday_Tail[80] = 63 TAIFEX-verified dates (shared
+         registry with L1/L2/L3/L4; byte-identical).
+       - Tail bars (00:00-05:00 of "last trading day + 1
+         calendar day") block new entries via v_Allow_Entry
+         AND force-flat any position from Holiday_Flat_Time
+         (15M grid = 04:15 trigger, retries 04:30/04:45,
+         flat before 05:00).
+       - Registry_Valid_Until(1270101) fail-safe: beyond
+         this date block entries + flatten (BL_RegistryEnd)
+         + 30-day red chart warning.
+       - Manual_Kill_Switch(false) for typhoon-class
+         unscheduled closures (BL_Kill).
+     History impact: 0 historical violations in 152-trade
+     older Excel (forward protection only). First live test
+     = 2026-06-18 Dragon Boat eve.
+
+   FIX 3 - FROZEN INITIAL STOP added:
+     v19.6 had the same ATR-drift bug as L1 V2.5-era and
+     L4 v14.0-era: v_ATR_Buffer = v_Current_ATR * ATR_Stop_Mult
+     recomputed every 15M bar, so the initial stop drifts
+     with ATR(35) and changes on chart reload.
+       - Freeze_SL_On(true): on entry bar, lock v_Frozen_ATR
+         = ATR-at-entry. The initial stop becomes a function
+         of v_Frozen_ATR (stable) instead of v_Current_ATR
+         (drifting).
+       - Trail layer keeps using v_Current_ATR by design
+         (trail should track current volatility).
+       - Set Freeze_SL_On = false to replicate v19.6 dynamic.
+
+   WHAT THIS ROUND DOES NOT TOUCH (deferred):
+     - BL_BE (post-scale-out breakeven floor) mechanism.
+       L4 v14.2 A/B proved BE can amputate multi-stage
+       winners; L5 has built-in BE since v19.x with no A/B.
+       Future round may test L5 with BE off vs on. NOT done
+       here per "do not refactor beyond scope" rule.
+     - Night entry filter (L4 Path A). L5 older data shows
+       02-04 entries are +87,800 net (12 trades, 7 wins),
+       UNLIKE L4 (-120,800). Night block would harm L5.
+     - Scale-out percentage and trail tier multipliers.
+
+ PERFORMANCE BASELINE (from L5 annotated v19.6 - to be
+ re-verified after v19.7 MC9 deployment with fresh Excel):
+   Net Profit    : 1,713,000 TWD
+   Profit Factor : 2.136
+   Win Rate      : 52.47%
+   MDD           : -193,200 (-16.61%)
+   Total Trades  : 162
+   Backtest      : ~4.8 years
+
+   v19.8+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue(Close - (Box_Btm - ATR*4.5)) *
+            BigPointValue. Uses the WIDER Bot-leg stop for both
+            entry legs (Bot and Mid). Conservative: Mid-leg entries
+            get more buffer than strictly needed, but ensures
+            disaster protection for all entries.
+          - Called only when flat (MP<=0) inside consolidation
+            block -> freezes when position opens.
+          - Dormant backup once custom stops tighten.
+          - Deploy only when flat.
+
+   v19.9  (2026-07-25) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+
+          BUG FIX - SetStopContract MISSING:
+            SetStopLoss without SetStopContract = stop dollar amount
+            applied to ENTIRE position, not per-contract. With 2 lots:
+            per-contract stop = half intended (4.5*ATR -> 2.25*ATR).
+            SetStopContract makes SetStopLoss PER-CONTRACT (lot-invariant).
+
+          NEW - SL_Pct Percentage Stop Cap:
+            ATR_Stop_Mult=4.5 at high-vol ATR creates stops > 2% of entry.
+            Historical worst: 2026-06-10 lost 2.87% (-504,400 NTD).
+            SL_Pct caps max initial stop as pct of entry price.
+            Dual-layer: actual stop = min(ATR distance, Pct distance).
+            Applied to: (1) P3b SetStopLoss guard, (2) Stage 1 base SL.
+            NOT applied to Stage 2/3 runner (protected by BE/Trail).
+            SL_Pct(0) = off (default for MC9 scan 0.6-1.8).
+
+          DEPLOY ONLY WHEN FLAT.
+================================================================================}
+
+inputs:
+    { [SEC-1] Data2 Commander Settings }
+    Lookback_Bars(4),
+    Range_Shrink_Rate(0.6),
+    Daily_MA_Len(60),
+
+    { [SEC-2] Zone A Entry Filter }
+    Min_RR_Bull(1.1),
+
+    { [SEC-3] Risk Management }
+    ATR_Length(35),
+    ATR_Stop_Mult(4.5),
+    FrontRun_Ticks(5),
+    Time_Stop_Bars(31),
+    SL_Pct(0),                     { 0 = off. Pct stop cap, scan 0.6-1.8 in MC9 }
+
+    { [SEC-4] Scale-Out Settings }
+    ScaleOut_Percent(0.4),
+
+    { [SEC-5] God Mode: Relative MFE Engine }
+    Trail_Start_Mult(2.5),
+    MFE_ATR_Tier_1(3.0),
+    MFE_ATR_Tier_2(6.0),
+    MFE_ATR_Tier_3(10.0),
+
+    { [SEC-6] Data3 (Weekly) Filter Settings }
+    Weekly_MA_Fast(20),
+    Weekly_MA_Slow(60),
+
+    { [SEC-7] v19.7 Frozen Initial SL }
+    Freeze_SL_On(true),            { PRODUCTION: lock ATR at entry; false = v19.6 dynamic }
+
+    { [SEC-8] v19.7 Holiday Flat Rule v3 (Iron Rule 2026-06-13) }
+    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false),
+
+    { [SEC-8b] Monthly Settlement Flat (2026-06-17 added) }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement (3rd Wed) }
+
+    { [SEC-9] v19.8 Pre-Trail StopProfit (L1 SP philosophy, A/B engine).
+              VERDICT 2026-06-13: All 5 SP variants (B/C/D/E/F)
+              FAILED net-vs-baseline. Best variant D was -14 pct
+              net + Top-10 retention only 50 pct. SP permanently
+              disabled in production. Code preserved for
+              archival/research only. See L5_v198_variant_results.md }
+    SP_Trigger_Pts(0),             { PERMANENT 0 = off. All A/B variants FAILED.
+                                     B/C/D/E/F all killed 3 mega-winners
+                                     (2026-04-07 +376K, 2026-03-31 +177K,
+                                     2026-03-12 +131K) reducing them to +7~+38K. }
+    SP_Retain_Pct(50);             { inert while SP_Trigger_Pts = 0 }
+
+variables:
+    { [SEC-0] Time filter state }
+    v_Allow_Entry(true),
+
+    { [SEC-1] Commander state }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+    v_Daily_MA(0),
+    v_Trend_Dir(0),
+
+    { [SEC-2] Execution geometry }
+    v_Current_ATR(0),
+    v_Mid_Line(0),
+    v_Expected_Reward(0),
+    v_Expected_Risk(0),
+    v_Current_RR(0),
+    v_TickSize(MinMove / PriceScale),
+    v_Target_Bot(0),
+    v_Target_Mid(0),
+
+    { [SEC-3] Cached ATR multiples }
+    v_ATR_Buffer(0),
+    v_ATR_Trail_Start(0),
+    v_ATR_Tier1(0),
+    v_ATR_Tier2(0),
+    v_ATR_Tier3(0),
+
+    { [SEC-4] Position sizing }
+    v_ScaleOut_Size(0),
+
+    { [SEC-5] MFE Engine state }
+    v_Highest_Since_Entry(0),
+    v_Trail_Active(false),
+    v_Current_MFE_Distance(0),
+    v_Dynamic_Trail_Mult(3.0),
+    v_Dynamic_Stop(0),
+
+    { [SEC-6] Data3 Weekly Filter }
+    v_Weekly_MA_Fast(0),
+    v_Weekly_MA_Slow(0),
+    v_Weekly_Filter(false),
+
+    { [SEC-7] v19.7 Frozen Initial SL }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_ATR_Buffer(0),
+
+    { [SEC-8] v19.7 Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0),
+
+    { [SEC-8b] Settlement Day state }
+    v_Settlement_Day(false),
+
+    { [SEC-9] v19.8 Pre-Trail StopProfit }
+    v_Peak_Profit(0),              { close-based MFE in points }
+    v_SP_Armed(false),
+    v_SP_Floor(0),
+    v_Bot_Base_Stop(0),            { Stage 1 base SL for Bot leg }
+    v_Mid_Base_Stop(0),            { Stage 1 base SL for Mid leg }
+    v_SL_Pct_Floor(0);             { v19.9: SL_Pct stop price floor }
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  [SEC--1] HOLIDAY TAIL REGISTRY (TAIFEX-verified, shared
+  with L1/L2/L3/L4). Holiday_Tail = last trading day + 1
+  calendar day = the date stamped on the 00:00-05:00 tail
+  bars of the final night session before each closure.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ==========================================
+  [SEC-0] TIME FILTER (v19.7: DayOfWeek=7 dead code removed)
+  Active filters:
+    - Dead-of-night 04:00-05:00 (low liquidity)
+    - Saturday after 13:30 (no TXF1 weekend session anyway,
+      but kept as belt-and-suspenders)
+    - Holiday tail bars (via v_Holiday_Block, added below)
+  ========================================== }
+
+v_Allow_Entry = true;
+
+if (Time >= 400) and (Time <= 500) then
+    v_Allow_Entry = false;
+
+if DayOfWeek(Date) = 6 and Time >= 1330 then
+    v_Allow_Entry = false;
+
+if v_Holiday_Block then
+    v_Allow_Entry = false;
+
+if v_Settlement_Day then
+    v_Allow_Entry = false;
+
+{ ==========================================
+  [SEC-1] COMMANDER LOGIC (Data2 - Daily)
+  ========================================== }
+
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+v_Daily_MA   = Average(Close, Daily_MA_Len) of Data2;
+
+if Close of Data2 > v_Daily_MA then
+    v_Trend_Dir = 1
+else
+    v_Trend_Dir = -1;
+
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+if v_is_in_consolidation then begin
+    if (High of Data2 > v_Box_Top) or (Low of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ==========================================
+  [SEC-2] ATR CACHE (Data1 - once per bar)
+  ATR_Buffer used for initial stop and entry filter geometry.
+  v19.7: when Freeze_SL_On is true and we're in position,
+  v_ATR_Buffer (for initial stop) uses v_Frozen_ATR instead.
+  ========================================== }
+
+v_Current_ATR     = AvgTrueRange(ATR_Length);
+v_ATR_Buffer      = v_Current_ATR * ATR_Stop_Mult;
+v_ATR_Trail_Start = v_Current_ATR * Trail_Start_Mult;
+v_ATR_Tier1       = v_Current_ATR * MFE_ATR_Tier_1;
+v_ATR_Tier2       = v_Current_ATR * MFE_ATR_Tier_2;
+v_ATR_Tier3       = v_Current_ATR * MFE_ATR_Tier_3;
+
+{ ==========================================
+  [SEC-6] WEEKLY FILTER LOGIC (Data3 - Weekly)
+  ========================================== }
+
+v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
+v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+
+if (Close of Data3 > v_Weekly_MA_Fast) and
+   (Close of Data3 > v_Weekly_MA_Slow) then
+    v_Weekly_Filter = true
+else
+    v_Weekly_Filter = false;
+
+{ ==========================================
+  [SEC-3] ENTRY LOGIC (Data1 - 15min)
+  Entries gated by:
+    - v_is_in_consolidation (box exists)
+    - v_Allow_Entry (time + holiday + DOW filters)
+    - v_Trend_Dir = 1 (daily MA60 bullish)
+    - v_Weekly_Filter (weekly AND filter)
+    - v_Current_RR >= Min_RR_Bull
+  ========================================== }
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    v_Mid_Line        = (v_Box_Top + v_Box_Btm) / 2;
+    v_Expected_Reward = (v_Box_Top - v_Box_Btm) / 2;
+    v_Expected_Risk   = v_ATR_Buffer;
+
+    if v_Expected_Risk > 0 then
+        v_Current_RR = v_Expected_Reward / v_Expected_Risk
+    else
+        v_Current_RR = 0;
+
+    v_Target_Bot = v_Mid_Line - (FrontRun_Ticks * v_TickSize);
+    v_Target_Mid = v_Box_Top  - (FrontRun_Ticks * v_TickSize);
+
+    { P3b: Immediate Stop Guard (2026-06-18) + v19.9 SetStopContract + SL_Pct }
+    SetStopContract;
+    if MarketPosition <= 0 then begin
+        Value1 = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
+        if SL_Pct > 0 then
+            Value1 = MinList(Value1, Close * SL_Pct / 100);
+        SetStopLoss(Value1 * BigPointValue);
+    end;
+
+    if MarketPosition = 0 and v_Allow_Entry then begin
+        if (v_Trend_Dir = 1) and
+           (v_Weekly_Filter = true) and
+           (v_Current_RR >= Min_RR_Bull) then begin
+
+            if (Close < v_Box_Btm) and
+               (Close > v_Box_Btm - v_ATR_Buffer) then
+                Buy ("BL_Entry_Bot") next bar at v_Box_Btm Stop;
+
+            if (Close < v_Mid_Line) and
+               (Close > v_Mid_Line - v_ATR_Buffer) then
+                Buy ("BL_Entry_Mid") next bar at v_Mid_Line Stop;
+
+        end;
+    end;
+
+    { ==========================================
+      [SEC-4] EXIT LOGIC
+      ========================================== }
+
+    if MarketPosition = 1 then begin
+
+        if v_Highest_Since_Entry = 0 then
+            v_Highest_Since_Entry = EntryPrice;
+        if High > v_Highest_Since_Entry then
+            v_Highest_Since_Entry = High;
+
+        v_Current_MFE_Distance = v_Highest_Since_Entry - EntryPrice;
+
+        if High > v_Box_Top + v_ATR_Trail_Start then
+            v_Trail_Active = true;
+
+        { v19.7: Freeze ATR ONCE on entry bar }
+        if Freeze_SL_On and v_SL_Locked = false then begin
+            v_Frozen_ATR        = v_Current_ATR;
+            v_Frozen_ATR_Buffer = v_Frozen_ATR * ATR_Stop_Mult;
+            v_SL_Locked         = true;
+        end;
+
+        { v19.8: Close-based MFE peak + SP arming (L1 SP philosophy).
+          Never disarms until flat. v_SP_Floor scales with peak. }
+        if Close - EntryPrice > v_Peak_Profit then
+            v_Peak_Profit = Close - EntryPrice;
+        if SP_Trigger_Pts > 0 and v_Peak_Profit >= SP_Trigger_Pts then
+            v_SP_Armed = true;
+        if v_SP_Armed then
+            v_SP_Floor = EntryPrice +
+                (v_Peak_Profit * (1 - SP_Retain_Pct / 100));
+
+        v_ScaleOut_Size = Round(MaxContracts * ScaleOut_Percent, 0);
+        if MaxContracts > 1 and v_ScaleOut_Size = 0 then
+            v_ScaleOut_Size = 1;
+
+        { Priority 0: Holiday Iron Rule / Registry / Kill
+          (Market-type, runs before stop/limit logic in PL engine) }
+        if Manual_Kill_Switch then begin
+            Sell ("BL_Kill_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Kill_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Registry_Expired then begin
+            Sell ("BL_RegistryEnd_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_RegistryEnd_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+            Sell ("BL_Holiday_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Holiday_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+            Sell ("BL_Settlement_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+            Sell ("BL_Settlement_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+        end;
+
+        { Stage 1: Full position }
+        if CurrentContracts = MaxContracts then begin
+
+            if v_ScaleOut_Size > 0 then begin
+                Sell ("BL_TP_Bot") v_ScaleOut_Size contracts
+                    from Entry ("BL_Entry_Bot") next bar at v_Target_Bot Limit;
+                Sell ("BL_TP_Mid") v_ScaleOut_Size contracts
+                    from Entry ("BL_Entry_Mid") next bar at v_Target_Mid Limit;
+            end;
+
+            { v19.7: base SL uses Frozen ATR Buffer when locked }
+            if Freeze_SL_On and v_SL_Locked then begin
+                v_Bot_Base_Stop = v_Box_Btm  - v_Frozen_ATR_Buffer;
+                v_Mid_Base_Stop = v_Mid_Line - v_Frozen_ATR_Buffer;
+            end else begin
+                v_Bot_Base_Stop = v_Box_Btm  - v_ATR_Buffer;
+                v_Mid_Base_Stop = v_Mid_Line - v_ATR_Buffer;
+            end;
+
+            { v19.9: SL_Pct percentage cap on initial stop }
+            if SL_Pct > 0 then begin
+                v_SL_Pct_Floor = EntryPrice * (1 - SL_Pct / 100);
+                v_Bot_Base_Stop = MaxList(v_Bot_Base_Stop, v_SL_Pct_Floor);
+                v_Mid_Base_Stop = MaxList(v_Mid_Base_Stop, v_SL_Pct_Floor);
+            end;
+
+            { v19.8: emit BL_SP_* when SP binds higher than base SL,
+              else BL_SL_* (mutually exclusive per leg per bar) }
+            if v_SP_Armed and v_SP_Floor > v_Bot_Base_Stop then
+                Sell ("BL_SP_Bot") CurrentContracts contracts
+                    from Entry ("BL_Entry_Bot")
+                    next bar at v_SP_Floor Stop
+            else
+                Sell ("BL_SL_Bot") CurrentContracts contracts
+                    from Entry ("BL_Entry_Bot")
+                    next bar at v_Bot_Base_Stop Stop;
+
+            if v_SP_Armed and v_SP_Floor > v_Mid_Base_Stop then
+                Sell ("BL_SP_Mid") CurrentContracts contracts
+                    from Entry ("BL_Entry_Mid")
+                    next bar at v_SP_Floor Stop
+            else
+                Sell ("BL_SL_Mid") CurrentContracts contracts
+                    from Entry ("BL_Entry_Mid")
+                    next bar at v_Mid_Base_Stop Stop;
+
+            if BarsSinceEntry >= Time_Stop_Bars then begin
+                Sell ("BL_TimeExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+                Sell ("BL_TimeExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+            end;
+
+        end;
+
+        { Stage 2 and 3: Partial position }
+        if CurrentContracts < MaxContracts then begin
+
+            if v_Trail_Active then begin
+
+                if v_Current_MFE_Distance > v_ATR_Tier3 then
+                    v_Dynamic_Trail_Mult = 0.8
+                else if v_Current_MFE_Distance > v_ATR_Tier2 then
+                    v_Dynamic_Trail_Mult = 1.5
+                else if v_Current_MFE_Distance > v_ATR_Tier1 then
+                    v_Dynamic_Trail_Mult = 2.0
+                else
+                    v_Dynamic_Trail_Mult = 3.0;
+
+                v_Dynamic_Stop = v_Highest_Since_Entry -
+                                 (v_Current_ATR * v_Dynamic_Trail_Mult);
+
+                { v19.8 priority for runner: Trail > SP > BE }
+                if v_Dynamic_Stop > MaxList(EntryPrice, v_SP_Floor) then begin
+                    Sell ("BL_Trail_Bot") CurrentContracts contracts
+                        from Entry ("BL_Entry_Bot")
+                        next bar at v_Dynamic_Stop Stop;
+                    Sell ("BL_Trail_Mid") CurrentContracts contracts
+                        from Entry ("BL_Entry_Mid")
+                        next bar at v_Dynamic_Stop Stop;
+                end else if v_SP_Armed and v_SP_Floor > EntryPrice then begin
+                    Sell ("BL_SP_Bot") CurrentContracts contracts
+                        from Entry ("BL_Entry_Bot")
+                        next bar at v_SP_Floor Stop;
+                    Sell ("BL_SP_Mid") CurrentContracts contracts
+                        from Entry ("BL_Entry_Mid")
+                        next bar at v_SP_Floor Stop;
+                end else begin
+                    Sell ("BL_BE_Bot") CurrentContracts contracts
+                        from Entry ("BL_Entry_Bot")
+                        next bar at EntryPrice Stop;
+                    Sell ("BL_BE_Mid") CurrentContracts contracts
+                        from Entry ("BL_Entry_Mid")
+                        next bar at EntryPrice Stop;
+                end;
+
+            end else begin
+                { Trail not yet active. v19.8: SP > BE priority. }
+                if v_SP_Armed and v_SP_Floor > EntryPrice then begin
+                    Sell ("BL_SP_Bot") CurrentContracts contracts
+                        from Entry ("BL_Entry_Bot")
+                        next bar at v_SP_Floor Stop;
+                    Sell ("BL_SP_Mid") CurrentContracts contracts
+                        from Entry ("BL_Entry_Mid")
+                        next bar at v_SP_Floor Stop;
+                end else begin
+                    Sell ("BL_BE_Bot") CurrentContracts contracts
+                        from Entry ("BL_Entry_Bot") next bar at EntryPrice Stop;
+                    Sell ("BL_BE_Mid") CurrentContracts contracts
+                        from Entry ("BL_Entry_Mid") next bar at EntryPrice Stop;
+                end;
+            end;
+
+        end;
+
+    end;
+
+end else begin
+    if MarketPosition = 1 then begin
+        Sell ("BL_BreakExit_Bot") from Entry ("BL_Entry_Bot") next bar at Market;
+        Sell ("BL_BreakExit_Mid") from Entry ("BL_Entry_Mid") next bar at Market;
+    end;
+end;
+
+{ ==========================================
+  [SEC-5] STATE RESET (position flat)
+  ========================================== }
+
+if MarketPosition = 0 then begin
+    v_Highest_Since_Entry = 0;
+    v_Trail_Active        = false;
+    v_Dynamic_Trail_Mult  = 3.0;
+    v_SL_Locked           = false;
+    v_Frozen_ATR          = 0;
+    v_Frozen_ATR_Buffer   = 0;
+    v_Peak_Profit         = 0;
+    v_SP_Armed            = false;
+    v_SP_Floor            = 0;
+    v_Bot_Base_Stop       = 0;
+    v_Mid_Base_Stop       = 0;
+    v_SL_Pct_Floor        = 0;
+end;
