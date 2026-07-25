@@ -319,7 +319,8 @@ variables:
     v_SP_Floor(0),
     v_Bot_Base_Stop(0),            { Stage 1 base SL for Bot leg }
     v_Mid_Base_Stop(0),            { Stage 1 base SL for Mid leg }
-    v_SL_Pct_Floor(0);             { v19.9: SL_Pct stop price floor }
+    v_SL_Pct_Floor(0),             { v19.9: SL_Pct stop price floor }
+    v_Guard_Distance(0);           { v19.9: P3b guard temp (replaces Value1) }
 
 arrays:
     Holiday_Tail[80](0);
@@ -482,6 +483,9 @@ if (Close of Data3 > v_Weekly_MA_Fast) and
 else
     v_Weekly_Filter = false;
 
+{ v19.9: unconditional engine declaration (must be outside conditional) }
+SetStopContract;
+
 { ==========================================
   [SEC-3] ENTRY LOGIC (Data1 - 15min)
   Entries gated by:
@@ -506,13 +510,12 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
     v_Target_Bot = v_Mid_Line - (FrontRun_Ticks * v_TickSize);
     v_Target_Mid = v_Box_Top  - (FrontRun_Ticks * v_TickSize);
 
-    { P3b: Immediate Stop Guard (2026-06-18) + v19.9 SetStopContract + SL_Pct }
-    SetStopContract;
+    { P3b: Immediate Stop Guard (2026-06-18) + v19.9 SL_Pct }
     if MarketPosition <= 0 then begin
-        Value1 = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
+        v_Guard_Distance = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
         if SL_Pct > 0 then
-            Value1 = MinList(Value1, Close * SL_Pct / 100);
-        SetStopLoss(Value1 * BigPointValue);
+            v_Guard_Distance = MinList(v_Guard_Distance, v_Box_Btm * SL_Pct / 100);
+        SetStopLoss(v_Guard_Distance * BigPointValue);
     end;
 
     if MarketPosition = 0 and v_Allow_Entry then begin
