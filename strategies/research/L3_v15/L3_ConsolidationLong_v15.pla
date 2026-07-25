@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v15.0 research (v14.1 base + SetStopContract + SL_Pct)
+ Version     : v15.0 research (v14.1 base + SetStopContract + SL_Pct 0.55%)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -87,7 +87,7 @@ inputs:
     { --- Risk Management (15M) --- }
     ATR_Length(9),
     ATR_Stop_Mult(3.0),
-    SL_Pct(0),                  { V15: percentage stop cap. 0 = disabled. E.g. 0.4 = 0.4% of entry }
+    SL_Pct(0.55),               { V15: percentage stop cap. 0 = disabled. E.g. 0.55 = 0.55% of entry }
 
     { --- Data3 (Daily) Filter Settings --- }
     Daily_MA_Fast(20),
