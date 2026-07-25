@@ -2,7 +2,7 @@
  Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
  MC Load Name: STRATEGY_WILLY_LONG_C
  Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v15.0 research (v14.1 base + SetStopContract + SL_Pct 0.55%)
+ Version     : v15.0 research (v14.1 base + SetStopContract + SL_Pct 0.55% + Opening Block)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -52,6 +52,11 @@
      Entry via Stop at Box_Btm fills near Close when Close > Box_Btm.
      Close-based distance is a conservative approximation. Combined with
      SL_Pct cap, the engine stop is always a valid safety net.
+   FILTER: Opening volatility block (08:45-09:30, Open_Block_End=930).
+     Day-session open 48 trades PF 0.73, WR 29%, Net -452K. 6/9 engine stops
+     occur in this window. Blocks entry SIGNALS whose fills would land in the
+     forbidden zone: Time=500 (night session last bar -> 09:00 fill) and
+     Time 900 to Open_Block_End-15 (-> 09:15..09:30 fills).
 
  PERFORMANCE (v14.1 OPTIMIZED, MC9 Excel 2026/07/04, Initial Capital 1M):
    Net Profit    : 2,048,000 TWD (+194% vs v13.4)
@@ -88,6 +93,7 @@ inputs:
     ATR_Length(9),
     ATR_Stop_Mult(3.0),
     SL_Pct(0.55),               { V15: percentage stop cap. 0 = disabled. E.g. 0.55 = 0.55% of entry }
+    Open_Block_End(930),        { V15: block entries filling before this MC time. 0 = disabled }
 
     { --- Data3 (Daily) Filter Settings --- }
     Daily_MA_Fast(20),
@@ -138,6 +144,7 @@ variables:
     v_Current_ATR(0),
     v_ATR_Buffer(0),
     v_SL_Distance(0),          { V15: SetStopLoss distance (engine level) }
+    v_Opening_Block(false),    { V15: true during day-session opening no-trade window }
 
     { --- Holiday / Settlement --- }
     v_Holiday_Block(false),
@@ -317,12 +324,20 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         SetStopLoss(v_SL_Distance * BigPointValue);
     end;
 
+    { --- V15 Opening Volatility Filter --- }
+    v_Opening_Block = false;
+    if Open_Block_End > 0 then begin
+        if Time = 500 then v_Opening_Block = true;
+        if Time >= 900 and Time < Open_Block_End then v_Opening_Block = true;
+    end;
+
     { --- V14 Entry (Dim 2: Unified Support Zone) --- }
     if v_Box_Qualified and MarketPosition = 0 then begin
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
            (v_Holiday_Block = false) and
-           (v_Settlement_Day = false) then begin
+           (v_Settlement_Day = false) and
+           (v_Opening_Block = false) then begin
 
             if (Close < v_Support_Zone) and
                (Close > v_Box_Btm - v_ATR_Buffer) then
