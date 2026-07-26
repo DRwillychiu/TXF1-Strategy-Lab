@@ -1,0 +1,657 @@
+{================================================================================
+ Script Name : _Research_Adaptive_Farmer_v16
+ MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
+ Description : Consolidation Short - Regime-Adaptive (v16 research)
+ Version     : v16.0 (research; based on v14.4 PRODUCTION + v15 lessons)
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ CHANGELOG:
+   v14.0 - v14.4  See live/L4_ConsolidationShort.pla for full history.
+
+   v15.0 - v15.1  FAILED. See research/L4_v15/ for full postmortem.
+     v15.0: OR removal alone -> -41.8% net, MDD 2x, 2026 still zero.
+     v15.1: OR removal + pressure zone -> net NEGATIVE (-433K).
+            Pressure zone at all P_ATR settings lacks robustness.
+            Optimized P_ATR=0.1 still -30.9% vs v14.4.
+     LESSON: OR condition protects against toxic bull-market entries.
+             False breakout in bull market = real breakout precursor.
+             L4 alpha = trap signal; pressure zone has no independent alpha.
+
+   v16.0  (2026-07-26) Regime-Adaptive Architecture (A+B design).
+
+          CORE INSIGHT (from user, validated by v15 data):
+            In bull markets, false breakout (trap) entry should NOT
+            be used AT ALL. Instead: detect regime, route to different
+            entry logic with strict risk management and box quality gates.
+
+          ARCHITECTURE:
+            Phase 0 is re-architected from a BLOCKER to a ROUTER.
+            v_Macro_Block (binary block) -> v_Bull_Regime (regime classifier).
+            Same underlying condition, opposite semantics:
+              v14.4: condition true -> BLOCK all entries
+              v16:   condition true -> ROUTE to strict bull path
+
+            Bear/Neutral regime (v_Bull_Regime = false):
+              - Trap entry (CS_Entry) -- UNCHANGED from v14.4
+              - TrendDir = -1 required
+              - Normal risk parameters (Stop ATR*2, Time 60, Trail ATR*1)
+              - Zero regression vs v14.4 on this path
+
+            Bull regime (v_Bull_Regime = true):
+              - Pressure approach entry (CS_BullEntry) -- NEW
+              - Trap entry DISABLED (user ruling: bull trap = real breakout)
+              - TrendDir check DISABLED (user ruling Option B: quality gate
+                + strict risk = sufficient protection without TrendDir)
+              - Box Quality Gate required: duration + touches + width
+              - Strict risk: Stop ATR*1, Time 30, Trail ATR*0.5
+              - Longer cooldown: 12 bars (vs 8 normal)
+              - CS_BullBreak fast exit: 15M close > Locked_Top
+
+          BUG PREVENTION (pre-implementation analysis, 17 bugs mapped):
+            C-01..C-04: All stop/time/trail/P3b use frozen regime-specific
+                        multipliers, never input constants.
+            C-05: v_Entry_Regime frozen at entry; exit params never
+                  change mid-position even if regime flips.
+            H-01: Pressure detection keeps trap-zone guard (breakout in
+                  bull market -> 6-bar cooling period before pressure ok).
+            H-02: Touch count resets on box boundary change, not flicker.
+            H-03: Touch spacing 12 bars + reset zone (ATR*0.5 pullback).
+            H-04: CS_BullBreak checks v_Entry_Regime = true only.
+
+          NOTE ON MACRO BLOCK:
+            v16 uses the AND-only condition from v15.0 for regime detection:
+              v_Bull_Regime = (Close > MA60) AND (MA60 rising)
+            This means the bear path is v15.0 behavior (OR removed), NOT
+            v14.4 exact. If bear-path regression is observed, upgrade to
+            full v14.4 condition (AND OR OR) by restoring FastMA logic.
+
+ v16.0 DELTA vs v14.4:
+   Phase 0 Macro Block: repurposed from blocker to regime router
+   Phase 2 Entry:       dual-regime entry (bear trap / bull pressure)
+   Phase 2 Quality:     box quality gate for bull entries
+   Phase 3 Freeze:      expanded to freeze regime-specific multipliers
+   Phase 3 Exit:        CS_BullBreak added (P1a priority)
+   New inputs (6):      Bull_Stop_Mult, Bull_Time_Stop, Bull_Trail_Mult,
+                         Bull_Cooldown_Bars, Min_Box_Duration, Min_Top_Touches
+   New variables (14):  see variables section
+   Risk level:          HIGH (new regime + new entry path + new exit)
+================================================================================}
+
+[IntrabarOrderGeneration = false]
+
+inputs:
+    { --- 0. Master Environment Filter (Data3 - Daily) --- }
+    Daily_SlowMA_Len(60),
+
+    { --- 1. Commander Logic Parameters (Data2 - 60M) --- }
+    Lookback_Bars(15),
+    Range_Shrink_Rate(0.7),
+    Weekly_MA_Len(48),
+
+    { --- 2. Risk & Volatility Parameters (Data1 - 15M) --- }
+    ATR_Length(60),
+    ATR_Stop_Mult(2),
+
+    { --- 3. Tactical Entry Parameters --- }
+    i_Buffer_ATR_Mult(0.4),
+    Time_Limit_Bars(6),
+
+    { --- 4. Advanced Management --- }
+    Cooldown_Bars(8),
+    Time_Stop_Bars(60),
+    Trail_ATR_Mult(1.0),
+
+    { --- 5. v14.1 Frozen Initial SL --- }
+    Freeze_SL_On(true),
+
+    { --- 6. Holiday Flat Rule v3 (Iron Rule 2026-06-13) --- }
+    Holiday_Flat_Time(415),
+    Registry_Valid_Until(1270101),
+    Manual_Kill_Switch(false),
+
+    { --- 6b. Monthly Settlement Flat (2026-06-17 added) --- }
+    Settlement_Flat_Time(1230),
+
+    { --- 7. v14.2 Path A - Night entry block --- }
+    Night_Block_On(true),
+
+    { --- 8. v14.2 Path B - Breakeven (REJECTED, code kept for research) --- }
+    BE_Trigger_Pts(0),
+    BE_Offset_Pts(5),
+
+    { --- 9. v14.2 Path B - StopProfit (REJECTED, code kept for research) --- }
+    SP_Trigger_Pts(0),
+    SP_Retain_Pct(50),
+
+    { --- 10. v16 Regime-Adaptive: Bull Risk Parameters --- }
+    Bull_Stop_Mult(1.0),          { ATR mult for stop in bull regime (vs ATR_Stop_Mult=2 bear) }
+    Bull_Time_Stop(30),           { bars before time exit in bull (vs Time_Stop_Bars=60 bear) }
+    Bull_Trail_Mult(0.5),         { ATR mult for trail in bull (vs Trail_ATR_Mult=1.0 bear) }
+    Bull_Cooldown_Bars(12),       { cooldown between entries in bull (vs Cooldown_Bars=8 bear) }
+
+    { --- 11. v16 Regime-Adaptive: Box Quality Gate (bull only) --- }
+    Min_Box_Duration(60),         { 15M bars; 60 bars approx 3 trading days }
+    Min_Top_Touches(2),           { min distinct approaches to Box_Top }
+    Bull_Pressure_ATR(0.3);       { pressure zone = Box_Top - ATR * this mult }
+
+    { Hardcoded constants (not inputs to limit curve-fit risk):
+        Touch_Zone     = ATR * 0.3 (reuses Bull_Pressure_ATR for consistency)
+        Touch_Spacing  = 12 bars   (3 hours min between counted touches)
+        Min_Box_Width  = ATR * 0.5 (filter micro-consolidation)
+        Touch_Reset    = ATR * 0.5 (price must pull back this far to reset) }
+
+variables:
+    { Phase 0: Regime detection (replaces v_Macro_Block) }
+    v_Daily_SlowMA(0),
+    v_Bull_Regime(false),
+
+    { Phase 1: Box definition }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+    v_Weekly_MA(0),
+    v_Trend_Dir(0),
+
+    { Phase 2: Execution variables }
+    v_Current_ATR(0),
+    v_Trigger_Price(0),
+    v_Stop_Level(0),
+    v_In_Trap_Zone(false),
+    v_Trap_Counter(0),
+    v_In_Pressure_Zone(false),
+    v_Night_Block(false),
+
+    { v16: Regime-specific active value (recalculated every bar) }
+    v_Active_Stop_Mult(0),
+
+    { v16: Box Quality Gate variables }
+    v_Box_Bar_Count(0),
+    v_Top_Touch_Count(0),
+    v_Last_Touch_Bar(0),
+    v_Touch_Can_Count(true),      { reset zone: must pull back before next touch }
+    v_Prev_Box_Top(0),
+    v_Prev_Box_Btm(0),
+    v_Box_Quality_Pass(false),
+
+    { Phase 3: Advanced Management Variables }
+    v_Locked_Top(0),
+    v_Locked_Btm(0),
+    v_BarsSinceExit(999),
+    v_Lowest_Low(999999),
+    v_Trail_Active(false),
+
+    { v14.1 Frozen Initial SL -- expanded for v16 regime freeze }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_LockedTop(0),
+    v_Frozen_Stop_Mult(0),        { [C-01] frozen regime-specific stop mult }
+    v_Frozen_Time_Stop(0),        { [C-02] frozen regime-specific time stop }
+    v_Frozen_Trail_Mult(0),       { [C-03] frozen regime-specific trail mult }
+    v_Entry_Regime(false),        { [C-05] frozen bull/bear flag at entry }
+
+    { Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0),
+
+    { Settlement Day }
+    v_Settlement_Day(false),
+
+    { v14.2 Path B - close-based MFE peak (in points) }
+    v_Peak_Profit_Pts(0),
+    v_BE_Armed(false),
+    v_SP_Armed(false),
+    v_BE_Floor(0),
+    v_SP_Floor(0),
+    v_Effective_Stop(0),
+
+    { Exit chain }
+    ExitFired(0);
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  Phase -1: Holiday Tail Registry (TAIFEX-verified, shared
+  with L1/L2/L3). Holiday_Tail = last trading day + 1 calendar
+  day = the date stamped on the 00:00-05:00 tail bars of the
+  final night session before each closure. * = reconstructed.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ==========================================
+  v14.2 Path A: Night entry block (02:00-04:59)
+  TXF1 dead-of-night session has thin liquidity. Diagnostic
+  found 9 entries at this window, all losers (net -120,800),
+  ZERO of them being CS_BreakExit cases. Pure noise.
+  ========================================== }
+
+v_Night_Block = false;
+if Night_Block_On = true and Time >= 200 and Time < 500 then
+    v_Night_Block = true;
+
+{ ==========================================
+  Phase 0: Regime Detection (Data3 - Daily)
+  v16: Macro Block repurposed from BLOCKER to ROUTER.
+  Same AND condition as v15.0. When true, entries route to
+  strict bull path instead of being blocked entirely.
+  ========================================== }
+
+v_Daily_SlowMA = Average(Close, Daily_SlowMA_Len) of Data3;
+
+v_Bull_Regime = false;
+if (Close of Data3 > v_Daily_SlowMA) and
+   (v_Daily_SlowMA >= v_Daily_SlowMA[1]) then begin
+    v_Bull_Regime = true;
+end;
+
+{ ==========================================
+  Phase 1: Macro Commander Logic (Data2 - 60M)
+  ========================================== }
+
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+
+v_Weekly_MA = Average(Close, Weekly_MA_Len) of Data2;
+
+if Close of Data2 < v_Weekly_MA then
+    v_Trend_Dir = -1
+else
+    v_Trend_Dir = 1;
+
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and
+       (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+if v_is_in_consolidation then begin
+    if (Close of Data2 > v_Box_Top) or
+       (Close of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ==========================================
+  Phase 2: Tactical Execution Engine (Data1 - 15M)
+  ========================================== }
+
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+{ --- Regime-specific active value (recalculated every bar) ---
+  v_Active_Stop_Mult: used by P3b SetStopLoss [C-04] }
+if v_Bull_Regime then
+    v_Active_Stop_Mult = Bull_Stop_Mult
+else
+    v_Active_Stop_Mult = ATR_Stop_Mult;
+
+{ Cooldown Counter Management }
+if MarketPosition <> 0 then
+    v_BarsSinceExit = 0
+else if MarketPosition = 0 and MarketPosition[1] <> 0 then
+    v_BarsSinceExit = 1
+else if MarketPosition = 0 then
+    v_BarsSinceExit = v_BarsSinceExit + 1;
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    { --- Box Quality Gate: accumulation [H-02, H-03, M-02] ---
+      Duration counter: 15M bars since current box boundaries formed.
+      Touch counter: distinct approaches to Box_Top.
+      Reset on box boundary change, NOT on consolidation flicker. }
+
+    if v_Box_Top <> v_Prev_Box_Top or v_Box_Btm <> v_Prev_Box_Btm then begin
+        v_Box_Bar_Count   = 0;
+        v_Top_Touch_Count = 0;
+        v_Last_Touch_Bar  = 0;
+        v_Touch_Can_Count = true;
+        v_Prev_Box_Top    = v_Box_Top;
+        v_Prev_Box_Btm    = v_Box_Btm;
+    end;
+
+    v_Box_Bar_Count = v_Box_Bar_Count + 1;
+
+    { Touch detection: High within ATR * Bull_Pressure_ATR of Box_Top.
+      Spacing: 12 bars between counted touches (hardcoded).
+      Reset zone: price must pull back below Box_Top - ATR*0.5
+      before the next touch is counted. [H-03] }
+    if High < v_Box_Top - (v_Current_ATR * 0.5) then
+        v_Touch_Can_Count = true;
+
+    if v_Touch_Can_Count and
+       High >= v_Box_Top - (v_Current_ATR * Bull_Pressure_ATR) and
+       (BarNumber - v_Last_Touch_Bar >= 12) then begin
+        v_Top_Touch_Count = v_Top_Touch_Count + 1;
+        v_Last_Touch_Bar  = BarNumber;
+        v_Touch_Can_Count = false;
+    end;
+
+    { Composite quality gate result }
+    v_Box_Quality_Pass = false;
+    if v_Box_Bar_Count   >= Min_Box_Duration and
+       v_Top_Touch_Count >= Min_Top_Touches  and
+       (v_Box_Top - v_Box_Btm) >= (v_Current_ATR * 0.5) then begin
+        v_Box_Quality_Pass = true;
+    end;
+
+    { Sub-Phase A1: False Breakout (Trap) Detection -- bear path only
+      Detection runs every bar regardless of regime so the trap state
+      is available if regime flips from bull to bear. }
+    if High > v_Box_Top then begin
+        v_In_Trap_Zone = true;
+        v_Trap_Counter = 0;
+    end;
+
+    { Time decay: trap zone expires after Time_Limit_Bars }
+    if v_In_Trap_Zone then begin
+        v_Trap_Counter = v_Trap_Counter + 1;
+        if v_Trap_Counter > Time_Limit_Bars then
+            v_In_Trap_Zone = false;
+    end;
+
+    { Sub-Phase A2: Pressure Zone Detection -- bull path only
+      Price approaches Box_Top within ATR * Bull_Pressure_ATR.
+      Guard: v_In_Trap_Zone = false. In bull regime this serves as
+      a 6-bar cooling period after a breakout attempt -- price must
+      settle before pressure entry is allowed. [H-01] }
+    v_In_Pressure_Zone = false;
+    if v_In_Trap_Zone = false and
+       High >= v_Box_Top - (v_Current_ATR * Bull_Pressure_ATR) then begin
+        v_In_Pressure_Zone = true;
+    end;
+
+    { P3b: Immediate Stop Guard -- entry-bar protection [C-04]
+      Uses v_Active_Stop_Mult (regime-specific, recalculated every bar).
+      SetStopLoss is MC engine-level: active on entry bar. }
+    if MarketPosition >= 0 then
+        SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * v_Active_Stop_Mult)
+                    - Close) * BigPointValue);
+
+    { Sub-Phase B: Regime-Routed Entry Execution
+      Bear regime: trap entry only (CS_Entry) -- v14.4 behavior
+      Bull regime: pressure entry + box quality (CS_BullEntry) -- NEW
+      The two paths are mutually exclusive via v_Bull_Regime check. }
+    v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
+
+    { --- BEAR PATH: Trap entry (original CS_Entry) ---
+      Requires: v_Bull_Regime = false, trap zone active, TrendDir = -1 }
+    if v_Bull_Regime      = false         and
+       MarketPosition     = 0             and
+       v_In_Trap_Zone     = true          and
+       v_Trend_Dir        = -1            and
+       v_BarsSinceExit   >= Cooldown_Bars and
+       Close              < v_Trigger_Price and
+       v_Holiday_Block    = false         and
+       v_Night_Block      = false         and
+       v_Settlement_Day   = false         then begin
+
+        SellShort ("CS_Entry") next bar at Market;
+        v_In_Trap_Zone     = false;
+        v_In_Pressure_Zone = false;
+    end;
+
+    { --- BULL PATH: Pressure entry (CS_BullEntry) ---
+      Requires: v_Bull_Regime = true, pressure zone active, box quality pass.
+      TrendDir check DISABLED (user ruling Option B: quality gate +
+      strict risk = sufficient without TrendDir fifth layer). }
+    if v_Bull_Regime      = true          and
+       MarketPosition     = 0             and
+       v_In_Pressure_Zone = true          and
+       v_Box_Quality_Pass = true          and
+       v_BarsSinceExit   >= Bull_Cooldown_Bars and
+       Close              < v_Trigger_Price and
+       v_Holiday_Block    = false         and
+       v_Night_Block      = false         and
+       v_Settlement_Day   = false         then begin
+
+        SellShort ("CS_BullEntry") next bar at Market;
+        v_In_Trap_Zone     = false;
+        v_In_Pressure_Zone = false;
+    end;
+
+end;
+
+{ ==========================================
+  Phase 3: Exit Logic and State Lock Defense
+  ========================================== }
+
+{ Snapshot box and reset tracking when flat }
+if MarketPosition = 0 then begin
+    if v_is_in_consolidation then begin
+        v_Locked_Top = v_Box_Top;
+        v_Locked_Btm = v_Box_Btm;
+    end;
+    v_Lowest_Low        = 999999;
+    v_Trail_Active      = false;
+    v_SL_Locked         = false;
+    v_Frozen_ATR        = 0;
+    v_Frozen_LockedTop  = 0;
+    v_Frozen_Stop_Mult  = 0;
+    v_Frozen_Time_Stop  = 0;
+    v_Frozen_Trail_Mult = 0;
+    v_Entry_Regime      = false;
+    v_Peak_Profit_Pts   = 0;
+    v_BE_Armed          = false;
+    v_SP_Armed          = false;
+    v_BE_Floor          = 0;
+    v_SP_Floor          = 0;
+end;
+
+if MarketPosition = -1 then begin
+
+    { 1. Record Maximum Favorable Excursion }
+    if Low < v_Lowest_Low then
+        v_Lowest_Low = Low;
+
+    { 2. Trailing Stop Activation }
+    if v_Lowest_Low <= v_Locked_Btm then
+        v_Trail_Active = true;
+
+    { 3. v14.1 Freeze: lock ATR + LockedTop + regime params ONCE [C-01..C-05]
+      All regime-specific multipliers are frozen at entry, preventing
+      mid-trade parameter drift if v_Bull_Regime changes during position. }
+    if Freeze_SL_On and v_SL_Locked = false then begin
+        v_Frozen_ATR        = v_Current_ATR;
+        v_Frozen_LockedTop  = v_Locked_Top;
+        v_Entry_Regime      = v_Bull_Regime;
+        if v_Bull_Regime then begin
+            v_Frozen_Stop_Mult  = Bull_Stop_Mult;
+            v_Frozen_Time_Stop  = Bull_Time_Stop;
+            v_Frozen_Trail_Mult = Bull_Trail_Mult;
+        end else begin
+            v_Frozen_Stop_Mult  = ATR_Stop_Mult;
+            v_Frozen_Time_Stop  = Time_Stop_Bars;
+            v_Frozen_Trail_Mult = Trail_ATR_Mult;
+        end;
+        v_SL_Locked = true;
+    end;
+
+    { 4. Stop Level Calculation [C-01, C-03]
+      Uses v_Frozen_Stop_Mult and v_Frozen_Trail_Mult instead of
+      input constants. Bull entries get tighter values (1.0 / 0.5). }
+    if v_Trail_Active then begin
+        v_Stop_Level = MinList(v_Stop_Level[1],
+            v_Lowest_Low + (v_Frozen_Trail_Mult * v_Current_ATR));
+    end else begin
+        if Freeze_SL_On then begin
+            v_Stop_Level = v_Frozen_LockedTop +
+                           (v_Frozen_Stop_Mult * v_Frozen_ATR);
+        end else begin
+            v_Stop_Level = v_Locked_Top +
+                           (v_Active_Stop_Mult * v_Current_ATR);
+            if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
+                v_Locked_Top = v_Box_Top;
+        end;
+    end;
+
+    { 5. v14.2 Path B: BE / SP arming + floor computation }
+    if EntryPrice - Close > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Close;
+
+    if BE_Trigger_Pts > 0 and v_Peak_Profit_Pts >= BE_Trigger_Pts then
+        v_BE_Armed = true;
+    if SP_Trigger_Pts > 0 and v_Peak_Profit_Pts >= SP_Trigger_Pts then
+        v_SP_Armed = true;
+
+    if v_BE_Armed then
+        v_BE_Floor = EntryPrice - BE_Offset_Pts;
+    if v_SP_Armed then
+        v_SP_Floor = EntryPrice -
+            (v_Peak_Profit_Pts * (1 - SP_Retain_Pct / 100));
+
+    { 6. Exit Chain with Priority Gates }
+    ExitFired = 0;
+
+    { Priority 0 - Manual Kill }
+    if (ExitFired = 0) and Manual_Kill_Switch then begin
+        BuyToCover ("CS_Kill") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Registry Fail-Safe }
+    if (ExitFired = 0) and v_Registry_Expired then begin
+        BuyToCover ("CS_RegistryEnd") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Holiday Iron Rule }
+    if (ExitFired = 0) and v_Holiday_Block and
+       (Time >= Holiday_Flat_Time) then begin
+        BuyToCover ("CS_Holiday") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Monthly Settlement Flat }
+    if (ExitFired = 0) and v_Settlement_Day and
+       (Time >= Settlement_Flat_Time) then begin
+        BuyToCover ("CS_Settlement") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 1a - Bull-regime fast escape [H-04]
+      Only for bull-regime entries (v_Entry_Regime = true).
+      Uses 15M Close > Locked_Top -- faster than CS_BreakExit (60M).
+      Bear entries NEVER trigger this; they use CS_BreakExit at P1b. }
+    if (ExitFired = 0) and
+       (v_Entry_Regime = true) and
+       (Close > v_Locked_Top) then begin
+        BuyToCover ("CS_BullBreak") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 1b - Disaster Control: box failed + upward break (60M) }
+    if (ExitFired = 0) and
+       (v_is_in_consolidation = false) and
+       (Close of Data2 > v_Locked_Top) then begin
+        BuyToCover ("CS_BreakExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 2 - Time stop [C-02]
+      Uses v_Frozen_Time_Stop (30 for bull, 60 for bear). }
+    if (ExitFired = 0) and
+       (v_Trail_Active = false) and
+       (BarsSinceEntry >= v_Frozen_Time_Stop) then begin
+        BuyToCover ("CS_TimeExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 3 - Labeled Stop order (CS_SP > CS_BE > CS_SL) }
+    v_Effective_Stop = v_Stop_Level;
+
+    if v_SP_Armed = true and
+       v_SP_Floor > 0 and v_SP_Floor < v_Effective_Stop then begin
+        v_Effective_Stop = v_SP_Floor;
+        BuyToCover ("CS_SP") next bar at v_Effective_Stop Stop;
+    end else if v_BE_Armed = true and
+                v_BE_Floor > 0 and v_BE_Floor < v_Effective_Stop then begin
+        v_Effective_Stop = v_BE_Floor;
+        BuyToCover ("CS_BE") next bar at v_Effective_Stop Stop;
+    end else begin
+        BuyToCover ("CS_SL") next bar at v_Effective_Stop Stop;
+    end;
+
+end;
