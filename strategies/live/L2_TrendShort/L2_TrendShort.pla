@@ -60,15 +60,15 @@
            to baseline). Below 1.00 degrades significantly
            (0.25 = -50% net, stops binding too tight on ATR spikes).
 
-  PERFORMANCE (Excel Report 2026/07/26, Initial Capital 1M):
-    Net Profit    : 2,873,600 TWD
-    Profit Factor : 2.91
-    Win Rate      : 39.74%
-    MDD           : -455,600 (-14.14%)
+  PERFORMANCE (Excel Report 2026/07/26, Initial Capital 1M, SL_Pct=1.25):
+    Net Profit    : 2,882,400 TWD
+    Profit Factor : 2.88
+    Win Rate      : 42.31%
+    MDD           : -484,400 (-14.99%)
     Total Trades  : 78
-    Avg Trade     : 44,209 TWD
-    Sharpe (ann.) : 0.856
-    Sortino       : 1.358
+    Avg Trade     : 44,345 TWD
+    Sharpe (ann.) : 0.847
+    Sortino       : 1.233
   ============================================================ }
 
 
