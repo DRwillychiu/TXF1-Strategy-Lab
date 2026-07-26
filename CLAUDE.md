@@ -157,15 +157,23 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - Priority 0 出場順序：Kill > Registry > Holiday > **Settlement** > 原邏輯
     - 進場 gate 必含 `v_Settlement_Day = false`
     - 驗證腳本 `scripts/verify_settlement_flat.py` 必須通過
-12. **★ 強制規範**：所有策略必須含 P3b Immediate Stop Guard（SetStopLoss）
+12. **★ 強制規範**：所有策略必須含 P3b Immediate Stop Guard（SetStopContract + SetStopLoss + SL_Pct）
     - 詳見 [docs/P3b_immediate_stop_guard_design_20260618.md](docs/P3b_immediate_stop_guard_design_20260618.md)
-    - `SetStopLoss` 為 MC 引擎層級函數，進場成交瞬間即生效（無 IOG 依賴）
+    - **SetStopContract**：必須在 SetStopLoss 前呼叫。使 SetStopLoss 金額為 PER-CONTRACT
+      而非 TOTAL POSITION。實盤統一 2 口，缺此呼叫 = 引擎停損 2 倍過窄。
+      （2026-07-26 發現 L2/L4/L5/S16_S 全部缺漏，已修復）
+    - **SetStopLoss**：MC 引擎層級函數，進場成交瞬間即生效（無 IOG 依賴）
+    - **SL_Pct**：ATR 停損距離的百分比上限。ATR 在極端行情可飆升數倍，
+      SL_Pct 以進場價的固定百分比封頂停損距離，防止不可預期災難。
+      Long: Floor = EntryPrice - EntryPrice * SL_Pct / 100
+      Short: Ceiling = EntryPrice + EntryPrice * SL_Pct / 100
+      MC sweep 0.00-5.00 step 0.25 找收斂點（最窄不降效值），寫回 input 預設。
     - 必須在進場區塊之前、指標計算之後呼叫
     - Guard 條件：Long 策略 `if MP <= 0`、Short 策略 `if MP >= 0`（進場後自動凍結）
     - 距離公式必須與該策略的 Frozen SL 使用相同變數和乘數
     - 金額 = 點數距離 × `BigPointValue`（TXF1 = 200）
-    - 每隻策略僅限 1 個 `SetStopLoss` 呼叫（不可重複）
-    - 新策略開發時，此項與 Settlement_Flat 同為必備結構模組
+    - 每隻策略僅限 1 組 `SetStopContract` + `SetStopLoss` 呼叫（不可重複）
+    - 新策略開發時，此三件套（SetStopContract + SetStopLoss + SL_Pct）與 Settlement_Flat 同為必備結構模組
 13. **★ 強制規範**：所有新策略 / 既有策略優化必須通過機構級 10 維度評估
     - 詳見 [docs/institutional_risk_framework_20260619.md](docs/institutional_risk_framework_20260619.md)
     - 10 維度：Sharpe/Sortino/Calmar、VaR/CVaR、跨策略相關性 < 0.7、

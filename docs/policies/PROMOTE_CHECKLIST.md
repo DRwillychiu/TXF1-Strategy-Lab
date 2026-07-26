@@ -51,12 +51,21 @@ python scripts/verify_settlement_flat.py --strategy <NAME>
 **Pass 標準**: 7/7 元素齊全
 **Fail 處置**: 拒絕 PROMOTE
 
-### Check 3 — Rule #12 SetStopLoss Guard
+### Check 3 — Rule #12 SetStopContract + SetStopLoss + SL_Pct 三件套
 ```bash
 python scripts/verify_l1_immediate_stop.py --strategy <NAME>  # or similar
+# 額外手動確認：
+grep -n "SetStopContract" strategies/<PATH>.pla         # 必須存在
+grep -n "SetStopLoss" strategies/<PATH>.pla              # 必須存在
+grep -n "SL_Pct" strategies/<PATH>.pla                   # 必須存在（input 宣告 + SL cap 邏輯）
 ```
-**Pass 標準**: SetStopLoss 存在 + Guard 條件正確（Long: MP<=0, Short: MP>=0）
+**Pass 標準**:
+1. `SetStopContract` 在 `SetStopLoss` **之前**呼叫（使金額為 per-contract）
+2. `SetStopLoss` 存在 + Guard 條件正確（Long: MP<=0, Short: MP>=0）
+3. `SL_Pct` input 存在（預設可為 0 = off，但必須有 input 宣告 + cap 邏輯）
+4. SL_Pct cap 方向正確：Long = Floor，Short = Ceiling
 **Fail 處置**: 拒絕 PROMOTE
+**歷史教訓**: 2026-07-26 發現 L2/L4/L5/S16_S 全部缺 SetStopContract + SL_Pct，引擎 2 口時停損 2x 過窄
 
 ### Check 4 — Rule #15 ASCII 100%
 ```bash
@@ -97,6 +106,7 @@ python scripts/verify_pla_ascii.py --strict
 | L-P4 | 每個 hardcoded `v_X = False;` 都應該有 justification comment（如「short strategy, MP=1 impossible」）|
 | L-P5 | PROMOTE 是「合規契約」，不只是「績效通過」— 兩者缺一不可 |
 | **L-P6** | **WFA 分析第一步 = 從交易明細驗證每個窗口實際日期跨度**（IS/OOS 不重疊、OOS 彼此不重疊、長度≈設計值）。跨度不過 = 拒算 WFE。標籤與檔名不可信，只有交易明細日期可信。（2026-07-18 S16_S audit：原版 WFE 77.4% 因窗口重疊+污染作廢）|
+| **L-P7** | **SetStopContract + SL_Pct 是 SetStopLoss 的前置與補充，三者缺一不可。** 缺 SetStopContract：多口時引擎將 SetStopLoss 金額當 TOTAL → 實際每口停損比設計窄 N 倍。缺 SL_Pct：ATR 在極端行情飆升，停損距離無上限。2026-07-26 audit 發現 L2/L4/L5/S16_S 全部缺漏，此前從未寫入 Rule #12 或任何 SKILL/checklist。|
 
 ---
 
@@ -116,7 +126,7 @@ python scripts/verify_pla_ascii.py --strict
 
 | 文件 | 角色 |
 |------|-----|
-| CLAUDE.md | 18 條強制規範（設計層）|
+| CLAUDE.md | 19 條強制規範（設計層）|
 | OFFICIAL_ROADMAP | 策略排程（Rule #14）|
 | institutional_risk_framework | Rule #13 10 維度 |
 | non_WFA_validation_SOP | Rule #18 5 件套 |
@@ -124,4 +134,5 @@ python scripts/verify_pla_ascii.py --strict
 
 ---
 
-**End of PROMOTE_CHECKLIST v1.0 — 2026-07-16**
+**End of PROMOTE_CHECKLIST v1.1 — 2026-07-26**
+*(v1.1: Check 3 升級 SetStopLoss → SetStopContract + SetStopLoss + SL_Pct 三件套，新增 L-P7)*

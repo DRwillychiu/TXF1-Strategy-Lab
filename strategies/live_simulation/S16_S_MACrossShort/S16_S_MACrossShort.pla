@@ -2,7 +2,22 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.4-BELATE  (2026-07-18 - BE late activation, plateau-verified)
+  Version     : v1.5 + SetStopContract + SL_Pct (2026-07-26, base v1.4-BELATE)
+
+  v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+    BUG FIX - SetStopContract MISSING (same issue as L2/L4/L5):
+      SetStopLoss without SetStopContract = stop dollar amount
+      is for the TOTAL POSITION, not per contract.
+      S16_S trades 2 contracts -> engine stop was 2x tighter than
+      designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+    NEW - SL_Pct Percentage Stop Cap (SHORT):
+      ATR can spike in volatile regimes (S16_S alpha zone),
+      causing ATR*4.0 stop to exceed any reasonable risk budget.
+      SL_Pct caps max stop distance as pct of entry price.
+      For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+      Applied to BOTH engine stop (P7) and custom stop (P6).
+      SL_Pct default = 0 (OFF). Run MC sweep 0-5.0 step 0.25
+      to find convergence point, then write back.
 
   v1.4-BELATE (2026-07-18, G3 track result, user pre-test thesis CONFIRMED):
     BE trailing tiers re-timed from early (1.0/1.5 ATR) to late
@@ -131,11 +146,11 @@
     P4 : Golden Cross (main exit)
     P5 : M8 Time Stop (max holding bars)
     P6 : ATR-based Frozen SL
-    P7 : SetStopLoss engine guard (Rule #12 backup)
+    P7 : SetStopContract + SetStopLoss + SL_Pct engine guard (Rule #12 backup)
 
   RULE COMPLIANCE:
     Rule #11 Settlement_Flat - YES (Priority 0 order)
-    Rule #12 SetStopLoss guard - YES (short variant MP >= 0)
+    Rule #12 SetStopContract + SetStopLoss + SL_Pct - YES (v1.5, short variant MP >= 0, SL_Pct default 0=off pending sweep)
     Rule #13 10-dim eval - to run at W5
     Rule #14 OFFICIAL_ROADMAP - YES (S16_S is in Batch 04)
     Rule #15 ASCII 100% - YES (verified via scripts/verify_pla_ascii.py)
@@ -210,9 +225,10 @@ inputs:
     M8_On                   ( True  ),
     MaxHoldingBars          ( 24    ),
 
-    { ===== Group F: ATR SL (Frozen) - v0.5 ===== }
+    { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),
     StopATRMult             ( 4.0   ),
+    SL_Pct                  ( 0     ),     { Pct stop cap for SHORT. 0=off. Ceiling = Entry + Entry*SL_Pct/100. Set via MC sweep. }
 
     { ===== Group H: Rule #11 Compliance ===== }
     { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
@@ -262,6 +278,10 @@ variables:
     v_Frozen_ATR            ( 0     ),
     v_Frozen_SL_Dist        ( 0     ),
     v_SL_Level              ( 0     ),
+
+    { ===== v1.5 SetStopContract + SL_Pct ===== }
+    v_Guard_Distance        ( 0     ),
+    v_SL_Pct_Ceil           ( 0     ),
 
     { ===== M5 Quick Stop state ===== }
     v_QuickStop_Fired       ( False ),
@@ -410,7 +430,7 @@ v_StopDist = v_ATR * StopATRMult;
 
 
 { ============================================================
-  SECTION 7 - FROZEN SL SETUP + SetStopLoss (Rule #12)
+  SECTION 7 - FROZEN SL SETUP + SetStopContract + SetStopLoss + SL_Pct (Rule #12)
   Lock SL distance on entry bar. Reset when flat.
   ============================================================ }
 
@@ -419,6 +439,10 @@ if MarketPosition = -1 then begin
         v_Frozen_ATR     = v_ATR;
         v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
         v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        if SL_Pct > 0 then begin
+            v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+            v_SL_Level = MinList(v_SL_Level, v_SL_Pct_Ceil);
+        end;
         v_SL_Locked      = True;
         v_EntryBar        = CurrentBar;
         v_QuickStop_Fired = False;
@@ -437,12 +461,19 @@ else begin
     v_BE_Tier2_Active    = False;
 end;
 
-{ Rule #12 SetStopLoss (short variant: MP >= 0 guard) }
-if v_SL_Locked = True then
-    v_StopDist = v_Frozen_SL_Dist;
+{ Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
+  v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close. }
+if v_SL_Locked = True then begin
+    v_Guard_Distance = v_Frozen_SL_Dist;
+    if SL_Pct > 0 then
+        v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+end;
 
-if MarketPosition >= 0 then
-    SetStopLoss( v_StopDist * BigPointValue );
+if MarketPosition >= 0 then begin
+    SetStopContract;
+    SetStopLoss( v_Guard_Distance * BigPointValue );
+end;
 
 
 { ============================================================
@@ -644,7 +675,7 @@ if MarketPosition = -1 then begin
         buy to cover ( "SX_MA_SL" ) next bar at v_SL_Level Stop;
     end;
 
-    { P7 handled by SetStopLoss in Section 7 }
+    { P7 handled by SetStopContract + SetStopLoss + SL_Pct in Section 7 }
 
 end;
 
