@@ -55,15 +55,20 @@
            SL_Pct caps max stop distance as pct of entry price.
            For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
            Applied to BOTH engine stop (P3b) and custom stop (Section 8).
-           SL_Pct(0) = off (default for MC sweep).
+           MC sweep 0.00-5.00 step 0.25: converge at SL_Pct=1.25.
+           1.25 is tightest non-degrading value (rows 6-21 identical
+           to baseline). Below 1.00 degrades significantly
+           (0.25 = -50% net, stops binding too tight on ATR spikes).
 
-  PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
-    Net Profit    : 1,400,200 TWD
-    Profit Factor : 2.595
-    Win Rate      : 37.35%
-    MDD           : -269,400 (-15.98%)
-    Total Trades  : 83
-    Backtest      : 2020/02/07 - 2026/06/06
+  PERFORMANCE (Excel Report 2026/07/26, Initial Capital 1M):
+    Net Profit    : 2,873,600 TWD
+    Profit Factor : 2.91
+    Win Rate      : 39.74%
+    MDD           : -455,600 (-14.14%)
+    Total Trades  : 78
+    Avg Trade     : 44,209 TWD
+    Sharpe (ann.) : 0.856
+    Sortino       : 1.358
   ============================================================ }
 
 
@@ -124,7 +129,7 @@ Inputs:
    Settlement_Flat_Time   ( 1230 ),
 
    { v5.3: SetStopContract + SL_Pct (2026-07-26) }
-   SL_Pct                 ( 0 );       { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. 0 = off. MC sweep to find converge. }
+   SL_Pct                 ( 1.25 );    { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. MC sweep converge = 1.25. }
 
 
 { ============================================================
