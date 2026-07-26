@@ -463,12 +463,12 @@ end;
 
 { Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
   v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
-         SL_Pct caps engine stop distance as pct of Close. }
-if v_SL_Locked = True then begin
-    v_Guard_Distance = v_Frozen_SL_Dist;
-    if SL_Pct > 0 then
-        v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
-end;
+         SL_Pct caps engine stop distance as pct of Close.
+  v_Guard_Distance computed EVERY BAR (current ATR, not frozen) to avoid
+  SetStopLoss(0) when flat — SetStopContract + SetStopLoss(0) = immediate stop. }
+v_Guard_Distance = v_ATR * StopATRMult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
 
 if MarketPosition >= 0 then begin
     SetStopContract;
