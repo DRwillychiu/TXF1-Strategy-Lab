@@ -30,7 +30,7 @@
 
 | 策略 | BOSS_VIEW 狀態 |
 |------|--------------|
-| **S1** NightMomentum | ✅ [BOSS_VIEW](S1_NightMomentum/S1_NightMomentum_BOSS_VIEW.md) |
+| **S1** NightMomentum | ✅ [BOSS_VIEW](S1_NightMomentum/S1_NightMomentum_BOSS_VIEW.md) / [DEPLOYMENT](S1_NightMomentum/S1_NightMomentum_DEPLOYMENT.md) |
 | **S3** RapidPullbackShort | ✅ [BOSS_VIEW](S3_RapidPullbackShort/S3_RapidPullbackShort_BOSS_VIEW.md) |
 | **S3_L** VolSqueezeLong | ✅ [BOSS_VIEW](S3_VolSqueezeLong/S3_VolSqueezeLong_BOSS_VIEW.md) |
 | **S3_S** VolSqueezeShort | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_BOSS_VIEW.md) |

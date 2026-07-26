@@ -1,10 +1,10 @@
-# S1 NightMomentum v2.5 — 中文逐行註解
+# S1 NightMomentum v2.7 — 中文逐行註解
 
 > 對應程式碼：`S1_NightMomentum.pla`（MC12 直接使用的全英文版）
-> 最後更新：**2026-06-13**
-> 版本：**v2.5 = v2.4 + Trail A/B engine（修活 Trail + 真移動停損）**
-> 真實本質：**夜盤突破 + 跨夜 Overnight Gap 套利 + 本金保護 MFE 鎖利**
-> 狀態：🟢 模擬上架運行 v2.1（待空手時部署 v2.5）
+> 最後更新：**2026-07-26**
+> 版本：**v2.7 = v2.6 base + SetStopContract + SL_Pct=1.50 + engine stop architecture fix**
+> 真實本質：**夜盤突破 + 跨夜 Overnight Gap 套利**
+> 狀態：live_simulation（v2.7 baseline: 790T / +3,066,000 / PF 1.319 / MDD -22.3%）
 
 ## v2.5 解決什麼問題（用戶批評）
 
