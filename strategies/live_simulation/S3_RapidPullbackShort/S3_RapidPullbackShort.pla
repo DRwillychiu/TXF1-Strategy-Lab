@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0.4 (2026-06-20) - USER-MANDATED defaults LOCKED to 17-trade MC opt
+  Version     : v2.0.5+StopHarden (2026-07-26) - SetStopContract + SL_Pct + engine stop fix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M    (entry trigger / exit chain)
@@ -70,8 +70,8 @@
   ============================================================
   CONSTITUTION COMPLIANCE (CLAUDE.md):
     Rule #11 Settlement_Flat (7 elements): present in Priority 0.
-    Rule #12 P3b SetStopLoss: single call before entry block,
-             guarded by MarketPosition >= 0 (short variant).
+    Rule #12 SetStopContract+SetStopLoss+SL_Pct: three-component
+             (v2.0.5). Engine stop every-bar recompute + per-contract + ATR cap.
     Rule #13 10-dim eval before live_simulation: deferred to
              post-backtest gate.
 
@@ -133,6 +133,9 @@ inputs:
     Registry_Valid_Until      ( 1270101 ), { TAIFEX-verified horizon }
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  ),   { 1hr buffer before 13:30 settlement }
+
+    { v2.0.5 Stop Hardening (2026-07-26) - Rule #12 three-component }
+    SL_Pct                    ( 0     ),   { ATR stop % cap; 0=off. MC sweep to find convergence }
 
     { ===== Secular Bull Filter (v2.0.3 REVISED, Section 2b) =====
       Mirror of L1 P6 Weekly filter, applied at Daily level (Data3).
@@ -229,6 +232,10 @@ variables:
     v_Daily_SecularMA_Fast   ( 0     ),
     v_Daily_SecularMA_Slow   ( 0     ),
     v_Secular_Bull_OK        ( False ),
+
+    { ===== v2.0.5 Stop Hardening ===== }
+    v_Guard_Distance         ( 0     ),
+    v_SL_Pct_Ceiling         ( 0     ),
 
     { ===== Diagnostic ===== }
     v_HighConv_Active        ( False );
@@ -658,14 +665,17 @@ else begin
     v_SL_Level       = 0;
 end;
 
-{ ---- 5b: P3b SetStopLoss engine guard (shares frozen ATR once locked) ---- }
-if v_SL_Locked = True then
-    v_SL_ATR = v_Frozen_ATR_5M
-else
-    v_SL_ATR = AvgTrueRange( SL_ATR_Len );
+{ ---- 5b: Engine stop - v_Guard_Distance computed EVERY BAR (current ATR, not frozen)
+  v2.0.5: SetStopContract makes amount PER-CONTRACT
+  v2.0.5: SL_Pct caps ATR spike in extreme vol ---- }
+v_Guard_Distance = AvgTrueRange( SL_ATR_Len ) * SL_ATR_Mult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
 
-if MarketPosition >= 0 then
-    SetStopLoss( v_SL_ATR * SL_ATR_Mult * BigPointValue );
+if MarketPosition >= 0 then begin
+    SetStopContract;
+    SetStopLoss(v_Guard_Distance * BigPointValue);
+end;
 
 
 { ============================================================
@@ -785,9 +795,15 @@ if MarketPosition = -1 then begin
             ExitFired = 1;
         end;
 
-        { ---- S-3 Frozen SL backup (belt+suspenders with Section 5b) ---- }
-        if ( ExitFired = 0 ) and ( v_SL_Locked = True ) then
-            BuyToCover( "SX_RPS_v2_SL" ) next bar at v_SL_Level Stop;
+        { ---- S-3 Frozen SL backup (belt+suspenders with Section 5b) + SL_Pct cap ---- }
+        if ( ExitFired = 0 ) and ( v_SL_Locked = True ) then begin
+            value1 = v_SL_Level;
+            if SL_Pct > 0 then begin
+                v_SL_Pct_Ceiling = EntryPrice + (EntryPrice * SL_Pct / 100);
+                value1 = MinList(value1, v_SL_Pct_Ceiling);
+            end;
+            BuyToCover( "SX_RPS_v2_SL" ) next bar at value1 Stop;
+        end;
 
     end;
 
