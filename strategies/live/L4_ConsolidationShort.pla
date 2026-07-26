@@ -143,16 +143,19 @@
           DEPLOY ONLY WHEN FLAT (changes historical stop fills).
           Production defaults = all off = v14.1 (regression-safe).
 
- PERFORMANCE (v14.2B Variant B = PRODUCTION, sealed 2026-06-13):
-   Net Profit    : 687,200 TWD   (was 581,200, +18.2 pct)
-   Profit Factor : 1.83          (was 1.62)
-   Win Rate      : 42.86%        (was 42.05%)
-   MDD           : -239,800      (was -328,000, improved 27 pct)
-   Total Trades  : 84            (was 88; removed 4 net = 8 night
-                                   blocked, 4 redistributed)
-   Backtest      : 2020/02/19 - 2026/06/06
-   Top-10 winner retention: 100 pct (no winner killed)
-   CS_BE / CS_SP fires    : 0 (Path B inputs at 0)
+ PERFORMANCE (v14.6 = PRODUCTION, sealed 2026-07-26):
+   Net Profit    : 894,400 TWD
+   Profit Factor : 1.54
+   Win Rate      : 43.04%
+   MDD           : -525,600
+   Total Trades  : 79
+   SL_Pct        : 1.50 (converge point; MC sweep 0-5.0 step 0.25)
+   SetStopContract: YES (per-contract engine stop)
+
+   vs v14.2B (pre-SetStopContract): Net +207K (+30%), MDD worsened
+   (engine stop now correct width -> losing trades run further, but
+    more trades recover -> net gain). PF drop 1.83->1.54 = higher
+    gross loss offset by higher gross profit.
 
    v14.2 A-G variant matrix complete; B sealed as production.
 
@@ -216,9 +219,9 @@
             SL_Pct caps max stop distance as pct of entry price.
             For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
             Applied to BOTH engine stop (P3b) and custom stop (Phase 3).
-            SL_Pct(0) = off (default for MC scan 2.0-3.5%).
-            NOTE: L4 SHORT needs wider SL_Pct than LONG strategies
-            (L1=0.5%, L3=0.55%, L5=1.0%) because ATR*2 stop is wider.
+            MC sweep 0-5.0 step 0.25: converge at 1.50% (SL_Pct < 1.50 degrades).
+            SL_Pct = 1.50 = tightest non-degrading value (+2K net vs baseline).
+            L4 SHORT wider than LONG strategies (L1=0.5%, L3=0.55%, L5=1.0%).
 
           v15-v16 research line CLOSED (2026-07-26):
             v15.0/v15.1/v15.1_opt/v16.0 all FAILED. L4 alpha = bear/neutral
@@ -287,7 +290,7 @@ inputs:
     SP_Retain_Pct(50),             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
 
     { --- 10. v14.6 SetStopContract + SL_Pct --- }
-    SL_Pct(0);                     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. 0 = off. MC scan: 2.0-3.5 }
+    SL_Pct(1.50);                  { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.50 (MC sweep 0-5.0) }
 
 variables:
     { Phase 0: Macro filter }
