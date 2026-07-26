@@ -1,8 +1,8 @@
 {================================================================================
  Script Name : _Research_Adaptive_Farmer_v15
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
- Description : Consolidation Short - S_Spring (v15 research: Macro Block OR removal)
- Version     : v15.0 (research; based on v14.4 PRODUCTION)
+ Description : Consolidation Short - S_Spring (v15 research: dual-path entry)
+ Version     : v15.1 (research; based on v14.4 PRODUCTION)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
@@ -55,18 +55,64 @@
    Total Trades  : 84
    Backtest      : 2020/02/19 - 2026/06/06
 
- PERFORMANCE (v15.0 -- PENDING MC BACKTEST):
+ PERFORMANCE (v15.0 -- FAILED):
+   Net Profit    : 530,800 (vs 912,800 baseline = -41.8%)
+   Profit Factor : 1.180  (vs 1.563 baseline)
+   MDD           : -1,142,800 (-38.9%) -- UNACCEPTABLE
+   Total Trades  : 122 (+42 new trades, all net -382K)
+   2026 trades   : STILL ZERO -- OR removal alone did not solve
+
+   v15.0 LESSON: the OR filter protected against premature entries
+   in bull market pullbacks. 42 new trades were toxic (avg -9,095).
+   CS_BreakExit exploded to 39 trades at 0% win rate (-1.6M).
+   Removing the OR alone makes the strategy WORSE.
+
+   v15.1  (2026-07-26) Dual-path entry: Trap + Pressure Zone.
+
+          THE INSIGHT (from user):
+            The OR still needs removal, BUT the entry logic itself
+            is too restrictive. Requiring a false breakout above
+            Box_Top as the ONLY entry path means:
+            - Price must first break OUT above box top
+            - Then fall BACK below trigger price
+            In 2026 corrections, price approaches resistance but
+            never breaks out -- the trap never fires.
+
+          THE FIX (mirrors L3 Support Zone architecture):
+            L3 enters long when Close drops into the bottom portion
+            of the box (Support Zone = Box_Btm + Range * 50%).
+            L4 v15.1 mirrors this: enter short when High reaches
+            the top portion of the box (Pressure Zone) WITHOUT
+            requiring an actual breakout above Box_Top.
+
+          DUAL-PATH ARCHITECTURE:
+            Path A (CS_Entry): False breakout trap (existing)
+              High > Box_Top -> trap armed -> Close < trigger -> entry
+            Path B (CS_PEntry): Pressure zone rejection (NEW)
+              High approaches Box_Top within ATR*Pressure_ATR_Mult
+              -> pressure armed -> Close < trigger -> entry
+            Path A has priority (stronger signal). Path B fires
+            only when no trap zone is active.
+
+          SEPARATE LABELS FOR RESEARCH:
+            CS_Entry  = trap-triggered entry (original path)
+            CS_PEntry = pressure-triggered entry (new path)
+            Same exit chain applies to both. Labels allow
+            backtest analysis of which path contributes what.
+
+ PERFORMANCE (v15.1 -- PENDING MC BACKTEST):
    Net Profit    : TBD
    Profit Factor : TBD
    MDD           : TBD
-   Total Trades  : TBD (expected increase vs v14.4)
+   Total Trades  : TBD
 
- v15 DELTA vs v14.4:
-   Phase 0 Macro Block: removed OR golden-cross condition
-   Dead code cleanup  : removed Daily_FastMA_Len input, v_Daily_FastMA var + computation
-   Lines removed : 5 (OR clause + 3 orphan references)
-   Lines added   : 0
-   Risk level    : LOW (loosening a filter, not changing entry/exit logic)
+ v15.1 DELTA vs v14.4:
+   Phase 0 Macro Block: removed OR golden-cross condition (from v15.0)
+   Dead code cleanup  : removed FastMA input/var/computation (from v15.0)
+   Phase 2 Entry      : added Pressure Zone path (CS_PEntry)
+   New inputs         : Pressure_Entry_On, Pressure_ATR_Mult
+   New variable       : v_In_Pressure_Zone
+   Risk level         : MEDIUM (new entry path generates more trades)
 ================================================================================}
 
 [IntrabarOrderGeneration = false]
@@ -113,7 +159,11 @@ inputs:
 
     { --- 9. v14.2 Path B - StopProfit (REJECTED, code kept for research) --- }
     SP_Trigger_Pts(0),
-    SP_Retain_Pct(50);
+    SP_Retain_Pct(50),
+
+    { --- 10. v15.1 Pressure Zone Entry (NEW) --- }
+    Pressure_Entry_On(true),
+    Pressure_ATR_Mult(1.0);
 
 variables:
     { Phase 0: Macro filter }
@@ -137,6 +187,7 @@ variables:
     v_Stop_Level(0),
     v_In_Trap_Zone(false),
     v_Trap_Counter(0),
+    v_In_Pressure_Zone(false),
     v_Night_Block(false),
 
     { Phase 3: Advanced Management Variables }
@@ -331,7 +382,7 @@ else if MarketPosition = 0 then
 
 if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
-    { Sub-Phase A: False Breakout (Trap) Detection }
+    { Sub-Phase A1: False Breakout (Trap) Detection -- original path }
     if High > v_Box_Top then begin
         v_In_Trap_Zone = true;
         v_Trap_Counter = 0;
@@ -344,6 +395,20 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
             v_In_Trap_Zone = false;
     end;
 
+    { Sub-Phase A2: Pressure Zone Detection (v15.1 NEW)
+      Mirrors L3 Support Zone: price approaches Box_Top resistance
+      without requiring an actual breakout. Activates when High
+      reaches within Pressure_ATR_Mult * ATR of Box_Top.
+      Only fires when no trap zone is active (trap has priority).
+      Recalculated every bar (no time decay needed -- the condition
+      is current, not event-driven). }
+    v_In_Pressure_Zone = false;
+    if Pressure_Entry_On = true and
+       v_In_Trap_Zone = false and
+       High >= v_Box_Top - (v_Current_ATR * Pressure_ATR_Mult) then begin
+        v_In_Pressure_Zone = true;
+    end;
+
     { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
       SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
       Only called when not short -> freezes at signal-bar box snapshot. }
@@ -351,21 +416,30 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
         SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close)
                     * BigPointValue);
 
-    { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail + Night Block) }
+    { Sub-Phase B: Dual-Path Entry Execution
+      Path A (CS_Entry):  trap-triggered (breakout above Box_Top -> pullback)
+      Path B (CS_PEntry): pressure-triggered (approach Box_Top -> rejection)
+      Trap takes priority via the if/else. Same trigger price, same
+      exit chain, same stop levels. Labels differ for research analysis. }
     v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
 
     if MarketPosition    =  0             and
        v_BarsSinceExit  >= Cooldown_Bars  and
        v_Trend_Dir       = -1             and
        v_Macro_Block     = false          and
-       v_In_Trap_Zone    = true           and
+       (v_In_Trap_Zone = true or v_In_Pressure_Zone = true) and
        Close             < v_Trigger_Price and
        v_Holiday_Block   = false          and
        v_Night_Block     = false          and
        v_Settlement_Day  = false          then begin
 
-        SellShort ("CS_Entry") next bar at Market;
+        if v_In_Trap_Zone = true then
+            SellShort ("CS_Entry") next bar at Market
+        else
+            SellShort ("CS_PEntry") next bar at Market;
+
         v_In_Trap_Zone = false;
+        v_In_Pressure_Zone = false;
 
     end;
 
