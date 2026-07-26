@@ -5,7 +5,7 @@
 
 ---
 
-## 模擬中策略清單（截至 2026-07-10）
+## 模擬中策略清單（截至 2026-07-26）
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 模擬起始 |
 |------|------|------|------|----------|----------|
@@ -15,11 +15,11 @@
 | **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.9.6-OPT-PROD (Anti-hunt + 5-param OPT, 71T / PF 1.749 / Rule#18 7/7 PASS, 3% cap)** | `SE_VS_` / `SX_VS_` / `SX_VS_1M_Exit` / `SX_VS_SP_Armed` | **2026-07-06**（升 v1.8.0→v1.9.6）|
 | **S16_S** MACrossShort | G 類動量交叉（純空）| 純空 | **v1.4-BELATE 正式上架 2026-07-18 (5M 崩盤/波動收割 sniper, 官方 718 baseline: 107T / +1,094,800 / PF 1.91 / MDD -18.3% / 5件套通用4/5 適性5/5 / 3% cap)** | `SE_MA_` / `SX_MA_` | 2026-07-10 promote / **2026-07-18 v1.4 上架** |
 
-⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong_DEPLOYMENT.md)。
+⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong/S3_VolSqueezeLong_DEPLOYMENT.md)。
 
-⚠️ **S3_S 部署 caveats (v1.9.6-OPT-PROD)**：3% 上限（沿用 v1.8.0）+ 71T/6.5y ≈ 11 trades/yr + Anti-hunt L1+L2 預設 OFF 待實戰觀察 + T68 06-08 -120K MAE Cap parallel 評估。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort_strategy.md) + [S3_S_VolSqueezeShort_BOSS_VIEW.md](S3_S_VolSqueezeShort_BOSS_VIEW.md)。
+⚠️ **S3_S 部署 caveats (v1.9.6-OPT-PROD)**：3% 上限（沿用 v1.8.0）+ 71T/6.5y ≈ 11 trades/yr + Anti-hunt L1+L2 預設 OFF 待實戰觀察 + T68 06-08 -120K MAE Cap parallel 評估。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_strategy.md) + [S3_S_VolSqueezeShort_BOSS_VIEW.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_BOSS_VIEW.md)。
 
-⚠️ **S16_S 部署 caveats (v1.4-BELATE)**：3% 上限 + ~19 trades/yr sniper + WR 27.1%（心理準備：連虧上限實測 10 次）+ 身分=崩盤/波動收割者（緩慢陰跌不參與）+ 冷啟動最壞開局實測 -169,800 + 參數凍結鐵則（禁止定期重最佳化）+ 模擬時鐘 2026-07-18 起算 30 筆。詳見 [S16_S_MACrossShort_DEPLOYMENT.md](S16_S_MACrossShort_DEPLOYMENT.md) + [S16_S_MACrossShort_BOSS_VIEW.md](S16_S_MACrossShort_BOSS_VIEW.md)。
+⚠️ **S16_S 部署 caveats (v1.4-BELATE)**：3% 上限 + ~19 trades/yr sniper + WR 27.1%（心理準備：連虧上限實測 10 次）+ 身分=崩盤/波動收割者（緩慢陰跌不參與）+ 冷啟動最壞開局實測 -169,800 + 參數凍結鐵則（禁止定期重最佳化）+ 模擬時鐘 2026-07-18 起算 30 筆。詳見 [S16_S_MACrossShort_DEPLOYMENT.md](S16_S_MACrossShort/S16_S_MACrossShort_DEPLOYMENT.md) + [S16_S_MACrossShort_BOSS_VIEW.md](S16_S_MACrossShort/S16_S_MACrossShort_BOSS_VIEW.md)。
 
 ---
 
@@ -30,11 +30,11 @@
 
 | 策略 | BOSS_VIEW 狀態 |
 |------|--------------|
-| **S1** NightMomentum | ✅ [BOSS_VIEW](S1_NightMomentum_BOSS_VIEW.md) |
-| **S3** RapidPullbackShort | ✅ [BOSS_VIEW](S3_RapidPullbackShort_BOSS_VIEW.md) |
-| **S3_L** VolSqueezeLong | ✅ [BOSS_VIEW](S3_VolSqueezeLong_BOSS_VIEW.md) |
-| **S3_S** VolSqueezeShort | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort_BOSS_VIEW.md) |
-| **S16_S** MACrossShort | ✅ [BOSS_VIEW](S16_S_MACrossShort_BOSS_VIEW.md) |
+| **S1** NightMomentum | ✅ [BOSS_VIEW](S1_NightMomentum/S1_NightMomentum_BOSS_VIEW.md) |
+| **S3** RapidPullbackShort | ✅ [BOSS_VIEW](S3_RapidPullbackShort/S3_RapidPullbackShort_BOSS_VIEW.md) |
+| **S3_L** VolSqueezeLong | ✅ [BOSS_VIEW](S3_VolSqueezeLong/S3_VolSqueezeLong_BOSS_VIEW.md) |
+| **S3_S** VolSqueezeShort | ✅ [BOSS_VIEW](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_BOSS_VIEW.md) |
+| **S16_S** MACrossShort | ✅ [BOSS_VIEW](S16_S_MACrossShort/S16_S_MACrossShort_BOSS_VIEW.md) |
 | L1-L5 (live/) | ✅ 5 份 BOSS_VIEW 已補（同步 2026-06-28，見 `strategies/live/`）|
 
 ---

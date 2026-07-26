@@ -5,15 +5,15 @@
 
 ---
 
-## 上架策略清單（截至 2026-06-28）
+## 上架策略清單（截至 2026-07-26）
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 最新基準淨利 | BOSS_VIEW |
 |------|------|------|------|----------|--------------|----------|
-| **L1** TrendLong | 趨勢追蹤 | 純多 | V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 | `TL_` | **+3,216,200** | [📋](L1_TrendLong_BOSS_VIEW.md) |
-| **L2** TrendShort | 趨勢追蹤 | 純空 | 5.2 + HolidayFlat_v3 | `TS_` | +1,400,200 | [📋](L2_TrendShort_BOSS_VIEW.md) |
-| **L3** ConsolidationLong | 盤整區間 | 純多 | v13.4（Variant B：Freeze 開、BE 關） | `CL_` | +697,200 | [📋](L3_ConsolidationLong_BOSS_VIEW.md) |
-| **L4** ConsolidationShort | 盤整反轉 | 純空 | v14.2B（Night 開、BE/SP 關）+ v14.4 ImmediateStop | `CS_` | +687,200 | [📋](L4_ConsolidationShort_BOSS_VIEW.md) |
-| **L5** BreakoutLong | 盤整突破 | 純多 | v19.9 + Cooldown-D + HolidayFlat_v3 | `BL_` | +1,361,400 | [📋](L5_BreakoutLong_BOSS_VIEW.md) |
+| **L1** TrendLong | 趨勢追蹤 | 純多 | V2.6 + StopProfit + FrozenSL + HolidayFlat_v3 | `TL_` | **+3,216,200** | [📋](L1_TrendLong/L1_TrendLong_BOSS_VIEW.md) |
+| **L2** TrendShort | 趨勢追蹤 | 純空 | **v5.3 + SetStopContract + SL_Pct=1.25** | `TS_` | **+2,882,400** | [📋](L2_TrendShort/L2_TrendShort_BOSS_VIEW.md) |
+| **L3** ConsolidationLong | 盤整區間 | 純多 | v13.4（Variant B：Freeze 開、BE 關） | `CL_` | +697,200 | [📋](L3_ConsolidationLong/L3_ConsolidationLong_BOSS_VIEW.md) |
+| **L4** ConsolidationShort | 盤整反轉 | 純空 | **v14.6 + SetStopContract + SL_Pct=1.50** | `CS_` | **+894,400** | [📋](L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md) |
+| **L5** BreakoutLong | 盤整突破 | 純多 | **v19.9 + SetStopContract + SL_Pct=1.0** | `BL_` | +1,361,400 | [📋](L5_BreakoutLong/L5_BreakoutLong_BOSS_VIEW.md) |
 
 📋 = **BOSS_VIEW**（老闆快速 view，每隻策略強制附，規範見 [`docs/methodology/BOSS_VIEW_TEMPLATE.md`](../../docs/methodology/BOSS_VIEW_TEMPLATE.md)）
 
@@ -27,6 +27,8 @@
 | Registry_Valid_Until = 1270101 | 視界 fail-safe | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Manual_Kill_Switch | 緊急停市 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Frozen Initial SL | 進場根鎖 ATR（防 reload 漂移） | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **SetStopContract** | 引擎停損 per-contract（非 total） | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **SL_Pct** | ATR 停損距離趴數上限（極端保護） | — | 1.25% | — | 1.50% | 1.0% |
 | 30 天紅字警告 | 登錄表過期前通知 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Holiday_Flat_Time 依 K 棒網格分配**：L1=345（45M）/ L2=300（60M）/ L3=L4=L5=415（15M）
@@ -50,13 +52,14 @@
 - BE_Trigger_Pts(0)：BE 駁回（變體 D 慘案：100 筆 0 勝率）
 - 教訓：盤整區間策略不適合 BE
 
-### L4 — Variant B 生產（A/B 實證後封裝）
+### L4 — v14.6 生產（A/B 實證後封裝 + SetStopContract + SL_Pct=1.50）
 - Night_Block_On(true)：02:00-04:59 進場封鎖
 - BE/SP 駁回（A/B 實證 -345K ~ -82K 全敗）
+- v15/v16 研究全 KILLED（alpha = bear/neutral trap only）
 - 教訓：100% 勝率機制可以是淨損
 
-### L5 — SP 駁回（A/B 實證後封裝）
-- v19.7 行為 = 生產配置
+### L5 — SP 駁回（A/B 實證後封裝 + SetStopContract + SL_Pct=1.0）
+- v19.9 行為 = 生產配置
 - SP_Trigger_Pts(0) 永久 0
 - 教訓：L1 SP 完全鏡像也失敗（策略尾巴集中度 > 70% = SP 禁區）
 
@@ -102,8 +105,8 @@ python scripts/verify_l4_v142.py      # 67/67 項
 
 ## 參考文件
 
-- [docs/entry_exit_sop.md](../../docs/entry_exit_sop.md) — 9 層出場架構標準
-- [docs/position_sizing_and_capacity.md](../../docs/position_sizing_and_capacity.md) — 口數配置
-- [docs/L4_v142_variant_results.md](../../docs/L4_v142_variant_results.md) — L4 A/B 完整實證
-- [docs/L5_v198_variant_results.md](../../docs/L5_v198_variant_results.md) — L5 A/B 完整實證
-- [docs/optimization_opportunities_2026Q2.md](../../docs/optimization_opportunities_2026Q2.md) — 優化空間清單
+- [docs/methodology/entry_exit_sop.md](../../docs/methodology/entry_exit_sop.md) — 9 層出場架構標準
+- [docs/methodology/position_sizing_and_capacity.md](../../docs/methodology/position_sizing_and_capacity.md) — 口數配置
+- [docs/strategy_archive/L4_v142_variant_results.md](../../docs/strategy_archive/L4_v142_variant_results.md) — L4 A/B 完整實證
+- [docs/strategy_archive/L5_v198_variant_results.md](../../docs/strategy_archive/L5_v198_variant_results.md) — L5 A/B 完整實證
+- [docs/research/optimization_opportunities_2026Q2.md](../../docs/research/optimization_opportunities_2026Q2.md) — 優化空間清單

@@ -31,6 +31,7 @@
 | [`strategy_classification_decision_matrix.svg`](policies/strategy_classification_decision_matrix.svg) | 策略分類 × Settlement 角色矩陣 | 參考 |
 | [`STRATEGY_SUCCESS_CRITERIA.md`](policies/STRATEGY_SUCCESS_CRITERIA.md) | 機構級策略成功標準 | 參考 |
 | [`lesson_L24_risk_overlay_alpha_preservation.md`](policies/lesson_L24_risk_overlay_alpha_preservation.md) | Lesson L24: Risk overlay 不可削 alpha source | 參考 |
+| [`PROMOTE_CHECKLIST.md`](policies/PROMOTE_CHECKLIST.md) | Rule #19 PROMOTE 6 項檢查（2026-07-16） | 🔒 LOCKED |
 
 ---
 
@@ -45,6 +46,8 @@
 | [`LOOP_FRAMEWORK.md`](methodology/LOOP_FRAMEWORK.md) | Loop 開發迭代框架 |
 | [`ENGINEERING_SYSTEM.md`](methodology/ENGINEERING_SYSTEM.md) | **五支柱工程規範**（Rule #16，2026-06-29 建立） |
 | [`extreme_sl_multilayer_sop_20260629.md`](methodology/extreme_sl_multilayer_sop_20260629.md) | **極端行情多層停損 SOP**（Fine Dining 架構，1M 因子積分制，2026-06-29） |
+| [`non_WFA_validation_SOP_20260630.md`](methodology/non_WFA_validation_SOP_20260630.md) | **非 WFA 5 件套驗證 SOP**（Rule #18，2026-06-30） |
+| [`BOSS_VIEW_TEMPLATE.md`](methodology/BOSS_VIEW_TEMPLATE.md) | BOSS_VIEW 老闆快速 view 模板 |
 
 ---
 

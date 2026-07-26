@@ -23,7 +23,7 @@
 ```
 research/         ──[W0-W6 通過]──►   live_simulation/   ──[模擬實證]──►   live/
 （開發中）                              （MC12 模擬帳戶）                     （MC9 實盤）
-S3 VolSqueeze                          S1, S3 RapidPullback                  L1-L5
+S16_L (suspended)                      S1, S3, S3_L, S3_S, S16_S            L1-L5
 ```
 
 ### 升級門檻
@@ -49,12 +49,8 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 | **S1 NightMomentum** | 時段型 | Long | 15M | 2026-06-07 |
 | **S3 RapidPullbackShort** | 多頭過熱拉回 | Short | 5M | 2026-06-20 |
 | **S3_L VolSqueezeLong** | C 類波動率 | Long | 60M | 2026-06-23 |
-| **S3_S VolSqueezeShort** | C 類波動率 | Short | 60M+1M | **2026-07-06 v1.9.6-OPT-PROD** |
-
-### Research（開發中）
-| 策略 | 類別 | 進度 |
-|------|------|------|
-| **S16_S MACrossShort** | G 類動量交叉（空）| 🔵 **W0 STRONG PASS (2026-07-08, 40/216 combos 4/4)，進 W1** |
+| **S3_S VolSqueezeShort** | C 類波動率 | Short | 60M+1M | 2026-07-06 |
+| **S16_S MACrossShort** | G 類動量交叉 | Short | 5M | **2026-07-18 v1.4-BELATE** |
 
 ---
 
@@ -66,8 +62,8 @@ S3 VolSqueeze                          S1, S3 RapidPullback                  L1-
 S3_L VolSqueezeLong   ✅ PROMOTED (2026-06-23)
 S3_S VolSqueezeShort  ✅ PROMOTED (2026-07-06, v1.9.6-OPT, 7/7 PASS)
 S4_L / S4_S MACD      ⚰️ KILLED (2026-07-07, alpha 不足)
-S16_S MACrossShort    🔵 CURRENT (W0 PASS 2026-07-08, 進 W1)
-S16_L MACrossLong     ⏳ Queue (S16_S 完成後)
+S16_S MACrossShort    ✅ PROMOTED (2026-07-18, v1.4-BELATE live_simulation)
+S16_L MACrossLong     ⏸️ SUSPENDED (待 ruling)
 S5_L / S5_S           ⏳
 S6 FlashCrashMomentum ⏳
 S7-S15                ⏳
@@ -82,14 +78,14 @@ S7-S15                ⏳
 ```
 TXF1-Strategy-Lab/
 ├── README.md                       ← 本檔
-├── CLAUDE.md                       ← Claude Code 專案指引 (14 條強制規範)
+├── CLAUDE.md                       ← Claude Code 專案指引 (19 條強制規範)
 │
 ├── strategies/                     策略原始碼層
-│   ├── live/                       L1-L5 (MC9 實盤)
-│   ├── live_simulation/            S1, S3 RapidPullback (MC12 模擬)
+│   ├── live/                       L1-L5 各自子資料夾 (MC9 實盤)
+│   ├── live_simulation/            S1/S3/S3_L/S3_S/S16_S 各自子資料夾 (MC12 模擬)
 │   └── research/                   研究中
-│       ├── S03_VolSqueezeShort/     ← 當前開發 (v1.9.5 GA done)
-│       ├── 2026-W24/               ← 每週批次 (Cowork 自動更新)
+│       ├── S03_VolSqueezeShort/     S3_S 研究歷史
+│       ├── S16_MACrossShort/        S16_S 研究 (promoted)
 │       └── archive/                 歷史批次
 │           ├── batch01_S2-S5/      原始排程基線
 │           ├── batch02_S6-S10/
@@ -126,7 +122,7 @@ TXF1-Strategy-Lab/
 
 ---
 
-## 六、開發紀律（從 13 條 CLAUDE.md 規則摘要）
+## 六、開發紀律（從 19 條 CLAUDE.md 規則摘要）
 
 1. 所有策略必含 **Settlement_Flat 7 元素**（Rule #11）
 2. 所有策略必含 **P3b SetStopLoss**（Rule #12）
