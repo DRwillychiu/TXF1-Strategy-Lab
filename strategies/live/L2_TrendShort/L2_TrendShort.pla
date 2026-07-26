@@ -2,7 +2,7 @@
   ADAPTIVE FARMER - TREND BEARISH STRATEGY
   Signal Name : Trendbearish_V1
   MC Load Name: Trendbearish_V1
-  Version     : 5.2 + HolidayFlat_v3 (Iron Rule) + ImmediateStop
+  Version     : 5.3 + SetStopContract + SL_Pct (v5.2 base)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : 60-Minute (Day + Night Sessions, grid verified
@@ -43,6 +43,19 @@
          - Does NOT replace Section 8-13 exit logic. Dormant
            backup once custom stops tighten.
          - Deploy only when flat.
+    5.3  (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+         BUG FIX - SetStopContract MISSING (same issue as L4 v14.6, L5 v19.9):
+           SetStopLoss without SetStopContract = stop dollar amount
+           is for the TOTAL POSITION, not per contract.
+           L2 trades 2 contracts -> engine stop was 2x tighter than
+           designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+         NEW - SL_Pct Percentage Stop Cap (SHORT mirror of L1/L3/L4/L5):
+           ATR can spike in volatile regimes, causing the ATR-based
+           stop (DC_Lower + ATR*1.1) to exceed any reasonable risk budget.
+           SL_Pct caps max stop distance as pct of entry price.
+           For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+           Applied to BOTH engine stop (P3b) and custom stop (Section 8).
+           SL_Pct(0) = off (default for MC sweep).
 
   PERFORMANCE (Excel Report 2026/06/07, Initial Capital 1M):
     Net Profit    : 1,400,200 TWD
@@ -108,7 +121,10 @@ Inputs:
      TXF1 settles every 3rd Wed of month at 13:30.
      Detection: DayOfWeek=3 AND DayOfMonth in [15,21].
      Flat at 12:30 (1hr buffer before 13:30 settlement). }
-   Settlement_Flat_Time   ( 1230 );
+   Settlement_Flat_Time   ( 1230 ),
+
+   { v5.3: SetStopContract + SL_Pct (2026-07-26) }
+   SL_Pct                 ( 0 );       { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. 0 = off. MC sweep to find converge. }
 
 
 { ============================================================
@@ -178,7 +194,10 @@ Variables:
    hidx                 ( 0     ),
 
    { Monthly Settlement Flat }
-   v_Settlement_Day     ( False );
+   v_Settlement_Day     ( False ),
+
+   { v5.3 SL_Pct }
+   v_Guard_Distance     ( 0 );
 
 
 { ============================================================
@@ -435,10 +454,16 @@ Else
 
 { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
   SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-  Only called when not short -> freezes at signal-bar values once position opens. }
-If MarketPosition >= 0 Then
-   SetStopLoss( AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close )
-                * BigPointValue );
+  Only called when not short -> freezes at signal-bar values once position opens.
+  v5.3: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close. }
+If MarketPosition >= 0 Then Begin
+   v_Guard_Distance = AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close );
+   If SL_Pct > 0 Then
+      v_Guard_Distance = MinList( v_Guard_Distance, Close * SL_Pct / 100 );
+   SetStopContract;
+   SetStopLoss( v_Guard_Distance * BigPointValue );
+End;
 
 If FilterOK = True And
    C0       = True And
@@ -460,6 +485,9 @@ If MarketPosition = -1 Then Begin
       ( SL_Locked = False ) Then Begin
       SL_Line = DC_Lower;
       SL_Trig = SL_Line + ( ATR_Val * SL_ATR_Ratio );
+      { v5.3: SL_Pct percentage stop cap (SHORT: ceiling above entry) }
+      If SL_Pct > 0 Then
+         SL_Trig = MinList( SL_Trig, EntryPrice + ( EntryPrice * SL_Pct / 100 ) );
       SL_Locked = True;
    End;
 
