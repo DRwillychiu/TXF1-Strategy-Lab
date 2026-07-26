@@ -2,7 +2,7 @@
  Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
  MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
  Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
- Version     : v14.4 + ImmediateStop (PRODUCTION; v14.5 fully removed after A/B failure)
+ Version     : v14.6 + SetStopContract + SL_Pct (PRODUCTION; v14.5 fully removed after A/B failure)
                v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
                see docs/range_force_exit_rollback_20260617.md for rationale.
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
@@ -200,7 +200,32 @@
             block -> freezes when short position opens.
           - Dormant backup once custom stops tighten.
 
-   STATUS: v14.4 + P3b ImmediateStop is the PRODUCTION version.
+   v14.6  (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+
+          BUG FIX - SetStopContract MISSING (same issue as L5 v19.9):
+            SetStopLoss without SetStopContract = stop dollar amount
+            is for the TOTAL POSITION, not per contract.
+            L4 trades 2 contracts -> engine stop was 2x tighter than
+            designed. 12 "Stop Loss" exits had avg distance 0.26%
+            (designed ~1.5%), totaling -266,800.
+            SetStopContract makes SetStopLoss PER-CONTRACT (lot-invariant).
+
+          NEW - SL_Pct Percentage Stop Cap (SHORT mirror of L1/L3/L5):
+            ATR can spike in volatile regimes, causing the ATR-based
+            stop (Box_Top + ATR*2) to exceed any reasonable risk budget.
+            SL_Pct caps max stop distance as pct of entry price.
+            For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+            Applied to BOTH engine stop (P3b) and custom stop (Phase 3).
+            SL_Pct(0) = off (default for MC scan 2.0-3.5%).
+            NOTE: L4 SHORT needs wider SL_Pct than LONG strategies
+            (L1=0.5%, L3=0.55%, L5=1.0%) because ATR*2 stop is wider.
+
+          v15-v16 research line CLOSED (2026-07-26):
+            v15.0/v15.1/v15.1_opt/v16.0 all FAILED. L4 alpha = bear/neutral
+            trap signal only. Bull market zero trades = correct behavior.
+            See strategies/research/L4_v15/ and L4_v16/ for full postmortem.
+
+   STATUS: v14.6 + SetStopContract + SL_Pct is the PRODUCTION version.
    Do NOT re-add Strong_Long_Filter or Fast_BreakExit without
    the redundancy+pass-rate analysis required by Constitution
    (memory: feedback_filter_redundancy_check.md).
@@ -259,7 +284,10 @@ inputs:
                                      CS_SP 100pct WR but net loser. Truncates CS_SL big
                                      winners (45/+1,019K to 36/+619K). DO NOT enable without
                                      redesign. }
-    SP_Retain_Pct(50);             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
+    SP_Retain_Pct(50),             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
+
+    { --- 10. v14.6 SetStopContract + SL_Pct --- }
+    SL_Pct(0);                     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. 0 = off. MC scan: 2.0-3.5 }
 
 variables:
     { Phase 0: Macro filter }
@@ -306,6 +334,10 @@ variables:
 
     { Settlement Day }
     v_Settlement_Day(false),
+
+    { v14.6 SL_Pct }
+    v_Guard_Distance(0),           { P3b engine stop distance (for SL_Pct cap) }
+    v_SL_Pct_Ceil(0),             { percentage stop ceiling price }
 
     { v14.2 Path B - close-based MFE peak (in points) }
     v_Peak_Profit_Pts(0),
@@ -467,6 +499,11 @@ end;
 
 v_Current_ATR = AvgTrueRange(ATR_Length);
 
+{ v14.6: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+  Without this, SetStopLoss dollar amount is for the TOTAL position,
+  causing engine stop to be N× tighter than designed for N-contract entries. }
+SetStopContract;
+
 { Cooldown Counter Management }
 if MarketPosition <> 0 then
     v_BarsSinceExit = 0
@@ -492,10 +529,14 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
     { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
       SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-      Only called when not short -> freezes at signal-bar box snapshot. }
-    if MarketPosition >= 0 then
-        SetStopLoss(AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close)
-                    * BigPointValue);
+      Only called when not short -> freezes at signal-bar box snapshot.
+      v14.6: SL_Pct caps engine stop distance as pct of Close. }
+    if MarketPosition >= 0 then begin
+        v_Guard_Distance = AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close);
+        if SL_Pct > 0 then
+            v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+        SetStopLoss(v_Guard_Distance * BigPointValue);
+    end;
 
     { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail + Night Block) }
     v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
@@ -537,6 +578,7 @@ if MarketPosition = 0 then begin
     v_SP_Armed         = false;
     v_BE_Floor         = 0;
     v_SP_Floor         = 0;
+    v_SL_Pct_Ceil      = 0;
 end;
 
 if MarketPosition = -1 then begin
@@ -556,7 +598,7 @@ if MarketPosition = -1 then begin
         v_SL_Locked        = true;
     end;
 
-    { 4. Stop Level Calculation (v14.1 logic, unchanged) }
+    { 4. Stop Level Calculation (v14.1 logic + v14.6 SL_Pct cap) }
     if v_Trail_Active then begin
         { Trail layer: by design uses CURRENT ATR to track volatility }
         v_Stop_Level = MinList(v_Stop_Level[1],
@@ -571,6 +613,14 @@ if MarketPosition = -1 then begin
             if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
                 v_Locked_Top = v_Box_Top;
         end;
+    end;
+
+    { v14.6: SL_Pct percentage stop cap (SHORT: ceiling above entry).
+      Caps v_Stop_Level so max loss per trade never exceeds Entry × SL_Pct%.
+      Applied after all stop paths (frozen/dynamic/trail) as universal safety net. }
+    if SL_Pct > 0 then begin
+        v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+        v_Stop_Level = MinList(v_Stop_Level, v_SL_Pct_Ceil);
     end;
 
     { 5. v14.2 Path B: BE / SP arming + floor computation
