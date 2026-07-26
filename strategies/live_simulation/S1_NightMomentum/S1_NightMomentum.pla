@@ -195,7 +195,7 @@ inputs:
     Settlement_Flat_Time(1230),
 
     { v2.7 Stop Hardening (2026-07-26) - Rule #12 three-component }
-    SL_Pct( 0 );
+    SL_Pct( 1.50 );
 
 variables:
     v_NightHigh(0),

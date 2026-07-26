@@ -9,7 +9,7 @@
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 模擬起始 |
 |------|------|------|------|----------|----------|
-| **S1** NightMomentum | A 類時段型 | 純多 | **v2.6 + Settlement + ImmediateStop + HolidayFlat_v3** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
+| **S1** NightMomentum | A 類時段型 | 純多 | **v2.7+StopHarden (SetStopContract + SL_Pct=1.50, 790T / +3,066,000 / PF 1.319 / MDD -22.3%)** | `LE_NM_` / `LX_NM_` | 2026-06-07 |
 | **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 | **S3_L** VolSqueezeLong | C 類波動率（純多）| 純多 | **v1.0 (W5 PASS, 5% portfolio cap)** | `LE_VS_` / `LX_VS_` | **2026-06-23** |
 | **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.9.6-OPT-PROD (Anti-hunt + 5-param OPT, 71T / PF 1.749 / Rule#18 7/7 PASS, 3% cap)** | `SE_VS_` / `SX_VS_` / `SX_VS_1M_Exit` / `SX_VS_SP_Armed` | **2026-07-06**（升 v1.8.0→v1.9.6）|
