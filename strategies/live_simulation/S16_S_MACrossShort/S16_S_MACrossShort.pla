@@ -16,8 +16,14 @@
       SL_Pct caps max stop distance as pct of entry price.
       For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
       Applied to BOTH engine stop (P7) and custom stop (P6).
-      SL_Pct default = 0 (OFF). Run MC sweep 0-5.0 step 0.25
-      to find convergence point, then write back.
+      MC sweep 0-5.0 step 0.25: converge at SL_Pct=1.00.
+      1.00 is tightest non-degrading value. Below 0.75 degrades
+      (0.25 = -6% net, MDD worsens -478K).
+    ENGINE STOP ARCHITECTURE CHANGE:
+      v_Guard_Distance now computed EVERY BAR from current ATR
+      (not frozen from previous trade). Fixes SetStopLoss(0) bug
+      when flat, and eliminates stale ATR from different regime.
+      Net +2,006,800 vs v1.4 +1,073,200 (+87%) primarily from this.
 
   v1.4-BELATE (2026-07-18, G3 track result, user pre-test thesis CONFIRMED):
     BE trailing tiers re-timed from early (1.0/1.5 ATR) to late
@@ -114,6 +120,25 @@
 
   v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
 
+  PERFORMANCE (v1.5, MC12 backtest 2026-07-26, SL_Pct=1.00):
+    Net Profit    : 2,006,800 TWD
+    Profit Factor : 1.78
+    Win Rate      : 25.89% (29W / 83L)
+    MDD           : -456,000
+    Total Trades  : 112
+    Avg Trade     : 17,918 TWD
+    Win/Loss Ratio: 5.08
+    Avg Winner    : 158,469 TWD
+    Avg Loser     : -31,190 TWD
+    Max Consec W  : 3
+    Max Consec L  : 10
+    Avg Bars W/L  : 24 / 6
+    SL_Pct        : 1.00 (converge; MC sweep 0-5.0 step 0.25)
+    SetStopContract: YES (per-contract engine stop)
+
+    vs v1.4 (+1,073,200): +87% net from engine stop architecture
+    fix (current ATR every bar vs stale frozen from prior trade).
+
   DESIGN PHILOSOPHY (v0.5-FINAL, evolved from W1 spec):
     "Sniper style: entry selective, exit swift."
     Strategy KNOWS what regime to trade (Bear + Volatile),
@@ -150,7 +175,7 @@
 
   RULE COMPLIANCE:
     Rule #11 Settlement_Flat - YES (Priority 0 order)
-    Rule #12 SetStopContract + SetStopLoss + SL_Pct - YES (v1.5, short variant MP >= 0, SL_Pct default 0=off pending sweep)
+    Rule #12 SetStopContract + SetStopLoss + SL_Pct - YES (v1.5, short variant MP >= 0, SL_Pct=1.00 converge)
     Rule #13 10-dim eval - to run at W5
     Rule #14 OFFICIAL_ROADMAP - YES (S16_S is in Batch 04)
     Rule #15 ASCII 100% - YES (verified via scripts/verify_pla_ascii.py)
@@ -228,7 +253,7 @@ inputs:
     { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),
     StopATRMult             ( 4.0   ),
-    SL_Pct                  ( 0     ),     { Pct stop cap for SHORT. 0=off. Ceiling = Entry + Entry*SL_Pct/100. Set via MC sweep. }
+    SL_Pct                  ( 1.00  ),     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.00 (MC sweep 0-5.0). }
 
     { ===== Group H: Rule #11 Compliance ===== }
     { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
