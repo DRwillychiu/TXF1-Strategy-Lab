@@ -1,0 +1,159 @@
+# L4 ConsolidationShort -- Research Summary
+
+**策略名稱**: L4 ConsolidationShort (S_Spring 假突破反轉做空)
+**研究期間**: 2026-06-13 ~ 2026-07-26
+**結論**: v14.6 = PRODUCTION. 所有延伸研究 (v15, v16) 確認 alpha 邊界不可擴展。
+**研究線狀態**: CLOSED
+
+---
+
+## 版本演進總覽
+
+| 版本 | 日期 | 內容 | 結果 |
+|------|------|------|------|
+| **v14.2B** | 2026-06-13 | Production baseline (Variant B sealed) | ✅ PRODUCTION |
+| **v14.4** | 2026-06-18 | P3b Immediate Stop Guard 加入 | ✅ 安全升級 |
+| **v14.5** | 2026-06-18 | Strong Long Block + Fast BreakExit 實驗 | ❌ A/B 兩配置皆失敗，完全回滾 |
+| **v14.6** | 2026-07-26 | SetStopContract bug fix + SL_Pct=1.50% | ✅ **CURRENT PRODUCTION** |
+| v15.0 | 2026-07-26 | Macro Block OR→AND 收緊 | ❌ 淨利 -41.8%，OR 是 load-bearing |
+| v15.1 | 2026-07-26 | Pressure Zone 進場新增 | ❌ net negative，與 trap alpha 互斥 |
+| v15.1 opt | 2026-07-26 | MC sweep 全參數空間搜索 | ❌ 無 sweet spot |
+| v16.0 | 2026-07-26 | Regime-Adaptive 雙路徑架構 | ❌ 0 bull trades，結構不可行 |
+
+---
+
+## 各版本詳述
+
+### v14.2B: Production Baseline (2026-06-13)
+
+Variant B sealed（Night_Block_On=true, BE=0, SP=0）。確立 L4 的核心交易邏輯：
+盤整箱體假突破 → 做空反轉。Macro Block（ADX<25 OR Close<200MA）定義有效 regime。
+
+### v14.4: P3b Immediate Stop Guard (2026-06-18)
+
+加入 SetStopLoss（Rule #12）+ HolidayFlat_v3 + Settlement_Flat。
+純安全性升級，不影響 alpha 結構。
+
+### v14.5: Strong Long Block + Fast BreakExit (2026-06-18) -- TRIED AND REMOVED
+
+兩個方向的嘗試：
+- **Strong Long Block**: 多頭強勢時禁止做空 → 砍掉有效交易
+- **Fast BreakExit**: 加速假突破認定出場 → 過早出場錯失利潤
+
+A/B 兩配置四種組合全部實證無效，完全回滾至 v14.4。
+
+### v14.6: SetStopContract + SL_Pct (2026-07-26) -- CURRENT PRODUCTION
+
+修復 SetStopContract bug，統一 SL_Pct=1.50%。
+這是最後一個成功的改動，確立為 production 版本。
+
+### v15 系列: Macro Block 修改實驗 (2026-07-26) -- ALL FAILED
+
+三個子實驗全部失敗：
+1. **v15.0**: OR→AND 收緊 → 淨利 -41.8%（OR 覆蓋的兩個 regime 都有獨立 alpha）
+2. **v15.1**: Pressure Zone 進場 → net negative（mean-reversion 與 trap alpha 互斥）
+3. **v15.1 opt**: 全參數空間 sweep → 無 sweet spot（結構問題非參數問題）
+
+詳見 [`L4_v15/L4_v15_FINAL_VERDICT.md`](L4_v15/L4_v15_FINAL_VERDICT.md)
+
+### v16.0: Regime-Adaptive 雙路徑 (2026-07-26) -- FAILED
+
+將 Macro Block 從 blocker 改為 router：
+- Bear path: 原 trap 進場（不變）
+- Bull path: Pressure Entry + Box Quality Gate（新增）
+
+結果 122 trades 全走 bear path，bull path **0 trades**。
+Bull market 盤整太短太窄，Quality Gate（60 bars + 2 touches）結構不可行。
+17 bug fixes + dead variable (`v_Active_Cooldown`) 清理確認非 implementation 問題。
+
+詳見 [`L4_v16/L4_v16_FINAL_VERDICT.md`](L4_v16/L4_v16_FINAL_VERDICT.md)
+
+---
+
+## Production 版本最終績效
+
+| 指標 | v14.6 (Production) |
+|------|-------------------|
+| 淨利 | **+894,400 NTD** |
+| Profit Factor | **1.54** |
+| Win Rate | **43.04%** |
+| MDD | **-525,600 NTD** |
+| 交易數 | **79** |
+| 每年交易數 | ~13 |
+
+---
+
+## 核心洞見
+
+### L4 Alpha 的本質
+
+> **L4 alpha = bear/neutral market trap signal ONLY.**
+
+1. **Alpha 來源**: 盤整箱體假突破 → 其他交易者被誘騙進場 → 停損出場推動價格反轉
+2. **有效 regime**: 盤整市（ADX<25）或空頭市（Close<200MA），二者 OR 連接
+3. **Bull market 零交易 = 正確行為**: 不是需要修復的 bug，是 alpha 不存在的正確反映
+
+### 不可擴展的邊界
+
+v15 + v16 的集體失敗證明了 L4 alpha 的嚴格邊界：
+
+- ❌ 不能收緊 regime filter（OR 是 load-bearing）
+- ❌ 不能新增 mean-reversion 進場（與 trap 機制互斥）
+- ❌ 不能擴展到 bull regime（bull market 沒有結構性假突破機會）
+- ❌ 不能修改進場條件（trap 進場是唯一有效路徑）
+
+### Portfolio 角色
+
+L4 在 portfolio 中扮演 **bear/neutral regime specialist**：
+- L1 TrendLong: bull trend alpha
+- L3 ConsolidationLong: bull consolidation alpha
+- L5 BreakoutLong: bull breakout alpha
+- **L4 ConsolidationShort: bear/neutral trap alpha** (互補)
+
+Bull market 零交易 = portfolio 不需要 L4 在 bull market 出力，
+因為 L1/L3/L5 已經覆蓋。這是正確的策略分工。
+
+---
+
+## 累計 Lessons (L28-L33)
+
+| # | 來源 | 教訓 |
+|---|------|------|
+| L28 | v15.0 | Regime filter OR 條件不可輕易改 AND -- 可能切斷獨立 alpha 來源 |
+| L29 | v15.1 | Trap-based alpha 與 mean-reversion alpha 互斥 |
+| L30 | v15.1 opt | 全參數空間零 sweet spot = 結構問題，立即 KILL |
+| L31 | v16.0 | Blocker→Router 架構假設目標 regime 有 alpha -- 必須先驗證 |
+| L32 | v16.0 | Quality gate 在低頻事件 regime = impossible filter (quality-quantity tradeoff) |
+| L33 | v16.0 | 0 trades in one path = 最強 KILL 信號 |
+
+---
+
+## 研究線狀態
+
+```
+L4 研究線：CLOSED (2026-07-26)
+Production: v14.6 (SetStopContract + SL_Pct 1.50%)
+
+未來方向：
+  ✅ v14.6 持續在 MC9 live 運行
+  ✅ 監控 forward performance（尤其 2026 年度表現是否回歸均值）
+  ❌ 不再投入 L4 新版本開發資源
+  ❌ 不嘗試擴展 bull regime 進場
+  ❌ 不修改 Macro Block 結構
+```
+
+---
+
+## 相關文件索引
+
+| 文件 | 路徑 |
+|------|------|
+| Production .pla | `strategies/live/L4_ConsolidationShort.pla` |
+| Production 審查 | `strategies/live/L4_ConsolidationShort_review.md` |
+| Production 注解 | `strategies/live/L4_ConsolidationShort_annotated.md` |
+| v15 .pla | `strategies/research/L4_v15/L4_ConsolidationShort_v15.pla` |
+| v15 FINAL_VERDICT | `strategies/research/L4_v15/L4_v15_FINAL_VERDICT.md` |
+| v16 .pla | `strategies/research/L4_v16/L4_ConsolidationShort_v16.pla` |
+| v16 FINAL_VERDICT | `strategies/research/L4_v16/L4_v16_FINAL_VERDICT.md` |
+| v14.2 variant 實證 | `docs/strategy_archive/L4_v142_*.md` |
+| Boss View | `strategies/live/L4_ConsolidationShort_BOSS_VIEW.md` |
