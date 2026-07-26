@@ -1,8 +1,9 @@
-# S16_S MACrossShort — Deployment Guide (v1.4-BELATE)
+# S16_S MACrossShort — Deployment Guide (v1.5)
 
 **Promote Date**: 2026-07-10 (v1.0-PROD) / **正式上架 (v1.4 official deployment): 2026-07-18**
-**Current Version**: v1.4-BELATE (BE late activation, plateau-verified)
-**Official Baseline (718, MaxBarsBack=200)**: **107T / Net +1,094,800 / PF 1.910 / MDD -228,000 / WR 27.1%**
+**Current Version**: v1.5 + SetStopContract + SL_Pct (2026-07-26)
+**Official Baseline (v1.5, 2026-07-26)**: **112T / Net +2,006,800 / PF 1.775 / MDD -456,000 (-18.3%) / WR 25.89%**
+**Prior Baseline (v1.4, 718)**: 107T / +1,094,800 / PF 1.910 / MDD -228,000 / WR 27.1% (superseded)
 
 ---
 
@@ -12,7 +13,7 @@
 |-------|------|
 | 1 Placeholder scan | PASS（v_Holiday_Block reset+loop 覆寫為合法模式）|
 | 2 Rule #11 有效性 | PASS（63 假日 registry 實測擋單證明有效）|
-| 3 Rule #12 SetStopLoss | PASS（MP>=0 guard）|
+| 3 Rule #12 SetStopContract+SetStopLoss+SL_Pct | PASS（v1.5: SetStopContract per-contract, SL_Pct=1.00 converge, MP>=0 guard）|
 | 4 Rule #15 ASCII | 27/27 PASS |
 | 5 Rule #13/#18 | 5 件套通用 4/5 / 適性 5/5；WFA 轉化為參數凍結鐵則 |
 | 6 Sniper 特殊條件 | 破產率 0.02% / 單筆最大虧 4.26% / EV +10,232 全過 |
@@ -64,7 +65,7 @@
 
 ---
 
-## 二、Key Parameters (v1.0-PROD, LOCKED)
+## 二、Key Parameters (LOCKED)
 
 | Input | Value | 用途 |
 |-------|-------|------|
@@ -74,6 +75,7 @@
 | QuickStop_MaxLoss_Pts | 60 | 快速止血 |
 | MaxHoldingBars | **24** | 2hr 強制平倉（G2 雙向實證最優：12/36/48 全劣）|
 | StopATRMult | 4.0 | 最後防線 SL 距離 |
+| **SL_Pct (v1.5)** | **1.00** | ATR 停損趴數上限（MC sweep 0-5.0 收斂點）|
 | **BE_Trigger_ATR (v1.4)** | **2.5** | 保本延後啟動（高原 2.0-3.0 平坦，勿低於 2.0）|
 | **BE_Tier2_ATR (v1.4)** | **3.5** | 二層保本 |
 | **BE_Buffer_Pts (v1.4)** | **15 / 20** | Tier 1/2 緩衝（脫離雜訊帶）|
@@ -81,37 +83,42 @@
 
 ---
 
-## 三、Backtest Evidence（v1.3-TIMEGUARD FINAL baseline，數據至 2026-07-18，MC12 實測）
+## 三、Backtest Evidence（MC12 實測）
 
-| Metric | **v1.3-TIMEGUARD (現行)** | v1.0.1-HOLIDAY | v1.0-PROD (superseded) |
-|--------|---------------------------|-----------------|------------------------|
-| Net Profit | **+888,400 NTD** | +833,600 | +1,028,600（含彩券單）|
-| PF | **1.736** | 1.672 | 1.885 |
-| MDD | **-249,600 (-21.25%)** | -271,600 | -271,600 |
-| Trades | **109** (2020/03-2026/07) | 110 | 106 |
-| WR | 23.85% | 22.73% | 22.64% |
-| Avg Win : Avg Loss | 5.54 : 1 | 5.68 : 1 | ~6.8 : 1 |
-| Sharpe (年化) | +0.530 | +0.483 | +0.463 |
-| Sortino | 0.529 | 0.411 | 0.66 |
-| 恢復因子 | 3.56 | 3.07 | 3.79 |
-| 最大連虧 | **10 次 / -159,600** | 13 次 / -162,400 | 13 次 |
-| 年化報酬率 | 11.78% | 11.06% | 13.67% |
+| Metric | **v1.5 (現行, 2026-07-26)** | v1.4-BELATE | v1.3-TIMEGUARD | v1.0-PROD (superseded) |
+|--------|---------------------------|-------------|----------------|------------------------|
+| Net Profit | **+2,006,800 NTD** | +1,073,200 | +888,400 | +1,028,600（含彩券單）|
+| PF | **1.775** | 1.876 | 1.736 | 1.885 |
+| MDD | **-456,000 (-18.31%)** | -228,000 (-18.6%) | -249,600 (-21.25%) | -271,600 |
+| Trades | **112** | 109 | 109 | 106 |
+| WR | **25.89%** | 26.6% | 23.85% | 22.64% |
+| Win:Loss | **5.08 : 1** | 5.2 : 1 | 5.54 : 1 | ~6.8 : 1 |
+| Sharpe (年化) | **+0.718** | +0.57 | +0.530 | +0.463 |
+| Sortino | **1.216** | 0.979 | 0.529 | 0.66 |
+| Max Single Win | **602,800** | — | — | — |
+| Max Single Loss | **-85,200** | — | — | — |
+| 最大連虧 | **10 次 / -322,800** | 10 次 | 10 次 / -159,600 | 13 次 |
+
+**v1.5 vs v1.4 變化原因**：engine stop 從「上一筆交易的凍結 ATR」改為「每根 K 棒即時 ATR」，
+消除跨 regime 使用過時波動率的結構性缺陷。MDD% 持平（18.6%→18.3%），非風險放大。
 
 ### v1.3 vs v1.0.1 逐筆 diff（109/110 完全一致）
 - 擋掉 `2025-03-05 05:00` 進場（-32,800，該筆持倉跨 05:00-08:45 早盤空窗吃 gap 虧損）
 - `2026-03-07` 出場 04:50 BE_Trail2 (-600) → 04:45 TailFlat (+21,400)
 - 總變動 +54,800，對帳一分不差
 
-### 出場分佈（與 MC 淨利 888,400 交叉驗證一分不差）
+### 出場分佈（v1.5 Excel 交叉驗證）
 
-| Exit | Trades | Net | WR |
-|------|--------|-----|-----|
-| TimeStop | 21 | +1,986,200 | 100% |
-| GoldenCross | 3 | +87,600 | 100% |
-| TailFlat (v1.3) | 1 | +21,400 | 100% |
-| BE_Trail 1+2 | 10 | -53,400 | 10% (G3 檢驗中) |
-| QuickStop_Time | 30 | -209,400 | 0% |
-| QuickStop_Loss | 44 | -944,000 | 0% |
+| Exit | Trades | Net | WR | Avg P/L |
+|------|--------|-----|-----|---------|
+| TimeStop | 23 | **+4,375,200** | 100% | +190,226 |
+| GoldenCross | 3 | +175,200 | 100% | +58,400 |
+| TailFlat (v1.3) | 1 | +42,800 | 100% | +42,800 |
+| BE_Trail2 | 1 | +1,600 | 100% | +1,600 |
+| BE_Trail1 | 2 | -400 | 50% | -200 |
+| ML_Exit | 1 | -28,000 | 0% | -28,000 |
+| QuickStop_Time | 31 | -418,800 | 0% | -13,510 |
+| QuickStop_Loss | 50 | **-2,140,800** | 0% | -42,816 |
 
 ### Regime 表現（W5-era 數據，含已移除彩券單，待 regime 重跑）
 
@@ -239,7 +246,7 @@ live_simulation → live：
 | Rule | 狀態 |
 |------|------|
 | #11 Settlement_Flat | ✅ 落實 P0 |
-| #12 SetStopLoss guard | ✅ Section 7 |
+| #12 SetStopContract+SetStopLoss+SL_Pct | ✅ Section 7 (v1.5: per-contract, SL_Pct=1.00) |
 | #13 10-dim eval | ✅ 8/10 PASS |
 | #14 OFFICIAL_ROADMAP | ✅ Batch 04 S16_S |
 | #15 ASCII 100% | ✅ verify PASS |
@@ -251,7 +258,7 @@ live_simulation → live：
 
 ## 十二、Related Files
 
-- Strategy PLA: `S16_S_MACrossShort.pla` (**v1.0.1-HOLIDAY**)
+- Strategy PLA: `S16_S_MACrossShort.pla` (**v1.5**)
 - Strategy Text: `../research/S16_MACrossShort/S16_S_STRATEGY_TEXT_20260718.md`（現行版）
 - Holiday impact: `../research/S16_MACrossShort/S16_S_HOLIDAY_IMPACT_20260717.md`
 - Risk Register: `../research/S16_MACrossShort/S16_S_OPEN_ISSUES_20260713.md`（A-G 全議題）
@@ -262,4 +269,4 @@ live_simulation → live：
 
 ---
 
-**Deployment Ready — 2026-07-10 / Compliance-verified baseline — 2026-07-18** 🎯
+**Deployment Ready — 2026-07-10 / Compliance-verified — 2026-07-18 / v1.5 Stop Hardening — 2026-07-26** 🎯

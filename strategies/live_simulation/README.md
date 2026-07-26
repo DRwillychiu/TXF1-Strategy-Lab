@@ -13,13 +13,13 @@
 | **S3** RapidPullbackShort | 多頭過熱拉回 | 純空 | **v2.0.4** | `SE_RPS_` / `SX_RPS_` | 2026-06-20 |
 | **S3_L** VolSqueezeLong | C 類波動率（純多）| 純多 | **v1.0 (W5 PASS, 5% portfolio cap)** | `LE_VS_` / `LX_VS_` | **2026-06-23** |
 | **S3_S** VolSqueezeShort | C 類波動率（純空）| 純空 | **v1.9.6-OPT-PROD (Anti-hunt + 5-param OPT, 71T / PF 1.749 / Rule#18 7/7 PASS, 3% cap)** | `SE_VS_` / `SX_VS_` / `SX_VS_1M_Exit` / `SX_VS_SP_Armed` | **2026-07-06**（升 v1.8.0→v1.9.6）|
-| **S16_S** MACrossShort | G 類動量交叉（純空）| 純空 | **v1.4-BELATE 正式上架 2026-07-18 (5M 崩盤/波動收割 sniper, 官方 718 baseline: 107T / +1,094,800 / PF 1.91 / MDD -18.3% / 5件套通用4/5 適性5/5 / 3% cap)** | `SE_MA_` / `SX_MA_` | 2026-07-10 promote / **2026-07-18 v1.4 上架** |
+| **S16_S** MACrossShort | G 類動量交叉（純空）| 純空 | **v1.5 + SetStopContract + SL_Pct=1.00 (5M 崩盤/波動收割 sniper, v1.5 baseline: 112T / +2,006,800 / PF 1.775 / MDD -18.3% / 3% cap)** | `SE_MA_` / `SX_MA_` | 2026-07-10 promote / **2026-07-26 v1.5** |
 
 ⚠️ **S3_L 部署 caveats**：portfolio 5% 上限 + 不可加 event filter + 已配對 S3_S。詳見 [S3_VolSqueezeLong_DEPLOYMENT.md](S3_VolSqueezeLong/S3_VolSqueezeLong_DEPLOYMENT.md)。
 
 ⚠️ **S3_S 部署 caveats (v1.9.6-OPT-PROD)**：3% 上限（沿用 v1.8.0）+ 71T/6.5y ≈ 11 trades/yr + Anti-hunt L1+L2 預設 OFF 待實戰觀察 + T68 06-08 -120K MAE Cap parallel 評估。詳見 [S3_S_VolSqueezeShort_DEPLOYMENT.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_DEPLOYMENT.md) + [S3_S_VolSqueezeShort_strategy.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_strategy.md) + [S3_S_VolSqueezeShort_BOSS_VIEW.md](S3_S_VolSqueezeShort/S3_S_VolSqueezeShort_BOSS_VIEW.md)。
 
-⚠️ **S16_S 部署 caveats (v1.4-BELATE)**：3% 上限 + ~19 trades/yr sniper + WR 27.1%（心理準備：連虧上限實測 10 次）+ 身分=崩盤/波動收割者（緩慢陰跌不參與）+ 冷啟動最壞開局實測 -169,800 + 參數凍結鐵則（禁止定期重最佳化）+ 模擬時鐘 2026-07-18 起算 30 筆。詳見 [S16_S_MACrossShort_DEPLOYMENT.md](S16_S_MACrossShort/S16_S_MACrossShort_DEPLOYMENT.md) + [S16_S_MACrossShort_BOSS_VIEW.md](S16_S_MACrossShort/S16_S_MACrossShort_BOSS_VIEW.md)。
+⚠️ **S16_S 部署 caveats (v1.5)**：3% 上限 + ~20 trades/yr sniper + WR 25.89%（心理準備：連虧上限實測 10 次）+ 身分=崩盤/波動收割者（緩慢陰跌不參與）+ 參數凍結鐵則（禁止定期重最佳化）+ v1.5 SetStopContract+SL_Pct 停損硬化（2026-07-26）+ 模擬時鐘 2026-07-18 起算 30 筆。詳見 [S16_S_MACrossShort_DEPLOYMENT.md](S16_S_MACrossShort/S16_S_MACrossShort_DEPLOYMENT.md) + [S16_S_MACrossShort_BOSS_VIEW.md](S16_S_MACrossShort/S16_S_MACrossShort_BOSS_VIEW.md)。
 
 ---
 
