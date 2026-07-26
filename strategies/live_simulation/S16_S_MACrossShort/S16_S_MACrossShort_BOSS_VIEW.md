@@ -69,7 +69,7 @@ S16_S 單月 14 筆 **+264,000** — 空方對沖本職到位。
 - **v1.5 baseline (2026-07-26)**：**112T / +2,006,800 / PF 1.775 / MDD -456,000 (-18.3%) / WR 25.89%**
 - **身分修正**：alpha 全在 Volatile regime (87T, PF 2.06)；Bear 僅 3 筆 —「崩盤/波動收割者」非「熊市策略」。風險告知：真實 95% DD 潛力 ≈ -380K（配置資本須承受）
 - Forward OOS 初步：參數定案（07-10）後的 7/14-17 交易 +175,200（4 筆）
-- **時框 robustness 已驗證（2026-07-18）**：10M 移植版獨立獲利（PF 1.61 / +615,600），架構非 5M 巧合；同時實證 5M 粒度全維度優勢（恢復因子 4.80 vs 1.32）。詳見 [`S16_S_10M_FINAL_SUMMARY_20260718.md`](../research/S16_MACrossShort_10M/S16_S_10M_FINAL_SUMMARY_20260718.md)
+- **時框 robustness 已驗證（2026-07-18）**：10M 移植版獨立獲利（PF 1.61 / +615,600），架構非 5M 巧合；同時實證 5M 粒度全維度優勢（恢復因子 4.80 vs 1.32）。詳見 [`S16_S_10M_FINAL_SUMMARY_20260718.md`](../research/S16_MACrossShort/S16_MACrossShort_10M/S16_S_10M_FINAL_SUMMARY_20260718.md)
 - **Rule #19 PROMOTE_CHECKLIST** + L-P6 WFA 跨度驗證鐵則
 
 ---

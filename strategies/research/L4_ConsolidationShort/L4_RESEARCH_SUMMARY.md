@@ -148,12 +148,12 @@ Production: v14.6 (SetStopContract + SL_Pct 1.50%)
 
 | 文件 | 路徑 |
 |------|------|
-| Production .pla | `strategies/live/L4_ConsolidationShort.pla` |
-| Production 審查 | `strategies/live/L4_ConsolidationShort_review.md` |
-| Production 注解 | `strategies/live/L4_ConsolidationShort_annotated.md` |
-| v15 .pla | `strategies/research/L4_v15/L4_ConsolidationShort_v15.pla` |
-| v15 FINAL_VERDICT | `strategies/research/L4_v15/L4_v15_FINAL_VERDICT.md` |
-| v16 .pla | `strategies/research/L4_v16/L4_ConsolidationShort_v16.pla` |
-| v16 FINAL_VERDICT | `strategies/research/L4_v16/L4_v16_FINAL_VERDICT.md` |
+| Production .pla | `strategies/live/L4_ConsolidationShort/L4_ConsolidationShort.pla` |
+| Production 審查 | `strategies/live/L4_ConsolidationShort/L4_ConsolidationShort_review.md` |
+| Production 注解 | `strategies/live/L4_ConsolidationShort/L4_ConsolidationShort_annotated.md` |
+| v15 .pla | `strategies/research/L4_ConsolidationShort/L4_v15/L4_ConsolidationShort_v15.pla` |
+| v15 FINAL_VERDICT | `strategies/research/L4_ConsolidationShort/L4_v15/L4_v15_FINAL_VERDICT.md` |
+| v16 .pla | `strategies/research/L4_ConsolidationShort/L4_v16/L4_ConsolidationShort_v16.pla` |
+| v16 FINAL_VERDICT | `strategies/research/L4_ConsolidationShort/L4_v16/L4_v16_FINAL_VERDICT.md` |
 | v14.2 variant 實證 | `docs/strategy_archive/L4_v142_*.md` |
-| Boss View | `strategies/live/L4_ConsolidationShort_BOSS_VIEW.md` |
+| Boss View | `strategies/live/L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md` |

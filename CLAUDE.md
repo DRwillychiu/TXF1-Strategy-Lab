@@ -27,19 +27,32 @@ strategies/                        # 策略原始碼三層分類
 │   └── L5_BreakoutLong.pla / _annotated.md / _review.md
 ├── live_simulation/               # MC12 模擬中
 │   ├── README.md
-│   ├── S1_NightMomentum.pla / _annotated.md
-│   ├── S3_RapidPullbackShort.pla / _annotated.md
-│   └── S3_VolSqueezeLong.pla / _annotated.md / _DEPLOYMENT.md
+│   ├── S1_NightMomentum/          # S1 純多夜盤
+│   ├── S3_RapidPullbackShort/     # S3 多頭拉回空
+│   ├── S3_VolSqueezeLong/         # S3_L 波動率純多
+│   ├── S3_S_VolSqueezeShort/      # S3_S 波動率純空
+│   └── S16_S_MACrossShort/        # S16_S 動量交叉空 v1.5
 └── research/                      # 研究中（單軌 OFFICIAL_ROADMAP）
     ├── README.md
-    ├── S03_VolSqueezeShort/       # ★ CURRENT — v1.7.3 regime filter
-    │   ├── S3_VolSqueezeShort.pla           # v1.5 (WFA FAIL baseline)
-    │   ├── S3_VolSqueezeShort_v17.pla       # v1.7.3 (regime filter experiment)
-    │   ├── S3_VolSqueezeShort_annotated.md
-    │   ├── v17_round1_*.md                  # Round 1 evaluation docs
-    │   ├── progress_*_handoff.md            # Session handoffs
-    │   ├── extreme_event_coverage_20260624.md
-    │   └── _analyze_scripts/               # One-time analysis scripts
+    ├── L1_TrendLong/              # L1 研究版本
+    │   ├── L1_v30/                        # v30 實驗
+    │   └── L1_v31/                        # v31 SL_Pct + SetStopContract
+    ├── L3_ConsolidationLong/      # L3 研究版本
+    │   ├── L3_v141/
+    │   └── L3_v15/
+    ├── L4_ConsolidationShort/     # L4 研究版本
+    │   ├── L4_RESEARCH_SUMMARY.md
+    │   ├── L4_v15/
+    │   └── L4_v16/
+    ├── L5_BreakoutLong/           # L5 研究版本
+    │   ├── L5_v198/
+    │   └── L5_v199/
+    ├── S03_VolSqueezeShort/       # S3_S 完整研發史
+    ├── S04_MACDDivergenceShort/   # S4 W0 pre-verify (KILLED)
+    ├── S16_MACrossLong/           # S16_L (SUSPENDED)
+    ├── S16_MACrossShort/          # S16_S 完整研發史 + 10M 延伸
+    │   └── S16_MACrossShort_10M/  # 10M 時框實驗 (正面收案)
+    ├── S17_SwingShort60M/         # S17 Stage 1
     └── archive/                   # 歷史與 off-roadmap
         ├── README.md
         ├── _batch_summaries/              # Batch02/03 摘要（Batch01 在 batch01_S2-S5/ 內）
