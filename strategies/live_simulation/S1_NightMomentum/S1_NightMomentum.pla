@@ -1,5 +1,5 @@
 {STRATEGY_GEN_NightMomentum}
-{v2.6+ImmediateStop: v2.5 base + Entry-side Trend Filter + P3b SetStopLoss}
+{v2.7+StopHarden: v2.6 base + SetStopContract + SL_Pct + engine stop architecture fix}
 {Category A: Night Session Breakout + Overnight Gap Capture + MFE protection}
 {Direction: Long Only}
 {Timeframe: 15-min on TXF1}
@@ -192,7 +192,10 @@ inputs:
       For S1, day-session entry blocking is mostly moot since
       entries only happen during night session 15:00-04:59 anyway,
       but kept for cross-strategy consistency with L1-L5. }
-    Settlement_Flat_Time(1230);
+    Settlement_Flat_Time(1230),
+
+    { v2.7 Stop Hardening (2026-07-26) - Rule #12 three-component }
+    SL_Pct( 0 );
 
 variables:
     v_NightHigh(0),
@@ -216,6 +219,10 @@ variables:
 
     { Settlement Day }
     v_Settlement_Day(false),
+
+    { v2.7 Stop Hardening state }
+    v_Guard_Distance(0),
+    v_SL_Pct_Floor(0),
 
     { v2.5 Trail state }
     v_HighestClose(0),              { tracks max close during position (Variant B) }
@@ -381,11 +388,17 @@ if v_IsNightSession and v_RangeReady = false then begin
     end;
 end;
 
-{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
-  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
-  Only called when flat -> freezes at signal-bar ATR once position opens. }
-if MarketPosition <= 0 then
-    SetStopLoss(v_ATR * StopATRMult * BigPointValue);
+{ Engine stop - v_Guard_Distance computed EVERY BAR (current ATR, not frozen)
+  v2.7: SetStopContract makes amount PER-CONTRACT (2-lot fix)
+  v2.7: SL_Pct caps ATR spike in extreme vol }
+v_Guard_Distance = v_ATR * StopATRMult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+
+if MarketPosition <= 0 then begin
+    SetStopContract;
+    SetStopLoss(v_Guard_Distance * BigPointValue);
+end;
 
 { Entry: Long breakout (v2.1 + Holiday + Settlement + TrendFilter gates) }
 { v2.6: added v_TrendPass (Mode 0 = always true = v2.4 baseline) }
@@ -421,9 +434,15 @@ if MarketPosition = 1 then begin
         sell ("LX_NM_Settlement") next bar at market;
 end;
 
-{ Exit: ATR-based stop loss (principal protection) }
-if MarketPosition = 1 and v_EntryATR > 0 then
-    sell ("LX_NM_SL") next bar at EntryPrice - v_EntryATR * StopATRMult stop;
+{ Exit: ATR-based stop loss (principal protection) + SL_Pct cap }
+if MarketPosition = 1 and v_EntryATR > 0 then begin
+    value1 = EntryPrice - v_EntryATR * StopATRMult;
+    if SL_Pct > 0 then begin
+        v_SL_Pct_Floor = EntryPrice - (EntryPrice * SL_Pct / 100);
+        value1 = MaxList(value1, v_SL_Pct_Floor);
+    end;
+    sell ("LX_NM_SL") next bar at value1 stop;
+end;
 
 { Exit: ATR-based take profit }
 if MarketPosition = 1 and v_EntryATR > 0 then
