@@ -2,7 +2,7 @@
   S3 - RAPID PULLBACK SHORT STRATEGY  (v2.0)
   Signal Name : S3_RapidPullbackShort_v2
   MC Load Name: STRATEGY_GEN_S3_RapidPullbackShort_v2
-  Version     : v2.0.5+StopHarden (2026-07-26) - SetStopContract + SL_Pct + engine stop fix
+  Version     : v2.0.6 (2026-07-27) - CB-1 Kill Switch entry gate + CB-2 engine stop cooldown fix
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 12 PowerLanguage x64
   Timeframe   : Data1 = 5M    (entry trigger / exit chain)
@@ -227,6 +227,7 @@ variables:
     Registry_Warn_ID         ( -1    ),
     hidx                     ( 0     ),
     ExitFired                ( 0     ),
+    v_Prev_MP                ( 0     ),
 
     { ===== Secular Bull Filter state (v2.0.3 Section 2b, Daily Data3) ===== }
     v_Daily_SecularMA_Fast   ( 0     ),
@@ -703,7 +704,8 @@ if ( MarketPosition = 0 ) and
    ( v_DailyCooldown_Active = False ) and
    ( v_Holiday_Block = False ) and
    ( v_Settlement_Day = False ) and
-   ( v_Registry_Expired = False ) then begin
+   ( v_Registry_Expired = False ) and
+   ( Manual_Kill_Switch = False ) then begin
     SellShort( "SE_RPS_v2_Entry" ) next bar at Market;
 end;
 
@@ -729,6 +731,12 @@ end;
   ============================================================ }
 
 ExitFired = 0;
+
+{ v2.0.6 CB-2: detect engine-stop exit via v_Prev_MP (Rule #8).
+  SetStopLoss fires before strategy eval, MP already 0 when Section 7 runs.
+  Without this, cooldown never activates and same-day re-entry is possible. }
+if (v_Prev_MP = -1) and (MarketPosition = 0) then
+    v_DailyCooldown_Active = True;
 
 if MarketPosition = -1 then begin
 
@@ -834,6 +842,10 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
            " trigger=", v_Trigger_Fired,
            " RSI60m0=", v_H60_RSI_Snap0:0:2,
            " RSI60m1=", v_H60_RSI_Snap1:0:2 );
+
+
+{ Rule #8: track previous-bar position state (v2.0.6) }
+v_Prev_MP = MarketPosition;
 
 
 { ============================================================
@@ -963,6 +975,20 @@ if Log_HighConviction and v_HighConv_Active and ( Date <> Date[1] ) then
              idiom for Close.
     [MC12-5] Variables: v_LastSeenHour removed; v_LastSeenData2Date +
              v_LastSeenData2Time added.
+
+  v2.0.5 -> v2.0.6 PATCH (2026-07-27, P0 bug fixes):
+    [CB-1] Manual_Kill_Switch added to entry gate (Section 6).
+           Previously: Kill Switch active -> MP=0 -> SellShort fires ->
+           P0-1 BuyToCover next bar = wasted 1000 NTD slippage round-trip.
+           Fix: entry gate checks ( Manual_Kill_Switch = False ).
+    [CB-2] Engine stop (SetStopLoss) cooldown bypass fixed (Section 7).
+           Previously: SetStopLoss fires -> MP becomes 0 before Section 7 ->
+           ExitFired stays 0 -> v_DailyCooldown_Active never set -> same-day
+           re-entry possible after stop-loss.
+           Fix: v_Prev_MP (Rule #8) detects MP transition -1 to 0 at top of
+           Section 7, forces cooldown regardless of exit path.
+    [STRUCT] v_Prev_MP added to variables, updated at end-of-file (Rule #8).
+    [LABELS] No label changes. SE_RPS_v2_* / SX_RPS_v2_* preserved.
 
   v1.1 -> v2.0 is REGIME-FRAME shortened. Same thesis, faster cadence,
   more trades expected per year. v2.0.1 makes the Data2 reads MC12-safe.
