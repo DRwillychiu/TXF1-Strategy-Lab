@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.5 + SetStopContract + SL_Pct (2026-07-26, base v1.4-BELATE)
+  Version     : v1.6 Re-Entry (2026-07-28, base v1.5)
 
   v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
     BUG FIX - SetStopContract MISSING (same issue as L2/L4/L5):
@@ -205,6 +205,7 @@
     SX_MA_Holiday            : P0 holiday block
     SX_MA_Settlement         : P0 settlement flat
     SX_MA_TailFlat           : P0.5 tail force exit (v1.3 time guard)
+    SE_MA_ReEntry            : Re-entry short (v1.6 washout recovery)
 
   CHART SETUP REQUIRED:
     Data1 = TXF1 5M
@@ -343,6 +344,11 @@ variables:
     v_BE_Stop_Tier1         ( 0     ),
     v_BE_Stop_Tier2         ( 0     ),
 
+    { ===== Re-Entry state (v1.6) ===== }
+    v_ReEntry_Armed         ( False ),
+    v_ReEntry_Price         ( 0     ),
+    v_Last_EntryPrice       ( 0     ),
+
     { ===== Priority 0 protection state ===== }
     v_Holiday_Block         ( False ),
     v_Registry_Expired      ( False ),
@@ -454,6 +460,32 @@ v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
 
 
 { ============================================================
+  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6)
+  After exit, if bearish structure (Fast < Slow) still intact,
+  allow re-entry via stop order at the original entry price.
+  Arms when position exits (v_Prev_MP -1 -> MP 0).
+  Resets on golden cross, bearish structure lost, or new death cross.
+  ============================================================ }
+
+if v_Prev_MP = -1 and MarketPosition = 0 then begin
+    v_ReEntry_Armed = True;
+    v_ReEntry_Price = v_Last_EntryPrice;
+end;
+
+if v_ReEntry_Armed = True then begin
+    if v_Golden_Cross = True or v_ZLEMA_Fast >= v_ZLEMA_Slow then begin
+        v_ReEntry_Armed = False;
+        v_ReEntry_Price = 0;
+    end;
+end;
+
+if v_Death_Cross = True then begin
+    v_ReEntry_Armed = False;
+    v_ReEntry_Price = 0;
+end;
+
+
+{ ============================================================
   SECTION 6 - ATR + STOP DISTANCE
   ============================================================ }
 
@@ -467,6 +499,7 @@ v_StopDist = v_ATR * StopATRMult;
   ============================================================ }
 
 if MarketPosition = -1 then begin
+    v_Last_EntryPrice = EntryPrice;
     if v_SL_Locked = False then begin
         v_Frozen_ATR     = v_ATR;
         v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
@@ -497,7 +530,7 @@ end;
   v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
          SL_Pct caps engine stop distance as pct of Close.
   v_Guard_Distance computed EVERY BAR (current ATR, not frozen) to avoid
-  SetStopLoss(0) when flat — SetStopContract + SetStopLoss(0) = immediate stop. }
+  SetStopLoss(0) when flat -- SetStopContract + SetStopLoss(0) = immediate stop. }
 v_Guard_Distance = v_ATR * StopATRMult;
 if SL_Pct > 0 then
     v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
@@ -535,6 +568,19 @@ if MarketPosition = 0 and
    v_Registry_Expired    = False and
    Manual_Kill_Switch    = False then begin
     sell short ( "SE_MA_DeathCross" ) next bar at market;
+end;
+
+{ v1.6 Re-Entry: washout recovery via stop order at original entry price.
+  Price must DROP to the level (stop order for short = trigger on price <= level). }
+if MarketPosition = 0 and
+   v_ReEntry_Armed       = True and
+   v_ZLEMA_Fast          < v_ZLEMA_Slow and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False then begin
+    sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
 end;
 
 
