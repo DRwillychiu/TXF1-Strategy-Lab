@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.6.1 Re-Entry + Slope gate (2026-07-28, base v1.6)
+  Version     : v1.6.2 Re-Entry + Slope gate + Close gate (2026-07-28, base v1.6.1)
 
   v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
     BUG FIX - SetStopContract MISSING (same issue as L2/L4/L5):
@@ -573,11 +573,15 @@ end;
 { v1.6 Re-Entry: washout recovery via stop order at original entry price.
   Price must DROP to the level (stop order for short = trigger on price <= level).
   v1.6.1: added v_Slope > MinSlope gate (same as main entry) to require
-  active bearish momentum before re-entry, not just structure. }
+  active bearish momentum before re-entry, not just structure.
+  v1.6.2: added Close >= v_ReEntry_Price gate to enforce directional entry --
+  stop order only placed when current bar closes at/above the re-entry level,
+  so the next bar must FALL to it (price descending through the level). }
 if MarketPosition = 0 and
    v_ReEntry_Armed       = True and
    v_ZLEMA_Fast          < v_ZLEMA_Slow and
    v_Slope               > MinSlope and
+   Close                 >= v_ReEntry_Price and
    ( Time <= Tail_LastEntry_Time or Time > 500 ) and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
