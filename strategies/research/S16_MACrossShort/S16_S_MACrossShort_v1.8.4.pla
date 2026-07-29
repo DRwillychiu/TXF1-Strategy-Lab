@@ -229,6 +229,8 @@
     SX_MA_Settlement         : P0 settlement flat
     SX_MA_TailFlat           : P0.5 tail force exit (v1.3 time guard)
     SE_MA_ReEntry            : Re-entry short (v1.6 washout recovery)
+    SX_MA_RE_BE              : P3 re-entry breakeven (v1.8.4 fixed pct)
+    SX_MA_RE_TimeStop        : P5 re-entry time stop (v1.8.4 shorter hold)
 
   CHART SETUP REQUIRED:
     Data1 = TXF1 5M
@@ -765,7 +767,7 @@ if MarketPosition = -1 then begin
             if v_Profit >= EntryPrice * ReEntry_BE_Pct / 100 then begin
                 v_BE_Stop_Tier1 = EntryPrice - BE_Buffer_Pts;
                 if Close >= v_BE_Stop_Tier1 then begin
-                    buy to cover ( "SX_MA_BE_Trail1" ) next bar at market;
+                    buy to cover ( "SX_MA_RE_BE" ) next bar at market;
                     ExitFired = 1;
                 end;
             end;
@@ -809,7 +811,7 @@ if MarketPosition = -1 then begin
         { v1.8.4: re-entry uses shorter hold time }
         if v_IsReEntry = True then begin
             if v_BarsSince >= ReEntry_MaxHold then begin
-                buy to cover ( "SX_MA_TimeStop" ) next bar at market;
+                buy to cover ( "SX_MA_RE_TimeStop" ) next bar at market;
                 ExitFired = 1;
             end;
         end
