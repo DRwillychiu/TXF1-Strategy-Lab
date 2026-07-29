@@ -144,6 +144,43 @@ and faster exit?
 
 ## Resolution Log
 
+### 2026-07-29: MC12 backtest results — v1.8.0-v1.8.4 A/B comparison
+
+**Critical finding: v1.8.0 through v1.8.3 produce IDENTICAL results to v1.7.1.**
+All four SL-patch variants (inherit frozen ATR / cap distance / separate mult /
+pure pct) had zero impact on any trade outcome in the 7.5-year backtest period.
+The 8 re-entry trades all exited via QuickStop or other mechanisms — none
+triggered the ATR-inflated SL path that was patched.
+
+v1.8.4 (full redesign) is the ONLY variant with different results:
+
+| Metric        | v1.7.1 / v1.8.0-3 | v1.8.4   | Delta     |
+|---------------|-------------------|----------|-----------|
+| Net Profit    | +2,413K           | +2,186K  | -227K     |
+| Gross Profit  | +5,536K           | +5,309K  | -227K     |
+| Gross Loss    | -3,122K           | -3,122K  | 0         |
+| PF            | 1.773             | 1.700    | -0.073    |
+| MDD           | -561K             | -561K    | 0         |
+| Sharpe        | 0.134             | 0.137    | +0.003    |
+| Monthly StdDev| 198K              | 174K     | -24K      |
+| Trades        | 122               | 122      | 0         |
+
+Exit signal differences (v1.8.4 only):
+- SX_MA_TimeStop: 26 -> 24 (-2 re-entries moved to RE_TimeStop)
+- SX_MA_RE_TimeStop: 0 -> 3 (NEW: re-entry 12-bar exit)
+- SX_MA_GoldenCross: 4 -> 3 (-1 re-entry exited before golden cross)
+
+Analysis: v1.8.4's 12-bar ReEntry_MaxHold cut 3 re-entries short. These
+would have profited more under the 24-bar hold. Gross loss unchanged — the
+redesign's defense mechanisms did not save any losing trades. The "fast-in,
+fast-out" re-entry thesis was net negative in this backtest sample.
+
+Implications:
+- Options 1-4 are "free insurance" (zero cost, protect against ATR inflation)
+- Option 5 needs ReEntry_MaxHold tuning (12 bars too aggressive)
+- User to verify whether v1.8.0-v1.8.3 code paths are genuinely identical
+  or if the re-entry trades simply never reached the SL threshold
+
 ### 2026-07-29: v1.8.0-v1.8.4 created for A/B testing
 - 5 .pla files generated from v1.7.1 base (QS_MaxLoss_Pct default updated to 0.25)
 - All variants add v_IsReEntry flag to distinguish main vs re-entry trades
