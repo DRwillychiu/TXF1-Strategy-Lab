@@ -75,6 +75,78 @@ inflated ATR, simultaneously weakening the defense:
 3. A2 + A3 (BE + ML delayed) — should fix, same root cause as A1
 4. D1-D4 (cosmetic) — defer to next version cleanup
 
+## Solution Options for A1 (Re-Entry SL)
+
+Five approaches analyzed, from conservative to radical:
+
+### Option 1: Inherit Original Frozen ATR (Conservative)
+- New variable v_Original_Frozen_ATR, saved at main entry, used at re-entry.
+- Re-entry SL = EntryPrice + v_Original_Frozen_ATR * StopATRMult, cap SL_Pct.
+- Solves: A1 + A2 + A3 (if BE/ML also use frozen ATR).
+- Does NOT solve: B1 (chain limit).
+- New params: 0. Code change: small (1 var, SL setup branch).
+
+### Option 2: Cap Re-Entry SL at Main Entry SL Distance (Pragmatic)
+- New variable v_Original_SL_Dist, saved at main entry.
+- Re-entry SL = MinList(normal ATR calc, v_Original_SL_Dist), cap SL_Pct.
+- Allows tighter SL if ATR drops, caps if ATR inflates.
+- Solves: A1 only. Does NOT solve: A2, A3, B1.
+- New params: 0. Code change: small (1 var, 1 MinList).
+
+### Option 3: Separate Re-Entry ATR Multiplier (Neutral)
+- New input ReEntry_StopATRMult (e.g. 2.0 vs main 4.0).
+- Re-entry SL = EntryPrice + v_ATR * ReEntry_StopATRMult, cap SL_Pct.
+- Lower multiplier offsets ATR inflation. If ATR doubles, 2.0*2 = 4.0.
+- Solves: A1 only. Does NOT solve: A2, A3, B1.
+- New params: 1 (needs optimization). Code change: small.
+
+### Option 4: Pure Percentage SL for Re-Entry (Aggressive)
+- New input ReEntry_SL_Pct (e.g. 0.50%).
+- Re-entry SL = EntryPrice * (1 + ReEntry_SL_Pct / 100). No ATR involved.
+- Completely immune to ATR inflation. Cross-era consistent.
+- Solves: A1 only. Does NOT solve: A2, A3, B1.
+- New params: 1. Code change: medium (SL setup forks).
+
+### Option 5: Redesign Re-Entry Exit Framework (Radical / Out-of-Box)
+- Re-entry thesis: "washout over, trend resumes." If correct, should profit
+  fast. If wrong, exit fast. Does NOT need main entry's 24-bar hold / wide SL.
+- Design: Re-entry gets fully independent exit path:
+  - QuickStop: unchanged (already percentage-based, ATR-immune)
+  - Initial SL: fixed percentage (e.g. 0.5%), no ATR
+  - Multi-Layer: disabled (QS covers this role)
+  - BE Trailing: fixed percentage thresholds, no ATR
+  - TimeStop: 12 bars (not 24 — thesis must play out faster)
+  - Chain limit: max 1 re-entry per death cross signal
+- Solves: A1 + A2 + A3 + B1 (all four issues at once).
+- New params: 3-4. Code change: large (v_IsReEntry flag + exit path fork).
+- Aligns with user's stated goal: "re-entry should match manual trading logic."
+
+### Comparison Matrix
+
+| Option | A1 SL | A2 BE | A3 ML | B1 Chain | New Params | Change Size |
+|--------|-------|-------|-------|----------|------------|-------------|
+| 1. Inherit Frozen ATR | YES | YES | YES | no  | 0 | small  |
+| 2. Cap SL Distance    | YES | no  | no  | no  | 0 | small  |
+| 3. Separate Multiplier | YES | no  | no  | no  | 1 | small  |
+| 4. Pure Percentage SL  | YES | no  | no  | no  | 1 | medium |
+| 5. Redesign Framework   | YES | YES | YES | YES | 3-4 | large |
+
+### Key Insight
+
+Options 1-4 are "patches" — they fix A1 but leave A2/A3/B1 for separate work.
+Option 5 is a "redesign" — it reframes re-entry as a "verification trade"
+(fast-in, fast-out) rather than a "second main entry." This eliminates the
+ATR dependency entirely because re-entry no longer uses ATR for any purpose.
+
+The fundamental question: in manual trading, after a washout stop, would you
+re-enter with the same 24-bar hold and wider stop, or with a tighter stop
+and faster exit?
+
 ## Resolution Log
 
-(To be updated as fixes are implemented)
+### 2026-07-29: Audit completed, options documented
+- 782-line full code audit completed
+- 7 findings categorized (A1-A3, B1, D1-D4)
+- 5 solution options for A1 analyzed and documented
+- Priority: A group first, D group deferred
+- Decision pending: user to review on desktop machine
