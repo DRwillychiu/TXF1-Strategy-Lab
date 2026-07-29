@@ -181,6 +181,26 @@ Implications:
 - User to verify whether v1.8.0-v1.8.3 code paths are genuinely identical
   or if the re-entry trades simply never reached the SL threshold
 
+### 2026-07-29: FINAL DECISION — v1.8.0 selected as candidate
+
+User confirmed v1.8.0 (Inherit Original Frozen ATR) as the final candidate:
+
+- **A1 SL + A2 BE + A3 ML all resolved**: re-entry inherits v_Original_Frozen_ATR
+  from main entry, preventing ATR inflation cascade across all three mechanisms.
+- **B1 chain limit**: NOT resolved by v1.8.0 — remains open issue.
+- **Zero new parameters**: 0 optimization risk.
+- **Zero performance cost**: all 122 trades identical to v1.7.1.
+- **v1.8.1-v1.8.4 REJECTED**: v1.8.1-v1.8.3 also had zero impact but only fixed A1;
+  v1.8.4 full redesign was net negative (-227K) due to ReEntry_MaxHold=12 cutting
+  profitable re-entries short.
+
+Resolution status:
+- A1 (SL widened): RESOLVED by v1.8.0
+- A2 (BE delayed): RESOLVED by v1.8.0
+- A3 (ML delayed): RESOLVED by v1.8.0
+- B1 (chain limit): OPEN — deferred to future version
+- D1-D4 (cosmetic): OPEN — deferred
+
 ### 2026-07-29: v1.8.0-v1.8.4 created for A/B testing
 - 5 .pla files generated from v1.7.1 base (QS_MaxLoss_Pct default updated to 0.25)
 - All variants add v_IsReEntry flag to distinguish main vs re-entry trades
