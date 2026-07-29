@@ -144,9 +144,19 @@ and faster exit?
 
 ## Resolution Log
 
+### 2026-07-29: v1.8.0-v1.8.4 created for A/B testing
+- 5 .pla files generated from v1.7.1 base (QS_MaxLoss_Pct default updated to 0.25)
+- All variants add v_IsReEntry flag to distinguish main vs re-entry trades
+- v1.8.0 (802 lines): Inherit original frozen ATR - solves A1+A2+A3
+- v1.8.1 (798 lines): Cap SL at original distance - solves A1
+- v1.8.2 (799 lines): Separate ReEntry_StopATRMult=2.0 - solves A1
+- v1.8.3 (803 lines): Pure ReEntry_SL_Pct=0.50% - solves A1
+- v1.8.4 (838 lines): Full redesign (SL/BE/ML/TimeStop/chain) - solves A1+A2+A3+B1
+- All 5 files pass ASCII verification (Rule #15)
+- Next: MC12 compile + backtest on desktop, compare vs v1.6.2 and v1.7.1
+
 ### 2026-07-29: Audit completed, options documented
 - 782-line full code audit completed
 - 7 findings categorized (A1-A3, B1, D1-D4)
 - 5 solution options for A1 analyzed and documented
 - Priority: A group first, D group deferred
-- Decision pending: user to review on desktop machine
