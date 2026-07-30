@@ -181,6 +181,21 @@ Implications:
 - User to verify whether v1.8.0-v1.8.3 code paths are genuinely identical
   or if the re-entry trades simply never reached the SL threshold
 
+### 2026-07-30: v1.9.0 analysis — MaxReEntries deviates from v1.8.0 ruling
+
+v1.9.0 (created in another session, commit 0b037a7) introduced MaxReEntries=1
+which caps re-entries per death-cross cycle. This was NOT authorized by the
+2026-07-29 ruling below — B1 was explicitly listed as OPEN, deferred.
+
+Impact: 119T vs 122T (-3 trades), Net +2,374K vs +2,413K (-39,200 / -1.6%).
+PF improved 1.773 -> 1.783 (gross loss improved more than gross profit dropped).
+MDD unchanged. 3 re-entries removed: 2 losses (-88.8K) + 1 win (+128K).
+Main entries (114T / +1,840,400) completely unchanged between versions.
+
+User ruling (2026-07-30): v1.8.0 remains the approved candidate version.
+v1.9.0 MaxReEntries decision deferred to future discussion.
+See S16_S_V180_V190_COMPARISON_20260730.md for full data.
+
 ### 2026-07-29: FINAL DECISION — v1.8.0 selected as candidate
 
 User confirmed v1.8.0 (Inherit Original Frozen ATR) as the final candidate:
