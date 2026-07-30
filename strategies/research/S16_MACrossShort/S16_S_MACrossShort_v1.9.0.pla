@@ -2,18 +2,21 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.8.1 P7 Engine Guard Alignment (2026-07-30, base v1.8.0)
+  Version     : v1.9.0 Re-Entry Module Hardening (2026-07-30, base v1.8.1)
+
+  v1.9.0 (2026-07-30) RE-ENTRY MODULE HARDENING (base v1.8.1):
+    FIX 1: v_IsReEntry reset to False when flat (semantic cleanup).
+    FIX 2: MaxReEntries cap -- v_ReEntry_Count tracks entries per cycle,
+    reset on death cross. Prevents unbounded re-entry chain (F4).
+    FIX 3: v_Last_EntryPrice moved inside v_SL_Locked=False block
+    (only set once on entry bar, not every bar while in position).
+    FIX 4: v_ReEntry_Armed disarmed on fill (armed again on exit
+    if counter allows). ReEntry_On input added as master switch.
 
   v1.8.1 (2026-07-30) P7 ENGINE GUARD ALIGNMENT (base v1.8.0):
-    ROOT CAUSE: v1.8.0 aligned P6/ML/BE to use v_Original_Frozen_ATR for
-    re-entry, but P7 (SetStopLoss engine guard) still uses unfrozen v_ATR.
-    When re-entry is armed after a volatile exit, P7 uses inflated ATR,
-    making the engine guard wider than the frozen SL during the fill bar.
     FIX: When v_ReEntry_Armed, cap v_Guard_Distance at original frozen
-    ATR * StopATRMult via MinList. No second SetStopLoss call (Rule #12).
-    v_Death_Cross resets v_ReEntry_Armed before P7 block, so main entries
-    are never affected by the cap.
-    Solves: P7 vs P6 mismatch for re-entry trades.
+    ATR * StopATRMult via MinList. v_Death_Cross resets v_ReEntry_Armed
+    before P7 block, so main entries never affected.
 
   v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
     ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
@@ -293,6 +296,10 @@ inputs:
     StopATRMult             ( 4.0   ),
     SL_Pct                  ( 1.00  ),     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.00 (MC sweep 0-5.0). }
 
+    { ===== Group G: Re-Entry (v1.6 + v1.9 hardening) ===== }
+    ReEntry_On              ( True  ),     { Master switch for re-entry module. }
+    MaxReEntries            ( 1     ),     { Max re-entries per death-cross cycle. Reset on new death cross. }
+
     { ===== Group H: Rule #11 Compliance ===== }
     { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
     { 1270101 = 2027-01-01 (aligned with L1-L5 / S1 / S3_S registry expiry) }
@@ -375,9 +382,10 @@ variables:
     v_BE_Stop_Tier1         ( 0     ),
     v_BE_Stop_Tier2         ( 0     ),
 
-    { ===== Re-Entry state (v1.6) ===== }
+    { ===== Re-Entry state (v1.6 + v1.9) ===== }
     v_ReEntry_Armed         ( False ),
     v_ReEntry_Price         ( 0     ),
+    v_ReEntry_Count         ( 0     ),
     v_Last_EntryPrice       ( 0     ),
     v_IsReEntry             ( False ),
 
@@ -492,14 +500,15 @@ v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
 
 
 { ============================================================
-  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6)
+  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6 + v1.9)
   After exit, if bearish structure (Fast < Slow) still intact,
   allow re-entry via stop order at the original entry price.
   Arms when position exits (v_Prev_MP -1 -> MP 0).
   Resets on golden cross, bearish structure lost, or new death cross.
+  v1.9: ReEntry_On gate, MaxReEntries cap, disarm on fill.
   ============================================================ }
 
-if v_Prev_MP = -1 and MarketPosition = 0 then begin
+if v_Prev_MP = -1 and MarketPosition = 0 and ReEntry_On = True then begin
     v_ReEntry_Armed = True;
     v_ReEntry_Price = v_Last_EntryPrice;
 end;
@@ -514,6 +523,7 @@ end;
 if v_Death_Cross = True then begin
     v_ReEntry_Armed = False;
     v_ReEntry_Price = 0;
+    v_ReEntry_Count = 0;
 end;
 
 
@@ -531,8 +541,8 @@ v_StopDist = v_ATR * StopATRMult;
   ============================================================ }
 
 if MarketPosition = -1 then begin
-    v_Last_EntryPrice = EntryPrice;
     if v_SL_Locked = False then begin
+        v_Last_EntryPrice = EntryPrice;
         { v1.8.0: re-entry inherits original frozen ATR }
         if v_IsReEntry = True and v_Original_Frozen_ATR > 0 then
             v_Frozen_ATR = v_Original_Frozen_ATR
@@ -562,6 +572,7 @@ else begin
     v_QuickStop_Fired    = False;
     v_BE_Tier1_Active    = False;
     v_BE_Tier2_Active    = False;
+    v_IsReEntry          = False;
 end;
 
 { Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
@@ -622,6 +633,7 @@ end;
   so the next bar must FALL to it (price descending through the level). }
 if MarketPosition = 0 and
    v_ReEntry_Armed       = True and
+   v_ReEntry_Count       < MaxReEntries and
    v_ZLEMA_Fast          < v_ZLEMA_Slow and
    v_Slope               > MinSlope and
    Close                 >= v_ReEntry_Price and
@@ -631,6 +643,8 @@ if MarketPosition = 0 and
    v_Registry_Expired    = False and
    Manual_Kill_Switch    = False then begin
     v_IsReEntry = True;
+    v_ReEntry_Count = v_ReEntry_Count + 1;
+    v_ReEntry_Armed = False;
     sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
 end;
 
