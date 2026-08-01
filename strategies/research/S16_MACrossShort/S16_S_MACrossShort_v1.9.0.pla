@@ -4,17 +4,18 @@
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.9.0 MinSlope Percentage (2026-08-01, base v1.8.0)
 
-  v1.9.0 (2026-08-01) MINSLOPE PERCENTAGE (base v1.8.0):
+  v1.9.0 (2026-08-01) MINSLOPE PERCENTAGE + FLOOR (base v1.8.0):
     ROOT CAUSE: Fixed-point MinSlope is index-level-dependent.
     Same class of issue as QS_MaxLoss fixed in v1.7.1.
     - MinSlope 28 pts at 9,000  = 0.31% (very aggressive, over-entry)
     - MinSlope 28 pts at 42,000 = 0.067% (current behavior)
     - MinSlope 28 pts at 47,000 = 0.060% (conservative)
-    CHANGE: MinSlope (28 pts) -> MinSlope_Pct (0.065%)
-    - Threshold: v_MinSlope_Threshold = v_ZLEMA_Fast * MinSlope_Pct / 100
-    - Default 0.065% = 28/43000 (equivalent at recent index level)
+    CHANGE: MinSlope (28 pts) -> MinSlope_Pct (0.060%) + MinSlope_Floor (15 pts)
+    - Threshold: v_MinSlope_Threshold = MaxList(v_ZLEMA_Fast * MinSlope_Pct / 100, MinSlope_Floor)
+    - Floor prevents over-entry at low index levels (e.g., 9000 * 0.06% = 5.4 -> floor at 15)
     - Applied to BOTH main entry and re-entry slope gate
-    MC12 sweep: MinSlope_Pct 0.030 ~ 0.100, step 0.005
+    DESIGN: Portfolio role principle -- entry filter catches moves, exit system controls loss.
+    MC12 sweep: MinSlope_Pct 0.030 ~ 0.100 step 0.005, MinSlope_Floor 5 ~ 25 step 5
 
   v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
     ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
@@ -254,7 +255,8 @@ inputs:
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL, v1.9.0 MinSlope -> Pct ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
-    MinSlope_Pct            ( 0.065 ),     { v1.9.0: pct of ZLEMA_Fast. 0.065 = 28pts at 43000. Sweep 0.030~0.100 step 0.005. }
+    MinSlope_Pct            ( 0.060 ),     { v1.9.0: pct of ZLEMA_Fast. Sweep 0.030~0.100 step 0.005. }
+    MinSlope_Floor          ( 15    ),     { v1.9.0: minimum absolute slope threshold (pts). Sweep 5~25 step 5. }
 
     { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
     QuickStop_On            ( True  ),
@@ -479,8 +481,8 @@ v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 { Positive value = Fast is falling = bearish momentum = good for short }
 v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
 
-{ v1.9.0: dynamic slope threshold scales with index level }
-v_MinSlope_Threshold = v_ZLEMA_Fast * MinSlope_Pct / 100;
+{ v1.9.0: dynamic slope threshold scales with index level, with absolute floor }
+v_MinSlope_Threshold = MaxList( v_ZLEMA_Fast * MinSlope_Pct / 100, MinSlope_Floor );
 
 
 { ============================================================
