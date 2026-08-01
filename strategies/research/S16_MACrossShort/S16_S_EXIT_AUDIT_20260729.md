@@ -181,6 +181,24 @@ Implications:
 - User to verify whether v1.8.0-v1.8.3 code paths are genuinely identical
   or if the re-entry trades simply never reached the SL threshold
 
+### 2026-08-01: DEFINITIVE — v1.8.0 finalized as official version
+
+User finalized v1.8.0 as the definitive version after three-version comparison
+(v1.8.0 / v1.8.1 / v1.9.0). Key rulings:
+
+- **v1.8.0 ADOPTED**: 122T / Net +2,413,200 / PF 1.773 / MDD -561,200
+- **v1.8.1 REJECTED**: P7 Guard Alignment — unauthorized, no performance data
+- **v1.9.0 REJECTED**: MaxReEntries=1 — deviates from B1 OPEN ruling
+
+v1.8.0 resolves A1+A2+A3 with zero new parameters and zero performance cost.
+BE mechanism analysis (2026-07-30~08-01) confirmed BE contributes only +1,200 NTD
+over 7.5 years (3 triggers, 1.2%-5.5% peak profit capture, 0 re-entry triggers).
+Decision: keep BE as-is (zero cost structural insurance).
+
+Open items deferred to future:
+- B1 chain limit (MaxReEntries concept valid but needs separate discussion)
+- BE redesign (protect profit vs protect breakeven — data shows near-zero impact)
+
 ### 2026-07-30: v1.9.0 analysis — MaxReEntries deviates from v1.8.0 ruling
 
 v1.9.0 (created in another session, commit 0b037a7) introduced MaxReEntries=1
@@ -196,7 +214,7 @@ User ruling (2026-07-30): v1.8.0 remains the approved candidate version.
 v1.9.0 MaxReEntries decision deferred to future discussion.
 See S16_S_V180_V190_COMPARISON_20260730.md for full data.
 
-### 2026-07-29: FINAL DECISION — v1.8.0 selected as candidate
+### 2026-07-29: v1.8.0 selected as candidate (superseded by 2026-08-01 definitive)
 
 User confirmed v1.8.0 (Inherit Original Frozen ATR) as the final candidate:
 
