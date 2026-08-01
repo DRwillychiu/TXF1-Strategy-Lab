@@ -2,21 +2,19 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.9.0 Re-Entry Module Hardening (2026-07-30, base v1.8.1)
+  Version     : v1.9.0 MinSlope Percentage (2026-08-01, base v1.8.0)
 
-  v1.9.0 (2026-07-30) RE-ENTRY MODULE HARDENING (base v1.8.1):
-    FIX 1: v_IsReEntry reset to False when flat (semantic cleanup).
-    FIX 2: MaxReEntries cap -- v_ReEntry_Count tracks entries per cycle,
-    reset on death cross. Prevents unbounded re-entry chain (F4).
-    FIX 3: v_Last_EntryPrice moved inside v_SL_Locked=False block
-    (only set once on entry bar, not every bar while in position).
-    FIX 4: v_ReEntry_Armed disarmed on fill (armed again on exit
-    if counter allows). ReEntry_On input added as master switch.
-
-  v1.8.1 (2026-07-30) P7 ENGINE GUARD ALIGNMENT (base v1.8.0):
-    FIX: When v_ReEntry_Armed, cap v_Guard_Distance at original frozen
-    ATR * StopATRMult via MinList. v_Death_Cross resets v_ReEntry_Armed
-    before P7 block, so main entries never affected.
+  v1.9.0 (2026-08-01) MINSLOPE PERCENTAGE (base v1.8.0):
+    ROOT CAUSE: Fixed-point MinSlope is index-level-dependent.
+    Same class of issue as QS_MaxLoss fixed in v1.7.1.
+    - MinSlope 28 pts at 9,000  = 0.31% (very aggressive, over-entry)
+    - MinSlope 28 pts at 42,000 = 0.067% (current behavior)
+    - MinSlope 28 pts at 47,000 = 0.060% (conservative)
+    CHANGE: MinSlope (28 pts) -> MinSlope_Pct (0.065%)
+    - Threshold: v_MinSlope_Threshold = v_ZLEMA_Fast * MinSlope_Pct / 100
+    - Default 0.065% = 28/43000 (equivalent at recent index level)
+    - Applied to BOTH main entry and re-entry slope gate
+    MC12 sweep: MinSlope_Pct 0.030 ~ 0.100, step 0.005
 
   v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
     ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
@@ -34,7 +32,7 @@
     CHANGE: QuickStop_MaxLoss_Pts (60) -> QS_MaxLoss_Pct (0.15%)
     - Loss check: v_Loss > EntryPrice * QS_MaxLoss_Pct / 100
     - Default 0.15% = 60/40000 (equivalent at current index level)
-    MinSlope UNCHANGED (still fixed 28 pts) -- see v1.7.
+    MinSlope fixed 28 pts in v1.7.1, converted to pct in v1.9.0.
     MC12 sweep: QS_MaxLoss_Pct 0.05 ~ 0.30, step 0.025
 
   v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
@@ -111,7 +109,7 @@
     Baseline: 106T / +1.03M / PF 1.885 / MDD -17.97% / Sharpe +0.463
 
     Config LOCKED:
-      Fast=25, Slow=70, MinSlope=28 (pure points)
+      Fast=25, Slow=70, MinSlope_Pct=0.065 (v1.9.0: pct of ZLEMA_Fast)
       QuickStop_MaxLoss_Pts=60, MaxHold=24, StopATRMult=4.0
 
     Portfolio position: 3% cap, sniper sleeve for momentum burst hedge
@@ -253,10 +251,10 @@
   SECTION 1 - INPUTS
   ============================================================ }
 inputs:
-    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
+    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL, v1.9.0 MinSlope -> Pct ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
-    MinSlope                ( 28    ),
+    MinSlope_Pct            ( 0.065 ),     { v1.9.0: pct of ZLEMA_Fast. 0.065 = 28pts at 43000. Sweep 0.030~0.100 step 0.005. }
 
     { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
     QuickStop_On            ( True  ),
@@ -296,10 +294,6 @@ inputs:
     StopATRMult             ( 4.0   ),
     SL_Pct                  ( 1.00  ),     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.00 (MC sweep 0-5.0). }
 
-    { ===== Group G: Re-Entry (v1.6 + v1.9 hardening) ===== }
-    ReEntry_On              ( True  ),     { Master switch for re-entry module. }
-    MaxReEntries            ( 1     ),     { Max re-entries per death-cross cycle. Reset on new death cross. }
-
     { ===== Group H: Rule #11 Compliance ===== }
     { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
     { 1270101 = 2027-01-01 (aligned with L1-L5 / S1 / S3_S registry expiry) }
@@ -327,6 +321,7 @@ variables:
     v_ZLEMA_Fast            ( 0     ),
     v_ZLEMA_Slow            ( 0     ),
     v_Slope                 ( 0     ),
+    v_MinSlope_Threshold    ( 0     ),
 
     { ===== Signal detection ===== }
     v_Death_Cross           ( False ),
@@ -382,10 +377,9 @@ variables:
     v_BE_Stop_Tier1         ( 0     ),
     v_BE_Stop_Tier2         ( 0     ),
 
-    { ===== Re-Entry state (v1.6 + v1.9) ===== }
+    { ===== Re-Entry state (v1.6) ===== }
     v_ReEntry_Armed         ( False ),
     v_ReEntry_Price         ( 0     ),
-    v_ReEntry_Count         ( 0     ),
     v_Last_EntryPrice       ( 0     ),
     v_IsReEntry             ( False ),
 
@@ -485,6 +479,9 @@ v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 { Positive value = Fast is falling = bearish momentum = good for short }
 v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
 
+{ v1.9.0: dynamic slope threshold scales with index level }
+v_MinSlope_Threshold = v_ZLEMA_Fast * MinSlope_Pct / 100;
+
 
 { ============================================================
   SECTION 5 - CROSS DETECTION
@@ -500,15 +497,14 @@ v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
 
 
 { ============================================================
-  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6 + v1.9)
+  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6)
   After exit, if bearish structure (Fast < Slow) still intact,
   allow re-entry via stop order at the original entry price.
   Arms when position exits (v_Prev_MP -1 -> MP 0).
   Resets on golden cross, bearish structure lost, or new death cross.
-  v1.9: ReEntry_On gate, MaxReEntries cap, disarm on fill.
   ============================================================ }
 
-if v_Prev_MP = -1 and MarketPosition = 0 and ReEntry_On = True then begin
+if v_Prev_MP = -1 and MarketPosition = 0 then begin
     v_ReEntry_Armed = True;
     v_ReEntry_Price = v_Last_EntryPrice;
 end;
@@ -523,7 +519,6 @@ end;
 if v_Death_Cross = True then begin
     v_ReEntry_Armed = False;
     v_ReEntry_Price = 0;
-    v_ReEntry_Count = 0;
 end;
 
 
@@ -541,8 +536,8 @@ v_StopDist = v_ATR * StopATRMult;
   ============================================================ }
 
 if MarketPosition = -1 then begin
+    v_Last_EntryPrice = EntryPrice;
     if v_SL_Locked = False then begin
-        v_Last_EntryPrice = EntryPrice;
         { v1.8.0: re-entry inherits original frozen ATR }
         if v_IsReEntry = True and v_Original_Frozen_ATR > 0 then
             v_Frozen_ATR = v_Original_Frozen_ATR
@@ -572,19 +567,14 @@ else begin
     v_QuickStop_Fired    = False;
     v_BE_Tier1_Active    = False;
     v_BE_Tier2_Active    = False;
-    v_IsReEntry          = False;
 end;
 
 { Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
   v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
          SL_Pct caps engine stop distance as pct of Close.
   v_Guard_Distance computed EVERY BAR (current ATR, not frozen) to avoid
-  SetStopLoss(0) when flat -- SetStopContract + SetStopLoss(0) = immediate stop.
-  v1.8.1: cap at original frozen ATR when re-entry armed (P7-P6 alignment). }
+  SetStopLoss(0) when flat -- SetStopContract + SetStopLoss(0) = immediate stop. }
 v_Guard_Distance = v_ATR * StopATRMult;
-if v_ReEntry_Armed = True and v_Original_Frozen_ATR > 0 then
-    v_Guard_Distance = MinList(v_Guard_Distance,
-                               v_Original_Frozen_ATR * StopATRMult);
 if SL_Pct > 0 then
     v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
 
@@ -614,7 +604,7 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
 { LastEntry signal bar; block only the final pre-close window.     }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope               > MinSlope and
+   v_Slope               > v_MinSlope_Threshold and
    ( Time <= Tail_LastEntry_Time or Time > 500 ) and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
@@ -633,9 +623,8 @@ end;
   so the next bar must FALL to it (price descending through the level). }
 if MarketPosition = 0 and
    v_ReEntry_Armed       = True and
-   v_ReEntry_Count       < MaxReEntries and
    v_ZLEMA_Fast          < v_ZLEMA_Slow and
-   v_Slope               > MinSlope and
+   v_Slope               > v_MinSlope_Threshold and
    Close                 >= v_ReEntry_Price and
    ( Time <= Tail_LastEntry_Time or Time > 500 ) and
    v_Settlement_Day      = False and
@@ -643,8 +632,6 @@ if MarketPosition = 0 and
    v_Registry_Expired    = False and
    Manual_Kill_Switch    = False then begin
     v_IsReEntry = True;
-    v_ReEntry_Count = v_ReEntry_Count + 1;
-    v_ReEntry_Armed = False;
     sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
 end;
 
