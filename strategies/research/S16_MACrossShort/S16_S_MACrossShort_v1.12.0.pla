@@ -1,0 +1,896 @@
+{ ================================================================================
+  S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
+  Signal Name : S16_S_MACrossShort
+  MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
+  Version     : v1.12.0 Profit Trail + BE Cost Fix (2026-08-03, base v1.11.0)
+
+  v1.12.0 (2026-08-03) PROFIT TRAIL + BE COST FIX (base v1.11.0):
+
+    G1 ARITHMETIC FIX -- BE_Cost_Pts 5 -> 10:
+      Backtest settings: slippage 1000 NTD per contract PER SIDE.
+      Per contract round trip = 2000 NTD = 10 points (2000 / 200).
+      BE_Cost_Pts=5 exits at EntryPrice-5 = 1000 NTD gross vs 2000 NTD
+      cost = -1000 NTD/contract. NOT breakeven.
+      Evidence: all 5 BE exits in v1.11.0 netted exactly -2000 NTD (2 lots).
+      Fix restores the stated design intent (true breakeven after costs).
+      SHORT stop moves EP-5 -> EP-10, i.e. triggers EARLIER on retrace.
+
+    G2 NEW -- P3b Profit Trail (default OFF, pending MC12 sweep):
+      Problem quantified from v1.11.0 trade list (129 trades w/ MFE):
+        - BE_Trigger_Pct=0.80 = 368 pts at index 46,000. Only 36/129
+          trades (27.9%) ever reached it. 72.1% had zero protection.
+        - 36 trades touched 3,350,000 NTD of open profit and realized
+          -738,400. Of those, 25 died to QuickStop_Time (bars>=4 and
+          Close>=EntryPrice) after running 139-397 pts in profit.
+      Design: track running peak profit, stop at a fixed giveback pct.
+        v_MaxProfit  = running max of (EntryPrice - Close)
+        trail lock   = v_MaxProfit * (100 - Trail_Giveback_Pct) / 100
+        stop level   = EntryPrice - MaxList(BE lock, trail lock)
+      BE_Cost_Pts acts as the FLOOR, so the trail can never protect
+      less than true breakeven. Trail_On=False reproduces v1.11.0
+      behaviour exactly (plus the G1 cost fix).
+      Stop order fires intrabar, so it preempts the QuickStop_Time
+      market order that currently flushes these trades at ~0.
+      Why this is NOT the L4/L5 StopProfit trap: S16_S top-10 winners
+      have giveback 0.4%-28.5% (8 of 10 below 30%) with tiny MAE --
+      clean one-way momentum bursts. 74.6% of gross winning P&L sits
+      in trades a 30% trail would never touch. L5's winners retraced
+      deeply mid-trade and were decapitated; these do not.
+      RESIDUAL RISK (unprovable from MFE data): an INTERMEDIATE retrace
+      beyond the giveback pct that later recovers to a new high is
+      invisible in the trade list. Only a bar-by-bar MC12 run settles it.
+      MC12 sweep: Trail_Trigger_Pct 0.10/0.20/0.30/0.40/0.60/0.80
+                x Trail_Giveback_Pct 25/35/45/55 = 24 combos.
+      HARD ACCEPTANCE (any fail -> Trail_On stays False permanently):
+        1. Top-10 winner survival >= 80%
+        2. Max single win >= 90% of 602,800
+        3. Net > 2,478,000
+        4. TimeStop 27-trade / 96.3% WR structure intact
+        5. MDD no worse than -561,200
+      Full analysis: docs/research/S16S_profit_exit_analysis_20260803.md
+
+  v1.11.0 (2026-08-02) TRUE BREAKEVEN REDESIGN (base v1.8.0):
+    BE module rewritten from ATR-based profit lock to true breakeven protection.
+    F1: ATR trigger (BE_Trigger_ATR * Frozen_ATR) -> fixed pct (BE_Trigger_Pct).
+    F2: True breakeven = EntryPrice - BE_Cost_Pts (covers commission/slippage).
+        SHORT: exit guarantees no loss after costs (5 pts = 1000 NTD RT).
+    F3: Single tier (removed Tier2 complexity -- was never independently validated).
+    F4: Stop order replaces market order (catches intrabar violations).
+    F5: Per-entry reset (re-entry gets independent BE with fresh calculation).
+    F6: Removed all ATR dependency from BE module.
+    F7: Inputs simplified: BE_On + BE_Trigger_Pct + BE_Cost_Pts (was 5 inputs).
+    MC12 sweep result: BE_Trigger_Pct=0.80 BE_Cost_Pts=5 (80-combo sweep).
+                       Plateau at 0.70-1.00, phase transition at 0.60->0.70.
+
+  v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
+    ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
+    Re-entry inherits inflated ATR, widening SL/BE/ML simultaneously.
+    FIX: Save v_Original_Frozen_ATR at main entry. Re-entry inherits
+    the original (pre-inflation) ATR for SL calc, BE thresholds, and
+    ML activation. Completely eliminates ATR inflation cascade.
+    ALSO: QS_MaxLoss_Pct default 0.15 -> 0.25 (v1.7.1 optimal).
+    Solves: A1 + A2 + A3. Does NOT solve: B1 (chain limit).
+
+  v1.7.1 (2026-07-29) QS_LOSS PERCENTAGE (base v1.6.2):
+    ROOT CAUSE: Fixed-point QS_Loss is index-level-dependent.
+    - QS_Loss 60 pts at 9,000  = 0.67% (rarely triggers, zero re-entries)
+    - QS_Loss 60 pts at 45,000 = 0.13% (trivially triggers, all re-entries)
+    CHANGE: QuickStop_MaxLoss_Pts (60) -> QS_MaxLoss_Pct (0.15%)
+    - Loss check: v_Loss > EntryPrice * QS_MaxLoss_Pct / 100
+    - Default 0.15% = 60/40000 (equivalent at current index level)
+    MinSlope UNCHANGED (still fixed 28 pts) -- see v1.7.
+    MC12 sweep: QS_MaxLoss_Pct 0.05 ~ 0.30, step 0.025
+
+  v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+    BUG FIX - SetStopContract MISSING (same issue as L2/L4/L5):
+      SetStopLoss without SetStopContract = stop dollar amount
+      is for the TOTAL POSITION, not per contract.
+      S16_S trades 2 contracts -> engine stop was 2x tighter than
+      designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+    NEW - SL_Pct Percentage Stop Cap (SHORT):
+      ATR can spike in volatile regimes (S16_S alpha zone),
+      causing ATR*4.0 stop to exceed any reasonable risk budget.
+      SL_Pct caps max stop distance as pct of entry price.
+      For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+      Applied to BOTH engine stop (P7) and custom stop (P6).
+      MC sweep 0-5.0 step 0.25: converge at SL_Pct=1.00.
+      1.00 is tightest non-degrading value. Below 0.75 degrades
+      (0.25 = -6% net, MDD worsens -478K).
+    ENGINE STOP ARCHITECTURE CHANGE:
+      v_Guard_Distance now computed EVERY BAR from current ATR
+      (not frozen from previous trade). Fixes SetStopLoss(0) bug
+      when flat, and eliminates stale ATR from different regime.
+      Net +2,006,800 vs v1.4 +1,073,200 (+87%) primarily from this.
+
+  v1.4-BELATE (2026-07-18, G3 track result, user pre-test thesis CONFIRMED):
+    BE trailing tiers re-timed from early (1.0/1.5 ATR) to late
+    (2.5/3.5 ATR) activation with wider buffers (15/20 pts).
+    MC12 evidence (109T): Net 888,400 -> 1,073,200 (+20.8%),
+    PF 1.876, MDD -228,000 (-18.63%), Sortino 0.979, RecFactor 4.71,
+    TimeStop 21 -> 23 wins. Plateau verified: trigger 2.0/2.5/3.0
+    flat within 0.6%; boundary BE_Off = 1,022K. 2.5/3.5 = center.
+    Fast-loss response UNCHANGED (QuickStop/ML/SetStopLoss as before).
+    G2 same day: MaxHold 24 confirmed optimal (12/36/48 all worse).
+
+  v1.3-TIMEGUARD (2026-07-18, user design):
+    "Latest entry + latest exit" tail guard. Positions can NEVER
+    survive into any market closure (morning break 0500-0845,
+    weekend, holiday).
+    - Tail_LastEntry_Time (430): last entry SIGNAL bar 0430
+      (fill 04:30). Entries allowed all night up to here.
+    - Tail_ForceExit_Time (440): force-flat signal at 0440 bar
+      close, fill 04:40 (445-bar open). 20-min buffer to close.
+    Verified vs 110-trade baseline (see research folder
+    S16_S_HOLIDAY_IMPACT_20260717.md for methodology):
+    - Blocks 2025-03-05 05:00 entry (-32,800 held across morning
+      break) -> baseline +32.8K
+    - 2026-03-07 exit moves 04:50 -> 04:40 (delta tiny)
+    - 2026-06-06 +292,600 TimeStop at 04:35 untouched
+    Expected: ~109T / ~+866K, pending MC12 verify.
+    Version number unified with research .pla (both v1.3).
+
+  v1.0.1-HOLIDAY CHANGE (2026-07-16):
+    CRITICAL COMPLIANCE FIX - Rule #11 gap closure.
+    Prior v1.0-PROD had v_Holiday_Block hardcoded to False
+    (W2 draft placeholder never replaced before PROMOTE - promotion audit gap).
+    This patch installs the shared 63-entry HolidayFlat_v3 registry
+    identical to L1-L5 / S1 / S3_S / research S16_S v1.2-HOLIDAY.
+    Also changes Date arithmetic to EL-standard (Year - 1900) format
+    for cross-strategy alignment.
+    Behavior change: strategy now correctly blocks entry and force-flats
+    positions on the 63 registered TAIFEX holidays 2019-2027.
+    Alpha logic UNCHANGED - Config LOCKED (F25/S70/Slope28/QS60/MH24/StopATRx4).
+    Backtest re-run required to verify no change to core performance
+    (expected: minimal impact - most trades in normal sessions).
+
+  v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
+
+  v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
+    W4 WFA (9-window rolling IS 2y / OOS 6m): WFE 77.4% (>> 50% gate)
+    - 416 OOS trades / +1,737,800 aggregate profit
+    - 7/9 windows profitable (Bear/Volatile 100% win)
+    - W6 (2024 H2 Bull whipsaw) -347K acknowledged as insurance cost
+    - Parameter CV 21-25% MODERATE (no curve fit)
+    W5 Sniper-adapted 5-piece: 8/8 PASS
+    Baseline: 106T / +1.03M / PF 1.885 / MDD -17.97% / Sharpe +0.463
+
+    Config LOCKED:
+      Fast=25, Slow=70, MinSlope=28 (pure points)
+      QuickStop_MaxLoss_Pts=60, MaxHold=24, StopATRMult=4.0
+
+    Portfolio position: 3% cap, sniper sleeve for momentum burst hedge
+    Bull regime insurance cost accepted per 2026-07-08 Option A ruling
+
+  v0.6-REJECTED (2026-07-10):
+    ATR-based adaptive Slope threshold was tested and FAILED:
+    - Test 1 (ATRMult=0.7): Net -128K, 181 trades (over-entry)
+    - Test 2 (ATRMult=1.5): Net +59K, only 2 trades (over-filter)
+    - Root cause: ATR measures volatility (both directions),
+      not directional slope. Wrong metric for slope filter.
+    Reverted to v0.5 pure-points MinSlope=28.
+    User insight confirmed: Slope filter should be absolute points
+    to reject "flat/upward" cross signals directly.
+    TXF1 real level ~47000 (not 25000 as initially assumed) means
+    MinSlope=28 pure points is even more conservative.
+
+  v0.5-FINAL EVIDENCE (2026-07-10 MC12 backtest):
+    Config: F25/S70/Slope28 + QS(4,60) MH24 StopATRx4
+    Result: Net +1,028,600 / PF 1.885 / MDD -271,600 (17.97%) / 106T / WR 22.64%
+    Sharpe +0.463 / Calmar ~3.8 / Sniper reward:risk profile
+    W5 Sniper-adapted validation: 8/8 PASS
+      - Ruin probability 0.03%
+      - Single trade max loss < 5% capital
+      - Kelly criterion 11.2%
+      - Expected value +10,547/trade
+      - Bear PF 3.79 / Volatile PF 2.13 / Bull PF 0.70
+      - Max consecutive loss 16.2% capital
+
+  v0.5 GA (2026-07-09, 1024-combo Genetic Algorithm):
+    Sensitivity: Fast+Slope=86% of total, 4 exit params all LOW (<0.06)
+    MinSlope 26->28: Slope26-28 plateau (-2.4%), Slope30 cliff (-27%)
+    ZLEMA_Slow 70: narrow peak (S80=-33.5%), documented
+    Calmar 3.961 / Avg Win:Loss 6.81:1
+
+  v0.4 EVIDENCE (2026-07-09 backtest):
+    Config: F25/S90/Slope26/QS45/MH24/StopATRx4
+    Result: Net +1,059,200 / PF 1.903 / MDD $-259K / 119T / WR 26.9%
+
+  v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
+
+  PERFORMANCE (v1.5 Excel Report, MC12 backtest 2026-07-26, SL_Pct=1.00):
+    Net Profit    : 2,006,800 TWD
+    Gross Profit  : 4,595,600 TWD
+    Gross Loss    : -2,588,800 TWD
+    Profit Factor : 1.775
+    Win Rate      : 25.89% (29W / 83L)
+    MDD           : -456,000 (-18.31%)
+    Total Trades  : 112
+    Avg Trade     : 17,918 TWD
+    Win/Loss Ratio: 5.08
+    Avg Winner    : 158,469 TWD
+    Avg Loser     : -31,190 TWD
+    Max Single Win: 602,800 TWD
+    Max Single Loss: -85,200 TWD
+    Max Consec W  : 3
+    Max Consec L  : 10
+    Avg Bars W/L  : 24 / 5.9
+    Sharpe (ann.) : 0.718
+    Sortino       : 1.216
+    SL_Pct        : 1.00 (converge; MC sweep 0-5.0 step 0.25)
+    SetStopContract: YES (per-contract engine stop)
+
+    vs v1.4 (+1,073,200 / PF 1.876 / MDD -228K / 109T):
+    Net +87%, MDD% stable (18.6%->18.3%), PF -0.10, +3 trades.
+    Root cause: engine stop from stale frozen ATR -> current ATR every bar.
+
+  DESIGN PHILOSOPHY (v0.5-FINAL, evolved from W1 spec):
+    "Sniper style: entry selective, exit swift."
+    Strategy KNOWS what regime to trade (Bear + Volatile),
+    LOSES SMALL in unsuitable regime (Bull), stays profitable overall.
+    5M timeframe ZLEMA death cross + MinSlope selective entry.
+    TimeStop (24 bars = 2hr) captures momentum burst decay window.
+    NO Regime Filter (user 2026-07-08 ruling Option A: pure simple).
+    NO TP (feedback_trend_let_profits_run).
+
+  STRATEGY IDENTITY:
+    - Primary regime: Bear (PF 3.79) + Volatile (PF 2.13) = alpha zone
+    - Insurance cost: Bull regime (PF 0.70) = -106K over 35 trades
+    - Alpha structure: 20 TimeStop wins (100% WR, avg +105K)
+      offset 72 QuickStop losses (small, avg -15K)
+    - Sniper profile: 22.6% WR + 6.8:1 reward:risk ratio
+
+  ARCHITECTURE:
+    Data1 = TXF1 5M (execution + signal)
+
+  W0 EVIDENCE (2026-07-08 daily proxy STRONG PASS):
+    - 40/216 combos 4/4 institutional gates
+    - Best: Fast=12, Slow=30, Fwd_N=3 -> WR 45.8% / RR 1.29 / Stability 57.1%
+    - 5M projected default: Fast=8, Slow=25
+
+  EXIT PRIORITY CHAIN (P0 to P7):
+    P0 : Rule #11/#12 compliance (Kill / Registry / Holiday / Settlement)
+    P1 : M5 Quick Stop (time-based OR loss-based)
+    P2 : M6 Multi-Layer 1M monitor (Rule #17, 5 categories 5 factors)
+    P3 : M7 True Breakeven + P3b Profit Trail (v1.12.0, single stop order)
+    P4 : Golden Cross (main exit)
+    P5 : M8 Time Stop (max holding bars)
+    P6 : ATR-based Frozen SL
+    P7 : SetStopContract + SetStopLoss + SL_Pct engine guard (Rule #12 backup)
+
+  RULE COMPLIANCE:
+    Rule #11 Settlement_Flat - YES (Priority 0 order)
+    Rule #12 SetStopContract + SetStopLoss + SL_Pct - YES (v1.5, short variant MP >= 0, SL_Pct=1.00 converge)
+    Rule #13 10-dim eval - to run at W5
+    Rule #14 OFFICIAL_ROADMAP - YES (S16_S is in Batch 04)
+    Rule #15 ASCII 100% - YES (verified via scripts/verify_pla_ascii.py)
+    Rule #16 5-pillar - YES (context/rules/verification/memory/format all met)
+    Rule #17 Multi-Layer SL - YES (implemented as M6)
+    Rule #18 Non-WFA 5 pack - to run at W5
+
+  LABEL CONVENTIONS:
+    SE_MA_DeathCross         : Entry (short on death cross)
+    SX_MA_GoldenCross        : Main exit (golden cross)
+    SX_MA_QuickStop_Time     : P1 M5 time-based quick stop
+    SX_MA_QuickStop_Loss     : P1 M5 loss-based quick stop
+    SX_MA_ML_Exit            : P2 M6 Multi-Layer trigger
+    SX_MA_BE                 : P3 M7 true breakeven (v1.11.0 stop order)
+    SX_MA_Trail              : P3b profit trail (v1.12.0, trail is binding)
+    SX_MA_TimeStop           : P5 M8 max holding time
+    SX_MA_SL                 : P6 frozen ATR SL
+    SX_MA_Kill               : P0 manual kill
+    SX_MA_Registry           : P0 registry expired
+    SX_MA_Holiday            : P0 holiday block
+    SX_MA_Settlement         : P0 settlement flat
+    SX_MA_TailFlat           : P0.5 tail force exit (v1.3 time guard)
+    SE_MA_ReEntry            : Re-entry short (v1.6 washout recovery)
+
+  CHART SETUP REQUIRED:
+    Data1 = TXF1 5M
+    IntrabarOrderGeneration = FALSE
+    MaxBarsBack >= 200 (covers all indicator warm-up)
+================================================================================ }
+
+[IntrabarOrderGeneration = False]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  ============================================================ }
+inputs:
+    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
+    ZLEMA_Fast              ( 25    ),
+    ZLEMA_Slow              ( 70    ),
+    MinSlope                ( 28    ),
+
+    { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
+    QuickStop_On            ( True  ),
+    QuickStop_MaxBars       ( 4     ),
+    QS_MaxLoss_Pct          ( 0.25  ),
+
+    { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
+    ML_On                   ( True  ),
+    ML_ActivationPct        ( 20    ),
+    ML_ScoreTrigger         ( 60    ),
+    ML_MinCategories        ( 3     ),
+    ML_VolAvgLen            ( 15    ),
+    ML_VolSpikeMult         ( 2.0   ),
+    ML_MA_ShortLen          ( 10    ),
+    ML_ATR_ShortLen         ( 3     ),
+    ML_ATR_LongLen          ( 90    ),
+    ML_ATR_Ratio            ( 2.5   ),
+
+    { ===== Group D: M7 True Breakeven - v1.11.0 redesign ===== }
+    { v1.11.0: ATR trigger -> fixed pct. True breakeven protection.  }
+    { BE_Trigger_Pct: profit as pct of EntryPrice to activate BE.    }
+    { 0.80 = MC12 80-combo sweep optimum, plateau 0.70-1.00.         }
+    { BE_Cost_Pts: pts covering slippage. v1.12.0 G1: 5 -> 10.       }
+    {   1000 NTD/contract/side x 2 sides = 2000 NTD = 10 pts.        }
+    {   5 pts only recovered 1000 NTD -> every BE exit lost money.   }
+    BE_On                   ( True  ),
+    BE_Trigger_Pct          ( 0.80  ),
+    BE_Cost_Pts             ( 10    ),
+
+    { ===== Group D2: P3b Profit Trail - v1.12.0 (DEFAULT OFF) ===== }
+    { Locks a pct of peak open profit once the trade proves itself.  }
+    { BE_Cost_Pts is the floor: trail never protects less than BE.   }
+    { Trail_On=False reproduces v1.11.0 exactly (plus G1 cost fix).  }
+    { Trail_Trigger_Pct : peak profit as pct of EntryPrice to arm.   }
+    { Trail_Giveback_Pct: pct of peak profit allowed to be given back}
+    {   e.g. peak 300 pts, giveback 35 -> stop locks 195 pts.        }
+    { MC12 sweep: Trigger 0.10/0.20/0.30/0.40/0.60/0.80              }
+    {           x Giveback 25/35/45/55 = 24 combos.                  }
+    Trail_On                ( False ),
+    Trail_Trigger_Pct       ( 0.30  ),
+    Trail_Giveback_Pct      ( 35    ),
+
+    { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
+    { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
+    M8_On                   ( True  ),
+    MaxHoldingBars          ( 24    ),
+
+    { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
+    ATR_Len                 ( 14    ),
+    StopATRMult             ( 4.0   ),
+    SL_Pct                  ( 1.00  ),     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.00 (MC sweep 0-5.0). }
+
+    { ===== Group H: Rule #11 Compliance ===== }
+    { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
+    { 1270101 = 2027-01-01 (aligned with L1-L5 / S1 / S3_S registry expiry) }
+    Holiday_Flat_Time       ( 415   ),
+    Registry_Valid_Until    ( 1270101 ),
+    Manual_Kill_Switch      ( False ),
+    Settlement_Flat_Time    ( 1230  ),
+
+    { ===== Group I: Tail Time Guard - v1.3 2026-07-18 ===== }
+    { Never hold into ANY closure. LastEntry = last legal entry   }
+    { SIGNAL bar stamp (fill = that bar close). ForceExit signal  }
+    { bar stamp (fill = next bar open, ~04:40). Both tail-only:   }
+    { conditions bounded by Time <= 500 (MC 24hr pitfall rule).   }
+    Tail_LastEntry_Time     ( 430   ),
+    Tail_ForceExit_Time     ( 440   );
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+variables:
+    { ===== ZLEMA state ===== }
+    v_Fast_Lag              ( 0     ),
+    v_Slow_Lag              ( 0     ),
+    v_ZLEMA_Fast            ( 0     ),
+    v_ZLEMA_Slow            ( 0     ),
+    v_Slope                 ( 0     ),
+
+    { ===== Signal detection ===== }
+    v_Death_Cross           ( False ),
+    v_Golden_Cross          ( False ),
+
+    { ===== ATR ===== }
+    v_ATR                   ( 0     ),
+
+    { ===== Trade state ===== }
+    v_EntryBar              ( 0     ),
+    v_BarsSince             ( 0     ),
+    v_Prev_MP               ( 0     ),
+    v_Loss                  ( 0     ),
+    v_Profit                ( 0     ),
+
+    { ===== Frozen SL (Rule #12) ===== }
+    v_SL_Locked             ( False ),
+    v_Frozen_ATR            ( 0     ),
+    v_Original_Frozen_ATR   ( 0     ),
+    v_Frozen_SL_Dist        ( 0     ),
+    v_SL_Level              ( 0     ),
+
+    { ===== v1.5 SetStopContract + SL_Pct ===== }
+    v_Guard_Distance        ( 0     ),
+    v_SL_Pct_Ceil           ( 0     ),
+
+    { ===== M5 Quick Stop state ===== }
+    v_QuickStop_Fired       ( False ),
+
+    { ===== M6 Multi-Layer state ===== }
+    v_ML_Loss               ( 0     ),
+    v_ML_Activation_Level   ( 0     ),
+    v_ML_Score              ( 0     ),
+    v_ML_Score_Pct          ( 0     ),
+    v_ML_CatCount           ( 0     ),
+    v_ML_Trigger            ( False ),
+    v_ML_Cat_1F             ( 0     ),
+    v_ML_Cat_2F             ( 0     ),
+    v_ML_Cat_3F             ( 0     ),
+    v_ML_Cat_4F             ( 0     ),
+    v_ML_Cat_5F             ( 0     ),
+    v_ML_AvgVol             ( 0     ),
+    v_ML_ATR_Short          ( 0     ),
+    v_ML_ATR_Long           ( 0     ),
+    v_ML_RSI                ( 0     ),
+    v_ML_RSI_Prior          ( 0     ),
+    v_ML_MA_Short           ( 0     ),
+
+    { ===== M7 True Breakeven state (v1.11.0) ===== }
+    v_BE_Active             ( False ),
+    v_BE_Stop_Level         ( 0     ),
+
+    { ===== P3b Profit Trail state (v1.12.0) ===== }
+    v_MaxProfit             ( 0     ),
+    v_Trail_Active          ( False ),
+    v_Trail_Lock            ( 0     ),
+    v_Protect_Lock          ( 0     ),
+    v_Trail_Binding         ( False ),
+
+    { ===== Re-Entry state (v1.6) ===== }
+    v_ReEntry_Armed         ( False ),
+    v_ReEntry_Price         ( 0     ),
+    v_Last_EntryPrice       ( 0     ),
+    v_IsReEntry             ( False ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block         ( False ),
+    v_Registry_Expired      ( False ),
+    v_Settlement_Day        ( False ),
+    hidx                    ( 0     ),
+    ExitFired               ( 0     );
+
+arrays:
+    Holiday_Tail[80](0);
+
+
+{ ============================================================
+  SECTION 3 - PRIORITY 0 COMPLIANCE CHECKS
+  (Rule #11 registry + kill + holiday + settlement)
+  v1.0.1-HOLIDAY (2026-07-16): HolidayFlat_v3 registry patched in.
+  Registry synced with L1-L5 / S1 / S3_S (63 entries 2019-2027).
+  Rebuild from TAIFEX calendar before Registry_Valid_Until reached.
+  ============================================================ }
+
+{ ---- Holiday Registry init (once on first bar) ---- }
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+end;
+
+{ ---- Registry expiry check (EL-standard: Date is YYYMMDD Year-1900) ---- }
+v_Registry_Expired = False;
+if Date > Registry_Valid_Until then
+    v_Registry_Expired = True;
+
+{ ---- Holiday match: check current date against registry tail (Time <= 500) ---- }
+v_Holiday_Block = False;
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+{ ---- Registry expiry escalation: force block once expired ---- }
+if v_Registry_Expired = True then
+    v_Holiday_Block = True;
+
+{ ---- Settlement day: 3rd Wednesday of month ---- }
+v_Settlement_Day = ( DayOfWeek(Date) = 3 ) and
+                   ( DayOfMonth(Date) >= 15 ) and
+                   ( DayOfMonth(Date) <= 21 );
+
+
+{ ============================================================
+  SECTION 4 - INDICATORS (ZLEMA)
+  ZLEMA formula: EMA(2*Price - Price[lag], N)
+  lag = int((N-1) / 2)
+  ============================================================ }
+
+v_Fast_Lag = IntPortion( ( ZLEMA_Fast - 1 ) / 2 );
+v_Slow_Lag = IntPortion( ( ZLEMA_Slow - 1 ) / 2 );
+
+v_ZLEMA_Fast = XAverage( 2 * Close - Close[v_Fast_Lag], ZLEMA_Fast );
+v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
+
+{ F2 fix: measure Fast ZLEMA downward slope for short entry (not Slow, not AbsValue) }
+{ Positive value = Fast is falling = bearish momentum = good for short }
+v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
+
+
+{ ============================================================
+  SECTION 5 - CROSS DETECTION
+  Death cross: Fast crosses BELOW Slow (short entry signal).
+  Golden cross: Fast crosses ABOVE Slow (main exit signal).
+  ============================================================ }
+
+v_Death_Cross  = v_ZLEMA_Fast[1] >= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    <  v_ZLEMA_Slow;
+
+v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    >  v_ZLEMA_Slow;
+
+
+{ ============================================================
+  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6)
+  After exit, if bearish structure (Fast < Slow) still intact,
+  allow re-entry via stop order at the original entry price.
+  Arms when position exits (v_Prev_MP -1 -> MP 0).
+  Resets on golden cross, bearish structure lost, or new death cross.
+  ============================================================ }
+
+if v_Prev_MP = -1 and MarketPosition = 0 then begin
+    v_ReEntry_Armed = True;
+    v_ReEntry_Price = v_Last_EntryPrice;
+end;
+
+if v_ReEntry_Armed = True then begin
+    if v_Golden_Cross = True or v_ZLEMA_Fast >= v_ZLEMA_Slow then begin
+        v_ReEntry_Armed = False;
+        v_ReEntry_Price = 0;
+    end;
+end;
+
+if v_Death_Cross = True then begin
+    v_ReEntry_Armed = False;
+    v_ReEntry_Price = 0;
+end;
+
+
+{ ============================================================
+  SECTION 6 - ATR + STOP DISTANCE
+  ============================================================ }
+
+v_ATR      = AvgTrueRange( ATR_Len );
+
+
+{ ============================================================
+  SECTION 7 - FROZEN SL SETUP + SetStopContract + SetStopLoss + SL_Pct (Rule #12)
+  Lock SL distance on entry bar. Reset when flat.
+  ============================================================ }
+
+if MarketPosition = -1 then begin
+    v_Last_EntryPrice = EntryPrice;
+    if v_SL_Locked = False then begin
+        { v1.8.0: re-entry inherits original frozen ATR }
+        if v_IsReEntry = True and v_Original_Frozen_ATR > 0 then
+            v_Frozen_ATR = v_Original_Frozen_ATR
+        else begin
+            v_Frozen_ATR = v_ATR;
+            v_Original_Frozen_ATR = v_ATR;
+        end;
+        v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        if SL_Pct > 0 then begin
+            v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+            v_SL_Level = MinList(v_SL_Level, v_SL_Pct_Ceil);
+        end;
+        v_SL_Locked      = True;
+        v_EntryBar        = CurrentBar;
+        v_QuickStop_Fired = False;
+        v_BE_Active       = False;
+        { v1.12.0: trail state resets per entry, re-entry included }
+        v_MaxProfit       = 0;
+        v_Trail_Active    = False;
+        v_Trail_Binding   = False;
+    end;
+end
+else begin
+    v_SL_Locked          = False;
+    v_Frozen_ATR         = 0;
+    v_Frozen_SL_Dist     = 0;
+    v_SL_Level           = 0;
+    v_EntryBar           = 0;
+    v_QuickStop_Fired    = False;
+    v_BE_Active          = False;
+    v_MaxProfit          = 0;
+    v_Trail_Active       = False;
+    v_Trail_Binding      = False;
+end;
+
+{ Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
+  v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close.
+  v_Guard_Distance computed EVERY BAR (current ATR, not frozen) to avoid
+  SetStopLoss(0) when flat -- SetStopContract + SetStopLoss(0) = immediate stop. }
+v_Guard_Distance = v_ATR * StopATRMult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+
+if MarketPosition >= 0 then begin
+    SetStopContract;
+    SetStopLoss( v_Guard_Distance * BigPointValue );
+end;
+
+
+{ ============================================================
+  SECTION 8 - M6 MULTI-LAYER INDICATOR PRECOMPUTE
+  5 categories, 1 factor each. Lightweight by design.
+  ============================================================ }
+
+v_ML_AvgVol    = Average( Volume, ML_VolAvgLen );
+v_ML_ATR_Short = AvgTrueRange( ML_ATR_ShortLen );
+v_ML_ATR_Long  = AvgTrueRange( ML_ATR_LongLen );
+v_ML_RSI       = RSI( Close, 14 );
+v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
+
+
+{ ============================================================
+  SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)
+  ============================================================ }
+
+{ v1.3: tail entry cutoff - allow evening/night entries up to the  }
+{ LastEntry signal bar; block only the final pre-close window.     }
+if MarketPosition = 0 and
+   v_Death_Cross         = True and
+   v_Slope               > MinSlope and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False then begin
+    v_IsReEntry = False;
+    sell short ( "SE_MA_DeathCross" ) next bar at market;
+end;
+
+{ v1.6 Re-Entry: washout recovery via stop order at original entry price.
+  Price must DROP to the level (stop order for short = trigger on price <= level).
+  v1.6.1: added v_Slope > MinSlope gate (same as main entry) to require
+  active bearish momentum before re-entry, not just structure.
+  v1.6.2: added Close >= v_ReEntry_Price gate to enforce directional entry --
+  stop order only placed when current bar closes at/above the re-entry level,
+  so the next bar must FALL to it (price descending through the level). }
+if MarketPosition = 0 and
+   v_ReEntry_Armed       = True and
+   v_ZLEMA_Fast          < v_ZLEMA_Slow and
+   v_Slope               > MinSlope and
+   Close                 >= v_ReEntry_Price and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False then begin
+    v_IsReEntry = True;
+    sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
+end;
+
+
+{ ============================================================
+  SECTION 10 - EXIT PRIORITY CHAIN (P0 to P7)
+  Fires in order. First hit wins per bar (ExitFired flag).
+  ============================================================ }
+
+if MarketPosition = -1 then begin
+
+    ExitFired = 0;
+    v_BarsSince = CurrentBar - v_EntryBar;
+    v_Loss = Close - EntryPrice;       { short: positive = loss }
+    v_Profit = EntryPrice - Close;     { short: positive = profit }
+
+    { ---- P0: Priority 0 compliance ---- }
+    if Manual_Kill_Switch = True then begin
+        buy to cover ( "SX_MA_Kill" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Registry_Expired = True then begin
+        buy to cover ( "SX_MA_Registry" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Holiday_Block = True and
+       Time >= Holiday_Flat_Time then begin
+        buy to cover ( "SX_MA_Holiday" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Settlement_Day = True and
+       Time >= Settlement_Flat_Time then begin
+        buy to cover ( "SX_MA_Settlement" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0.5: Tail Force Exit (v1.3) - flat before session close ---- }
+    { Signal at 0440 bar close -> fill 04:40 (445-bar open).            }
+    { Guarantees no position ever crosses morning break / weekend /     }
+    { holiday closure. Holiday flat at 0415 fires earlier as backstop   }
+    { on registered holiday tails. Required BEFORE any G2 MaxHold       }
+    { extension experiment (36/48 bars breaks 2hr self-resolution).     }
+    if ExitFired = 0 and
+       Time >= Tail_ForceExit_Time and Time <= 500 then begin
+        buy to cover ( "SX_MA_TailFlat" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P1: M5 Quick Stop ---- }
+    if ExitFired = 0 and QuickStop_On = True and
+       v_QuickStop_Fired = False then begin
+
+        { P1a Loss-based (v1.7.1: pct of EntryPrice, not fixed pts) }
+        if v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then begin
+            buy to cover ( "SX_MA_QuickStop_Loss" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+
+        { P1b Time-based (N bars with no profit) }
+        if ExitFired = 0 and
+           v_BarsSince >= QuickStop_MaxBars and
+           Close >= EntryPrice then begin
+            buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+    end;
+
+    { ---- P2: M6 Rule #17 Multi-Layer 1M Monitor ---- }
+    if ExitFired = 0 and ML_On = True then begin
+
+        { v1.8.0: use frozen SL dist, not unfrozen v_StopDist }
+        v_ML_Activation_Level = v_Frozen_SL_Dist * ML_ActivationPct / 100;
+
+        if v_Loss > v_ML_Activation_Level then begin
+
+            { Reset all category scores }
+            v_ML_Cat_1F = 0;
+            v_ML_Cat_2F = 0;
+            v_ML_Cat_3F = 0;
+            v_ML_Cat_4F = 0;
+            v_ML_Cat_5F = 0;
+
+            { 1F K-bar layer: bullish engulfing (adverse for short) }
+            if Close > High[1] and Close > Open then
+                v_ML_Cat_1F = 1;
+
+            { 2F Vol-price layer: volume spike }
+            if Volume > v_ML_AvgVol * ML_VolSpikeMult then
+                v_ML_Cat_2F = 1;
+
+            { 3F Momentum layer: RSI reversal from oversold }
+            v_ML_RSI_Prior = Lowest( RSI( Close, 14 ), 5 );
+            if v_ML_RSI_Prior < 30 and v_ML_RSI > 40 then
+                v_ML_Cat_3F = 1;
+
+            { 4F Structure layer: higher low + close above short MA }
+            if Low > Low[1] and Close > v_ML_MA_Short then
+                v_ML_Cat_4F = 1;
+
+            { 5F Volatility layer: ATR expansion }
+            if v_ML_ATR_Long > 0 and
+               v_ML_ATR_Short / v_ML_ATR_Long > ML_ATR_Ratio then
+                v_ML_Cat_5F = 1;
+
+            { Compute score }
+            v_ML_Score    = v_ML_Cat_1F + v_ML_Cat_2F + v_ML_Cat_3F +
+                            v_ML_Cat_4F + v_ML_Cat_5F;
+            v_ML_Score_Pct = v_ML_Score / 5 * 100;
+            v_ML_CatCount = v_ML_Score;   { 1 factor per category = same }
+
+            v_ML_Trigger = v_ML_Score_Pct >= ML_ScoreTrigger and
+                           v_ML_CatCount >= ML_MinCategories;
+
+            if v_ML_Trigger = True then begin
+                buy to cover ( "SX_MA_ML_Exit" ) next bar at market;
+                ExitFired = 1;
+            end;
+        end;
+    end;
+
+    { ---- P3: M7 True Breakeven + P3b Profit Trail (v1.12.0) ---- }
+    { Both mechanisms produce a protective lock in POINTS. The larger    }
+    { lock wins, and a single stop order is issued at                    }
+    {     EntryPrice - lock                                              }
+    { For a SHORT a bigger lock = lower price level = triggers earlier   }
+    { on the retrace = more profit retained. BE_Cost_Pts is the floor,   }
+    { so the trail can never protect less than true breakeven.           }
+    { Stop order (not market): fires intrabar, so it preempts the        }
+    { QuickStop_Time market order that otherwise flushes these at ~0.    }
+    { Re-issued every bar, ExitFired NOT set (same pattern as P6).       }
+
+    { Track running peak open profit (bar-close basis, IOG=False) }
+    if v_Profit > v_MaxProfit then
+        v_MaxProfit = v_Profit;
+
+    { Latch activations }
+    if BE_On = True and
+       v_Profit >= EntryPrice * BE_Trigger_Pct / 100 then
+        v_BE_Active = True;
+
+    if Trail_On = True and
+       v_MaxProfit >= EntryPrice * Trail_Trigger_Pct / 100 then
+        v_Trail_Active = True;
+
+    { Resolve the binding lock }
+    v_Protect_Lock  = 0;
+    v_Trail_Binding = False;
+
+    if BE_On = True and v_BE_Active = True then
+        v_Protect_Lock = BE_Cost_Pts;
+
+    if Trail_On = True and v_Trail_Active = True then begin
+        v_Trail_Lock = v_MaxProfit * ( 100 - Trail_Giveback_Pct ) / 100;
+        if v_Trail_Lock > v_Protect_Lock then begin
+            v_Protect_Lock  = v_Trail_Lock;
+            v_Trail_Binding = True;
+        end;
+    end;
+
+    if ExitFired = 0 and v_Protect_Lock > 0 then begin
+        v_BE_Stop_Level = EntryPrice - v_Protect_Lock;
+        if v_Trail_Binding = True then
+            buy to cover ( "SX_MA_Trail" ) next bar at v_BE_Stop_Level stop
+        else
+            buy to cover ( "SX_MA_BE" ) next bar at v_BE_Stop_Level stop;
+    end;
+
+    { ---- P4: Golden Cross main exit ---- }
+    if ExitFired = 0 and v_Golden_Cross = True then begin
+        buy to cover ( "SX_MA_GoldenCross" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P5: M8 Time Stop ---- }
+    if ExitFired = 0 and M8_On = True and
+       v_BarsSince >= MaxHoldingBars then begin
+        buy to cover ( "SX_MA_TimeStop" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P6: ATR-based Frozen SL (last resort) ---- }
+    if ExitFired = 0 and v_SL_Locked = True then begin
+        buy to cover ( "SX_MA_SL" ) next bar at v_SL_Level Stop;
+    end;
+
+    { P7 handled by SetStopContract + SetStopLoss + SL_Pct in Section 7 }
+
+end;
+
+
+{ ============================================================
+  SECTION 11 - PREV_MP TRACKING (last line, per PL Rule 8)
+  ============================================================ }
+v_Prev_MP = MarketPosition;
