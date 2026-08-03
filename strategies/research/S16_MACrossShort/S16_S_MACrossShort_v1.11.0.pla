@@ -14,8 +14,8 @@
     F5: Per-entry reset (re-entry gets independent BE with fresh calculation).
     F6: Removed all ATR dependency from BE module.
     F7: Inputs simplified: BE_On + BE_Trigger_Pct + BE_Cost_Pts (was 5 inputs).
-    MC12 sweep plan: BE_Trigger_Pct 0.05~0.30 step 0.05 x
-                     BE_Cost_Pts 5~15 step 5 = 18 combos.
+    MC12 sweep result: BE_Trigger_Pct=0.80 BE_Cost_Pts=5 (80-combo sweep).
+                       Plateau at 0.70-1.00, phase transition at 0.60->0.70.
 
   v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
     ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
@@ -280,7 +280,7 @@ inputs:
     { Stop order at EntryPrice - BE_Cost_Pts catches intrabar moves. }
     { MC12 sweep: Pct 0.05~0.30 step 0.05, Cost 5~15 step 5.        }
     BE_On                   ( True  ),
-    BE_Trigger_Pct          ( 0.10  ),
+    BE_Trigger_Pct          ( 0.80  ),
     BE_Cost_Pts             ( 5     ),
 
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
