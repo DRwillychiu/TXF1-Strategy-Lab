@@ -327,7 +327,6 @@ variables:
 
     { ===== ATR ===== }
     v_ATR                   ( 0     ),
-    v_StopDist              ( 0     ),
 
     { ===== Trade state ===== }
     v_EntryBar              ( 0     ),
@@ -520,7 +519,6 @@ end;
   ============================================================ }
 
 v_ATR      = AvgTrueRange( ATR_Len );
-v_StopDist = v_ATR * StopATRMult;
 
 
 { ============================================================
