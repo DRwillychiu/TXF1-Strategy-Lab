@@ -15,7 +15,17 @@
       Fix restores the stated design intent (true breakeven after costs).
       SHORT stop moves EP-5 -> EP-10, i.e. triggers EARLIER on retrace.
 
-    G2 NEW -- P3b Profit Trail (default OFF, pending MC12 sweep):
+    RESULT (2026-08-03, 42-combo exhaustive sweep + trade-list audit):
+      Baseline (Trail_On=False)  : Net 2,488,000 / PF 1.7478 / 129T
+      ADOPTED  (1.20 / 80)       : Net 2,556,800 / PF 1.77   / 129T
+      All 5 pre-registered acceptance criteria PASS.
+      Only 2 of 129 trades change, both from BE-at-zero to a partial
+      lock (+40,800 and +28,000). Zero trades degrade.
+      NOTE: an earlier single run at 0.30/35 was a disaster
+      (Net 1,026,800, Top-10 survival 1/10) -- tight trails decapitate
+      the TimeStop winners. The adopted setting is deliberately loose.
+
+    G2 NEW -- P3b Profit Trail:
       Problem quantified from v1.11.0 trade list (129 trades w/ MFE):
         - BE_Trigger_Pct=0.80 = 368 pts at index 46,000. Only 36/129
           trades (27.9%) ever reached it. 72.1% had zero protection.
@@ -330,18 +340,30 @@ inputs:
     BE_Trigger_Pct          ( 0.80  ),
     BE_Cost_Pts             ( 10    ),
 
-    { ===== Group D2: P3b Profit Trail - v1.12.0 (DEFAULT OFF) ===== }
+    { ===== Group D2: P3b Profit Trail - v1.12.0 ===== }
     { Locks a pct of peak open profit once the trade proves itself.  }
     { BE_Cost_Pts is the floor: trail never protects less than BE.   }
     { Trail_On=False reproduces v1.11.0 exactly (plus G1 cost fix).  }
     { Trail_Trigger_Pct : peak profit as pct of EntryPrice to arm.   }
     { Trail_Giveback_Pct: pct of peak profit allowed to be given back}
-    {   e.g. peak 300 pts, giveback 35 -> stop locks 195 pts.        }
-    { MC12 sweep: Trigger 0.10/0.20/0.30/0.40/0.60/0.80              }
-    {           x Giveback 25/35/45/55 = 24 combos.                  }
-    Trail_On                ( False ),
-    Trail_Trigger_Pct       ( 0.30  ),
-    Trail_Giveback_Pct      ( 35    ),
+    {   e.g. peak 600 pts, giveback 80 -> stop locks 120 pts.        }
+    { 1.20 / 80 SET BY 42-COMBO EXHAUSTIVE SWEEP (2026-08-03).       }
+    {   Chosen for ROBUSTNESS, not peak: 1.0/60 scored higher        }
+    {   (2,632,800) but its 4-cell neighbourhood averages 2,330,100  }
+    {   -- below baseline -- because 0.8/60 collapses to 1,896,000.  }
+    {   1.2/80 sits inside the flat region (trigger 1.0-1.2 x        }
+    {   giveback 70-90, all cells 2.45M-2.59M).                      }
+    { Sanity anchor 1.2/90 = 2,518,400 converged to baseline as      }
+    {   predicted, confirming the module is wired correctly.         }
+    { Verified effect: 2 of 129 trades change, both improve, none    }
+    {   degrade. Top-10 winners, TimeStop 27, Gross Loss and MDD all }
+    {   bit-identical to baseline. Net 2,488,000 -> 2,556,800.       }
+    { CAVEATS: gain rests on 2 trades (+68,800, 1.40 sigma). Residual}
+    {   tail risk is a trade giving back 80% of a >=1.2% run then    }
+    {   recovering to a new high -- never observed in 6.4 years.     }
+    Trail_On                ( True  ),
+    Trail_Trigger_Pct       ( 1.20  ),
+    Trail_Giveback_Pct      ( 80    ),
 
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
     { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
