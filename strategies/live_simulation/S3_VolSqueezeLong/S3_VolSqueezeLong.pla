@@ -104,6 +104,8 @@ inputs:
     { ===== ATR (stop / target anchor) ===== }
     ATR_Len                   ( 14    ),   { Locked; not optimized this run }
     StopATRMult               ( 2.75  ),   { Phase 2 best plateau (P2 confirmed) }
+    SL_Pct                    ( 0     ),   { Rule #12 pct stop cap. 0 = DISABLED. PENDING MC sweep 0.00-5.00 step 0.25. }
+                                           { Long: floor = Entry - Entry * SL_Pct / 100. Added 2026-08-04 (Rule #12 gap). }
     TargetATRMult             ( 8.0   ),   { Phase 3 best; UPPER EDGE (range 5.5..8.0), Mid exit 37% }
 
     { ===== Exit timing ===== }
@@ -392,8 +394,22 @@ end;
 if v_SL_Locked = True then
     v_StopDist = v_Frozen_SL_Dist;
 
-if MarketPosition <= 0 then
+{ Rule #12 SL_Pct cap (added 2026-08-04).                                   }
+{ The guard runs pre-entry, so EntryPrice is not yet known; Close is used   }
+{ as the anchor proxy - same convention as L1/L2/L3/L4/S16_S.               }
+{ SL_Pct = 0 leaves this inert, so behaviour is unchanged until a sweep     }
+{ sets a value.                                                            }
+if SL_Pct > 0 then
+    v_StopDist = MinList( v_StopDist, Close * SL_Pct / 100 );
+
+{ Rule #12: SetStopContract MUST be called before SetStopLoss so the        }
+{ amount is PER-CONTRACT instead of TOTAL POSITION. Deployment is a fixed   }
+{ 2-lot size, so without this call the engine stop sits at half the         }
+{ intended distance.                                                       }
+if MarketPosition <= 0 then begin
+    SetStopContract;
     SetStopLoss( v_StopDist * BigPointValue );
+end;
 
 
 { ============================================================
