@@ -4,3 +4,8 @@ __pycache__/
 *.tmp
 .DS_Store
 scripts/_temp_*.pkl
+
+# Raw TAIFEX quote CSVs backing data/taifex_market_closures.json.
+# ~5 MB of exchange data, re-fetchable at any time via
+# scripts/fetch_taifex_quotes.py -- the derived JSON is what belongs in git.
+data/_taifex_cache/
