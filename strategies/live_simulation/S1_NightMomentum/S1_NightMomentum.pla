@@ -403,9 +403,12 @@ end;
 { Entry: Long breakout (v2.1 + Holiday + Settlement + TrendFilter gates) }
 { v2.6: added v_TrendPass (Mode 0 = always true = v2.4 baseline) }
 { v2.7: added v_Settlement_Day (3rd Wed monthly settlement) }
+{ 2026-08-04: Manual_Kill_Switch added as an entry gate. It was only
+  wired into the exit chain, so flipping it flattened the position but
+  did NOT stop re-entry. Default false = no-op, no backtest change. }
 if v_RangeReady and v_IsNightSession and Time < ExitTime and
    v_VolPass and v_TrendPass and v_Holiday_Block = false and
-   v_Settlement_Day = false then begin
+   v_Settlement_Day = false and Manual_Kill_Switch = false then begin
     if v_Prev_MP <= 0 and v_ATR > 0 then
         buy ("LE_NM_Long") next bar at v_NightHigh + v_ATR * EntryATRMult stop;
 end;

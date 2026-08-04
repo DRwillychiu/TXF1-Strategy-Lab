@@ -122,3 +122,75 @@ pre-commit hook: ASCII 48/48 PASS | Settlement_Flat 70/70 元素 10/10 策略 | 
 建議在 `verify_settlement_flat.py` 增加第 8 項檢查：
 解析各策略的 Data1 週期與 `Holiday_Flat_Time`，斷言窗口寬度 >= K 棒間隔。
 難點是 Data1 週期目前只寫在註解裡，需要先標準化成可機讀欄位。
+
+---
+
+## 7. 附帶發現：Manual_Kill_Switch 不擋進場（8/10 支，含全部實盤）
+
+稽核假日窗口時順帶檢查 Priority 0 的另一個元素，發現更廣的缺陷。
+
+### 7.1 缺陷
+
+`Manual_Kill_Switch` 在多數策略中**只接到出場鏈**，沒有接到進場 gate：
+
+```powerlanguage
+{ L1_TrendLong (LIVE) 進場條件 }
+if MP = 0 and Cond_Breakout and
+   (v_Weekly_Filter  = true ) and
+   (v_Holiday_Block  = false) and
+   (v_Settlement_Day = false) then       <- 無 Manual_Kill_Switch
+    Buy ("TL_Entry") next bar at Market;
+```
+
+扳下開關後的實際行為：
+
+```
+出場鏈 P0-1 觸發 -> 平倉
+下一根 K 棒，進場條件成立 -> 重新進場   <- 開關無效
+再下一根，出場鏈再觸發 -> 再平倉
+```
+
+**「Kill Switch」不會 kill，反而變成滑價抽水機**：每個循環每口 2,000 NTD
+（來回滑價），2 口 = 4,000 NTD，且完全沒有獲利機會。
+
+這正是緊急停止最需要生效的時刻。
+
+### 7.2 稽核結果
+
+| 策略 | 層級 | 修正前 | 修正後 |
+|---|---|---|---|
+| L1_TrendLong | **live** | 僅出場鏈 | **未修（待裁決）** |
+| L2_TrendShort | **live** | 僅出場鏈 | **未修（待裁決）** |
+| L3_ConsolidationLong | **live** | 僅出場鏈 | **未修（待裁決）** |
+| L4_ConsolidationShort | **live** | 僅出場鏈 | **未修（待裁決）** |
+| L5_BreakoutLong | **live** | 僅出場鏈 | **未修（待裁決）** |
+| S1_NightMomentum | live_sim | 僅出場鏈 | 已補進場 gate |
+| S3_S_VolSqueezeShort | live_sim | 僅出場鏈 | 已補進場 gate |
+| S3_VolSqueezeLong | live_sim | 僅出場鏈 | 已補進場 gate |
+| S16_S_MACrossShort | live_sim | 已有 | — |
+| S3_RapidPullbackShort | live_sim | 已有（CB-1 已修） | — |
+
+> handoff P4 只記錄了 3 支 live_simulation，**實際範圍是 8 支，含全部 5 支實盤**。
+
+### 7.3 為什麼這個修正零風險
+
+`Manual_Kill_Switch` 預設為 `False`。補上 `Manual_Kill_Switch = False` 這個 gate 後：
+
+- 正常運作（開關 False）：條件恆為真，進場行為完全不變
+- **任何回測結果不會改變一分一毫**
+- 只有扳下開關時才生效
+
+因此這是**純粹增益、無副作用**的修正。
+
+### 7.4 實盤五支未修的理由
+
+L1-L5 在 MC9 跑真實資金。即使改動邏輯上零風險，仍需經過部署流程
+（重新編譯 + 掛圖確認），不應由 Claude 逕自修改。**列入待裁決。**
+
+建議：若同意，五支一併修改後排一次 MC9 重新編譯與掛圖驗證。
+
+### 7.5 建議加入驗證腳本
+
+`verify_settlement_flat.py` 現行 7 項檢查涵蓋 Settlement，但不檢查 Kill switch 的
+進場 gate。建議新增第 8 項：斷言 `Manual_Kill_Switch` 同時出現在出場鏈與進場條件。
+本缺陷在全部既有檢查下都是綠燈。

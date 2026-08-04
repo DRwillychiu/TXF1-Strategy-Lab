@@ -915,7 +915,10 @@ if BarStatus(2) = 2 then begin
        ( v_Holiday_Block = False ) and
        ( v_Settlement_Day = False ) and
        ( v_Registry_Expired = False ) and
-       ( v_Regime_OK = True ) then begin
+       ( v_Regime_OK = True ) and
+       { 2026-08-04: kill switch was exit-chain only, so flipping it
+         flattened then immediately re-entered. Default False = no-op. }
+       ( Manual_Kill_Switch = False ) then begin
         sell short ( "SE_VS_Entry" ) next bar at Market;
         v_EntryBar = BarNumber of Data2;
     end;

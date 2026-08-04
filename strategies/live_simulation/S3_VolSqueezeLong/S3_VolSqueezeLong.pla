@@ -428,13 +428,19 @@ end;
   All time-related gates are state-flag based (v_Holiday_Block / v_Settlement_Day).
   ============================================================ }
 
+{ 2026-08-04: Manual_Kill_Switch added as an entry gate. It was only
+  wired into the exit chain (P0-1), so flipping it flattened the
+  position but did NOT stop re-entry: exit -> re-enter -> exit,
+  burning 2000 NTD/contract per cycle. Default is False, so this gate
+  is a no-op under normal operation and changes no backtest result. }
 if ( MarketPosition = 0 ) and
    ( v_Squeeze = True ) and
    ( Close > v_UpperBand ) and
    ( v_Cooldown_Active = False ) and
    ( v_Holiday_Block = False ) and
    ( v_Settlement_Day = False ) and
-   ( v_Registry_Expired = False ) then begin
+   ( v_Registry_Expired = False ) and
+   ( Manual_Kill_Switch = False ) then begin
     buy( "LE_VS_Entry" ) next bar at Market;
     v_EntryBar = BarNumber;
 end;
