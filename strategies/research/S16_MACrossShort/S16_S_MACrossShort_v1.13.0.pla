@@ -6,9 +6,9 @@
 
   v1.13.0 (2026-08-04) A2 STRUCTURE TRAIL (base v1.12.0):
 
-    STATUS: EXPERIMENTAL. Struct_On defaults to False, which reproduces
-    v1.12.0 bit-for-bit. Nothing below is validated yet -- no MC12 run
-    has been made with Struct_On=True.
+    STATUS: ADOPTED. Struct_On now defaults to True at Lookback 20 /
+    Buffer 20. User ruling 2026-08-04 after the full anchor + sweep +
+    trade-list audit. Results in the RESULT block below.
 
     WHY: Step 1 peak-path anatomy (docs/research/
     S16S_step1_peak_anatomy_20260804.md) measured that the 27 trades
@@ -68,6 +68,78 @@
     ACCEPTANCE (pre-registered, nine criteria in the design document).
     Note criterion 2 is the bar-25 COHORT of 29 trades / 5,355,200, not
     "TimeStop 27" -- Step 1 proved 2 of those exits are GoldenCross.
+
+    ------------------------------------------------------------------
+    RESULT (2026-08-04, anchors + 80-cell sweep + trade-list audit)
+    ------------------------------------------------------------------
+
+    ADOPTED: Struct_On=True, Lookback=20, Buffer_Pts=20, UseClose=True,
+             Trigger_Pct=1.20, Trail_On left True.
+
+      BE only (Trail off, Struct off) : 2,488,000 / PF 1.7478
+      Trail 1.20/80 only              : 2,556,800 / PF 1.7685
+      Struct 20/20 only               : 2,646,400 / PF 1.7954
+      BOTH legs on                    : 2,646,400 / PF 1.7954
+
+    BOTH is BIT-IDENTICAL to Struct-only across all 129 trades:
+    SX_MA_Trail fires 0 times once Struct is on. Struct locks more on
+    every trade the percentage trail would have caught. Trail is kept
+    anyway because the code takes the MAX of the three locks, so it can
+    never make things worse and covers the untested path where a peak
+    is high while the recent structural high is also high.
+
+    DEGENERATE ANCHORS -- BOTH PASSED, bit-identical over 129 trades x
+    13 fields. Anchor B armed the leg on 24 trades, so
+    Highest(Close, v_Struct_Window) really did execute; the lock stayed
+    negative (max sample peak 1652 pts - 2000 buffer) and never latched.
+    NOTE anchor A was run with Struct_On=False, which makes
+    Trigger_Pct=99 unreachable -- it degenerated into a repeat of the
+    Struct_On=False baseline. Not re-run: anchor B strictly covers it
+    (24 armed + 105 unarmed trades in the same pass).
+
+    EFFECT: exactly 2 of 129 trades change. Both were BE exits at zero
+    and become Struct exits. Zero trades degrade.
+      2026-06-25 entry 45901, peak 234,000 -> +103,200
+      2024-08-05 entry 19260, peak 167,600 ->  +55,200
+    Gross Loss, MDD, Max Single Win, the Top-10 winners and the 27
+    TimeStop trades are all bit-identical to baseline.
+
+    CRITERIA: 8 of 9 pass, several perfectly (Top-10 survival 10/10 with
+    not one dollar moved; TimeStop 27/27 still TimeStop).
+
+    CRITERION 9 FAILED ON ITS FACE and was adopted anyway by explicit
+    user ruling. The rule is "no single year may hold >50% of the
+    benefit"; the split is 2024 34.8% / 2026 65.2%. Two reasons, both
+    recorded rather than argued away:
+      (a) With n=2 firing trades the criterion is unsatisfiable by
+          construction -- any two-trade split is at least 50/50 and in
+          practice lumpier. It cannot discriminate a concentrated
+          mechanism from a small sample.
+      (b) User ruling: the concentration is a symptom of MinSlope being
+          a fixed 28 points, which loosens as the index rises (0.32% at
+          8,700 vs 0.061% at 46,000), so the trade population itself is
+          skewed toward recent years. It is not a property of A2. And
+          forward-looking the index will not return to 20,000-30,000,
+          so future population resembles 2026, not 2020-2024.
+    This must be re-tested once MinSlope is percentage-normalised,
+    because that changes the trade population the criterion measures.
+
+    LIMITS -- state these in any report, do not drop them:
+      1. Benefit rests on 2 trades, +158,400, paired test 1.36 sigma.
+         Below the 2 sigma bar. Not statistically established.
+      2. Struct_Lookback >= 25 is mathematically inert: the window is
+         clamped by MinList(Lookback, BarsSince+1) and MaxHoldingBars
+         is 24, so 25/30/35/40 are the same run. 20 was chosen as the
+         smallest value reaching the maximum. REVISIT IF MaxHoldingBars
+         CHANGES.
+      3. Struct_Buffer_Pts protective value was never measured. Only 2
+         trades fired, so the sweep only ever priced the buffer's COST
+         (a perfectly linear -4,000 per +5 pts, which is just 2 trades
+         x 5 pts x 400 NTD). Buffer=0 scored highest and must NOT be
+         shipped: it puts the stop exactly on the recent high, where one
+         tick sweeps it. 20 is an operational judgement, not an
+         optimisation result.
+      4. Struct_UseClose=False (High-based) was never swept. P2 pending.
 
   v1.12.0 (2026-08-03) PROFIT TRAIL + BE COST FIX (base v1.11.0):
 
@@ -430,29 +502,36 @@ inputs:
     Trail_Trigger_Pct       ( 1.20  ),
     Trail_Giveback_Pct      ( 80    ),
 
-    { ===== Group D3: A2 Structure Trail - v1.13.0 (DEFAULT OFF) ===== }
+    { ===== Group D3: A2 Structure Trail - v1.13.0 (ADOPTED) ===== }
     { Trails behind market structure rather than behind a percentage.   }
     { Stop sits just above the highest point of the recent N bars.      }
     { A retrace of any depth is tolerated as long as it sets no new     }
     { high; only a break of recent structure exits.                     }
     {                                                                   }
-    { Struct_On=False reproduces v1.12.0 bit-for-bit -- this is the     }
-    {   shipped default and the degenerate anchor.                      }
+    { Struct_On=False still reproduces v1.12.0 bit-for-bit and remains  }
+    {   the rollback path and the degenerate anchor.                    }
     { Struct_Lookback    : bars to scan for the structural high.        }
     {   Clamped to bars-since-entry, so the window never reaches back   }
-    {   before this trade started. Sweep 5-40 step 5.                   }
+    {   before this trade started. Swept 5-40 step 5.                   }
     {   Upper bound 40 is safe against MaxBarsBack=100 (deepest         }
     {   existing lookback is ML_ATR_LongLen=90, leaving ~9 bars).       }
     { Struct_Buffer_Pts  : points above that high to place the stop.    }
     {   Too small = swept by noise, too large = never binds.            }
-    {   Sweep 0/10/20/30/40. Set 2000 for degenerate anchor B.          }
+    {   Swept 0-45 step 5. Set 2000 for degenerate anchor B.            }
     { Struct_UseClose    : True = highs measured on Close (wick proof,  }
     {   reacts later), False = on High (faithful, wick exposed).        }
-    {   BOTH MUST BE SWEPT -- this default is a starting point, not a   }
-    {   finding. Night-session wicks are the specific hazard.           }
+    {   STILL UNSWEPT (P2 pending) -- this default is a starting point, }
+    {   not a finding. Night-session wicks are the specific hazard.     }
     { Struct_Trigger_Pct : peak profit pct to arm, held at 1.20 for the }
-    {   first pass to keep the sweep two-dimensional.                   }
-    Struct_On               ( False ),
+    {   first pass to keep the sweep two-dimensional. Unswept.          }
+    { ADOPTED 2026-08-04: Struct_On True, 20 / 20. See RESULT block in  }
+    { the header. Lookback 20 = smallest value reaching the maximum     }
+    { (25+ are clamped by MaxHoldingBars=24 and therefore identical).   }
+    { Buffer 20 is an OPERATIONAL choice, not the sweep optimum:        }
+    { Buffer 0 scored 2,662,400 but parks the stop exactly on the       }
+    { recent high where one tick sweeps it. The 16,000 (0.6%) given up  }
+    { buys a noise cushion the 2-trade sample could never price.        }
+    Struct_On               ( True  ),
     Struct_Lookback         ( 20    ),
     Struct_Buffer_Pts       ( 20    ),
     Struct_UseClose         ( True  ),
