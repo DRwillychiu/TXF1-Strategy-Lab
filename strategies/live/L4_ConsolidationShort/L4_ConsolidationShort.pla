@@ -504,7 +504,7 @@ v_Current_ATR = AvgTrueRange(ATR_Length);
 
 { v14.6: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
   Without this, SetStopLoss dollar amount is for the TOTAL position,
-  causing engine stop to be N× tighter than designed for N-contract entries. }
+  causing engine stop to be Nx tighter than designed for N-contract entries. }
 SetStopContract;
 
 { Cooldown Counter Management }
@@ -619,7 +619,7 @@ if MarketPosition = -1 then begin
     end;
 
     { v14.6: SL_Pct percentage stop cap (SHORT: ceiling above entry).
-      Caps v_Stop_Level so max loss per trade never exceeds Entry × SL_Pct%.
+      Caps v_Stop_Level so max loss per trade never exceeds Entry x SL_Pct%.
       Applied after all stop paths (frozen/dynamic/trail) as universal safety net. }
     if SL_Pct > 0 then begin
         v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
