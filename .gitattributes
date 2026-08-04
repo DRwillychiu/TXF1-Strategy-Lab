@@ -1,0 +1,13 @@
+# Git hooks and shell scripts MUST keep LF endings.
+#
+# core.autocrlf is true on the Windows machines used for this repo, which
+# would otherwise rewrite the hook to CRLF on checkout. A CRLF shebang
+# ("#!/bin/sh\r") is not a valid interpreter path and the hook silently
+# fails to run -- reintroducing exactly the "gatekeeper never ran" failure
+# the hook exists to prevent.
+.githooks/** text eol=lf
+*.sh        text eol=lf
+
+# .pla files are edited and compiled on Windows (MultiCharts). Leave them
+# to the platform default; do not normalise.
+*.pla       -text
