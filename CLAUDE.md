@@ -3,11 +3,13 @@
 ## 專案概述
 台指期貨（TXF1）量化策略研究庫。所有策略以 MultiCharts 12 PowerLanguage 撰寫，用 Python 做模擬回測驗證。
 
-## 技術規格
+## 技術規格（2026-08-04 依 MC12 策略屬性截圖校正，完整版見 `docs/policies/BACKTEST_COST_SPEC.md`）
 - 商品：TXF1（台指期近月連續），1 點 = 200 NTD
 - 平台：MultiCharts 12 / PowerLanguage（EasyLanguage 相容）
-- 滑價：1,000 NTD round-trip（單邊 500）
-- 固定口數：1 口
+- 手續費：無｜滑價：**1,000 NTD 每口每邊**（非 round-trip）→ 來回 2,000 NTD = **10 點**
+  - **任何保本／成本門檻常數必須 >= 10 點**，低於此值掛保本標籤仍淨虧（S16_S v1.11.0 實證）
+- 固定口數：**2 口**｜原始資金：2,000,000 NTD（% 報酬與 MDD% 基準）｜利率 2%
+- MaxBarsBack：**100** → 任何指標回看長度不得 > 99（現行最長 ML_ATR_LongLen=90）
 - 回測區間：2020/01/01 ~ 今天
 - 交易時段：日盤 08:45-13:45 / 夜盤 15:00-05:00
 
