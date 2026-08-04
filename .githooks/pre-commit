@@ -1,0 +1,108 @@
+#!/bin/sh
+#
+# TXF1-Strategy-Lab pre-commit gate
+#
+# Enforces the mandatory verification scripts that CLAUDE.md declares as the
+# execution mechanism for Rule #11 (Settlement_Flat) and Rule #15 (ASCII).
+#
+# WHY THIS EXISTS
+#   On 2026-07-26 a folder restructure silently broke both verifiers. The ASCII
+#   scanner kept reporting "36/36 PASS, exit 0" while scanning ZERO deployed
+#   strategies, and a real Rule #15 violation sat undetected in a live strategy
+#   for 9 days. The scripts were fine in principle -- nothing forced them to run.
+#   This hook is that force.
+#
+# SCOPE
+#   Runs on EVERY commit, not just .pla changes. A folder move can break
+#   discovery without touching a single .pla byte -- that is exactly how the
+#   2026-07-26 incident happened.
+#
+# INSTALL (per machine, once):
+#   git config core.hooksPath .githooks
+#
+# BYPASS: git commit --no-verify
+#   Only for genuine emergencies. A bypassed commit means the repo is in an
+#   unverified state -- fix and re-verify immediately after.
+
+set -u
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
+    echo ""
+    echo " PRE-COMMIT BLOCKED: cannot resolve repository root."
+    echo " Refusing to run verifiers against an unknown working directory."
+    exit 1
+fi
+cd "$REPO_ROOT" || exit 1
+
+# --- locate a python interpreter -------------------------------------------
+PY=""
+for candidate in python python3 py; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        PY="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PY" ]; then
+    echo ""
+    echo "=============================================================="
+    echo " PRE-COMMIT BLOCKED: no python interpreter found on PATH"
+    echo "=============================================================="
+    echo " The Rule #11 / #15 verifiers cannot run, so this commit"
+    echo " cannot be vouched for. Fail closed."
+    echo ""
+    echo " Fix PATH, or bypass with:  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+FAILED=0
+
+run_check() {
+    label="$1"
+    script="$2"
+
+    if [ ! -f "$script" ]; then
+        echo ""
+        echo "  [BLOCKED] $label -- script not found: $script"
+        echo "            A missing verifier is treated as FAIL, never as skip."
+        FAILED=1
+        return
+    fi
+
+    echo ""
+    echo "  --- $label ---"
+    if "$PY" "$script" --strict; then
+        :
+    else
+        FAILED=1
+    fi
+}
+
+echo ""
+echo "=============================================================="
+echo " TXF1 pre-commit verification  (CLAUDE.md Rule #11 / #15)"
+echo "=============================================================="
+
+run_check "Rule #15  ASCII compliance"      "scripts/verify_pla_ascii.py"
+run_check "Rule #11  Settlement_Flat"       "scripts/verify_settlement_flat.py"
+
+echo ""
+echo "=============================================================="
+if [ "$FAILED" -ne 0 ]; then
+    echo " COMMIT BLOCKED -- one or more mandatory checks failed."
+    echo "=============================================================="
+    echo ""
+    echo " Do NOT bypass to 'fix it later'. The 2026-07-26 incident was"
+    echo " 9 days of a green light over a real violation."
+    echo ""
+    echo " Emergency bypass:  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo " ALL CHECKS PASSED -- commit allowed."
+echo "=============================================================="
+echo ""
+exit 0
