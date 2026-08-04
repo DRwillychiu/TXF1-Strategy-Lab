@@ -117,7 +117,7 @@ inputs:
     Cooldown_Days             ( 1     ),   { cooldown days after exit, opt 0..3 }
 
     { ===== Priority 0 Protection (Rule #11 / #12) ===== }
-    Holiday_Flat_Time         ( 415   ),   { 60M grid -> fire 04:15 holiday tail }
+    Holiday_Flat_Time         ( 300   ),   { 60M grid: trigger on 03:00 bar -> fill 03:00, retry on 04:00 bar -> fill 04:00 }
     Registry_Valid_Until      ( 1270101 ), { TAIFEX-verified horizon; bump each Q4 }
     Manual_Kill_Switch        ( False ),
     Settlement_Flat_Time      ( 1230  );   { 1hr buffer before 13:30 settlement }
@@ -456,6 +456,19 @@ end;
 
   CLOSED-INTERVAL AUDIT:
     Holiday_Flat_Time : guarded by v_Holiday_Block + explicit Time <= 455
+      GRID ALIGNMENT (2026-08-04 fix): Data1 is 60M. The night session
+      opens 15:00, so 60M bars close on the hour: ... 03:00, 04:00, 05:00.
+      The previous default 415 put the window at [0415, 0455], which
+      contains NO 60M bar -- the branch was dead code and S3_L could
+      carry a position across a long holiday (no daily force-flat exists
+      here; MaxBars=70 x 60M is about five trading days).
+      Default is now 300, matching L2_TrendShort which is also 60M.
+      Window [0300, 0455] contains the 03:00 and 04:00 bars: fire on
+      03:00 -> fill 03:00, retry on 04:00 -> fill 04:00.
+      The 05:00 bar stays excluded on purpose: a signal there would fill
+      at the NEXT session open (08:45), i.e. after the closure.
+      Rule: the holiday window must span at least one Data1 bar interval
+      and must exclude the session's final bar.
     Settlement_Flat_Time : guarded by v_Settlement_Day + bounded by day session
     No isolated Time>=X without pair or state-guard.
   ============================================================ }
