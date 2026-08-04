@@ -72,6 +72,7 @@ v_Settlement_Day = (DayOfWeek(Date) = 3) and
 end;
 
 { 元素 5: Priority 0 出場（互斥優先序的第 4 位）}
+{ 注意：本行刻意使用無上界的 Time >=，是條款 9 明列的豁免，不是漏寫。}
 else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
     Sell/BuyToCover ("*_Settlement") next bar at Market;
 end;
@@ -172,6 +173,52 @@ end;
 
 **目前狀態**：暫不強制執行此條款。實際上 L1 / L5 雖含 Trail / SP / BE，但歷史回測未出現「Trail 未觸發跨日 + Settlement_Flat 鎖利」的衝突。
 
+### 條款 9：Settlement 分支豁免「`Time >=` 必須配對 `Time <=`」
+
+**背景（2026-08-04 行事曆模組化稽核發現）**：
+本憲法自相矛盾。條款 1「元素 5」的參考實作寫的是無上界的
+`Time >= Settlement_Flat_Time`，但第四章 checklist 卻要求「任何 `Time >=` 條件
+必須同時有 `Time <=` 閉區間」。10 支在役策略照抄了參考實作，於是全庫出現
+10 處「違反自家 checklist」的寫法。**規則不能兩邊都對。**
+
+**裁決（2026-08-04 使用者裁定）**：以參考實作為準，checklist 加註豁免。
+Settlement 分支**不得**補上界。
+
+**理由**：
+
+1. `v_Settlement_Day` 是**純日期守衛**（`DayOfWeek=3 AND DayOfMonth in [15,21]`），
+   為真的視窗恰好是一個日曆日；它跟條款 7/8 撤回的那種「純時間條件」本質不同。
+   條款 7/8 的 `Time >= 1200` 在**任何**日子的夜盤都會誤觸；元素 5 只在結算日成立。
+
+2. 逐時段推演（結算日為週三）：
+
+   | 時段 | 該根 K 棒 `Date` | `v_Settlement_Day` | `Time >= 1230` | 分支狀態 |
+   |---|---|---|---|---|
+   | 週三 00:00-05:00（夜盤尾） | 週三 | true | false（0-500） | 不觸發 |
+   | 週三 08:45-12:29 | 週三 | true | false | 不觸發 |
+   | 週三 12:30-13:45 | 週三 | true | true | **正常觸發**（設計意圖） |
+   | 週三 15:00-23:59（夜盤） | 週三 | true | true | 仍武裝 |
+   | 週四 00:00-05:00 | 週四 | false | — | 不觸發 |
+
+3. 第四列就是 checklist 想擋的情形，但在此處**無害且有益**：進場已被元素 4 的
+   `v_Settlement_Day = false` gate 全天封鎖，週三傍晚不可能有新倉；能存在的部位
+   只有「12:30 那次強平沒成交」的殘留，而此時分支再發一次單，等於**免費的重試**。
+   補上 `Time <= 1345` 會把這個重試拿掉。
+
+4. 條款 3 的互斥鏈中，武裝但無倉可平的分支只會讓下位分支在週三傍晚不執行；
+   MP = 0 時下位分支本來也沒事可做。
+
+**適用界線（不得擴張解釋）**：
+本豁免**只**適用於同時被純日期守衛保護的 Priority-0 分支。Holiday 分支
+（`v_Holiday_Block`）**不在**豁免範圍——它的安全性另有來源（見規則手冊 R-3
+「隱藏相依」：靠 `Time <= 500` guard + Registry 分支排在其前共同封死），
+那是既有設計，不是本條款授予的。任何新的純時間條件一律回到 checklist 原則。
+
+**驗證**：`scripts/verify_settlement_flat.py` 檢查元素 5 存在且以
+`Time >= Settlement_Flat_Time` 把關；本條款生效後該腳本**不得**被改成要求閉區間。
+
+---
+
 ### 補充規則 4：手動 Roll Over 後必須在 MC 同步 Force Flat
 
 實戰場景：用戶在 broker 端手動把舊月份合約 Roll 到新月份合約。
@@ -232,6 +279,7 @@ python scripts/verify_strategy_holding_classification.py
 - [ ] ~~若 Alpha 為 mean reversion：是否含 Time >= 1200 強制出場？~~ （條款 7 暫撤回）
 - [ ] ~~若含 Trail/BE：是否含 Time >= 1330 強制出場？~~ （條款 8 暫撤回）
 - [ ] 任何 `Time >=` 條件是否同時有 `Time <=` 閉區間？（防夜盤誤觸）
+      **例外**：Settlement 分支（元素 5）依條款 9 豁免，不得補上界
 - [ ] 結算日當天的回測表現是否單獨計算？
 - [ ] 結算日績效是否被排除在主績效指標外？
 
@@ -341,7 +389,8 @@ python scripts/verify_strategy_holding_classification.py
 | 1.0 | 2026-06-17 | 初版生效（條款 1-5 + 章節 1-7）|
 | 1.1 | 2026-06-17 | 新增條款 6-8 + 補充規則 4-5（基於 L3/L4/L5 跨日 33-47% 實證發現）|
 | **1.2** | **2026-06-17** | **條款 7/8 撤回 — RangeForceExit 實作失敗（夜盤誤觸 + L4 績效轉負），保留條款 1-6 與補充規則 4-5。詳見 [rollback report](range_force_exit_rollback_20260617.md)** |
+| **1.3** | **2026-08-04** | **新增條款 9 — 解決本憲法自相矛盾（元素 5 參考實作無上界 vs 第四章 checklist 要求閉區間）。使用者裁定以參考實作為準，Settlement 分支豁免，10 支在役策略維持現狀不動。豁免界線明文限縮於「被純日期守衛保護的 Priority-0 分支」，Holiday 分支不在其內。** |
 
 ---
 
-**本憲法 v1.2 生效於 2026-06-17。任何在此之後開發的策略，若無 Settlement_Flat 模組（條款 1-5）、未通過三象限分類驗證（條款 6），將不被視為合格上架候選。條款 7/8 暫撤回待重新設計。**
+**本憲法 v1.3 生效於 2026-08-04。任何在此之後開發的策略，若無 Settlement_Flat 模組（條款 1-5）、未通過三象限分類驗證（條款 6），將不被視為合格上架候選。條款 7/8 暫撤回待重新設計；條款 9 為 checklist 的具名豁免，不得擴張解釋。**
