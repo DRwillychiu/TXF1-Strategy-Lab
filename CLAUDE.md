@@ -13,137 +13,16 @@
 - 回測區間：2020/01/01 ~ 今天
 - 交易時段：日盤 08:45-13:45 / 夜盤 15:00-05:00
 
-## 目錄結構（2026-06-27 審計更新）
-```
-CLAUDE.md                          # 本檔（19 條強制規範）
-README.md                          # 專案總覽
-.gitignore
+## 目錄結構
 
-strategies/                        # 策略原始碼三層分類
-├── live/                          # MC9 實盤（真金白銀）
-│   ├── README.md
-│   ├── L1_TrendLong.pla / _annotated.md / _review.md
-│   ├── L2_TrendShort.pla / _annotated.md / _review.md
-│   ├── L3_ConsolidationLong.pla / _annotated.md / _review.md
-│   ├── L4_ConsolidationShort.pla / _annotated.md / _review.md
-│   └── L5_BreakoutLong.pla / _annotated.md / _review.md
-├── live_simulation/               # MC12 模擬中
-│   ├── README.md
-│   ├── S1_NightMomentum/          # S1 純多夜盤
-│   ├── S3_RapidPullbackShort/     # S3 多頭拉回空
-│   ├── S3_VolSqueezeLong/         # S3_L 波動率純多
-│   ├── S3_S_VolSqueezeShort/      # S3_S 波動率純空
-│   └── S16_S_MACrossShort/        # S16_S 動量交叉空 v1.5
-└── research/                      # 研究中（單軌 OFFICIAL_ROADMAP）
-    ├── README.md
-    ├── L1_TrendLong/              # L1 研究版本
-    │   ├── L1_v30/                        # v30 實驗
-    │   └── L1_v31/                        # v31 SL_Pct + SetStopContract
-    ├── L3_ConsolidationLong/      # L3 研究版本
-    │   ├── L3_v141/
-    │   └── L3_v15/
-    ├── L4_ConsolidationShort/     # L4 研究版本
-    │   ├── L4_RESEARCH_SUMMARY.md
-    │   ├── L4_v15/
-    │   └── L4_v16/
-    ├── L5_BreakoutLong/           # L5 研究版本
-    │   ├── L5_v198/
-    │   └── L5_v199/
-    ├── S03_VolSqueezeShort/       # S3_S 完整研發史
-    ├── S04_MACDDivergenceShort/   # S4 W0 pre-verify (KILLED)
-    ├── S16_MACrossLong/           # S16_L (SUSPENDED)
-    ├── S16_MACrossShort/          # S16_S 完整研發史 + 10M 延伸
-    │   └── S16_MACrossShort_10M/  # 10M 時框實驗 (正面收案)
-    ├── S17_SwingShort60M/         # S17 Stage 1
-    └── archive/                   # 歷史與 off-roadmap
-        ├── README.md
-        ├── _batch_summaries/              # Batch02/03 摘要（Batch01 在 batch01_S2-S5/ 內）
-        ├── batch01_S2-S5/                 # 原始排程雛形 + powerlanguage/
-        ├── batch02_S6-S10/                # S06-S10 各自子資料夾
-        │   ├── S06_FlashCrashMomentum/
-        │   ├── S07_BullPullbackLong/
-        │   ├── S08_BearBounceSell/
-        │   ├── S09_VolExplosion/
-        │   └── S10_AdaptiveBreakout/
-        ├── batch03_S11-S15/               # S11-S15 各自子資料夾
-        │   ├── S11_MiddayCompression/
-        │   ├── S12_WeekdayMomentum/
-        │   ├── S13_VolCollapseShort/
-        │   ├── S14_TripleTFTrend/
-        │   └── S15_BBReversion/
-        ├── S02_InsideBarBreak_killed_20260622/
-        ├── S03_RapidPullbackShort_archived_20260622/
-        ├── S03_VolSqueezeLong_promoted_20260620/   # S3_L 升等後 W0-W5 歷史
-        ├── S3_S_v2_killed_20260626/
-        └── offRoadmap_2026Q2_killed/      # S4-S9 偏離排程 KILL
+完整樹狀圖見 **`docs/REPO_STRUCTURE.md`**（2026-08-04 自本檔拆出，原文剪貼未改寫）。
 
-docs/                              # 機構級文件分類（data-analyst 規範）
-├── README.md                      # 文件索引
-├── handoffs/                      # 當前 session handoffs
-├── policies/                      # ★ 強制規範（合規層）
-│   ├── OFFICIAL_ROADMAP.md                    # Rule #14 排程鎖定
-│   ├── SETTLEMENT_DAY_DESIGN_CONSTITUTION.md  # Rule #11
-│   ├── P3b_immediate_stop_guard_design_20260618.md  # Rule #12
-│   ├── institutional_risk_framework_20260619.md     # Rule #13
-│   ├── STRATEGY_SUCCESS_CRITERIA.md           # 機構級成功標準
-│   ├── lesson_L24_risk_overlay_alpha_preservation.md  # Lesson L24
-│   ├── settlement_flat_module_20260617.md
-│   ├── settlement_flat_flow_diagram.svg
-│   ├── settlement_flat_backtest_validation_20260617.md
-│   └── strategy_classification_decision_matrix.svg
-├── methodology/                   # 流程 SOP
-│   ├── entry_exit_sop.md
-│   ├── claude_code_workflow.md
-│   ├── cowork_sync_prompt.md
-│   ├── position_sizing_and_capacity.md
-│   └── LOOP_FRAMEWORK.md
-├── research/                      # 主題研究 / theses
-│   ├── index_level_thesis.md
-│   ├── structural_issues_review_20260618.md
-│   └── optimization_opportunities_2026Q2.md
-├── strategy_archive/              # 既有策略歷史演進
-│   ├── L1_v26_20260622_gap_miss_case.md
-│   ├── L4_v142_*.md               # pathA / pathB / variant_results
-│   ├── L5_v198_*.md / L5_v199_*.md
-│   ├── S1_v23_*.md / S1_v24_*.md
-│   └── range_force_exit_*.md      # deployment + rollback
-└── archive/                       # 歸檔（off-roadmap、舊 handoffs）
-    ├── handoffs/                   # 過期 handoffs（2026-06-07、06-13）
-    └── offRoadmap_2026Q2/         # 24 個偏離排程產物
+拆檔原因：本檔受 300 行硬上限約束（MAINTENANCE_PROTOCOL §2）。目錄結構是純參考資訊、
+非強制規範，且隨每次新增策略而變動，留在 CLAUDE.md 只會持續擠壓規範內容的空間。
+規範性內容（技術規格、三層晉升流程、PowerLanguage 規範、品質門檻）一律留在本檔。
 
-optimization/                      # 原始 ROADMAP 追蹤系統
-├── README.md
-├── TRACKER.md                     # S1-S15 master 進度表
-└── logs/                          # 每隻策略 Phase 1-4 詳細紀錄
-    ├── B01_S1_NightMomentum.md    # 🟢 已部署 live_simulation
-    ├── B01_S3_VolSqueeze.md       # 🟡 v1.7.3 regime filter 實驗中
-    ├── B01_S4_MACDDivergence.md   # ⏳ next
-    ├── B02_S6~S10 / B03_S11~S15  # ⏳ Queue
-    └── TEMPLATE_optimization_log.md
+> ⚠️ `docs/REPO_STRUCTURE.md` 已知有過時處（live 策略實際帶子目錄），待完整重新審計。
 
-scripts/                           # 驗證 / 分析腳本
-├── README.md
-├── verify_all_live.py             # ★ Master 跨策略驗證 110 項
-├── verify_pla_ascii.py            # Rule #15 ASCII 驗證
-├── verify_l{1..5}_immediate_stop.py  # Rule #12 驗證
-├── verify_settlement_*.py         # Rule #11 驗證
-├── verify_s1_v22~v26.py           # S1 各版本驗證
-├── analyze_*.py                   # 分析腳本
-├── wfa_loop_runner.py             # WFA 自動化
-└── results/                       # WFA JSON 輸出
-
-backtest/                          # ⚠️ Python 日線代理（DEPRECATED）
-├── README.md
-├── run_backtest.py                # ⚠️ DEPRECATED
-├── fetch_data.py
-├── twii_daily.csv
-├── results_batch01.json           # 原始基線證據
-├── results_batch02.json
-├── optimize/                      # Walk-Forward / Monte Carlo 框架
-└── results/                       # S1 視覺化 + portfolio 分析
-    ├── s1_optimization/           # Phase 1-3 PNG + JSON
-    └── portfolio/                 # 組合分析 JSON
-```
 
 ## 三層晉升流程
 
@@ -168,12 +47,12 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
 9. 策略名稱 `STRATEGY_GEN_` 前綴
 10. 每隻策略 < 150 行，進場條件 ≤ 5 個
 11. **★ 強制規範**：所有策略必須含 Settlement_Flat 模組（7 元素）
-    - 詳見 [docs/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md](docs/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md)
+    - 詳見 [docs/policies/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md](docs/policies/SETTLEMENT_DAY_DESIGN_CONSTITUTION.md)
     - Priority 0 出場順序：Kill > Registry > Holiday > **Settlement** > 原邏輯
     - 進場 gate 必含 `v_Settlement_Day = false`
     - 驗證腳本 `scripts/verify_settlement_flat.py` 必須通過
 12. **★ 強制規範**：所有策略必須含 P3b Immediate Stop Guard（SetStopContract + SetStopLoss + SL_Pct）
-    - 詳見 [docs/P3b_immediate_stop_guard_design_20260618.md](docs/P3b_immediate_stop_guard_design_20260618.md)
+    - 詳見 [docs/policies/P3b_immediate_stop_guard_design_20260618.md](docs/policies/P3b_immediate_stop_guard_design_20260618.md)
     - **SetStopContract**：必須在 SetStopLoss 前呼叫。使 SetStopLoss 金額為 PER-CONTRACT
       而非 TOTAL POSITION。實盤統一 2 口，缺此呼叫 = 引擎停損 2 倍過窄。
       （2026-07-26 發現 L2/L4/L5/S16_S 全部缺漏，已修復）
@@ -190,7 +69,7 @@ research/  ──[Phase 1-3 通過]──►  live_simulation/  ──[模擬實
     - 每隻策略僅限 1 組 `SetStopContract` + `SetStopLoss` 呼叫（不可重複）
     - 新策略開發時，此三件套（SetStopContract + SetStopLoss + SL_Pct）與 Settlement_Flat 同為必備結構模組
 13. **★ 強制規範**：所有新策略 / 既有策略優化必須通過機構級 10 維度評估
-    - 詳見 [docs/institutional_risk_framework_20260619.md](docs/institutional_risk_framework_20260619.md)
+    - 詳見 [docs/policies/institutional_risk_framework_20260619.md](docs/policies/institutional_risk_framework_20260619.md)
     - 10 維度：Sharpe/Sortino/Calmar、VaR/CVaR、跨策略相關性 < 0.7、
       Drawdown clustering、樣本數 ≥ 100、WFE > 50%、三市況 PF > 1.0、
       成本分析、Operational risk、法規 / 帳戶限制
