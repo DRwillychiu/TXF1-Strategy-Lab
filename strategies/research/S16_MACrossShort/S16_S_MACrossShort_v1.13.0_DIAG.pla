@@ -2,6 +2,47 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
+  Version     : v1.13.0-DIAG  LATCH VERIFICATION BUILD  (2026-08-05)
+
+  ####################################################################
+  #  DIAGNOSTIC BUILD -- DO NOT TRADE, DO NOT PROMOTE                #
+  #                                                                  #
+  #  Byte-identical to S16_S_MACrossShort_v1.13.0.pla except for:    #
+  #    - inputs  Struct_Diag, Struct_Diag_Path                       #
+  #    - vars    v_Diag_Act, v_Diag_Bind                             #
+  #    - one Print(File()) block after the P3 stop order             #
+  #  No orders and no strategy state are touched.                    #
+  #                                                                  #
+  #  PURPOSE: acceptance criterion 7, the only one still unverified. #
+  #  The claim under test is that v_Struct_Lock is monotonically     #
+  #  non-decreasing within a trade and resets to 0 on every entry.   #
+  #  A performance report cannot show this -- it has no bar-level    #
+  #  lock series -- so the value has to be emitted directly.         #
+  #                                                                  #
+  #  WHY IT MATTERS: the reference is a ROLLING window high. When a  #
+  #  bounce puts a new high into the window the reference rises and  #
+  #  the raw lock FALLS. Without the latch the stop would retreat,   #
+  #  and a trailing stop that retreats is not a trailing stop. The   #
+  #  latch is written; it has never been observed working.           #
+  #                                                                  #
+  #  This failure mode is invisible in a performance report. It only #
+  #  shows up on the pattern "make a profit high -> bounce sets a    #
+  #  new high -> fall back", it costs foregone profit rather than a  #
+  #  loss, and it would affect a handful of trades at most.          #
+  #                                                                  #
+  #  ANCHOR: this build must reproduce v1.13.0 exactly --            #
+  #  129 trades / Net 2,646,400 / PF 1.795384. If it does not, the   #
+  #  diagnostic itself perturbed the run and the log is worthless.   #
+  #                                                                  #
+  #  CSV COLUMNS (no header row, Print appends):                     #
+  #    Date, Time, EntryBar, BarsSince, EntryPrice, Close,           #
+  #    StructActive, StructRef, StructRaw, StructLock,               #
+  #    ProtectLock, StructBinding                                    #
+  #                                                                  #
+  #  EntryBar is the per-trade key -- it changes on every new entry. #
+  #  DELETE THE CSV BEFORE EVERY RUN. Print(File()) appends.         #
+  ####################################################################
+
   Version     : v1.13.0 A2 Structure Trail (2026-08-04, base v1.12.0)
 
   v1.13.0 (2026-08-04) A2 STRUCTURE TRAIL (base v1.12.0):
@@ -558,6 +599,13 @@ inputs:
     Struct_UseClose         ( True  ),
     Struct_Trigger_Pct      ( 1.20  ),
 
+    { ===== DIAG ONLY - criterion 7 latch verification ===== }
+    { Emits one CSV line per in-position bar. No orders, no state    }
+    { changes, so the run must reproduce v1.13.0 exactly.            }
+    { Print(File()) APPENDS -- delete the file before every run.     }
+    Struct_Diag             ( True  ),
+    Struct_Diag_Path        ( "C:\Users\WILLY CHIU\Downloads\S16S_latch_diag.csv" ),
+
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
     { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
     M8_On                   ( True  ),
@@ -659,6 +707,8 @@ variables:
     v_Struct_Raw            ( 0     ),
     v_Struct_Lock           ( 0     ),
     v_Struct_Binding        ( False ),
+    v_Diag_Act              ( 0     ),
+    v_Diag_Bind             ( 0     ),
 
     { ===== Re-Entry state (v1.6) ===== }
     v_ReEntry_Armed         ( False ),
@@ -1139,6 +1189,41 @@ if MarketPosition = -1 then begin
         else
             buy to cover ( "SX_MA_BE" ) next bar at v_BE_Stop_Level stop;
     end;
+
+    { ==== DIAG ONLY -- criterion 7 latch verification ================
+      Emits one CSV line per in-position bar. Placed AFTER the lock is
+      resolved and the order is issued, so every logged value is final
+      for that bar. Issues no orders and touches no state, so the run
+      must reproduce v1.13.0 exactly -- that identity is the anchor
+      proving the log describes the real strategy.
+
+      Booleans go through numeric temporaries because NumToStr cannot
+      take a boolean and IFFString availability is not worth betting on.
+
+      Print(File()) APPENDS. Delete the file before every run or the
+      previous run's rows will be silently mixed in.                  }
+    if Struct_Diag = True then begin
+        v_Diag_Act = 0;
+        if v_Struct_Active = True then
+            v_Diag_Act = 1;
+        v_Diag_Bind = 0;
+        if v_Struct_Binding = True then
+            v_Diag_Bind = 1;
+        Print( File( Struct_Diag_Path ),
+               NumToStr( Date, 0 ), ",",
+               NumToStr( Time, 0 ), ",",
+               NumToStr( v_EntryBar, 0 ), ",",
+               NumToStr( v_BarsSince, 0 ), ",",
+               NumToStr( EntryPrice, 0 ), ",",
+               NumToStr( Close, 0 ), ",",
+               NumToStr( v_Diag_Act, 0 ), ",",
+               NumToStr( v_Struct_Ref, 2 ), ",",
+               NumToStr( v_Struct_Raw, 2 ), ",",
+               NumToStr( v_Struct_Lock, 2 ), ",",
+               NumToStr( v_Protect_Lock, 2 ), ",",
+               NumToStr( v_Diag_Bind, 0 ) );
+    end;
+    { ==== end DIAG =================================================== }
 
     { ---- P4: Golden Cross main exit ---- }
     if ExitFired = 0 and v_Golden_Cross = True then begin
