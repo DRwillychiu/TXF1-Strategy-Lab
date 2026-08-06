@@ -59,6 +59,81 @@
     ACCEPTANCE: same nine pre-registered criteria as A2. Criterion 2 is
     the bar-25 COHORT (29 trades / 5,355,200), and it is checked FIRST.
 
+    ------------------------------------------------------------------
+    RESULT (2026-08-05 sweep, 2026-08-06 user ruling)
+    ------------------------------------------------------------------
+
+    ADOPTED: Tier2_On=True, Tier2_Trigger_Pct=2.00, Giveback_Pct=40.
+    Baseline for every figure below is v1.13.0 FIRST VERSION
+    (Struct 20/20 Close-based): 129 trades / 2,646,400 / PF 1.7953835.
+
+      Net          2,646,400 -> 2,670,800   (+24,400, +0.92%)
+      Gross profit 5,973,600 -> 5,998,000   (+24,400)
+      Gross loss  -3,327,200 -> -3,327,200  (unchanged to the dollar)
+      PF             1.795384 -> 1.802717   (+0.41%)
+      Adjusted PF    1.349643 -> 1.355156
+      Return on cap    132.32% -> 133.54%
+      Annual return    17.4637% -> 17.6248%
+      MDD            -561,200 -> -575,200   (-14,000, 2.49% worse)
+      Max single win  602,800 -> 602,800    (unchanged)
+      Max closed loss -461,200 -> -461,200  (unchanged)
+      Calmar          0.101070 -> 0.101070  (unchanged)
+      Flat period    1Y10M13D -> unchanged
+      Trades / W:L    129 / 35:90 -> unchanged
+
+    ALL THREE DEGENERATE ANCHORS PASSED before the sweep. Anchor C
+    (Tier2_On=True, Trigger=2, Giveback=80) matters most: the tier
+    executes on reachable trades but is mathematically inert at the
+    base rate, so it proves the wiring rather than the gate.
+
+    SWEEP: 25 cells. 2 beat baseline, 2 equalled it, 21 fell below.
+    The trigger axis has a cliff -- 2.00 down to 1.50 costs up to
+    1,020,000 at the same giveback. The giveback axis is flat by
+    comparison (the 2.00 row spans 2,586k-2,671k).
+
+    EFFECT: exactly 4 of 129 trades change.
+      #8  2024-08-05 08:55  TimeStop    -> Trail   122,000 -> 149,200
+      #9  2024-08-05 12:50  GoldenCross -> Trail    50,400 -> 101,200
+      #10 2024-08-05 20:15  Struct      -> Trail    55,200 ->  92,000
+      #23 2025-04-09 11:05  TimeStop    -> Trail   236,800 -> 146,400
+    Improvement +114,800, degradation -90,400, net +24,400. The single
+    degrading trade cancels 79% of the gain and drops #23 out of the
+    top-ten winners. All three improving trades fall on ONE DAY.
+
+    CRITERIA: 5 pass, 3 FAIL, 1 unverifiable. Adopted by explicit user
+    ruling 2026-08-06 with the failures recorded rather than reworded:
+
+      FAIL 2 -- TimeStop cohort 27 trades / 5,187,200 -> 25 / 4,828,400,
+        down 358,800. This is the criterion that was flagged at sweep
+        time as the one to read before net profit.
+      FAIL 4 -- MDD -561,200 -> -575,200. User ruling: criterion 4 as
+        written governs "no regression", but the operative constraint
+        is a per-contract risk ceiling, and -287,600 per contract
+        (vs -280,600) sits inside it. The trade is 14,000 of drawdown
+        for 24,400 of net, 1:1.74 in absolute terms. Note the honest
+        counter-reading: in PERCENTAGE terms MDD worsens 2.49% while
+        net improves only 0.92%, so the ratio favours adoption only on
+        an absolute-dollar view.
+      FAIL 9 -- concentration is not merely single-year, it is
+        SINGLE-DAY. Every improving trade is 2024-08-05.
+
+    The pre-registered warning held: gross improvement 114,800 landed
+    in the predicted 50,000-70,000 band's neighbourhood and the bar-25
+    cohort did lose ground, exactly as the header said to expect.
+
+    LIMITS -- carry these into any report:
+      1. Benefit rests on 4 trades, 3 of them on one calendar day.
+         Not statistically established.
+      2. Trigger 1.50 is a cliff (-38% net). 2.00 is one step away from
+         it. Trigger is a percentage so it self-scales with index and
+         will not drift, but the margin is one grid step.
+      3. TimeStop cohort is now 25 trades, down from 27. Any later work
+         that assumes "27 TimeStop trades" must be re-based.
+      4. Effective sample is still ~7 months (Jan-Jul 2026 holds 76% of
+         trades and 92.4% of profit). MinSlope percentage-normalisation
+         will change the trade population and REQUIRES re-validation of
+         all nine criteria.
+
   v1.13.0 A2 Structure Trail (2026-08-04, base v1.12.0)
 
   v1.13.0 (2026-08-04) A2 STRUCTURE TRAIL (base v1.12.0):
@@ -634,9 +709,16 @@ inputs:
     { ONE TIER ONLY, TWO PARAMETERS. 21 armed trades in 6.4 years cannot }
     { support a multi-tier table -- it would fit noise. Do not add tiers }
     { without first enlarging the sample.                                }
-    Tier2_On                ( False ),
+    { ADOPTED 2026-08-06 by user ruling: True / 2.00 / 40.            }
+    {   Net 2,646,400 -> 2,670,800. 4 trades change, 3 improve on a    }
+    {   single day (2024-08-05), 1 degrades by -90,400.                }
+    {   Criteria 2, 4 and 9 FAILED and were adopted anyway -- see the  }
+    {   RESULT block in the header. Do not restate this as a clean     }
+    {   pass.                                                          }
+    {   Tier2_On=False still reproduces v1.13.0 bit-for-bit.           }
+    Tier2_On                ( True  ),
     Tier2_Trigger_Pct       ( 2.00  ),
-    Tier2_Giveback_Pct      ( 50    ),
+    Tier2_Giveback_Pct      ( 40    ),
 
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
     { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
