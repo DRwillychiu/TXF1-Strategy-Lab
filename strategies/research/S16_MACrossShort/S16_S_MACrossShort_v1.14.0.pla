@@ -645,9 +645,15 @@ inputs:
     {   giveback 70-90, all cells 2.45M-2.59M).                      }
     { Sanity anchor 1.2/90 = 2,518,400 converged to baseline as      }
     {   predicted, confirming the module is wired correctly.         }
-    { Verified effect: 2 of 129 trades change, both improve, none    }
-    {   degrade. Top-10 winners, TimeStop 27, Gross Loss and MDD all }
-    {   bit-identical to baseline. Net 2,488,000 -> 2,556,800.       }
+    { Verified effect AT v1.12.0: 2 of 129 trades change, both       }
+    {   improve, none degrade. Top-10 winners, TimeStop 27, Gross    }
+    {   Loss and MDD all bit-identical. Net 2,488,000 -> 2,556,800.  }
+    { SUPERSEDED at v1.13.0: once the structure leg is on, this leg  }
+    {   fires 0 times -- structure always wins the max comparison.   }
+    { SUPERSEDED AGAIN at v1.14.0: with Tier2 on, this leg fires 4   }
+    {   times and TimeStop is down to 25 trades. The "TimeStop 27"   }
+    {   above is the v1.12.0 figure, kept for the record, NOT the    }
+    {   current baseline.                                            }
     { CAVEATS: gain rests on 2 trades (+68,800, 1.40 sigma). Residual}
     {   tail risk is a trade giving back 80% of a >=1.2% run then    }
     {   recovering to a new high -- never observed in 6.4 years.     }
@@ -721,7 +727,34 @@ inputs:
     Tier2_Giveback_Pct      ( 40    ),
 
     { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
-    { MaxHoldingBars=24 = 2hr, 31 trades exit here with 100% WR / avg +72K }
+    { ===== Group E: M8 Time Stop ===== }
+    { MaxHoldingBars=24 = 2hr. Thesis: a momentum burst self-resolves   }
+    { inside two hours; past that you are holding a random position.    }
+    {                                                                   }
+    { CURRENT COUNT (v1.14.0): 25 trades / 4,828,400. NOT the "31       }
+    {   trades / 100% WR" the pre-v1.12.0 comment claimed -- that value }
+    {   is stale. It was 27 through v1.13.0 and B1 took two of them     }
+    {   (#8, #23) by firing a stop order intrabar before this market    }
+    {   order could evaluate at bar close.                              }
+    {                                                                   }
+    { WHAT THIS LEG ACTUALLY DOES: it cuts WINNERS. QuickStop_Time      }
+    {   (4 bars AND no profit) handles trades that never worked; this   }
+    {   one exits trades that ARE working, purely on bar count.         }
+    {                                                                   }
+    { OPEN QUESTIONS -- none of these are settled:                      }
+    {  1. M8_On=False (no time limit at all) has NEVER been tested.     }
+    {     The 2026-07-18 sweep covered 12/24/36/48 -- all finite.       }
+    {  2. That sweep ran at v1.4-BELATE on 109 trades, BEFORE frozen    }
+    {     ATR, true BE, the percentage trail and the structure trail    }
+    {     existed. Its premise was "past 24 bars the position is        }
+    {     unprotected", which no longer holds: three protective legs    }
+    {     now run, and above a 2% peak the trail locks 60% of it.       }
+    {  3. MaxHoldingBars is COUPLED to Struct_Lookback. The structure   }
+    {     window is MinList(Lookback, BarsSince+1), so with a 24-bar    }
+    {     cap it barely rolls and Lookback >= 25 is inert. CHANGING     }
+    {     THIS VALUE INVALIDATES A2's "20 is optimal" finding.          }
+    {  4. Interaction with Tail_ForceExit_Time is untested -- a longer  }
+    {     hold pushes more positions toward the 0440 forced flat.       }
     M8_On                   ( True  ),
     MaxHoldingBars          ( 24    ),
 
