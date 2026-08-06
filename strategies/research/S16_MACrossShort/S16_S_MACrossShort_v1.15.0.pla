@@ -787,8 +787,16 @@ inputs:
     {   Swept 0-45 step 5. Set 2000 for degenerate anchor B.            }
     { Struct_UseClose    : True = highs measured on Close (wick proof,  }
     {   reacts later), False = on High (faithful, wick exposed).        }
-    {   STILL UNSWEPT (P2 pending) -- this default is a starting point, }
-    {   not a finding. Night-session wicks are the specific hazard.     }
+    {   SETTLED BY P2, 2026-08-05. Close wins decisively. Switching to  }
+    {   High does not merely score worse -- it makes the leg INERT:     }
+    {   the result matched the Struct-off baseline to six decimals,     }
+    {   0 structure exits against 2. The predicted mechanism was        }
+    {   confirmed exactly: both affected trades sit in the 20:00-24:00  }
+    {   night block (-89,600 there, day session 83 trades unchanged to  }
+    {   the dollar). One long upper wick in a thin night session        }
+    {   manufactures a phantom high and pushes the stop out of reach,   }
+    {   and the night session is this strategy's alpha source.          }
+    {   Do not revisit without a reason that is not "faithfulness".     }
     { Struct_Trigger_Pct : peak profit pct to arm, held at 1.20 for the }
     {   first pass to keep the sweep two-dimensional. Unswept.          }
     { ADOPTED 2026-08-04: Struct_On True, 20 / 20. See RESULT block in  }
