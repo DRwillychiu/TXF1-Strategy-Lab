@@ -2,55 +2,107 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.17.0 MinSlope Percentage Option (2026-08-08, base v1.16.0)
+  Version     : v1.17.0 Session Boundary Fill Guard (2026-08-08, base v1.16.0)
 
-  v1.17.0 (2026-08-08) MinSlope PERCENTAGE OPTION -- SHIPS OFF:
+  v1.17.0 (2026-08-08) SESSION BOUNDARY -- CLOSING THE FILL-SIDE HALF
+                       OF THE GAP PROBLEM:
 
-    Targets the sample-validity problem that run 7 of v1.16.0 exposed,
-    not a performance problem.
+    NOTE ON VERSION REUSE: an earlier v1.17.0 carried a MinSlope
+    percentage option that shipped OFF and was never validated. That
+    direction is unsettled and the file had no working content, so the
+    number was reused. The old file is preserved at
+    S16_S_MACrossShort_v1.17.0.pla.bak_20260808 and in git history.
 
-    MinSlope is a POINTS threshold. 28 points was 0.28% of the 2019
-    index and is 0.062% today, so the identical gate ran 4.5x tighter
-    in the early years. Candidate death crosses run about 1,200 a year
-    with no trend, but trades clearing the gate do not:
+    ------------------------------------------------------------------
+    A. SESSION LAST-BAR ENTRY BLOCK  (Sess_LastBar_Block_On, ships ON)
+    ------------------------------------------------------------------
 
-      2019  0   2020  1   2021  0   2022  3
-      2023  0   2024 11   2025 11   2026 93
+    v1.16.0 established the repo-wide rule that an order placed on bar
+    N cannot be withdrawn on bar N+1, so any rule meant to prevent a
+    fill must be evaluated one bar EARLIER than the bar it protects.
 
-    Five years produced four trades, so the 6.5-year backtest is
-    really 2.5 years, and Rule #13's "sample >= 100" and "PF > 1.0 in
-    three regimes" are not genuinely satisfiable as parameterised.
+    The gap filter obeys that rule for SIGNALS: Gap_Scope_Bars = 1
+    blocks a signal on the session's first bar. It does NOT cover the
+    other direction. The day session's last bar is stamped 1345, and
+    the entry time gate reads
 
-    STATUS: SHIPS OFF. MinSlope_Use_Pct defaults to False, so this
-            version MUST reproduce v1.16.0 bit for bit:
-              119 trades / 3,141,200 / PF 2.0657
-            Run that anchor before trusting any swept cell.
+        ( Time <= Tail_LastEntry_Time or Time > 500 )
 
-    WHICH NORMALISATION, AND WHY THIS ONE
-      v0.6   threshold = ATR * mult              REJECTED 2026-07-10.
-             ATR measures volatility in BOTH directions and cannot
-             express a directional slope. At mult 0.7 it over-entered
-             (181 trades, -128K); at 1.5 it over-filtered (2 trades).
-             The metric was wrong, not the constant.
-      v1.9.0 threshold = ZLEMA_Fast * pct / 100  -1.6% net with a
-             BETTER profit factor on the architecture of the time.
-             Abandoned for reasons that are not in the numbers.
-      v1.17.0 uses the v1.9.0 form, anchored at 28 / 40634 = 0.0689%.
+    which at 1345 is TRUE via the second clause. So a signal is allowed
+    on the last day bar, and the resulting order fills on the FIRST
+    NIGHT BAR -- straight into the session opening gap. v_Gap_Block is
+    set True on that bar, but the order was placed a bar earlier and
+    cannot be withdrawn. The exact defect the rule describes.
 
-    WHAT TO EXPECT
-      The early years gain trades and the recent years lose a few:
-      0.0689% is 6.9 points at a 10,000 index and 31 points at 45,000.
-      A large rise in trade count is the POINT -- it is what makes the
-      sample real. Net profit may well fall. Judge this change on
-      sample validity and on regime PF, not on net profit alone.
+    Both entry paths carry it, death cross and re-entry alike.
 
-    WARNING: THE TRADE POPULATION CHANGES ENTIRELY.
-      Every prior finding conditioned on the population must be
-      re-verified before this is adopted -- Rule #13's ten dimensions,
-      acceptance item 9, and the v1.16.0 gap filter parameters, whose
-      Gap_Down_Min_Pct and Gap_Night_On inertness proofs were measured
-      on the 119-trade population and do not automatically carry over.
+    The two mechanisms are a symmetric pair and only one half existed:
+      Gap_Scope_Bars = 1     protects the first bar's SIGNAL   (v1.16.0)
+      Sess_LastBar_Block_On  protects the first bar's FILL     (here)
 
+    MEASURED IN SAMPLE: zero occurrences. No signal timestamp is 1345
+    and no fill timestamp is 0850 or 1505 across all 119 trades. This
+    ships as a guard against something that has not happened yet, so
+    the acceptance test is that it changes NOTHING -- bit-identical to
+    v1.16.0 at 119 trades / 3,141,200 / PF 2.0657. A zero-change result
+    is the proof it is wired correctly and simply has not been needed.
+
+    HONEST LIMITATION. v1.16.0 detects the session's FIRST bar by
+    transition (v_In_Day and not v_In_Day[1]) and its comment states
+    why: a hard-coded stamp fails silently when the open is delayed,
+    and a protective filter that fails open is worse than none. The
+    LAST bar cannot be detected that way -- that would require seeing
+    the next bar. This guard therefore compares against Sess_Day_End /
+    Sess_Night_End and WILL FAIL OPEN on an irregular early close whose
+    final bar carries a different stamp. Settlement days and registered
+    holidays are already blocked upstream, so the residual exposure is
+    an unscheduled early close. Documented rather than papered over.
+
+    ------------------------------------------------------------------
+    B. Gap_Down_Min_Pct  0.30 -> 0     (collapses the gap test to one)
+    ------------------------------------------------------------------
+
+    The v1.16.0 block condition is a conjunction:
+
+        session gap <= -Gap_Down_Min_Pct   AND   first bar closed up
+
+    The handoff describes the mechanism in one line -- "if the session's
+    first bar did not close below its open, do not enter" -- but the
+    code also requires the gap to exceed 0.30%. All 17 observed
+    first-bar entries had a median gap of -1.108%, so the threshold was
+    inert and was reported as such. Inert IN SAMPLE is not the same as
+    harmless: a -0.10% gap with an up-closing first bar slips through
+    today.
+
+    v1.16.0's own sweep already measured this. Run #4 set X = 0 and
+    came back BIT-IDENTICAL to the adopted 0.30 across all 119 trades
+    (run #3 at -999 likewise). So the change costs nothing in sample
+    and closes the small-gap hole going forward.
+
+    It also makes the code match its own description: with the
+    threshold at 0 the condition really is the single sentence the
+    documentation claims.
+
+    ------------------------------------------------------------------
+    C. Tail_LastEntry_Time FILL SEMANTICS  (Tail_FillSemantic_On, OFF)
+    ------------------------------------------------------------------
+
+    v1.16.0 marks this input NOT COMPLIANT in its own compliance list:
+    it is named as an entry time but gates the SIGNAL bar, so 0430
+    permits an 0435 fill. Observed once, 2026-03-07.
+
+    The fix is one comparison -- Time < Tail_LastEntry_Time instead of
+    <= -- so the last permitted signal is one bar earlier and the fill
+    lands ON the named time rather than after it.
+
+    THIS ONE COSTS MONEY. That 2026-03-07 trade entered 0435, was
+    force-flatted by TailFlat at 0445 two bars later, and made +42,800.
+    Correcting the semantics removes a winner.
+
+    Shipped OFF so the correctness fix and the trading decision stay
+    separate. Turning it on is a ruling, not a default: keeping it off
+    means retaining a behaviour the file itself labels non-compliant in
+    exchange for 42,800 of in-sample profit.
 
   v1.16.0 (2026-08-08) SESSION OPENING GAP FILTER -- FIRST ENTRY-SIDE
                        CHANGE SINCE v1.6.2:
@@ -233,6 +285,9 @@
     v1.17.0 will fix Tail_LastEntry_Time, which names a fill time but
     gates a signal bar. Kept out of this version so the gap filter's
     attribution stays clean.
+    [v1.17.0 note: done, but behind Tail_FillSemantic_On shipped OFF --
+     the fix costs a measured -42,800, so it is available rather than
+     applied. The default still carries the defect.]
 
   v1.15.0 (2026-08-06) PARAMETER PROVENANCE + ARCHITECTURE COLLAPSE:
 
@@ -751,6 +806,12 @@
     weekend, holiday).
     - Tail_LastEntry_Time (430): last entry SIGNAL bar 0430
       (fill 04:30). Entries allowed all night up to here.
+      [v1.17.0 CORRECTION: "(fill 04:30)" is wrong and this is the
+       original source of the defect. The signal bar is 0430 and the
+       order is a next-bar order, so the fill is 04:35. The intent
+       written here was right; the implementation was off by one bar
+       and the comment recorded the intent rather than the behaviour.
+       See Tail_FillSemantic_On.]
     - Tail_ForceExit_Time (440): force-flat signal at 0440 bar
       close, fill 04:40 (445-bar open). 20-min buffer to close.
     Verified vs 110-trade baseline (see research folder
@@ -933,30 +994,7 @@ inputs:
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
-    { MinSlope is a POINTS threshold, which is a dimensional error:
-      28 points was 0.28% of the 2019 index and is 0.062% today, so
-      the same gate is 4.5x tighter in the early years. Consequence
-      measured on v1.16.0 -- trades clearing it per year:
-        2019 0  2020 1  2021 0  2022 3  2023 0  2024 11  2025 11
-        2026 93
-      while candidate death crosses run ~1,200 a year with no trend.
-      Five years produced four trades. This is a SAMPLE problem.
-
-      v1.17.0 adds a percentage form behind a switch. Default False
-      keeps the points path, so the anchor must reproduce v1.16.0
-      exactly: 119T / 3,141,200 / PF 2.0657.
-
-      IMPLEMENTATION NOTE -- two normalisations were tried before:
-        v0.6  threshold = ATR * mult            REJECTED. ATR measures
-              volatility in BOTH directions and cannot express a
-              directional slope. Wrong metric, not a wrong constant.
-        v1.9.0 threshold = ZLEMA_Fast * pct/100  -1.6% net with a
-              BETTER profit factor on the then-current architecture.
-              Abandoned for reasons not present in the numbers.
-      v1.17.0 uses the v1.9.0 form. Anchor 28 / 40634 = 0.0689%. }
-    MinSlope                ( 28     ),
-    MinSlope_Use_Pct        ( False  ),
-    MinSlope_Pct            ( 0.0689 ),
+    MinSlope                ( 28    ),
 
     { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
     QuickStop_On            ( True  ),
@@ -1157,6 +1195,24 @@ inputs:
     Tail_LastEntry_Time     ( 430   ),
     Tail_ForceExit_Time     ( 440   ),
 
+    { v1.17.0 ITEM C -- Tail_LastEntry_Time fill semantics.          }
+    { OFF. This is a correctness switch that costs money, so it is   }
+    { shipped inert and turning it on is a deliberate ruling.        }
+    {                                                                }
+    { Tail_LastEntry_Time is named as an ENTRY time but gates the    }
+    { SIGNAL bar, so 0430 permits an 0435 FILL -- the file's own     }
+    { compliance list in Section 4.5 marks it NOT COMPLIANT.         }
+    {                                                                }
+    { True  -> Time <  Tail_LastEntry_Time : last signal 0425,       }
+    {          fill lands ON 0430, the input means what it says.     }
+    { False -> Time <= Tail_LastEntry_Time : v1.16.0 behaviour.      }
+    {                                                                }
+    { MEASURED COST OF True: -42,800. The single affected trade      }
+    { (2026-03-07, entered 0435) was force-flatted by TailFlat at    }
+    { 0445 for +42,800. Correcting the semantics removes a winner,   }
+    { which is why the fix and the trading decision are kept apart.  }
+    Tail_FillSemantic_On    ( False ),
+
     { ===== Group J: Session Gap Filter - v1.16.0 (DEFAULT OFF) ===== }
     { Suppresses the entry SIGNAL on the opening bar(s) of a session   }
     { when the session opened with a DOWN gap and that opening bar     }
@@ -1186,10 +1242,23 @@ inputs:
     {                     clean [1] so the mechanism argues for 1    }
     { Both inert inputs are kept for readability and as structural   }
     { cover, NOT because they contribute. First to cut if simplified.}
+    {                                                                }
+    { v1.17.0 ITEM B: Gap_Down_Min_Pct 0.30 -> 0.                    }
+    { The threshold was inert in sample (all 17 observed first-bar   }
+    { entries had a median gap of -1.108%) and run #4 proved 0 is    }
+    { bit-identical to 0.30. Inert in sample is not harmless going   }
+    { forward: at 0.30 a -0.10% gap with an up-closing first bar     }
+    { slips through. At 0 the condition reduces to exactly the one   }
+    { sentence the documentation already claims -- "if the session's }
+    { first bar did not close below its open, do not enter" -- and   }
+    { the code stops overstating its own precision.                  }
+    { The input is retained (not deleted) so the sweep evidence      }
+    { stays reproducible and a threshold can be reinstated without   }
+    { a structural edit.                                             }
     Gap_Filter_On           ( True  ),
     Gap_Day_On              ( True  ),
     Gap_Night_On            ( True  ),
-    Gap_Down_Min_Pct        ( 0.30  ),
+    Gap_Down_Min_Pct        ( 0.00  ),
     Gap_Rise_Min_Pct        ( 0.00  ),
     Gap_Scope_Bars          ( 1     ),
 
@@ -1202,6 +1271,28 @@ inputs:
     Sess_Day_End            ( 1345  ),
     Sess_Night_Start        ( 1500  ),
     Sess_Night_End          ( 500   ),
+
+    { v1.17.0 ITEM A -- session LAST-bar entry block. ON.            }
+    {                                                                }
+    { The gap filter protects the session's first bar from the       }
+    { SIGNAL side (Gap_Scope_Bars). This protects it from the FILL   }
+    { side. A signal on the last bar of a session fills on the first }
+    { bar of the next one, straight into the opening gap, and by     }
+    { then v_Gap_Block is a bar too late to withdraw the order.      }
+    { Both entry paths carry it -- death cross and re-entry alike.   }
+    {                                                                }
+    { Expected in-sample effect: ZERO. No signal timestamp is 1345   }
+    { and no fill timestamp is 0850 or 1505 across all 119 trades.   }
+    { A bit-identical result is the acceptance test, not a           }
+    { disappointment -- this guards a path that has not been taken.  }
+    {                                                                }
+    { FAILS OPEN ON IRREGULAR SESSIONS. The first bar is detected by }
+    { transition and needs no timestamp; the LAST bar cannot be, so  }
+    { this compares against Sess_Day_End / Sess_Night_End. An        }
+    { unscheduled early close whose final bar carries a different    }
+    { stamp is not covered. Settlement days and registered holidays  }
+    { are already blocked upstream.                                  }
+    Sess_LastBar_Block_On   ( True  ),
 
     { ===== Group K: K-bar classification - v1.16.0 (RECORD ONLY) ===== }
     { Thresholds for the 18-type taxonomy in Section 4.5. Nothing in   }
@@ -1224,7 +1315,6 @@ variables:
     v_ZLEMA_Fast            ( 0     ),
     v_ZLEMA_Slow            ( 0     ),
     v_Slope                 ( 0     ),
-    v_MinSlope_Eff          ( 0     ),
 
     { ===== Signal detection ===== }
     v_Death_Cross           ( False ),
@@ -1311,6 +1401,11 @@ variables:
     v_Night_First           ( False ),
     v_Sess_First            ( False ),
     v_Bars_In_Sess          ( 0     ),
+
+    { ===== v1.17.0 session LAST bar (fill-side gap guard) ===== }
+    v_Sess_LastBar          ( False ),
+    v_Sess_LastBar_Block    ( False ),
+    v_Tail_Entry_OK         ( True  ),
 
     { ===== v1.16.0 gap measurement (latched on the session first bar) ===== }
     v_Prev_Open             ( 0     ),
@@ -1426,14 +1521,6 @@ v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
 { Positive value = Fast is falling = bearish momentum = good for short }
 v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
 
-{ v1.17.0: effective slope threshold. Points form is the default so
-  the gate is bit-identical to v1.16.0 until the switch is flipped.
-  The percentage form scales the threshold with the index level, which
-  is what makes the gate mean the same thing in 2019 and in 2026. }
-v_MinSlope_Eff = MinSlope;
-if MinSlope_Use_Pct then
-    v_MinSlope_Eff = v_ZLEMA_Fast * MinSlope_Pct / 100;
-
 
 { ============================================================
   SECTION 4.5 - SESSION BOUNDARY, OPENING GAP, K-BAR TYPE
@@ -1455,14 +1542,26 @@ if MinSlope_Use_Pct then
   comment, whether it names the SIGNAL bar or the FILL bar.
 
   Compliance in this file:
-    Gap_Scope_Bars       COMPLIANT - names signal bars, and the
-                         resulting fill bars are stated in Group J.
-    Tail_LastEntry_Time  NOT COMPLIANT - named as an entry time
-                         but gates the signal bar, so a 0430 value
-                         permits an 0435 fill (observed 2026-03-07).
-                         Deliberately left unchanged in v1.16.0 so
-                         that this version's attribution stays clean.
-                         Scheduled for v1.17.0.
+    Gap_Scope_Bars        COMPLIANT - names signal bars, and the
+                          resulting fill bars are stated in Group J.
+    Sess_LastBar_Block_On COMPLIANT (v1.17.0) - it is the fill-side
+                          twin of Gap_Scope_Bars. Gap_Scope_Bars
+                          stops a session first bar from SIGNALLING;
+                          this stops a session last bar from
+                          signalling, which is what would put a FILL
+                          on the next session's first bar. The pair
+                          is what makes the offset rule enforced in
+                          both directions rather than just one.
+    Tail_LastEntry_Time   NOT COMPLIANT BY DEFAULT - named as an
+                          entry time but gates the signal bar, so a
+                          0430 value permits an 0435 fill (observed
+                          2026-03-07). v1.17.0 adds the fix behind
+                          Tail_FillSemantic_On, shipped OFF because
+                          it costs a measured -42,800. The default
+                          therefore still carries the defect; this
+                          entry stays NOT COMPLIANT until the switch
+                          is turned on, and must not be read as
+                          closed just because a switch exists.
 
   ------------------------------------------------------------
   BAR DIRECTION IS NEVER NAMED BY COLOUR
@@ -1503,6 +1602,33 @@ else if v_In_Day or v_In_Night then
     v_Bars_In_Sess = v_Bars_In_Sess + 1
 else
     v_Bars_In_Sess = 0;
+
+{ ---- Last bar of a session (v1.17.0, ITEM A) -----------------
+  The first bar above is found by TRANSITION, which needs no
+  timestamp and so cannot be fooled by a delayed open. The last
+  bar cannot be found that way: knowing a bar is the last one
+  requires seeing the next one, which is a future reference.
+  So this compares against the session end stamps, and the
+  limitation is stated rather than hidden -- an unscheduled early
+  close whose final bar carries a different stamp is NOT caught
+  and this guard fails open there.
+
+  Why the guard is needed at all: a signal on the day session's
+  last bar (1345) passes the entry time gate through its
+  Time > 500 clause, and the resulting next-bar order fills at
+  1505 -- the first bar of the night session, inside the opening
+  gap. v_Gap_Block is computed correctly on that 1505 bar but the
+  order was already placed, and per the offset rule above it
+  cannot be withdrawn.
+
+  The night session's last bar (0500) is already blocked today,
+  incidentally, because the entry gate's Time <= Tail_LastEntry_Time
+  clause stops signals after 0430. That is a coincidence of the
+  current input value, not a guarantee, so both sessions are
+  handled here and this guard does not depend on what
+  Tail_LastEntry_Time happens to be set to. -------------------- }
+v_Sess_LastBar = ( v_In_Day   and Time = Sess_Day_End   ) or
+                 ( v_In_Night and Time = Sess_Night_End );
 
 { ---- Latch the gap and the opening bar OHLC ------------------
   On the session first bar, Open[1] and Close[1] are the open and
@@ -1627,6 +1753,32 @@ if Gap_Filter_On and v_Bars_In_Sess >= 1 and v_Bars_In_Sess <= Gap_Scope_Bars th
             v_Gap_Block = True;
     end;
 end;
+
+{ ---- v1.17.0 ITEM A: fill-side twin of the gap filter ---------
+  Same shape as v_Gap_Block above -- a raw fact (v_Sess_LastBar)
+  measured in Section 4.5, then a switched verdict here, so the
+  measurement stays available for diagnostics even when the guard
+  is turned off. With Sess_LastBar_Block_On = False this is always
+  False and both entry paths behave exactly as v1.16.0. ------- }
+v_Sess_LastBar_Block = False;
+if Sess_LastBar_Block_On = True and v_Sess_LastBar = True then
+    v_Sess_LastBar_Block = True;
+
+{ ---- v1.17.0 ITEM C: tail entry time, signal vs fill ----------
+  One boolean so both entry paths share a single definition and
+  cannot drift apart.
+
+  OFF (default, = v1.16.0): last signal 0430, so the FILL is 0435
+  and Tail_LastEntry_Time does not mean what its name says.
+  ON: last signal 0425, so the FILL lands ON 0430.
+
+  The Time > 500 clause is unchanged in both. It admits the day
+  session and the pre-midnight night bars; only post-midnight bars
+  are measured against Tail_LastEntry_Time (MC 24hr rule). ---- }
+if Tail_FillSemantic_On = True then
+    v_Tail_Entry_OK = ( Time <  Tail_LastEntry_Time or Time > 500 )
+else
+    v_Tail_Entry_OK = ( Time <= Tail_LastEntry_Time or Time > 500 );
 
 
 { ============================================================
@@ -1759,15 +1911,21 @@ v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
 
 { v1.3: tail entry cutoff - allow evening/night entries up to the  }
 { LastEntry signal bar; block only the final pre-close window.     }
+{ v1.17.0: the raw time test is now v_Tail_Entry_OK (Item C), and  }
+{ v_Sess_LastBar_Block is added as the fill-side twin of           }
+{ v_Gap_Block (Item A). The two Block flags sit together on        }
+{ purpose: one stops a signal ON the session's first bar, the      }
+{ other stops a signal that would FILL on it.                      }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope               > v_MinSlope_Eff and
-   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Slope               > MinSlope and
+   v_Tail_Entry_OK       = True and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
    Manual_Kill_Switch    = False and
-   v_Gap_Block           = False then begin
+   v_Gap_Block           = False and
+   v_Sess_LastBar_Block  = False then begin
     v_IsReEntry = False;
     sell short ( "SE_MA_DeathCross" ) next bar at market;
 end;
@@ -1778,18 +1936,28 @@ end;
   active bearish momentum before re-entry, not just structure.
   v1.6.2: added Close >= v_ReEntry_Price gate to enforce directional entry --
   stop order only placed when current bar closes at/above the re-entry level,
-  so the next bar must FALL to it (price descending through the level). }
+  so the next bar must FALL to it (price descending through the level).
+
+  v1.17.0: carries the SAME two changes as the death cross path above.
+  This matters more here, not less. A stop order is WORKING through the
+  whole of the next bar rather than filling at its open, so a re-entry
+  armed on a session's last bar sits live across the entire opening bar
+  of the next session and any wick through v_ReEntry_Price fills it --
+  precisely the gap the filter was written to avoid. The two entry paths
+  are kept condition-for-condition identical on every protective gate so
+  that a rule can never be true of one and false of the other. }
 if MarketPosition = 0 and
    v_ReEntry_Armed       = True and
    v_ZLEMA_Fast          < v_ZLEMA_Slow and
-   v_Slope               > v_MinSlope_Eff and
+   v_Slope               > MinSlope and
    Close                 >= v_ReEntry_Price and
-   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Tail_Entry_OK       = True and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
    v_Registry_Expired    = False and
    Manual_Kill_Switch    = False and
-   v_Gap_Block           = False then begin
+   v_Gap_Block           = False and
+   v_Sess_LastBar_Block  = False then begin
     v_IsReEntry = True;
     sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
 end;
