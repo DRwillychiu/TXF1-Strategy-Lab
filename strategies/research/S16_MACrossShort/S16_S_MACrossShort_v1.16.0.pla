@@ -13,10 +13,107 @@
     were last tuned against an exit architecture that no longer
     exists.
 
-    STATUS: SHIPS OFF. Gap_Filter_On defaults to False, so this
-            version MUST reproduce v1.15.0 bit for bit:
-              129 trades / Net 2,761,600 / PF 1.8300072133
-            Run that anchor before trusting any swept cell.
+    STATUS: ADOPTED 2026-08-08 after nine measured runs.
+
+      v1.15.0   129 trades / 2,761,600 / PF 1.8300 / Sharpe 0.1429
+      v1.16.0   119 trades / 3,141,200 / PF 2.0657 / Sharpe 0.1656
+
+      Net +13.7%, PF +12.9%, drawdown -23.07% -> -20.99%,
+      win rate 27.91% -> 30.25%, and Sharpe clears the 0.15 floor
+      in STRATEGY_SUCCESS_CRITERIA.md for the first time in seven
+      versions. No metric regressed.
+
+    ------------------------------------------------------------------
+    THE NINE RUNS
+    ------------------------------------------------------------------
+    0   defaults, filter off      129T / 2,761,600 / PF 1.8300072133
+                                  bit-identical to v1.15.0 across
+                                  129 trades x 9 fields. The 132 new
+                                  lines touch nothing.
+
+    0b  structural test           DownMin=-999, RiseMin=-999 blocks
+                                  every session first bar. Entries at
+                                  0855 and 1510 both went 17->0 and
+                                  1->0, which is what proves MC stamps
+                                  bars at their CLOSE and that the
+                                  session detection is correct.
+                                  108T / 3,038,000 / Sharpe 0.2014
+
+    1   Y = +0.30                 123T / 2,956,800   blocks 6
+    2   Y =  0.00  <-- ADOPTED    119T / 3,141,200   blocks 10
+    3   X = -999                  bit-identical to run 2
+    4   X =  0                    bit-identical to run 2
+    5   Scope = 2                 118T / 3,144,400   +3,200 only
+    6   Night off                 bit-identical to run 2
+    7   MinSlope = 0              9,272T / -33,461,600
+    8   MinSlope = -99999        12,369T / -44,334,000
+
+    ------------------------------------------------------------------
+    THE MODULE COLLAPSES TO ONE CONDITION
+    ------------------------------------------------------------------
+    Runs 3 and 4 make Gap_Down_Min_Pct provably inert, and the reason
+    is structural rather than a sample accident:
+
+      an UP gap raises Close, so v_ZLEMA_Fast rises, so
+      v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast goes NEGATIVE and
+      MinSlope rejects it -- and a death cross needs the fast line
+      to cross BELOW, which an up gap cannot produce anyway.
+
+    An up gap therefore cannot generate a first-bar short entry at
+    all, which makes "require a down gap" redundant with conditions
+    the strategy already has.
+
+    Run 6 makes Gap_Night_On inert too: the sole night first-bar
+    entry (2026-03-17 15:10) closed DOWN, so Y=0.00 never blocked it.
+
+    What actually runs is one sentence:
+
+      IF THE SESSION'S FIRST BAR DID NOT CLOSE BELOW ITS OWN OPEN,
+      DO NOT ENTER.
+
+    Zero tuned thresholds. 0.00 is the natural boundary, not a swept
+    optimum, so there is no selection bias to discount.
+
+    ------------------------------------------------------------------
+    WHY MinSlope STAYS (runs 7 and 8)
+    ------------------------------------------------------------------
+    Removing the gate entirely costs 47,475,200 and takes drawdown to
+    -47,115,600, roughly 23x the account. But the interesting part is
+    what it reveals about the mechanism. Slippage is 4,000 per trade
+    (10 points x 200 x 2 lots), so backing it out:
+
+      adopted     119 trades   gross 3,617,200
+      MinSlope=0  9,272 trades gross 3,626,400
+
+    Nine thousand more trades produce 9,200 more gross profit -- one
+    NT dollar per trade. MinSlope adds no alpha whatsoever. It is a
+    COST-FLOOR SELECTOR: it discards the 99% of crosses whose gross
+    edge (about 2 points) cannot clear a 10-point cost.
+
+    This is why a candlestick-shape filter cannot replace it. Shape
+    ratios are dimensionless and cannot distinguish a long bearish
+    bar that fell 5 points from one that fell 500. Only a magnitude
+    measure can face a fixed cost floor. The correct fix for the
+    28-point scale problem is percentage normalisation, not
+    substitution.
+
+    ------------------------------------------------------------------
+    SAMPLE VALIDITY WARNING SURFACED BY RUN 7
+    ------------------------------------------------------------------
+    Candidate death crosses run about 1,200 per year with no trend.
+    Trades that clear MinSlope = 28 points do not:
+
+      2019  0     2020  1     2021  0     2022  3
+      2023  0     2024 11     2025 11     2026 93
+
+    Five years produced four trades. The 6.5-year backtest is really
+    2.5 years of data. 28 points was 0.28% of the 2019 index and is
+    0.062% today, so the gate was 4.5x tighter in the early years.
+
+    This is a SAMPLE problem, not a performance problem, and it makes
+    Rule #13's "sample >= 100" and "PF > 1.0 in three regimes" not
+    genuinely satisfiable on the current parameterisation. It must be
+    resolved before any promote.
 
     ------------------------------------------------------------------
     THE DEFECT
@@ -1010,7 +1107,15 @@ inputs:
     { Gap_Rise_Min_Pct semantics: the test is >=, so the default 0.00  }
     { also blocks a bar that closed exactly at its open. Set 0.01 to   }
     { require a strictly higher close.                                 }
-    Gap_Filter_On           ( False ),
+    { ADOPTED 2026-08-08. Nine measured runs; see the version block  }
+    { at the top of this file. Only Gap_Rise_Min_Pct binds:          }
+    {   Gap_Down_Min_Pct  bit-identical at -999 / 0 / 0.30           }
+    {   Gap_Night_On      bit-identical at True / False              }
+    {   Gap_Scope_Bars    2 gains 3,200 = 0.1%, and bar 2 has a      }
+    {                     clean [1] so the mechanism argues for 1    }
+    { Both inert inputs are kept for readability and as structural   }
+    { cover, NOT because they contribute. First to cut if simplified.}
+    Gap_Filter_On           ( True  ),
     Gap_Day_On              ( True  ),
     Gap_Night_On            ( True  ),
     Gap_Down_Min_Pct        ( 0.30  ),
