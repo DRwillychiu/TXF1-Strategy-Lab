@@ -1302,7 +1302,44 @@ inputs:
     KB_Body_Long            ( 0.75  ),
     KB_Body_Mid             ( 0.30  ),
     KB_Body_Small           ( 0.05  ),
-    KB_Shadow_Ratio         ( 2.00  );
+    KB_Shadow_Ratio         ( 2.00  ),
+
+    { ===== Group L: Re-Entry gates - v1.17.0 (ALL DEFAULT ON) =====
+      The re-entry leg has carried three conditions since v1.6.x and
+      not one of them has ever been measured on its own, because none
+      had a switch. These four inputs exist to make that measurable.
+      Every default is the CURRENT behaviour, so the whole group is
+      inert until one is flipped and the anchor must be unaffected.
+
+      WHY THESE FOUR
+        ReEntry_On             v1.6   whole-leg degenerate anchor
+        ReEntry_Structure_Gate v1.6   v_ZLEMA_Fast < v_ZLEMA_Slow
+        ReEntry_Slope_Gate     v1.6.1 v_Slope > MinSlope
+        ReEntry_Close_Gate     v1.6.2 Close >= v_ReEntry_Price
+
+      WHAT IS ALREADY KNOWN (v1.16.0 population, 119 trades)
+        11 re-entries, +648,000 -- but +565,600 of it is one trade.
+        Excluding each leg's own best trade, re-entry averages +8,240
+        against the death cross path's +12,913. The leg's edge is not
+        established.
+        Chains form because v_ReEntry_Price = v_Last_EntryPrice, so a
+        chain re-enters at its parent's price. Blocking a parent
+        removes the whole chain -- measured at run 0b, where blocking
+        every session first bar removed 3 re-entries worth +158,000.
+        The longest chain observed is 3 (2026-07-17, all at 44,181).
+        ReEntry_Max_Chain is deliberately NOT added (user ruling).
+
+      SCOPE OF WHAT A MEASUREMENT CAN SETTLE
+        The 2026-08-08 ruling is that re-entry is a DESIGN question --
+        it exists so the original entry condition is honoured rather
+        than abandoned on a washout. A weak measured edge therefore
+        does not by itself remove the mechanism. Cross-strategy prior:
+        L1_TrendLong shipped re-entry and withdrew it after an MC9 A/B
+        test at -920,000. Recorded, not acted on. }
+    ReEntry_On              ( True  ),
+    ReEntry_Structure_Gate  ( True  ),
+    ReEntry_Slope_Gate      ( True  ),
+    ReEntry_Close_Gate      ( True  );
 
 
 { ============================================================
@@ -1946,11 +1983,16 @@ end;
   precisely the gap the filter was written to avoid. The two entry paths
   are kept condition-for-condition identical on every protective gate so
   that a rule can never be true of one and false of the other. }
+{ v1.17.0: the three v1.6.x conditions are now each behind a switch.
+  With every switch True, "( Switch = False or Cond )" reduces to Cond,
+  so this block is logically identical to v1.16.0 and the anchor must
+  reproduce 119 / 3,141,200 / PF 2.065681 bit for bit. }
 if MarketPosition = 0 and
+   ReEntry_On            = True and
    v_ReEntry_Armed       = True and
-   v_ZLEMA_Fast          < v_ZLEMA_Slow and
-   v_Slope               > MinSlope and
-   Close                 >= v_ReEntry_Price and
+   ( ReEntry_Structure_Gate = False or v_ZLEMA_Fast < v_ZLEMA_Slow ) and
+   ( ReEntry_Slope_Gate     = False or v_Slope      > MinSlope ) and
+   ( ReEntry_Close_Gate     = False or Close        >= v_ReEntry_Price ) and
    v_Tail_Entry_OK       = True and
    v_Settlement_Day      = False and
    v_Holiday_Block       = False and
