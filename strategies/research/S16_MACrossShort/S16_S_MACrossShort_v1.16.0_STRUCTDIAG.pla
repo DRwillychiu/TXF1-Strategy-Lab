@@ -1,0 +1,2251 @@
+{ ================================================================================
+  S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
+  Signal Name : S16_S_MACrossShort
+  MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
+  Version     : v1.16.0 Session Gap Filter (2026-08-08, base v1.15.0)
+
+  v1.16.0 (2026-08-08) SESSION OPENING GAP FILTER -- FIRST ENTRY-SIDE
+                       CHANGE SINCE v1.6.2:
+
+    Exit side closed at v1.15.0 with all nine parameters measured.
+    This is the first entry-side work in nine versions. Everything
+    from v1.7 to v1.15 touched exits only, so the entry conditions
+    were last tuned against an exit architecture that no longer
+    exists.
+
+    STATUS: ADOPTED 2026-08-08 after nine measured runs.
+
+      v1.15.0   129 trades / 2,761,600 / PF 1.8300 / Sharpe 0.1429
+      v1.16.0   119 trades / 3,141,200 / PF 2.0657 / Sharpe 0.1656
+
+      Net +13.7%, PF +12.9%, drawdown -23.07% -> -20.99%,
+      win rate 27.91% -> 30.25%, and Sharpe clears the 0.15 floor
+      in STRATEGY_SUCCESS_CRITERIA.md for the first time in seven
+      versions. No metric regressed.
+
+    ------------------------------------------------------------------
+    THE NINE RUNS
+    ------------------------------------------------------------------
+    0   defaults, filter off      129T / 2,761,600 / PF 1.8300072133
+                                  bit-identical to v1.15.0 across
+                                  129 trades x 9 fields. The 132 new
+                                  lines touch nothing.
+
+    0b  structural test           DownMin=-999, RiseMin=-999 blocks
+                                  every session first bar. Entries at
+                                  0855 and 1510 both went 17->0 and
+                                  1->0, which is what proves MC stamps
+                                  bars at their CLOSE and that the
+                                  session detection is correct.
+                                  108T / 3,038,000 / Sharpe 0.2014
+
+    1   Y = +0.30                 123T / 2,956,800   blocks 6
+    2   Y =  0.00  <-- ADOPTED    119T / 3,141,200   blocks 10
+    3   X = -999                  bit-identical to run 2
+    4   X =  0                    bit-identical to run 2
+    5   Scope = 2                 118T / 3,144,400   +3,200 only
+    6   Night off                 bit-identical to run 2
+    7   MinSlope = 0              9,272T / -33,461,600
+    8   MinSlope = -99999        12,369T / -44,334,000
+
+    ------------------------------------------------------------------
+    THE MODULE COLLAPSES TO ONE CONDITION
+    ------------------------------------------------------------------
+    Runs 3 and 4 make Gap_Down_Min_Pct provably inert, and the reason
+    is structural rather than a sample accident:
+
+      an UP gap raises Close, so v_ZLEMA_Fast rises, so
+      v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast goes NEGATIVE and
+      MinSlope rejects it -- and a death cross needs the fast line
+      to cross BELOW, which an up gap cannot produce anyway.
+
+    An up gap therefore cannot generate a first-bar short entry at
+    all, which makes "require a down gap" redundant with conditions
+    the strategy already has.
+
+    Run 6 makes Gap_Night_On inert too: the sole night first-bar
+    entry (2026-03-17 15:10) closed DOWN, so Y=0.00 never blocked it.
+
+    What actually runs is one sentence:
+
+      IF THE SESSION'S FIRST BAR DID NOT CLOSE BELOW ITS OWN OPEN,
+      DO NOT ENTER.
+
+    Zero tuned thresholds. 0.00 is the natural boundary, not a swept
+    optimum, so there is no selection bias to discount.
+
+    ------------------------------------------------------------------
+    WHY MinSlope STAYS (runs 7 and 8)
+    ------------------------------------------------------------------
+    Removing the gate entirely costs 47,475,200 and takes drawdown to
+    -47,115,600, roughly 23x the account. But the interesting part is
+    what it reveals about the mechanism. Slippage is 4,000 per trade
+    (10 points x 200 x 2 lots), so backing it out:
+
+      adopted     119 trades   gross 3,617,200
+      MinSlope=0  9,272 trades gross 3,626,400
+
+    Nine thousand more trades produce 9,200 more gross profit -- one
+    NT dollar per trade. MinSlope adds no alpha whatsoever. It is a
+    COST-FLOOR SELECTOR: it discards the 99% of crosses whose gross
+    edge (about 2 points) cannot clear a 10-point cost.
+
+    This is why a candlestick-shape filter cannot replace it. Shape
+    ratios are dimensionless and cannot distinguish a long bearish
+    bar that fell 5 points from one that fell 500. Only a magnitude
+    measure can face a fixed cost floor. The correct fix for the
+    28-point scale problem is percentage normalisation, not
+    substitution.
+
+    ------------------------------------------------------------------
+    SAMPLE VALIDITY WARNING SURFACED BY RUN 7
+    ------------------------------------------------------------------
+    Candidate death crosses run about 1,200 per year with no trend.
+    Trades that clear MinSlope = 28 points do not:
+
+      2019  0     2020  1     2021  0     2022  3
+      2023  0     2024 11     2025 11     2026 93
+
+    Five years produced four trades. The 6.5-year backtest is really
+    2.5 years of data. 28 points was 0.28% of the 2019 index and is
+    0.062% today, so the gate was 4.5x tighter in the early years.
+
+    This is a SAMPLE problem, not a performance problem, and it makes
+    Rule #13's "sample >= 100" and "PF > 1.0 in three regimes" not
+    genuinely satisfiable on the current parameterisation. It must be
+    resolved before any promote.
+
+    ------------------------------------------------------------------
+    THE DEFECT
+    ------------------------------------------------------------------
+    v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast
+
+    On the first bar of a session [1] points at the last bar of the
+    PREVIOUS session. A 3h45m overnight gap is therefore measured as
+    one bar of momentum, and MinSlope = 28 cannot filter it. The gate
+    is structurally inert on exactly that bar.
+
+    ------------------------------------------------------------------
+    THE EVIDENCE
+    ------------------------------------------------------------------
+    MC stamps bars at their close, so a fill at 0855 comes from a
+    signal on the first day bar (0850). v1.15.0 has 17 such trades
+    and 1 night equivalent.
+
+      all 17 followed a DOWN gap        base rate 44.7%,  p ~ 4.7e-7
+      median gap on those days          -1.108%  (all days +0.022%)
+      combined                          -393,200,  win rate 11.8%
+      14 of 17 exited on QuickStop
+      spread over 2020/2022/2024/2025/2026 -- NOT a recent-bias find
+
+    Splitting those 17 by whether the opening bar closed above or
+    below its own open:
+
+      closed at/above its open   10 trades   -379,600   0 wins
+      closed below its open       7 trades    -13,600   2 wins,
+                                                        incl. +149,200
+
+    First-bar direction also separates the whole session's path with
+    no overlap on this sample: of the 10 that closed up, none went on
+    to a sustained decline; of the 7 that closed down, none went on to
+    a sustained advance.
+
+    ------------------------------------------------------------------
+    WHY A DIRECTION TEST AND NOT A TIME BLOCK
+    ------------------------------------------------------------------
+    Blocking the opening bar outright removes all 17 (+393,200 on a
+    first-order estimate) but also removes the class that produced
+    the +149,200 winner. Blocking only the bars that closed up
+    recovers +379,600 -- 97% of the benefit, 59% of the trades, and
+    the winning class survives. Per portfolio-role-design, keeping
+    the fat tail wins.
+
+    ------------------------------------------------------------------
+    WHAT THIS VERSION DOES NOT FIX
+    ------------------------------------------------------------------
+    2026-07-17 fell 3.45% on the session, its opening bar closed
+    DOWN, so this filter passes it -- and it still lost 85,200. The
+    entry moved 331 points against the position before reversing.
+    Direction right, timing wrong. That is a QuickStop tolerance
+    question, not a gap question, and it is not addressed here.
+
+    ------------------------------------------------------------------
+    ALSO ADDED
+    ------------------------------------------------------------------
+    - 18-type K-bar taxonomy of the session opening bar, computed and
+      held but read by NOTHING. Awaiting 5-minute bar data for
+      non-circular validation (a bar's own OHLC statistics cannot
+      validate a classification derived from that same OHLC).
+    - Previous session's final bar OPEN is now recorded alongside its
+      close, so a down gap after a declining bar can be told apart
+      from one after an advancing bar.
+    - The signal/fill offset rule and the no-colour-names rule, both
+      stated in Section 4.5.
+
+    v1.17.0 will fix Tail_LastEntry_Time, which names a fill time but
+    gates a signal bar. Kept out of this version so the gap filter's
+    attribution stays clean.
+
+  v1.15.0 (2026-08-06) PARAMETER PROVENANCE + ARCHITECTURE COLLAPSE:
+
+    Two exit parameters had no defensible provenance. Both were settled
+    by measurement, and the second turned out to be dead, which let the
+    percentage leg collapse from five inputs to three.
+
+    RESULT: Net 2,670,800 -> 2,761,600 / PF 1.8027 -> 1.8300
+            129 trades, Gross Loss, MDD and Max Single Win all unchanged.
+
+    ------------------------------------------------------------------
+    C1  Struct_Trigger_Pct 1.20 -> 1.00        (behaviour change)
+    ------------------------------------------------------------------
+    1.20 was never swept. It was copied from the percentage leg at
+    v1.13.0 to keep that sweep two-dimensional, and the code said so.
+    "Copied from the other leg" is not an answer that survives a W5
+    ten-dimension review.
+
+    11-cell sweep, 0.00 to 2.00 step 0.20, everything else frozen.
+    The 1.20 cell reproduced 129T / 2,670,800 / PF 1.802717 exactly,
+    so the sweep is trustworthy.
+
+      0.0      0.2       0.4       0.6       0.8      1.0      1.2      1.4-2.0
+      1,382k   2,260k    2,309k    2,845k    2,726k   2,762k   2,671k   2,608k
+
+    THE GATE IS NOT REDUNDANT. At 0.00 net collapses 48% and drawdown
+    worsens to -812,000. The design doc had predicted 0.00-0.60 would be
+    identical to 1.20 on the theory that the lock formula self-gates
+    early in a trade. That theory is wrong -- see the A-1 note in the
+    structure leg block for why.
+
+    1.4 and above converge to 2,608,400, which IS the structure leg
+    contributing nothing. No separate Struct_On=False anchor needed.
+
+    CHOSE 1.00, NOT THE TOP-SCORING 0.60. 0.60 scores 2,844,800 with a
+    better drawdown (-492,000), but its left neighbour 0.40 sits at
+    2,309,200 -- a 535,600 cliff one grid step away. It also shows the
+    truncation signature: average winner -14%, winners holding 20 bars
+    instead of 23. 0.8/1.0/1.2 span just 3.3%; 1.00 is the plateau centre.
+    Same reasoning that rejected Trail 1.0/60 at v1.12.0.
+
+    EFFECT, back-solved from the exit-label deltas and matching the
+    sweep's net delta to the dollar: exactly 2 of 129 trades change.
+      2026-07-08  entry 45085   GoldenCross +40,000 -> Struct +72,800
+      2026-07-30  entry 40301   BE 0                -> Struct +58,000
+    Zero trades degrade. Gross Loss -3,327,200 untouched.
+
+    ------------------------------------------------------------------
+    C2  Percentage leg collapsed 5 inputs -> 3   (NO behaviour change)
+    ------------------------------------------------------------------
+    Trail_Giveback_Pct=80 governed only peaks in [1.2%, 2.0%); above
+    that Tier2's 40 took over. Failure test: raise it to 99 so the lock
+    in that band (peak x 1%) falls below BE_Cost_Pts and the leg cannot
+    bind. Result was BIT-IDENTICAL over 129 trades x 13 fields.
+
+    99 rather than the 95 originally proposed: at peak 1.2% of 45,000
+    the lock at 95 is still 27 points, well above BE's 10, so 95 only
+    loosens the parameter instead of disabling it. 99 gives 5.4 points,
+    and 9.5 points at the top of the band on the largest entry price in
+    the sample -- below BE everywhere, so the band is genuinely off.
+
+    PROOF THAT ALL FOUR TRAIL EXITS BELONG TO TIER2, independent of the
+    failure test. Back-solve each exit's lock from entry minus exit
+    price, then ask which giveback could have produced it:
+
+      lock 383 -> Tier2(40) implies peak 3.13%, base(80) implies 9.38%
+      lock 376 -> Tier2(40) implies peak 3.52%, base(80) implies 10.57%
+      lock 263 -> Tier2(40) implies peak 2.22%, base(80) implies 6.66%
+      lock 240 -> Tier2(40) implies peak 2.08%, base(80) implies 6.23%
+
+    Every base-80 figure exceeds that trade's own intrabar MFE, which is
+    impossible. Every Tier2-40 figure is under its MFE and lands above
+    2.0%. The base rate never determined an exit in 6.4 years.
+
+    COLLAPSE, verified bit-identical in a third run:
+      Trail_Trigger_Pct   1.20 -> 2.00
+      Trail_Giveback_Pct  80   -> 40
+      Tier2_On            True -> False
+    Three configurations -- base, failure test, collapsed -- are all
+    bit-identical to each other. The tier parameters are RETIRED, not
+    deleted: the code stays for reversibility, but re-enabling Tier2
+    requires re-verification because the base trigger has moved to 2.00.
+
+    ------------------------------------------------------------------
+    LIMITS
+    ------------------------------------------------------------------
+    1. The C1 gain rests on 2 trades, +90,800, paired test 1.37 sigma.
+       Below 2 sigma. Not statistically established.
+    2. Both changed trades are in 2026, so the pre-registered criterion
+       "no year holds >50% of the benefit" fails again, for the same
+       structural reason recorded at v1.13.0: MinSlope is a fixed 28
+       points and loosens 5.2x as the index rises, so the trade
+       population itself is skewed toward recent years. Re-test after
+       MinSlope is percentage-normalised.
+    3. The C2 runs were executed at Struct_Trigger_Pct=1.00, not the
+       1.20 that was current when the test was specified. That is the
+       more relevant configuration given C1, and the only base-band
+       trade under 1.20 also exits via Struct, so the conclusion carries
+       -- but it was not directly measured under 1.20.
+    4. Audit of this file: docs/research/
+       S16S_v1140_code_architecture_audit_20260806.md
+       Nine compliance checks pass; eight findings, none of which change
+       any current backtest number.
+
+  v1.14.0 (2026-08-05) B1 TIERED GIVEBACK (base v1.13.0):
+
+    STATUS: EXPERIMENTAL. Tier2_On defaults to False, which reproduces
+    v1.13.0 bit-for-bit. Nothing here is validated -- no MC12 run has
+    been made with it enabled.
+
+    WHY: Step 1 measured 1,690,000 of peak profit given back INSIDE the
+    holding window by the 27 trades that reach bar 25. A2 recovered
+    89,600 of it -- 5.3%. The other 94.7% is still on the table.
+
+    The latch diagnostic (2026-08-05) showed WHERE it sits. On the big
+    winners the binding leg is the percentage trail, not the structure
+    leg. Trade #84 at bar 21: peak 1594 pts, structure lock 134, trail
+    lock 319, structure binding flag 0. Structure locks on the distance
+    to the recent high, which stays small on a clean one-way move; the
+    trail locks a fraction of the peak, which grows with the peak. So
+    structure covers trades with tight structure and modest peaks, and
+    the trail covers the large-peak trades. The remaining giveback is
+    almost entirely in the trail's territory.
+
+    MECHANISM: a flat Trail_Giveback_Pct treats a 1.2% run and a 5% run
+    identically. Handing back 80% of the first costs 1% of index; of the
+    second, 4%. This tier lowers the allowed giveback once peak profit
+    clears a threshold. The user's framing: what is unacceptable is not
+    giving back 80%, it is giving back 80% OF A LARGE WIN.
+
+    ONE TIER, TWO PARAMETERS. The diagnostic counted 21 armed trades in
+    6.4 years -- not 24, which was the intraday-MFE upper bound. A
+    multi-tier table on 21 samples fits noise. Do not add tiers without
+    first enlarging the sample.
+
+    SWEEP: Tier2_Trigger_Pct 1.5/2.0/2.5/3.0/3.5
+         x Tier2_Giveback_Pct 30/40/50/60/70 = 25 combos.
+    Tier2_Giveback_Pct must stay BELOW Trail_Giveback_Pct(80) or the
+    tier loosens protection instead of tightening it.
+
+    DEGENERATE ANCHORS -- all three must be bit-identical to v1.13.0
+    (129 trades / Net 2,646,400 / PF 1.7953835):
+      A. Tier2_On = False               -> tier never evaluated
+      B. Tier2_Trigger_Pct = 99         -> threshold unreachable
+      C. Tier2_Giveback_Pct = 80        -> tier equals the base rate
+
+    PRIOR EXPECTATION, recorded before the run so it cannot be adjusted
+    afterwards: of the seven worst givebacks in the sample only three
+    ever armed (#75 peak 1.34%, #33 peak 1.40%, #8 peak 3.21%). Their
+    peaks straddle the whole range, so no single threshold catches all
+    three. A rough hand-calc puts the ceiling near 50,000-70,000 across
+    those three trades -- roughly 2% of net, and again resting on a
+    handful of trades. If the sweep returns much more than that,
+    suspect that winners are being cut rather than giveback recovered,
+    and check the bar-25 cohort before the net figure.
+
+    ACCEPTANCE: same nine pre-registered criteria as A2. Criterion 2 is
+    the bar-25 COHORT (29 trades / 5,355,200), and it is checked FIRST.
+
+    ------------------------------------------------------------------
+    RESULT (2026-08-05 sweep, 2026-08-06 user ruling)
+    ------------------------------------------------------------------
+
+    ADOPTED: Tier2_On=True, Tier2_Trigger_Pct=2.00, Giveback_Pct=40.
+    Baseline for every figure below is v1.13.0 FIRST VERSION
+    (Struct 20/20 Close-based): 129 trades / 2,646,400 / PF 1.7953835.
+
+      Net          2,646,400 -> 2,670,800   (+24,400, +0.92%)
+      Gross profit 5,973,600 -> 5,998,000   (+24,400)
+      Gross loss  -3,327,200 -> -3,327,200  (unchanged to the dollar)
+      PF             1.795384 -> 1.802717   (+0.41%)
+      Adjusted PF    1.349643 -> 1.355156
+      Return on cap    132.32% -> 133.54%
+      Annual return    17.4637% -> 17.6248%
+      MDD            -561,200 -> -575,200   (-14,000, 2.49% worse)
+      Max single win  602,800 -> 602,800    (unchanged)
+      Max closed loss -461,200 -> -461,200  (unchanged)
+      Calmar          0.101070 -> 0.101070  (unchanged)
+      Flat period    1Y10M13D -> unchanged
+      Trades / W:L    129 / 35:90 -> unchanged
+
+    ALL THREE DEGENERATE ANCHORS PASSED before the sweep. Anchor C
+    (Tier2_On=True, Trigger=2, Giveback=80) matters most: the tier
+    executes on reachable trades but is mathematically inert at the
+    base rate, so it proves the wiring rather than the gate.
+
+    SWEEP: 25 cells. 2 beat baseline, 2 equalled it, 21 fell below.
+    The trigger axis has a cliff -- 2.00 down to 1.50 costs up to
+    1,020,000 at the same giveback. The giveback axis is flat by
+    comparison (the 2.00 row spans 2,586k-2,671k).
+
+    EFFECT: exactly 4 of 129 trades change.
+      #8  2024-08-05 08:55  TimeStop    -> Trail   122,000 -> 149,200
+      #9  2024-08-05 12:50  GoldenCross -> Trail    50,400 -> 101,200
+      #10 2024-08-05 20:15  Struct      -> Trail    55,200 ->  92,000
+      #23 2025-04-09 11:05  TimeStop    -> Trail   236,800 -> 146,400
+    Improvement +114,800, degradation -90,400, net +24,400. The single
+    degrading trade cancels 79% of the gain and drops #23 out of the
+    top-ten winners. All three improving trades fall on ONE DAY.
+
+    CRITERIA: 5 pass, 3 FAIL, 1 unverifiable. Adopted by explicit user
+    ruling 2026-08-06 with the failures recorded rather than reworded:
+
+      FAIL 2 -- TimeStop cohort 27 trades / 5,187,200 -> 25 / 4,828,400,
+        down 358,800. This is the criterion that was flagged at sweep
+        time as the one to read before net profit.
+      FAIL 4 -- MDD -561,200 -> -575,200. User ruling: criterion 4 as
+        written governs "no regression", but the operative constraint
+        is a per-contract risk ceiling, and -287,600 per contract
+        (vs -280,600) sits inside it. The trade is 14,000 of drawdown
+        for 24,400 of net, 1:1.74 in absolute terms. Note the honest
+        counter-reading: in PERCENTAGE terms MDD worsens 2.49% while
+        net improves only 0.92%, so the ratio favours adoption only on
+        an absolute-dollar view.
+      FAIL 9 -- concentration is not merely single-year, it is
+        SINGLE-DAY. Every improving trade is 2024-08-05.
+
+    The pre-registered warning held: gross improvement 114,800 landed
+    in the predicted 50,000-70,000 band's neighbourhood and the bar-25
+    cohort did lose ground, exactly as the header said to expect.
+
+    LIMITS -- carry these into any report:
+      1. Benefit rests on 4 trades, 3 of them on one calendar day.
+         Not statistically established.
+      2. Trigger 1.50 is a cliff (-38% net). 2.00 is one step away from
+         it. Trigger is a percentage so it self-scales with index and
+         will not drift, but the margin is one grid step.
+      3. TimeStop cohort is now 25 trades, down from 27. Any later work
+         that assumes "27 TimeStop trades" must be re-based.
+      4. Effective sample is still ~7 months (Jan-Jul 2026 holds 76% of
+         trades and 92.4% of profit). MinSlope percentage-normalisation
+         will change the trade population and REQUIRES re-validation of
+         all nine criteria.
+
+  v1.13.0 A2 Structure Trail (2026-08-04, base v1.12.0)
+
+  v1.13.0 (2026-08-04) A2 STRUCTURE TRAIL (base v1.12.0):
+
+    STATUS: ADOPTED. Struct_On now defaults to True at Lookback 20 /
+    Buffer 20. User ruling 2026-08-04 after the full anchor + sweep +
+    trade-list audit. Results in the RESULT block below.
+
+    WHY: Step 1 peak-path anatomy (docs/research/
+    S16S_step1_peak_anatomy_20260804.md) measured that the 27 trades
+    reaching bar 25 peaked at 6,985,200 gross and realised 5,295,200.
+    1,690,000 -- 24.2% of peak -- was given back INSIDE the existing
+    holding window. The percentage trail cannot recover it because at
+    any giveback tight enough to catch the fade it also decapitates the
+    winners (0.30/35 measured Net 1,026,800, Top-10 survival 1/10).
+
+    A percentage trail is blind: it cannot distinguish a breather before
+    the move resumes from the actual reversal. To avoid killing the
+    former it must be loose enough to miss the latter. Hence 80%.
+
+    MECHANISM: trail behind market structure instead of behind a
+    percentage. Stop sits just above the highest point of the recent
+    N bars. Price keeps falling -> old highs roll out of the window ->
+    stop follows down. A bounce that sets no new high leaves the stop
+    untouched, however deep it goes. Only a break of the recent high
+    exits. This is what a discretionary trader actually watches.
+
+    MANDATORY LATCH: a rolling N-bar high can move UP when a bounce
+    enters the window. Without a latch the lock would shrink and the
+    stop would retreat, which breaks the monotonicity that defines a
+    trailing stop. v_Struct_Lock therefore only ever increases.
+
+    WINDOW GUARD: the lookback is clamped to bars elapsed since entry,
+    so the window never reaches back into price structure that predates
+    this trade.
+
+    Struct_UseClose: High-based detection is faithful to where buyers
+    actually appeared, but one long upper wick in a thin night session
+    can manufacture a phantom high and push the stop out of reach --
+    and the night session is this strategy's alpha source. Close-based
+    filters wicks at the cost of reacting later. DEFAULT IS Close;
+    BOTH MUST BE SWEPT. Do not assume this default is correct.
+
+    SWEEP PLAN (see docs/research/
+    S16S_A2_structure_trail_experiment_20260804.md):
+      P1  Struct_Lookback 5-40 step 5  x  Struct_Buffer_Pts 0/10/20/30/40
+          = 40 combos, percentage trail OFF so attribution stays clean
+      P2  winner neighbourhood with Struct_UseClose=False
+      P3  head to head vs frozen-ATR and prior-day-range variants
+      P4  coexistence with the percentage trail
+
+    DEGENERATE ANCHORS (run BOTH before trusting any sweep cell; each
+    must come back bit-identical to v1.12.0, else the wiring is wrong
+    and every sweep number is void no matter how good it looks):
+      A. Struct_Trigger_Pct = 99  -> leg never arms
+      B. Struct_Buffer_Pts  = 2000 -> lock stays negative, never latches
+      Anchor A tests the arming gate, anchor B tests the lock maths.
+      NOTE 2000, not 500: the lock is EntryPrice - (high + buffer), and
+      in a large move the recent high sits far BELOW entry -- trade #84
+      peaked 1652 pts. A 500 pt buffer would still bind on the big
+      winners, which is precisely the population the anchor must not
+      touch. 2000 clears the largest peak in the 6.4 year sample.
+
+    ACCEPTANCE (pre-registered, nine criteria in the design document).
+    Note criterion 2 is the bar-25 COHORT of 29 trades / 5,355,200, not
+    "TimeStop 27" -- Step 1 proved 2 of those exits are GoldenCross.
+
+    ------------------------------------------------------------------
+    RESULT (2026-08-04, anchors + 80-cell sweep + trade-list audit)
+    ------------------------------------------------------------------
+
+    ADOPTED: Struct_On=True, Lookback=20, Buffer_Pts=20, UseClose=True,
+             Trigger_Pct=1.20, Trail_On left True.
+
+      BE only (Trail off, Struct off) : 2,488,000 / PF 1.7478
+      Trail 1.20/80 only              : 2,556,800 / PF 1.7685
+      Struct 20/20 only               : 2,646,400 / PF 1.7954
+      BOTH legs on                    : 2,646,400 / PF 1.7954
+
+    BOTH is BIT-IDENTICAL to Struct-only across all 129 trades:
+    SX_MA_Trail fires 0 times once Struct is on. Struct locks more on
+    every trade the percentage trail would have caught. Trail is kept
+    anyway because the code takes the MAX of the three locks, so it can
+    never make things worse and covers the untested path where a peak
+    is high while the recent structural high is also high.
+
+    DEGENERATE ANCHORS -- BOTH PASSED, bit-identical over 129 trades x
+    13 fields. Anchor B armed the leg on 24 trades, so
+    Highest(Close, v_Struct_Window) really did execute; the lock stayed
+    negative (max sample peak 1652 pts - 2000 buffer) and never latched.
+    NOTE anchor A was run with Struct_On=False, which makes
+    Trigger_Pct=99 unreachable -- it degenerated into a repeat of the
+    Struct_On=False baseline. Not re-run: anchor B strictly covers it
+    (24 armed + 105 unarmed trades in the same pass).
+
+    EFFECT: exactly 2 of 129 trades change. Both were BE exits at zero
+    and become Struct exits. Zero trades degrade.
+      2026-06-25 entry 45901, peak 234,000 -> +103,200
+      2024-08-05 entry 19260, peak 167,600 ->  +55,200
+    Gross Loss, MDD, Max Single Win, the Top-10 winners and the 27
+    TimeStop trades are all bit-identical to baseline.
+
+    CRITERIA: 8 of 9 pass, several perfectly (Top-10 survival 10/10 with
+    not one dollar moved; TimeStop 27/27 still TimeStop).
+
+    CRITERION 9 FAILED ON ITS FACE and was adopted anyway by explicit
+    user ruling. The rule is "no single year may hold >50% of the
+    benefit"; the split is 2024 34.8% / 2026 65.2%. Two reasons, both
+    recorded rather than argued away:
+      (a) With n=2 firing trades the criterion is unsatisfiable by
+          construction -- any two-trade split is at least 50/50 and in
+          practice lumpier. It cannot discriminate a concentrated
+          mechanism from a small sample.
+      (b) User ruling: the concentration is a symptom of MinSlope being
+          a fixed 28 points, which loosens as the index rises (0.32% at
+          8,700 vs 0.061% at 46,000), so the trade population itself is
+          skewed toward recent years. It is not a property of A2. And
+          forward-looking the index will not return to 20,000-30,000,
+          so future population resembles 2026, not 2020-2024.
+    This must be re-tested once MinSlope is percentage-normalised,
+    because that changes the trade population the criterion measures.
+
+    LIMITS -- state these in any report, do not drop them:
+      1. Benefit rests on 2 trades, +158,400, paired test 1.36 sigma.
+         Below the 2 sigma bar. Not statistically established.
+      2. Struct_Lookback >= 25 is mathematically inert: the window is
+         clamped by MinList(Lookback, BarsSince+1) and MaxHoldingBars
+         is 24, so 25/30/35/40 are the same run. 20 was chosen as the
+         smallest value reaching the maximum. REVISIT IF MaxHoldingBars
+         CHANGES.
+      3. Struct_Buffer_Pts protective value was never measured. Only 2
+         trades fired, so the sweep only ever priced the buffer's COST
+         (a perfectly linear -4,000 per +5 pts, which is just 2 trades
+         x 5 pts x 400 NTD). Buffer=0 scored highest and must NOT be
+         shipped: it puts the stop exactly on the recent high, where one
+         tick sweeps it. 20 is an operational judgement, not an
+         optimisation result.
+      4. RESOLVED 2026-08-05. Struct_UseClose=False (High-based) was
+         swept and LOST decisively. The High-based run is bit-identical
+         to the Struct-off baseline to six decimals on every metric --
+         SX_MA_Struct fires ZERO times, both trades revert to
+         SX_MA_Trail, Net falls 2,646,400 -> 2,556,800. With highs read
+         off High the structure lock never once exceeds the trail lock
+         across all 129 trades, so the leg is not weakened, it is
+         switched off. Both affected trades are night session (20:15,
+         21:55) and 100% of the -89,600 lands in the 20:00-24:00
+         bucket; all 83 day-session trades are untouched to the dollar.
+         This is the wick hazard the design document predicted. Close
+         is now a MEASURED result, not an assumption.
+      5. Structure and trail COMPETE, they do not complement. The two
+         structure exits fire one bar EARLIER than the trail would, at
+         68 and 156 points better. That is why both-legs-on came back
+         bit-identical to structure-only: the structure leg always wins
+         the max comparison. Trail_On=True is harmless but, at these
+         parameters, dead code.
+      6. STILL UNVERIFIED: the latch (criterion 7). The performance
+         report carries no bar-level lock series, so "v_Struct_Lock is
+         monotonically non-decreasing" remains an assumption. See
+         S16_S_MACrossShort_v1.13.0_DIAG.pla.
+
+  v1.12.0 (2026-08-03) PROFIT TRAIL + BE COST FIX (base v1.11.0):
+
+    G1 ARITHMETIC FIX -- BE_Cost_Pts 5 -> 10:
+      Backtest settings: slippage 1000 NTD per contract PER SIDE.
+      Per contract round trip = 2000 NTD = 10 points (2000 / 200).
+      BE_Cost_Pts=5 exits at EntryPrice-5 = 1000 NTD gross vs 2000 NTD
+      cost = -1000 NTD/contract. NOT breakeven.
+      Evidence: all 5 BE exits in v1.11.0 netted exactly -2000 NTD (2 lots).
+      Fix restores the stated design intent (true breakeven after costs).
+      SHORT stop moves EP-5 -> EP-10, i.e. triggers EARLIER on retrace.
+
+    RESULT (2026-08-03, 42-combo exhaustive sweep + trade-list audit):
+      Baseline (Trail_On=False)  : Net 2,488,000 / PF 1.7478 / 129T
+      ADOPTED  (1.20 / 80)       : Net 2,556,800 / PF 1.77   / 129T
+      All 5 pre-registered acceptance criteria PASS.
+      Only 2 of 129 trades change, both from BE-at-zero to a partial
+      lock (+40,800 and +28,000). Zero trades degrade.
+      NOTE: an earlier single run at 0.30/35 was a disaster
+      (Net 1,026,800, Top-10 survival 1/10) -- tight trails decapitate
+      the TimeStop winners. The adopted setting is deliberately loose.
+
+    G2 NEW -- P3b Profit Trail:
+      Problem quantified from v1.11.0 trade list (129 trades w/ MFE):
+        - BE_Trigger_Pct=0.80 = 368 pts at index 46,000. Only 36/129
+          trades (27.9%) ever reached it. 72.1% had zero protection.
+        - 36 trades touched 3,350,000 NTD of open profit and realized
+          -738,400. Of those, 25 died to QuickStop_Time (bars>=4 and
+          Close>=EntryPrice) after running 139-397 pts in profit.
+      Design: track running peak profit, stop at a fixed giveback pct.
+        v_MaxProfit  = running max of (EntryPrice - Close)
+        trail lock   = v_MaxProfit * (100 - Trail_Giveback_Pct) / 100
+        stop level   = EntryPrice - MaxList(BE lock, trail lock)
+      BE_Cost_Pts acts as the FLOOR, so the trail can never protect
+      less than true breakeven. Trail_On=False reproduces v1.11.0
+      behaviour exactly (plus the G1 cost fix).
+      Stop order fires intrabar, so it preempts the QuickStop_Time
+      market order that currently flushes these trades at ~0.
+      Why this is NOT the L4/L5 StopProfit trap: S16_S top-10 winners
+      have giveback 0.4%-28.5% (8 of 10 below 30%) with tiny MAE --
+      clean one-way momentum bursts. 74.6% of gross winning P&L sits
+      in trades a 30% trail would never touch. L5's winners retraced
+      deeply mid-trade and were decapitated; these do not.
+      RESIDUAL RISK (unprovable from MFE data): an INTERMEDIATE retrace
+      beyond the giveback pct that later recovers to a new high is
+      invisible in the trade list. Only a bar-by-bar MC12 run settles it.
+      MC12 sweep: Trail_Trigger_Pct 0.10/0.20/0.30/0.40/0.60/0.80
+                x Trail_Giveback_Pct 25/35/45/55 = 24 combos.
+      HARD ACCEPTANCE (any fail -> Trail_On stays False permanently):
+        1. Top-10 winner survival >= 80%
+        2. Max single win >= 90% of 602,800
+        3. Net > 2,478,000
+        4. TimeStop 27-trade / 96.3% WR structure intact
+        5. MDD no worse than -561,200
+      Full analysis: docs/research/S16S_profit_exit_analysis_20260803.md
+
+  v1.11.0 (2026-08-02) TRUE BREAKEVEN REDESIGN (base v1.8.0):
+    BE module rewritten from ATR-based profit lock to true breakeven protection.
+    F1: ATR trigger (BE_Trigger_ATR * Frozen_ATR) -> fixed pct (BE_Trigger_Pct).
+    F2: True breakeven = EntryPrice - BE_Cost_Pts (covers commission/slippage).
+        SHORT: exit guarantees no loss after costs (5 pts = 1000 NTD RT).
+    F3: Single tier (removed Tier2 complexity -- was never independently validated).
+    F4: Stop order replaces market order (catches intrabar violations).
+    F5: Per-entry reset (re-entry gets independent BE with fresh calculation).
+    F6: Removed all ATR dependency from BE module.
+    F7: Inputs simplified: BE_On + BE_Trigger_Pct + BE_Cost_Pts (was 5 inputs).
+    MC12 sweep result: BE_Trigger_Pct=0.80 BE_Cost_Pts=5 (80-combo sweep).
+                       Plateau at 0.70-1.00, phase transition at 0.60->0.70.
+
+  v1.8.0 (2026-07-29) RE-ENTRY SL FIX Option 1: Inherit Frozen ATR (base v1.7.1):
+    ROOT CAUSE: After stop loss exit, ATR inflates from exit volatility.
+    Re-entry inherits inflated ATR, widening SL/BE/ML simultaneously.
+    FIX: Save v_Original_Frozen_ATR at main entry. Re-entry inherits
+    the original (pre-inflation) ATR for SL calc, BE thresholds, and
+    ML activation. Completely eliminates ATR inflation cascade.
+    ALSO: QS_MaxLoss_Pct default 0.15 -> 0.25 (v1.7.1 optimal).
+    Solves: A1 + A2 + A3. Does NOT solve: B1 (chain limit).
+
+  v1.7.1 (2026-07-29) QS_LOSS PERCENTAGE (base v1.6.2):
+    ROOT CAUSE: Fixed-point QS_Loss is index-level-dependent.
+    - QS_Loss 60 pts at 9,000  = 0.67% (rarely triggers, zero re-entries)
+    - QS_Loss 60 pts at 45,000 = 0.13% (trivially triggers, all re-entries)
+    CHANGE: QuickStop_MaxLoss_Pts (60) -> QS_MaxLoss_Pct (0.15%)
+    - Loss check: v_Loss > EntryPrice * QS_MaxLoss_Pct / 100
+    - Default 0.15% = 60/40000 (equivalent at current index level)
+    MinSlope UNCHANGED (still fixed 28 pts) -- see v1.7.
+    MC12 sweep: QS_MaxLoss_Pct 0.05 ~ 0.30, step 0.025
+
+  v1.5 (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+    BUG FIX - SetStopContract MISSING (same issue as L2/L4/L5):
+      SetStopLoss without SetStopContract = stop dollar amount
+      is for the TOTAL POSITION, not per contract.
+      S16_S trades 2 contracts -> engine stop was 2x tighter than
+      designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+    NEW - SL_Pct Percentage Stop Cap (SHORT):
+      ATR can spike in volatile regimes (S16_S alpha zone),
+      causing ATR*4.0 stop to exceed any reasonable risk budget.
+      SL_Pct caps max stop distance as pct of entry price.
+      For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+      Applied to BOTH engine stop (P7) and custom stop (P6).
+      MC sweep 0-5.0 step 0.25: converge at SL_Pct=1.00.
+      1.00 is tightest non-degrading value. Below 0.75 degrades
+      (0.25 = -6% net, MDD worsens -478K).
+    ENGINE STOP ARCHITECTURE CHANGE:
+      v_Guard_Distance now computed EVERY BAR from current ATR
+      (not frozen from previous trade). Fixes SetStopLoss(0) bug
+      when flat, and eliminates stale ATR from different regime.
+      Net +2,006,800 vs v1.4 +1,073,200 (+87%) primarily from this.
+
+  v1.4-BELATE (2026-07-18, G3 track result, user pre-test thesis CONFIRMED):
+    BE trailing tiers re-timed from early (1.0/1.5 ATR) to late
+    (2.5/3.5 ATR) activation with wider buffers (15/20 pts).
+    MC12 evidence (109T): Net 888,400 -> 1,073,200 (+20.8%),
+    PF 1.876, MDD -228,000 (-18.63%), Sortino 0.979, RecFactor 4.71,
+    TimeStop 21 -> 23 wins. Plateau verified: trigger 2.0/2.5/3.0
+    flat within 0.6%; boundary BE_Off = 1,022K. 2.5/3.5 = center.
+    Fast-loss response UNCHANGED (QuickStop/ML/SetStopLoss as before).
+    G2 same day: MaxHold 24 confirmed optimal (12/36/48 all worse).
+
+  v1.3-TIMEGUARD (2026-07-18, user design):
+    "Latest entry + latest exit" tail guard. Positions can NEVER
+    survive into any market closure (morning break 0500-0845,
+    weekend, holiday).
+    - Tail_LastEntry_Time (430): last entry SIGNAL bar 0430
+      (fill 04:30). Entries allowed all night up to here.
+    - Tail_ForceExit_Time (440): force-flat signal at 0440 bar
+      close, fill 04:40 (445-bar open). 20-min buffer to close.
+    Verified vs 110-trade baseline (see research folder
+    S16_S_HOLIDAY_IMPACT_20260717.md for methodology):
+    - Blocks 2025-03-05 05:00 entry (-32,800 held across morning
+      break) -> baseline +32.8K
+    - 2026-03-07 exit moves 04:50 -> 04:40 (delta tiny)
+    - 2026-06-06 +292,600 TimeStop at 04:35 untouched
+    Expected: ~109T / ~+866K, pending MC12 verify.
+    Version number unified with research .pla (both v1.3).
+
+  v1.0.1-HOLIDAY CHANGE (2026-07-16):
+    CRITICAL COMPLIANCE FIX - Rule #11 gap closure.
+    Prior v1.0-PROD had v_Holiday_Block hardcoded to False
+    (W2 draft placeholder never replaced before PROMOTE - promotion audit gap).
+    This patch installs the shared 63-entry HolidayFlat_v3 registry
+    identical to L1-L5 / S1 / S3_S / research S16_S v1.2-HOLIDAY.
+    Also changes Date arithmetic to EL-standard (Year - 1900) format
+    for cross-strategy alignment.
+    Behavior change: strategy now correctly blocks entry and force-flats
+    positions on the 63 registered TAIFEX holidays 2019-2027.
+    Alpha logic UNCHANGED - Config LOCKED (F25/S70/Slope28/QS60/MH24/StopATRx4).
+    Backtest re-run required to verify no change to core performance
+    (expected: minimal impact - most trades in normal sessions).
+
+  v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
+
+  v1.0-PROD PROMOTE EVIDENCE (2026-07-10):
+    W4 WFA (9-window rolling IS 2y / OOS 6m): WFE 77.4% (>> 50% gate)
+    - 416 OOS trades / +1,737,800 aggregate profit
+    - 7/9 windows profitable (Bear/Volatile 100% win)
+    - W6 (2024 H2 Bull whipsaw) -347K acknowledged as insurance cost
+    - Parameter CV 21-25% MODERATE (no curve fit)
+    W5 Sniper-adapted 5-piece: 8/8 PASS
+    Baseline: 106T / +1.03M / PF 1.885 / MDD -17.97% / Sharpe +0.463
+
+    Config LOCKED:
+      Fast=25, Slow=70, MinSlope=28 (pure points)
+      QuickStop_MaxLoss_Pts=60, MaxHold=24, StopATRMult=4.0
+
+    Portfolio position: 3% cap, sniper sleeve for momentum burst hedge
+    Bull regime insurance cost accepted per 2026-07-08 Option A ruling
+
+  v0.6-REJECTED (2026-07-10):
+    ATR-based adaptive Slope threshold was tested and FAILED:
+    - Test 1 (ATRMult=0.7): Net -128K, 181 trades (over-entry)
+    - Test 2 (ATRMult=1.5): Net +59K, only 2 trades (over-filter)
+    - Root cause: ATR measures volatility (both directions),
+      not directional slope. Wrong metric for slope filter.
+    Reverted to v0.5 pure-points MinSlope=28.
+    User insight confirmed: Slope filter should be absolute points
+    to reject "flat/upward" cross signals directly.
+    TXF1 real level ~47000 (not 25000 as initially assumed) means
+    MinSlope=28 pure points is even more conservative.
+
+  v0.5-FINAL EVIDENCE (2026-07-10 MC12 backtest):
+    Config: F25/S70/Slope28 + QS(4,60) MH24 StopATRx4
+    Result: Net +1,028,600 / PF 1.885 / MDD -271,600 (17.97%) / 106T / WR 22.64%
+    Sharpe +0.463 / Calmar ~3.8 / Sniper reward:risk profile
+    W5 Sniper-adapted validation: 8/8 PASS
+      - Ruin probability 0.03%
+      - Single trade max loss < 5% capital
+      - Kelly criterion 11.2%
+      - Expected value +10,547/trade
+      - Bear PF 3.79 / Volatile PF 2.13 / Bull PF 0.70
+      - Max consecutive loss 16.2% capital
+
+  v0.5 GA (2026-07-09, 1024-combo Genetic Algorithm):
+    Sensitivity: Fast+Slope=86% of total, 4 exit params all LOW (<0.06)
+    MinSlope 26->28: Slope26-28 plateau (-2.4%), Slope30 cliff (-27%)
+    ZLEMA_Slow 70: narrow peak (S80=-33.5%), documented
+    Calmar 3.961 / Avg Win:Loss 6.81:1
+
+  v0.4 EVIDENCE (2026-07-09 backtest):
+    Config: F25/S90/Slope26/QS45/MH24/StopATRx4
+    Result: Net +1,059,200 / PF 1.903 / MDD $-259K / 119T / WR 26.9%
+
+  v0.3-P0FIX (2026-07-08): F1/F2/F3 code bug fixes
+
+  PERFORMANCE (v1.5 Excel Report, MC12 backtest 2026-07-26, SL_Pct=1.00):
+    Net Profit    : 2,006,800 TWD
+    Gross Profit  : 4,595,600 TWD
+    Gross Loss    : -2,588,800 TWD
+    Profit Factor : 1.775
+    Win Rate      : 25.89% (29W / 83L)
+    MDD           : -456,000 (-18.31%)
+    Total Trades  : 112
+    Avg Trade     : 17,918 TWD
+    Win/Loss Ratio: 5.08
+    Avg Winner    : 158,469 TWD
+    Avg Loser     : -31,190 TWD
+    Max Single Win: 602,800 TWD
+    Max Single Loss: -85,200 TWD
+    Max Consec W  : 3
+    Max Consec L  : 10
+    Avg Bars W/L  : 24 / 5.9
+    Sharpe (ann.) : 0.718
+    Sortino       : 1.216
+    SL_Pct        : 1.00 (converge; MC sweep 0-5.0 step 0.25)
+    SetStopContract: YES (per-contract engine stop)
+
+    vs v1.4 (+1,073,200 / PF 1.876 / MDD -228K / 109T):
+    Net +87%, MDD% stable (18.6%->18.3%), PF -0.10, +3 trades.
+    Root cause: engine stop from stale frozen ATR -> current ATR every bar.
+
+  DESIGN PHILOSOPHY (v0.5-FINAL, evolved from W1 spec):
+    "Sniper style: entry selective, exit swift."
+    Strategy KNOWS what regime to trade (Bear + Volatile),
+    LOSES SMALL in unsuitable regime (Bull), stays profitable overall.
+    5M timeframe ZLEMA death cross + MinSlope selective entry.
+    TimeStop (24 bars = 2hr) captures momentum burst decay window.
+    NO Regime Filter (user 2026-07-08 ruling Option A: pure simple).
+    NO TP (feedback_trend_let_profits_run).
+
+  STRATEGY IDENTITY:
+    - Primary regime: Bear (PF 3.79) + Volatile (PF 2.13) = alpha zone
+    - Insurance cost: Bull regime (PF 0.70) = -106K over 35 trades
+    - Alpha structure: 20 TimeStop wins (100% WR, avg +105K)
+      offset 72 QuickStop losses (small, avg -15K)
+    - Sniper profile: 22.6% WR + 6.8:1 reward:risk ratio
+
+  ARCHITECTURE:
+    Data1 = TXF1 5M (execution + signal)
+
+  W0 EVIDENCE (2026-07-08 daily proxy STRONG PASS):
+    - 40/216 combos 4/4 institutional gates
+    - Best: Fast=12, Slow=30, Fwd_N=3 -> WR 45.8% / RR 1.29 / Stability 57.1%
+    - 5M projected default: Fast=8, Slow=25
+
+  EXIT PRIORITY CHAIN (P0 to P7):
+    P0 : Rule #11/#12 compliance (Kill / Registry / Holiday / Settlement)
+    P1 : M5 Quick Stop (time-based OR loss-based)
+    P2 : M6 Multi-Layer 1M monitor (Rule #17, 5 categories 5 factors)
+    P3 : M7 True Breakeven + P3b Profit Trail (v1.12.0, single stop order)
+    P4 : Golden Cross (main exit)
+    P5 : M8 Time Stop (max holding bars)
+    P6 : ATR-based Frozen SL
+    P7 : SetStopContract + SetStopLoss + SL_Pct engine guard (Rule #12 backup)
+
+  RULE COMPLIANCE:
+    Rule #11 Settlement_Flat - YES (Priority 0 order)
+    Rule #12 SetStopContract + SetStopLoss + SL_Pct - YES (v1.5, short variant MP >= 0, SL_Pct=1.00 converge)
+    Rule #13 10-dim eval - to run at W5
+    Rule #14 OFFICIAL_ROADMAP - YES (S16_S is in Batch 04)
+    Rule #15 ASCII 100% - YES (verified via scripts/verify_pla_ascii.py)
+    Rule #16 5-pillar - YES (context/rules/verification/memory/format all met)
+    Rule #17 Multi-Layer SL - YES (implemented as M6)
+    Rule #18 Non-WFA 5 pack - to run at W5
+
+  LABEL CONVENTIONS:
+    SE_MA_DeathCross         : Entry (short on death cross)
+    SX_MA_GoldenCross        : Main exit (golden cross)
+    SX_MA_QuickStop_Time     : P1 M5 time-based quick stop
+    SX_MA_QuickStop_Loss     : P1 M5 loss-based quick stop
+    SX_MA_ML_Exit            : P2 M6 Multi-Layer trigger
+    SX_MA_BE                 : P3 M7 true breakeven (v1.11.0 stop order)
+    SX_MA_Trail              : P3b profit trail (v1.12.0, trail is binding)
+    SX_MA_TimeStop           : P5 M8 max holding time
+    SX_MA_SL                 : P6 frozen ATR SL
+    SX_MA_Kill               : P0 manual kill
+    SX_MA_Registry           : P0 registry expired
+    SX_MA_Holiday            : P0 holiday block
+    SX_MA_Settlement         : P0 settlement flat
+    SX_MA_TailFlat           : P0.5 tail force exit (v1.3 time guard)
+    SE_MA_ReEntry            : Re-entry short (v1.6 washout recovery)
+
+  CHART SETUP REQUIRED:
+    Data1 = TXF1 5M
+    IntrabarOrderGeneration = FALSE
+    MaxBarsBack >= 200 (covers all indicator warm-up)
+================================================================================ }
+
+[IntrabarOrderGeneration = False]
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  ============================================================ }
+inputs:
+    { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
+    ZLEMA_Fast              ( 25    ),
+    ZLEMA_Slow              ( 70    ),
+    MinSlope                ( 28    ),
+
+    { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
+    QuickStop_On            ( True  ),
+    QuickStop_MaxBars       ( 4     ),
+    QS_MaxLoss_Pct          ( 0.25  ),
+
+    { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
+    ML_On                   ( True  ),
+    ML_ActivationPct        ( 20    ),
+    ML_ScoreTrigger         ( 60    ),
+    ML_MinCategories        ( 3     ),
+    ML_VolAvgLen            ( 15    ),
+    ML_VolSpikeMult         ( 2.0   ),
+    ML_MA_ShortLen          ( 10    ),
+    ML_ATR_ShortLen         ( 3     ),
+    ML_ATR_LongLen          ( 90    ),
+    ML_ATR_Ratio            ( 2.5   ),
+
+    { ===== Group D: M7 True Breakeven - v1.11.0 redesign ===== }
+    { v1.11.0: ATR trigger -> fixed pct. True breakeven protection.  }
+    { BE_Trigger_Pct: profit as pct of EntryPrice to activate BE.    }
+    { 0.80 = MC12 80-combo sweep optimum, plateau 0.70-1.00.         }
+    { BE_Cost_Pts: pts covering slippage. v1.12.0 G1: 5 -> 10.       }
+    {   1000 NTD/contract/side x 2 sides = 2000 NTD = 10 pts.        }
+    {   5 pts only recovered 1000 NTD -> every BE exit lost money.   }
+    BE_On                   ( True  ),
+    BE_Trigger_Pct          ( 0.80  ),
+    BE_Cost_Pts             ( 10    ),
+
+    { ===== Group D2: P3b Profit Trail - v1.12.0 ===== }
+    { Locks a pct of peak open profit once the trade proves itself.  }
+    { BE_Cost_Pts is the floor: trail never protects less than BE.   }
+    { Trail_On=False reproduces v1.11.0 exactly (plus G1 cost fix).  }
+    { Trail_Trigger_Pct : peak profit as pct of EntryPrice to arm.   }
+    { Trail_Giveback_Pct: pct of peak profit allowed to be given back}
+    {   e.g. peak 600 pts, giveback 80 -> stop locks 120 pts.        }
+    { 1.20 / 80 SET BY 42-COMBO EXHAUSTIVE SWEEP (2026-08-03).       }
+    {   Chosen for ROBUSTNESS, not peak: 1.0/60 scored higher        }
+    {   (2,632,800) but its 4-cell neighbourhood averages 2,330,100  }
+    {   -- below baseline -- because 0.8/60 collapses to 1,896,000.  }
+    {   1.2/80 sits inside the flat region (trigger 1.0-1.2 x        }
+    {   giveback 70-90, all cells 2.45M-2.59M).                      }
+    { Sanity anchor 1.2/90 = 2,518,400 converged to baseline as      }
+    {   predicted, confirming the module is wired correctly.         }
+    { Verified effect AT v1.12.0: 2 of 129 trades change, both       }
+    {   improve, none degrade. Top-10 winners, TimeStop 27, Gross    }
+    {   Loss and MDD all bit-identical. Net 2,488,000 -> 2,556,800.  }
+    { SUPERSEDED at v1.13.0: once the structure leg is on, this leg  }
+    {   fires 0 times -- structure always wins the max comparison.   }
+    { SUPERSEDED AGAIN at v1.14.0: with Tier2 on, this leg fires 4   }
+    {   times and TimeStop is down to 25 trades. The "TimeStop 27"   }
+    {   above is the v1.12.0 figure, kept for the record, NOT the    }
+    {   current baseline.                                            }
+    { CAVEATS: gain rests on 2 trades (+68,800, 1.40 sigma). Residual}
+    {   tail risk is a trade giving back 80% of a >=1.2% run then    }
+    {   recovering to a new high -- never observed in 6.4 years.     }
+    Trail_On                ( True  ),
+    { v1.15.0 C2: collapsed. The old 1.20/80 base band was measured dead }
+    { -- raising the giveback to 99 changed nothing over 129 trades, and }
+    { all four Trail exits back-solve to Tier2's rate. Moving the        }
+    { trigger to 2.00 with giveback 40 reproduces the whole leg with     }
+    { Tier2 switched off, verified bit-identical. See header C2.         }
+    Trail_Trigger_Pct       ( 2.00  ),
+    Trail_Giveback_Pct      ( 40    ),
+
+    { ===== Group D3: A2 Structure Trail - v1.13.0 (ADOPTED) ===== }
+    { Trails behind market structure rather than behind a percentage.   }
+    { Stop sits just above the highest point of the recent N bars.      }
+    { A retrace of any depth is tolerated as long as it sets no new     }
+    { high; only a break of recent structure exits.                     }
+    {                                                                   }
+    { Struct_On=False still reproduces v1.12.0 bit-for-bit and remains  }
+    {   the rollback path and the degenerate anchor.                    }
+    { Struct_Lookback    : bars to scan for the structural high.        }
+    {   Clamped to bars-since-entry, so the window never reaches back   }
+    {   before this trade started. Swept 5-40 step 5.                   }
+    {   Upper bound 40 is safe against MaxBarsBack=100 (deepest         }
+    {   existing lookback is ML_ATR_LongLen=90, leaving ~9 bars).       }
+    { Struct_Buffer_Pts  : points above that high to place the stop.    }
+    {   Too small = swept by noise, too large = never binds.            }
+    {   Swept 0-45 step 5. Set 2000 for degenerate anchor B.            }
+    { Struct_UseClose    : True = highs measured on Close (wick proof,  }
+    {   reacts later), False = on High (faithful, wick exposed).        }
+    {   SETTLED BY P2, 2026-08-05. Close wins decisively. Switching to  }
+    {   High does not merely score worse -- it makes the leg INERT:     }
+    {   the result matched the Struct-off baseline to six decimals,     }
+    {   0 structure exits against 2. The predicted mechanism was        }
+    {   confirmed exactly: both affected trades sit in the 20:00-24:00  }
+    {   night block (-89,600 there, day session 83 trades unchanged to  }
+    {   the dollar). One long upper wick in a thin night session        }
+    {   manufactures a phantom high and pushes the stop out of reach,   }
+    {   and the night session is this strategy's alpha source.          }
+    {   Do not revisit without a reason that is not "faithfulness".     }
+    { Struct_Trigger_Pct : peak profit pct to arm, held at 1.20 for the }
+    {   first pass to keep the sweep two-dimensional. Unswept.          }
+    { ADOPTED 2026-08-04: Struct_On True, 20 / 20. See RESULT block in  }
+    { the header. Lookback 20 = smallest value reaching the maximum     }
+    { (25+ are clamped by MaxHoldingBars=24 and therefore identical).   }
+    { Buffer 20 is an OPERATIONAL choice, not the sweep optimum:        }
+    { Buffer 0 scored 2,662,400 but parks the stop exactly on the       }
+    { recent high where one tick sweeps it. The 16,000 (0.6%) given up  }
+    { buys a noise cushion the 2-trade sample could never price.        }
+    Struct_On               ( True  ),
+    Struct_Lookback         ( 20    ),
+    Struct_Buffer_Pts       ( 20    ),
+    Struct_UseClose         ( True  ),
+    { v1.15.0 C1: 1.20 -> 1.00. 11-cell sweep, plateau centre of        }
+    { 0.8/1.0/1.2 (span 3.3%). NOT the top-scoring 0.60, which sits one }
+    { grid step from a 535,600 cliff at 0.40. See header C1.            }
+    Struct_Trigger_Pct      ( 1.00  ),
+
+    { ===== Group D4: B1 Tiered Giveback - v1.14.0 (DEFAULT OFF) ===== }
+    { The flat Trail_Giveback_Pct treats a 1.2% run and a 5% run the    }
+    { same. Giving back 80% of the first costs 1% of index; of the       }
+    { second, 4%. This tier tightens the giveback once peak profit       }
+    { clears a threshold, so large winners are not handed back.          }
+    {                                                                    }
+    { Tier2_On=False reproduces v1.13.0 bit-for-bit -- shipped default   }
+    {   and degenerate anchor A.                                         }
+    { Tier2_Trigger_Pct : peak profit pct at which the tier engages.     }
+    {   Sweep 1.5 / 2.0 / 2.5 / 3.0 / 3.5.                               }
+    {   Set 99 for degenerate anchor B (unreachable threshold).          }
+    { Tier2_Giveback_Pct: giveback allowed above that threshold.         }
+    {   Sweep 30 / 40 / 50 / 60 / 70. MUST be lower than                 }
+    {   Trail_Giveback_Pct or the tier loosens instead of tightening.    }
+    {   Set equal to Trail_Giveback_Pct for degenerate anchor C.         }
+    {                                                                    }
+    { ONE TIER ONLY, TWO PARAMETERS. 21 armed trades in 6.4 years cannot }
+    { support a multi-tier table -- it would fit noise. Do not add tiers }
+    { without first enlarging the sample.                                }
+    { ADOPTED 2026-08-06 by user ruling: True / 2.00 / 40.            }
+    {   Net 2,646,400 -> 2,670,800. 4 trades change, 3 improve on a    }
+    {   single day (2024-08-05), 1 degrades by -90,400.                }
+    {   Criteria 2, 4 and 9 FAILED and were adopted anyway -- see the  }
+    {   RESULT block in the header. Do not restate this as a clean     }
+    {   pass.                                                          }
+    {   Tier2_On=False still reproduces v1.13.0 bit-for-bit.           }
+    { v1.15.0 C2: RETIRED, not deleted. With Trail now at 2.00/40 the   }
+    { tier is redundant -- the collapsed configuration was verified      }
+    { bit-identical over 129 trades x 13 fields. Code kept so the tier   }
+    { can be revived, but RE-ENABLING REQUIRES RE-VERIFICATION: the base }
+    { trigger has moved to 2.00, so Tier2 at 2.00 would now be a no-op   }
+    { and any other value changes a band that was never swept.           }
+    Tier2_On                ( False ),
+    Tier2_Trigger_Pct       ( 2.00  ),
+    Tier2_Giveback_Pct      ( 40    ),
+
+    { ===== Group E: M8 Time Stop - v0.5 (KEY ALPHA DRIVER) ===== }
+    { ===== Group E: M8 Time Stop ===== }
+    { MaxHoldingBars=24 = 2hr. Thesis: a momentum burst self-resolves   }
+    { inside two hours; past that you are holding a random position.    }
+    {                                                                   }
+    { CURRENT COUNT (v1.14.0): 25 trades / 4,828,400. NOT the "31       }
+    {   trades / 100% WR" the pre-v1.12.0 comment claimed -- that value }
+    {   is stale. It was 27 through v1.13.0 and B1 took two of them     }
+    {   (#8, #23) by firing a stop order intrabar before this market    }
+    {   order could evaluate at bar close.                              }
+    {                                                                   }
+    { WHAT THIS LEG ACTUALLY DOES: it cuts WINNERS. QuickStop_Time      }
+    {   (4 bars AND no profit) handles trades that never worked; this   }
+    {   one exits trades that ARE working, purely on bar count.         }
+    {                                                                   }
+    { OPEN QUESTIONS -- none of these are settled:                      }
+    {  1. M8_On=False (no time limit at all) has NEVER been tested.     }
+    {     The 2026-07-18 sweep covered 12/24/36/48 -- all finite.       }
+    {  2. That sweep ran at v1.4-BELATE on 109 trades, BEFORE frozen    }
+    {     ATR, true BE, the percentage trail and the structure trail    }
+    {     existed. Its premise was "past 24 bars the position is        }
+    {     unprotected", which no longer holds: three protective legs    }
+    {     now run, and above a 2% peak the trail locks 60% of it.       }
+    {  3. MaxHoldingBars is COUPLED to Struct_Lookback. The structure   }
+    {     window is MinList(Lookback, BarsSince+1), so with a 24-bar    }
+    {     cap it barely rolls and Lookback >= 25 is inert. CHANGING     }
+    {     THIS VALUE INVALIDATES A2's "20 is optimal" finding.          }
+    {  4. Interaction with Tail_ForceExit_Time is untested -- a longer  }
+    {     hold pushes more positions toward the 0440 forced flat.       }
+    M8_On                   ( True  ),
+    MaxHoldingBars          ( 24    ),
+
+    { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
+    ATR_Len                 ( 14    ),
+    StopATRMult             ( 4.0   ),
+    SL_Pct                  ( 1.00  ),     { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.00 (MC sweep 0-5.0). }
+
+    { ===== Group H: Rule #11 Compliance ===== }
+    { Registry_Valid_Until format: EL-standard YYYMMDD where YYY=Year-1900 }
+    { 1270101 = 2027-01-01 (aligned with L1-L5 / S1 / S3_S registry expiry) }
+    Holiday_Flat_Time       ( 415   ),
+    Registry_Valid_Until    ( 1270101 ),
+    Manual_Kill_Switch      ( False ),
+    Settlement_Flat_Time    ( 1230  ),
+
+    { ===== Group I: Tail Time Guard - v1.3 2026-07-18 ===== }
+    { Never hold into ANY closure. LastEntry = last legal entry   }
+    { SIGNAL bar stamp (fill = that bar close). ForceExit signal  }
+    { bar stamp (fill = next bar open, ~04:40). Both tail-only:   }
+    { conditions bounded by Time <= 500 (MC 24hr pitfall rule).   }
+    Tail_LastEntry_Time     ( 430   ),
+    Tail_ForceExit_Time     ( 440   ),
+
+    { ===== Group J: Session Gap Filter - v1.16.0 (DEFAULT OFF) ===== }
+    { Suppresses the entry SIGNAL on the opening bar(s) of a session   }
+    { when the session opened with a DOWN gap and that opening bar     }
+    { closed at or above its own open.                                 }
+    {                                                                  }
+    { WHY THIS EXISTS -- structural, not statistical:                  }
+    {   v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast                       }
+    {   On the first bar of a session [1] is the LAST BAR OF THE       }
+    {   PREVIOUS SESSION, so an overnight gap is measured as if it     }
+    {   were one bar of momentum. MinSlope cannot filter it.           }
+    {   Evidence: all 17 day-open entries in v1.15.0 followed a DOWN   }
+    {   gap (base rate 44.7%; p ~ 4.7e-7). The 10 whose opening bar    }
+    {   closed at or above its open went 0 for 10, -379,600.           }
+    {                                                                  }
+    { SIGNAL / FILL MAPPING (see the offset rule in Section 4.5):      }
+    {   Gap_Scope_Bars = N suppresses the SIGNAL on session bars       }
+    {   1..N, therefore no entry FILL on session bars 2..N+1.          }
+    {                                                                  }
+    { Gap_Rise_Min_Pct semantics: the test is >=, so the default 0.00  }
+    { also blocks a bar that closed exactly at its open. Set 0.01 to   }
+    { require a strictly higher close.                                 }
+    { ADOPTED 2026-08-08. Nine measured runs; see the version block  }
+    { at the top of this file. Only Gap_Rise_Min_Pct binds:          }
+    {   Gap_Down_Min_Pct  bit-identical at -999 / 0 / 0.30           }
+    {   Gap_Night_On      bit-identical at True / False              }
+    {   Gap_Scope_Bars    2 gains 3,200 = 0.1%, and bar 2 has a      }
+    {                     clean [1] so the mechanism argues for 1    }
+    { Both inert inputs are kept for readability and as structural   }
+    { cover, NOT because they contribute. First to cut if simplified.}
+    Gap_Filter_On           ( True  ),
+    Gap_Day_On              ( True  ),
+    Gap_Night_On            ( True  ),
+    Gap_Down_Min_Pct        ( 0.30  ),
+    Gap_Rise_Min_Pct        ( 0.00  ),
+    Gap_Scope_Bars          ( 1     ),
+
+    { Session boundaries. Bars are stamped at their CLOSE time, so the }
+    { first day bar carries 0850 and the first night bar 1505 on a     }
+    { 5-minute chart. The tests below are written as open-lower /      }
+    { closed-upper so they hold for any bar interval, and the night    }
+    { test is an OR because that session spans midnight (MC 24hr rule).}
+    Sess_Day_Start          ( 845   ),
+    Sess_Day_End            ( 1345  ),
+    Sess_Night_Start        ( 1500  ),
+    Sess_Night_End          ( 500   ),
+
+    { ===== Group K: K-bar classification - v1.16.0 (RECORD ONLY) ===== }
+    { Thresholds for the 18-type taxonomy in Section 4.5. Nothing in   }
+    { the entry or exit chain reads v_KB_Type yet -- it is computed and }
+    { held so the type can be exported and validated against 5-minute  }
+    { bar data before any rule depends on it.                          }
+    KB_Body_Long            ( 0.75  ),
+    KB_Body_Mid             ( 0.30  ),
+    KB_Body_Small           ( 0.05  ),
+    KB_Shadow_Ratio         ( 2.00  ),
+
+    { ===== STRUCTDIAG ONLY - Phase 1 of the structure study ===== }
+    { Records the MA-relative structure state at every entry. Issues no }
+    { orders, gates nothing, and writes only to its own variables, so   }
+    { the run must reproduce v1.16.0 exactly:                           }
+    {     119 trades / Net 3,141,200 / PF 2.0657                        }
+    { If it does not, the state machine perturbed the run and the CSV   }
+    { is worthless regardless of what it contains.                      }
+    { Print(File()) APPENDS -- delete the CSV before every run.         }
+    Struct_Diag             ( True  ),
+    Struct_Diag_Path        ( "C:\Users\WILLY CHIU\Downloads\S16S_struct_diag.csv" );
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+variables:
+    { ===== ZLEMA state ===== }
+    v_Fast_Lag              ( 0     ),
+    v_Slow_Lag              ( 0     ),
+    v_ZLEMA_Fast            ( 0     ),
+    v_ZLEMA_Slow            ( 0     ),
+    v_Slope                 ( 0     ),
+
+    { ===== Signal detection ===== }
+    v_Death_Cross           ( False ),
+    v_Golden_Cross          ( False ),
+
+    { ===== ATR ===== }
+    v_ATR                   ( 0     ),
+
+    { ===== Trade state ===== }
+    v_EntryBar              ( 0     ),
+    v_BarsSince             ( 0     ),
+    v_Prev_MP               ( 0     ),
+    v_Loss                  ( 0     ),
+    v_Profit                ( 0     ),
+
+    { ===== Frozen SL (Rule #12) ===== }
+    v_SL_Locked             ( False ),
+    v_Frozen_ATR            ( 0     ),
+    v_Original_Frozen_ATR   ( 0     ),
+    v_Frozen_SL_Dist        ( 0     ),
+    v_SL_Level              ( 0     ),
+
+    { ===== v1.5 SetStopContract + SL_Pct ===== }
+    v_Guard_Distance        ( 0     ),
+    v_SL_Pct_Ceil           ( 0     ),
+
+    { ===== M5 Quick Stop state ===== }
+    v_QuickStop_Fired       ( False ),
+
+    { ===== M6 Multi-Layer state ===== }
+    v_ML_Loss               ( 0     ),
+    v_ML_Activation_Level   ( 0     ),
+    v_ML_Score              ( 0     ),
+    v_ML_Score_Pct          ( 0     ),
+    v_ML_CatCount           ( 0     ),
+    v_ML_Trigger            ( False ),
+    v_ML_Cat_1F             ( 0     ),
+    v_ML_Cat_2F             ( 0     ),
+    v_ML_Cat_3F             ( 0     ),
+    v_ML_Cat_4F             ( 0     ),
+    v_ML_Cat_5F             ( 0     ),
+    v_ML_AvgVol             ( 0     ),
+    v_ML_ATR_Short          ( 0     ),
+    v_ML_ATR_Long           ( 0     ),
+    v_ML_RSI                ( 0     ),
+    v_ML_RSI_Prior          ( 0     ),
+    v_ML_MA_Short           ( 0     ),
+
+    { ===== M7 True Breakeven state (v1.11.0) ===== }
+    v_BE_Active             ( False ),
+    v_BE_Stop_Level         ( 0     ),
+
+    { ===== P3b Profit Trail state (v1.12.0) ===== }
+    v_MaxProfit             ( 0     ),
+    v_Trail_Active          ( False ),
+    v_Trail_Lock            ( 0     ),
+    v_Protect_Lock          ( 0     ),
+    v_Trail_Binding         ( False ),
+    v_Struct_Active         ( False ),
+    v_Struct_Window         ( 0     ),
+    v_Struct_Ref            ( 0     ),
+    v_Struct_Raw            ( 0     ),
+    v_Struct_Lock           ( 0     ),
+    v_Struct_Binding        ( False ),
+    v_Trail_Giveback        ( 0     ),
+
+    { ===== Re-Entry state (v1.6) ===== }
+    v_ReEntry_Armed         ( False ),
+    v_ReEntry_Price         ( 0     ),
+    v_Last_EntryPrice       ( 0     ),
+    v_IsReEntry             ( False ),
+
+    { ===== Priority 0 protection state ===== }
+    v_Holiday_Block         ( False ),
+    v_Registry_Expired      ( False ),
+    v_Settlement_Day        ( False ),
+    hidx                    ( 0     ),
+    ExitFired               ( 0     ),
+
+    { ===== v1.16.0 session boundary state ===== }
+    v_In_Day                ( False ),
+    v_In_Night              ( False ),
+    v_Day_First             ( False ),
+    v_Night_First           ( False ),
+    v_Sess_First            ( False ),
+    v_Bars_In_Sess          ( 0     ),
+
+    { ===== v1.16.0 gap measurement (latched on the session first bar) ===== }
+    v_Prev_Open             ( 0     ),
+    v_Prev_Close            ( 0     ),
+    v_Prev_Body             ( 0     ),
+    v_Sess_Gap_Pts          ( 0     ),
+    v_Sess_Gap_Pct          ( 0     ),
+
+    { ===== v1.16.0 session first bar OHLC (latched) ===== }
+    v_First_Open            ( 0     ),
+    v_First_High            ( 0     ),
+    v_First_Low             ( 0     ),
+    v_First_Close           ( 0     ),
+    v_First_Rise_Pct        ( 0     ),
+
+    { ===== v1.16.0 K-bar classification (record only) ===== }
+    v_KB_Range              ( 0     ),
+    v_KB_Body               ( 0     ),
+    v_KB_UpSh               ( 0     ),
+    v_KB_DnSh               ( 0     ),
+    v_KB_Up                 ( False ),
+    v_KB_Type               ( 0     ),
+
+    { ===== v1.16.0 gap filter verdict ===== }
+    v_Gap_Block             ( False ),
+
+    { ===== STRUCTDIAG ONLY - MA-relative structure state machine =====
+      Spec: docs/research/S16S_ma_relative_structure_spec_20260808.md
+      Definitions locked 2026-08-08. Judged on Close, extremes on
+      High/Low, two markers each, reset on golden cross, written on
+      state EXIT only.                                                }
+    v_A_Active              ( False ),   { price is above the fast line }
+    v_A_Peak                ( 0     ),   { running High while in state A }
+    v_B_Active              ( False ),   { price is below the slow line }
+    v_B_Trough              ( 0     ),   { running Low while in state B }
+    v_HIGH_1                ( 0     ),   { most recent rally top }
+    v_HIGH_2                ( 0     ),   { the one before it }
+    v_HIGH_1_Bar            ( 0     ),   { CurrentBar when HIGH_1 was written }
+    v_LOW_1                 ( 0     ),   { most recent breakdown trough }
+    v_LOW_2                 ( 0     ),
+    v_LOW_1_Bar             ( 0     ),
+    v_Marker_Count          ( 0     ),   { markers written since last reset }
+
+    { snapshot taken at the SIGNAL bar, emitted at the FILL bar.
+      Emitting at the fill bar makes the log join to the trade list on
+      Date/Time with no bar arithmetic. Snapshotting at the signal bar
+      keeps the VALUES equal to what a filter would actually see -- the
+      filter has to decide one bar before the fill. Both timestamps are
+      logged so the signal-to-fill gap is visible per trade.           }
+    v_Snp_Date              ( 0     ),
+    v_Snp_Time              ( 0     ),
+    v_Snp_H1                ( 0     ),
+    v_Snp_H2                ( 0     ),
+    v_Snp_HBar              ( 0     ),
+    v_Snp_L1                ( 0     ),
+    v_Snp_L2                ( 0     ),
+    v_Snp_LBar              ( 0     ),
+    v_Snp_Cnt               ( 0     ),
+    v_Snp_Sep               ( 0     ),
+    v_Snp_Slope             ( 0     ),
+    v_Snp_KBType            ( 0     ),
+    v_Snp_IsRe              ( 0     ),
+    v_Snp_Close             ( 0     );
+
+arrays:
+    Holiday_Tail[80](0);
+
+
+{ ============================================================
+  SECTION 3 - PRIORITY 0 COMPLIANCE CHECKS
+  (Rule #11 registry + kill + holiday + settlement)
+  v1.0.1-HOLIDAY (2026-07-16): HolidayFlat_v3 registry patched in.
+  Registry synced with L1-L5 / S1 / S3_S (63 entries 2019-2027).
+  Rebuild from TAIFEX calendar before Registry_Valid_Until reached.
+  ============================================================ }
+
+{ ---- Holiday Registry init (once on first bar) ---- }
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+end;
+
+{ ---- Registry expiry check (EL-standard: Date is YYYMMDD Year-1900) ---- }
+v_Registry_Expired = False;
+if Date > Registry_Valid_Until then
+    v_Registry_Expired = True;
+
+{ ---- Holiday match: check current date against registry tail (Time <= 500) ---- }
+v_Holiday_Block = False;
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+
+{ ---- Registry expiry escalation: force block once expired ---- }
+if v_Registry_Expired = True then
+    v_Holiday_Block = True;
+
+{ ---- Settlement day: 3rd Wednesday of month ---- }
+v_Settlement_Day = ( DayOfWeek(Date) = 3 ) and
+                   ( DayOfMonth(Date) >= 15 ) and
+                   ( DayOfMonth(Date) <= 21 );
+
+
+{ ============================================================
+  SECTION 4 - INDICATORS (ZLEMA)
+  ZLEMA formula: EMA(2*Price - Price[lag], N)
+  lag = int((N-1) / 2)
+  ============================================================ }
+
+v_Fast_Lag = IntPortion( ( ZLEMA_Fast - 1 ) / 2 );
+v_Slow_Lag = IntPortion( ( ZLEMA_Slow - 1 ) / 2 );
+
+v_ZLEMA_Fast = XAverage( 2 * Close - Close[v_Fast_Lag], ZLEMA_Fast );
+v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
+
+{ F2 fix: measure Fast ZLEMA downward slope for short entry (not Slow, not AbsValue) }
+{ Positive value = Fast is falling = bearish momentum = good for short }
+v_Slope = v_ZLEMA_Fast[1] - v_ZLEMA_Fast;
+
+
+{ ============================================================
+  SECTION 4.5 - SESSION BOUNDARY, OPENING GAP, K-BAR TYPE
+  Added v1.16.0. Everything here is pure measurement plus one
+  boolean verdict (v_Gap_Block). With Gap_Filter_On = False the
+  verdict is always False and the strategy is bit-identical to
+  v1.15.0.
+
+  ------------------------------------------------------------
+  SIGNAL / FILL OFFSET RULE  (repo-wide, established 2026-08-08)
+  ------------------------------------------------------------
+  Every entry order in this file is a NEXT BAR order: a signal
+  evaluated on bar N produces a fill on bar N+1. An order placed
+  on bar N CANNOT be withdrawn on bar N+1, so any rule intended
+  to prevent a fill must be evaluated one bar EARLIER than the
+  bar it protects.
+
+  Therefore every time or bar-count input must state, in its own
+  comment, whether it names the SIGNAL bar or the FILL bar.
+
+  Compliance in this file:
+    Gap_Scope_Bars       COMPLIANT - names signal bars, and the
+                         resulting fill bars are stated in Group J.
+    Tail_LastEntry_Time  NOT COMPLIANT - named as an entry time
+                         but gates the signal bar, so a 0430 value
+                         permits an 0435 fill (observed 2026-03-07).
+                         Deliberately left unchanged in v1.16.0 so
+                         that this version's attribution stays clean.
+                         Scheduled for v1.17.0.
+
+  ------------------------------------------------------------
+  BAR DIRECTION IS NEVER NAMED BY COLOUR
+  ------------------------------------------------------------
+  Taiwan charting draws a RISING bar in one colour and a FALLING
+  bar in another, and the Western / MultiCharts defaults are the
+  exact reverse. Chart colours are also user-configurable. To make
+  misreading impossible, no identifier or comment in this file
+  names a colour. Direction is stated arithmetically only.
+  ============================================================ }
+
+{ ---- Which session is this bar in ----------------------------
+  Bars are stamped at their CLOSE, so the first day bar is 0850
+  and the first night bar 1505 on a 5-minute chart. Using
+  open-lower / closed-upper keeps this correct at any interval.
+  The night test is an OR because the session crosses midnight
+  (memory rule: MC 24hr pitfall). ---------------------------- }
+v_In_Day   = Time >  Sess_Day_Start   and Time <= Sess_Day_End;
+v_In_Night = Time >  Sess_Night_Start or  Time <= Sess_Night_End;
+
+{ ---- First bar of a session ----------------------------------
+  Detected as a transition into the session rather than by a
+  hard-coded stamp. A hard-coded stamp fails silently when the
+  open is delayed, and a protective filter that fails open is
+  worse than no filter. CurrentBar > 1 guards the [1] reference. }
+v_Day_First   = False;
+v_Night_First = False;
+if CurrentBar > 1 then begin
+    if v_In_Day   and v_In_Day[1]   = False then v_Day_First   = True;
+    if v_In_Night and v_In_Night[1] = False then v_Night_First = True;
+end;
+v_Sess_First = v_Day_First or v_Night_First;
+
+{ ---- Bar ordinal within the session -------------------------- }
+if v_Sess_First then
+    v_Bars_In_Sess = 1
+else if v_In_Day or v_In_Night then
+    v_Bars_In_Sess = v_Bars_In_Sess + 1
+else
+    v_Bars_In_Sess = 0;
+
+{ ---- Latch the gap and the opening bar OHLC ------------------
+  On the session first bar, Open[1] and Close[1] are the open and
+  close of the LAST BAR OF THE PREVIOUS SESSION. Both are kept:
+  the close defines the gap, and the pair defines whether that
+  final bar was itself advancing or declining, which the gap size
+  alone cannot express (a down gap after a declining bar is a
+  continuation; after an advancing bar it is a reversal). The
+  direction is recorded now and read by nothing yet. ---------- }
+if v_Sess_First then begin
+    v_Prev_Open  = Open[1];
+    v_Prev_Close = Close[1];
+    v_Prev_Body  = Close[1] - Open[1];
+
+    v_Sess_Gap_Pts = Open - Close[1];
+    if Close[1] > 0 then
+        v_Sess_Gap_Pct = v_Sess_Gap_Pts / Close[1] * 100
+    else
+        v_Sess_Gap_Pct = 0;
+
+    v_First_Open  = Open;
+    v_First_High  = High;
+    v_First_Low   = Low;
+    v_First_Close = Close;
+    if Open > 0 then
+        v_First_Rise_Pct = ( Close - Open ) / Open * 100
+    else
+        v_First_Rise_Pct = 0;
+end;
+
+{ ---- K-bar taxonomy of the session opening bar (RECORD ONLY) --
+  18 mutually exclusive and collectively exhaustive types.
+  Normalised by the bar range R = High - Low:
+      body + upper shadow + lower shadow == 1  (identity, exact)
+  so the shape is one point on a 2-simplex plus a direction bit.
+  The tree below partitions body over [0,1] and then partitions
+  the shadow ratio, hence every bar maps to exactly one type.
+  Verified over 3,197 TAIFEX sessions: 3,197 classified, no gaps,
+  no overlaps.
+
+     0  no range              1  long body up     2  long body down
+     3  mid  lower-shadow up  4  mid  lower-shadow down
+     5  mid  upper-shadow up  6  mid  upper-shadow down
+     7  mid  balanced up      8  mid  balanced down
+     9  small lower-shadow up 10 small lower-shadow down (hammer pair)
+    11  small upper-shadow up 12 small upper-shadow down (star pair)
+    13  small balanced up     14 small balanced down
+    15  doji lower-shadow     16 doji upper-shadow      17 doji balanced
+
+  All functions used here are scalar (AbsValue / MaxList /
+  MinList), not series functions, so evaluating them inside a
+  conditional is safe -- unlike the A-3 finding on Lowest(RSI()).
+  ----------------------------------------------------------- }
+if v_Sess_First then begin
+    v_KB_Range = v_First_High - v_First_Low;
+    v_KB_Up    = v_First_Close > v_First_Open;
+
+    if v_KB_Range <= 0 then begin
+        v_KB_Body  = 0;
+        v_KB_UpSh  = 0;
+        v_KB_DnSh  = 0;
+        v_KB_Type  = 0;
+    end
+    else begin
+        v_KB_Body = AbsValue( v_First_Close - v_First_Open ) / v_KB_Range;
+        v_KB_UpSh = ( v_First_High - MaxList( v_First_Open, v_First_Close ) ) / v_KB_Range;
+        v_KB_DnSh = ( MinList( v_First_Open, v_First_Close ) - v_First_Low ) / v_KB_Range;
+
+        if v_KB_Body >= KB_Body_Long then begin
+            if v_KB_Up then v_KB_Type = 1 else v_KB_Type = 2;
+        end
+        else if v_KB_Body >= KB_Body_Mid then begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then begin
+                if v_KB_Up then v_KB_Type = 3 else v_KB_Type = 4;
+            end
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then begin
+                if v_KB_Up then v_KB_Type = 5 else v_KB_Type = 6;
+            end
+            else begin
+                if v_KB_Up then v_KB_Type = 7 else v_KB_Type = 8;
+            end;
+        end
+        else if v_KB_Body >= KB_Body_Small then begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then begin
+                if v_KB_Up then v_KB_Type = 9 else v_KB_Type = 10;
+            end
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then begin
+                if v_KB_Up then v_KB_Type = 11 else v_KB_Type = 12;
+            end
+            else begin
+                if v_KB_Up then v_KB_Type = 13 else v_KB_Type = 14;
+            end;
+        end
+        else begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then
+                v_KB_Type = 15
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then
+                v_KB_Type = 16
+            else
+                v_KB_Type = 17;
+        end;
+    end;
+end;
+
+{ ---- Gap filter verdict --------------------------------------
+  Recomputed every bar so it cannot latch True and leak into a
+  later bar of the session. Blocks only while the bar ordinal is
+  inside the scope window, only in an enabled session, only after
+  a down gap of at least Gap_Down_Min_Pct, and only when the
+  opening bar advanced by at least Gap_Rise_Min_Pct.
+
+  Gap_Down_Min_Pct is a stability floor, not a tuned value: the
+  rise is compared against the bar's own open, but a near-zero
+  gap would still admit noise-sized recoveries as blocks. The
+  0.10-0.50 band tested identically on the 17 known cases.
+  ----------------------------------------------------------- }
+v_Gap_Block = False;
+if Gap_Filter_On and v_Bars_In_Sess >= 1 and v_Bars_In_Sess <= Gap_Scope_Bars then begin
+    if ( v_In_Day and Gap_Day_On ) or ( v_In_Night and Gap_Night_On ) then begin
+        if v_Sess_Gap_Pct  <= -Gap_Down_Min_Pct and
+           v_First_Rise_Pct >= Gap_Rise_Min_Pct then
+            v_Gap_Block = True;
+    end;
+end;
+
+
+{ ============================================================
+  SECTION 5 - CROSS DETECTION
+  Death cross: Fast crosses BELOW Slow (short entry signal).
+  Golden cross: Fast crosses ABOVE Slow (main exit signal).
+  ============================================================ }
+
+v_Death_Cross  = v_ZLEMA_Fast[1] >= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    <  v_ZLEMA_Slow;
+
+v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    >  v_ZLEMA_Slow;
+
+
+{ ============================================================
+  SECTION 5.5 - RE-ENTRY STATE MANAGEMENT (v1.6)
+  After exit, if bearish structure (Fast < Slow) still intact,
+  allow re-entry via stop order at the original entry price.
+  Arms when position exits (v_Prev_MP -1 -> MP 0).
+  Resets on golden cross, bearish structure lost, or new death cross.
+  ============================================================ }
+
+if v_Prev_MP = -1 and MarketPosition = 0 then begin
+    v_ReEntry_Armed = True;
+    v_ReEntry_Price = v_Last_EntryPrice;
+end;
+
+if v_ReEntry_Armed = True then begin
+    if v_Golden_Cross = True or v_ZLEMA_Fast >= v_ZLEMA_Slow then begin
+        v_ReEntry_Armed = False;
+        v_ReEntry_Price = 0;
+    end;
+end;
+
+if v_Death_Cross = True then begin
+    v_ReEntry_Armed = False;
+    v_ReEntry_Price = 0;
+end;
+
+
+{ ============================================================
+  SECTION 5.6 - STRUCTDIAG ONLY: MA-RELATIVE STRUCTURE MARKERS
+  ============================================================
+  Reads only. Writes only to its own variables. Issues no orders and
+  touches nothing the strategy reads, so the run must reproduce
+  v1.16.0 exactly. That identity is the anchor.
+
+  WHY THIS EXISTS: entry is death cross AND slope > MinSlope. The
+  cross is the fast line's POSITION relative to slow; the slope is
+  that same line's DERIVATIVE. Two views of one quantity, so the
+  entry carries no orthogonal information at all. Structure markers
+  are an attempt to add some.
+
+  WHY MA PLANES INSTEAD OF RAW SWING POINTS: a raw swing high needs N
+  bars of confirmation and is therefore lagging. A line crossing is
+  immediate. The planes also move with the index, so the markers are
+  scale-invariant -- unlike MinSlope's fixed 28 points, which drifted
+  from 0.28% of index in 2019 to 0.062% in 2026.
+
+  ASYMMETRY IS DELIBERATE: the FAST line marks rally tops (sensitive,
+  catches every bounce, which is what lower-highs need) and the SLOW
+  line marks breakdown troughs (dull, records only moves worth
+  noticing). Shorts want the bounces measured finely and the down-legs
+  filtered coarsely.
+
+  KNOWN LIMIT, recorded before the run: in a downtrend price sits
+  under the slow line continuously, so state B is one long stretch
+  rather than discrete events, and a LOW marker is only written when
+  price closes back above -- which is the trend ending. A trade opened
+  mid-trend may therefore see NO LOW markers at all. If the log shows
+  that, any filter leaning on LOW does not exist and should be dropped
+  rather than patched.
+
+  Close judges the state transitions; High/Low record the extreme.
+  Entry wants robustness -- v1.13.0's P2 control measured that judging
+  on High instead of Close disabled the structure trail outright, all
+  of the damage in the night session from upper wicks. The recorded
+  value wants the true extreme. These do not conflict.
+  ============================================================ }
+
+if Struct_Diag = True then begin
+
+    { ---- state A: above the fast line, tracking the rally top ---- }
+    if Close > v_ZLEMA_Fast then begin
+        if v_A_Active = False then begin
+            v_A_Active = True;
+            v_A_Peak   = High;
+        end
+        else
+            v_A_Peak = MaxList( v_A_Peak, High );
+    end
+    else begin
+        if v_A_Active = True then begin
+            v_A_Active     = False;
+            v_HIGH_2       = v_HIGH_1;
+            v_HIGH_1       = v_A_Peak;
+            v_HIGH_1_Bar   = CurrentBar;
+            v_A_Peak       = 0;
+            v_Marker_Count = v_Marker_Count + 1;
+        end;
+    end;
+
+    { ---- state B: below the slow line, tracking the trough ---- }
+    if Close < v_ZLEMA_Slow then begin
+        if v_B_Active = False then begin
+            v_B_Active = True;
+            v_B_Trough = Low;
+        end
+        else
+            v_B_Trough = MinList( v_B_Trough, Low );
+    end
+    else begin
+        if v_B_Active = True then begin
+            v_B_Active     = False;
+            v_LOW_2        = v_LOW_1;
+            v_LOW_1        = v_B_Trough;
+            v_LOW_1_Bar    = CurrentBar;
+            v_B_Trough     = 0;
+            v_Marker_Count = v_Marker_Count + 1;
+        end;
+    end;
+
+    { ---- golden cross clears the slate: bearish structure is gone,
+           so older markers no longer describe anything current ---- }
+    if v_Golden_Cross = True then begin
+        v_HIGH_1       = 0;
+        v_HIGH_2       = 0;
+        v_HIGH_1_Bar   = 0;
+        v_LOW_1        = 0;
+        v_LOW_2        = 0;
+        v_LOW_1_Bar    = 0;
+        v_A_Active     = False;
+        v_A_Peak       = 0;
+        v_B_Active     = False;
+        v_B_Trough     = 0;
+        v_Marker_Count = 0;
+    end;
+
+end;
+
+
+{ ============================================================
+  SECTION 6 - ATR + STOP DISTANCE
+  ============================================================ }
+
+v_ATR      = AvgTrueRange( ATR_Len );
+
+
+{ ============================================================
+  SECTION 7 - FROZEN SL SETUP + SetStopContract + SetStopLoss + SL_Pct (Rule #12)
+  Lock SL distance on entry bar. Reset when flat.
+  ============================================================ }
+
+if MarketPosition = -1 then begin
+    v_Last_EntryPrice = EntryPrice;
+    if v_SL_Locked = False then begin
+        { v1.8.0: re-entry inherits original frozen ATR }
+        if v_IsReEntry = True and v_Original_Frozen_ATR > 0 then
+            v_Frozen_ATR = v_Original_Frozen_ATR
+        else begin
+            v_Frozen_ATR = v_ATR;
+            v_Original_Frozen_ATR = v_ATR;
+        end;
+        v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        if SL_Pct > 0 then begin
+            v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+            v_SL_Level = MinList(v_SL_Level, v_SL_Pct_Ceil);
+        end;
+        v_SL_Locked      = True;
+        v_EntryBar        = CurrentBar;
+        v_QuickStop_Fired = False;
+        v_BE_Active       = False;
+        { v1.12.0: trail state resets per entry, re-entry included }
+        v_MaxProfit       = 0;
+        v_Trail_Active    = False;
+        v_Trail_Binding   = False;
+        { v1.13.0: structure leg state, same per-entry reset }
+        v_Struct_Active   = False;
+        v_Struct_Lock     = 0;
+        v_Struct_Binding  = False;
+    end;
+end
+else begin
+    v_SL_Locked          = False;
+    v_Frozen_ATR         = 0;
+    v_Frozen_SL_Dist     = 0;
+    v_SL_Level           = 0;
+    v_EntryBar           = 0;
+    v_QuickStop_Fired    = False;
+    v_BE_Active          = False;
+    v_MaxProfit          = 0;
+    v_Trail_Active       = False;
+    v_Trail_Binding      = False;
+    v_Struct_Active      = False;
+    v_Struct_Lock        = 0;
+    v_Struct_Binding     = False;
+end;
+
+{ Rule #12 SetStopContract + SetStopLoss + SL_Pct (short variant: MP >= 0 guard).
+  v1.5: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close.
+  v_Guard_Distance computed EVERY BAR (current ATR, not frozen) to avoid
+  SetStopLoss(0) when flat -- SetStopContract + SetStopLoss(0) = immediate stop. }
+v_Guard_Distance = v_ATR * StopATRMult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+
+if MarketPosition >= 0 then begin
+    SetStopContract;
+    SetStopLoss( v_Guard_Distance * BigPointValue );
+end;
+
+
+{ ============================================================
+  SECTION 8 - M6 MULTI-LAYER INDICATOR PRECOMPUTE
+  5 categories, 1 factor each. Lightweight by design.
+  ============================================================ }
+
+v_ML_AvgVol    = Average( Volume, ML_VolAvgLen );
+v_ML_ATR_Short = AvgTrueRange( ML_ATR_ShortLen );
+v_ML_ATR_Long  = AvgTrueRange( ML_ATR_LongLen );
+v_ML_RSI       = RSI( Close, 14 );
+v_ML_MA_Short  = Average( Close, ML_MA_ShortLen );
+
+
+{ ============================================================
+  SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)
+  ============================================================ }
+
+{ v1.3: tail entry cutoff - allow evening/night entries up to the  }
+{ LastEntry signal bar; block only the final pre-close window.     }
+if MarketPosition = 0 and
+   v_Death_Cross         = True and
+   v_Slope               > MinSlope and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False and
+   v_Gap_Block           = False then begin
+    v_IsReEntry = False;
+    { STRUCTDIAG: snapshot the structure the filter would have seen }
+    if Struct_Diag = True then begin
+        v_Snp_Date   = Date;
+        v_Snp_Time   = Time;
+        v_Snp_H1     = v_HIGH_1;
+        v_Snp_H2     = v_HIGH_2;
+        v_Snp_HBar   = v_HIGH_1_Bar;
+        v_Snp_L1     = v_LOW_1;
+        v_Snp_L2     = v_LOW_2;
+        v_Snp_LBar   = v_LOW_1_Bar;
+        v_Snp_Cnt    = v_Marker_Count;
+        v_Snp_Sep    = v_ZLEMA_Slow - v_ZLEMA_Fast;
+        v_Snp_Slope  = v_Slope;
+        v_Snp_KBType = v_KB_Type;
+        v_Snp_IsRe   = 0;
+        v_Snp_Close  = Close;
+    end;
+    sell short ( "SE_MA_DeathCross" ) next bar at market;
+end;
+
+{ v1.6 Re-Entry: washout recovery via stop order at original entry price.
+  Price must DROP to the level (stop order for short = trigger on price <= level).
+  v1.6.1: added v_Slope > MinSlope gate (same as main entry) to require
+  active bearish momentum before re-entry, not just structure.
+  v1.6.2: added Close >= v_ReEntry_Price gate to enforce directional entry --
+  stop order only placed when current bar closes at/above the re-entry level,
+  so the next bar must FALL to it (price descending through the level). }
+if MarketPosition = 0 and
+   v_ReEntry_Armed       = True and
+   v_ZLEMA_Fast          < v_ZLEMA_Slow and
+   v_Slope               > MinSlope and
+   Close                 >= v_ReEntry_Price and
+   ( Time <= Tail_LastEntry_Time or Time > 500 ) and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False and
+   v_Gap_Block           = False then begin
+    v_IsReEntry = True;
+    { STRUCTDIAG: re-entry uses a STOP order, so it may not fill on the
+      next bar. The order is re-issued every bar the conditions hold, so
+      this snapshot is refreshed each time and the value carried into a
+      fill is the one from the bar immediately before it. The logged
+      signal timestamp makes the gap visible either way. }
+    if Struct_Diag = True then begin
+        v_Snp_Date   = Date;
+        v_Snp_Time   = Time;
+        v_Snp_H1     = v_HIGH_1;
+        v_Snp_H2     = v_HIGH_2;
+        v_Snp_HBar   = v_HIGH_1_Bar;
+        v_Snp_L1     = v_LOW_1;
+        v_Snp_L2     = v_LOW_2;
+        v_Snp_LBar   = v_LOW_1_Bar;
+        v_Snp_Cnt    = v_Marker_Count;
+        v_Snp_Sep    = v_ZLEMA_Slow - v_ZLEMA_Fast;
+        v_Snp_Slope  = v_Slope;
+        v_Snp_KBType = v_KB_Type;
+        v_Snp_IsRe   = 1;
+        v_Snp_Close  = Close;
+    end;
+    sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
+end;
+
+
+{ ============================================================
+  SECTION 10 - EXIT PRIORITY CHAIN (P0 to P7)
+  Fires in order. First hit wins per bar (ExitFired flag).
+  ============================================================ }
+
+if MarketPosition = -1 then begin
+
+    ExitFired = 0;
+    v_BarsSince = CurrentBar - v_EntryBar;
+    v_Loss = Close - EntryPrice;       { short: positive = loss }
+    v_Profit = EntryPrice - Close;     { short: positive = profit }
+
+    { ---- P0: Priority 0 compliance ---- }
+    if Manual_Kill_Switch = True then begin
+        buy to cover ( "SX_MA_Kill" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Registry_Expired = True then begin
+        buy to cover ( "SX_MA_Registry" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Holiday_Block = True and
+       Time >= Holiday_Flat_Time then begin
+        buy to cover ( "SX_MA_Holiday" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    if ExitFired = 0 and v_Settlement_Day = True and
+       Time >= Settlement_Flat_Time then begin
+        buy to cover ( "SX_MA_Settlement" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P0.5: Tail Force Exit (v1.3) - flat before session close ---- }
+    { Signal at 0440 bar close -> fill 04:40 (445-bar open).            }
+    { Guarantees no position ever crosses morning break / weekend /     }
+    { holiday closure. Holiday flat at 0415 fires earlier as backstop   }
+    { on registered holiday tails. Required BEFORE any G2 MaxHold       }
+    { extension experiment (36/48 bars breaks 2hr self-resolution).     }
+    if ExitFired = 0 and
+       Time >= Tail_ForceExit_Time and Time <= 500 then begin
+        buy to cover ( "SX_MA_TailFlat" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P1: M5 Quick Stop ---- }
+    if ExitFired = 0 and QuickStop_On = True and
+       v_QuickStop_Fired = False then begin
+
+        { P1a Loss-based (v1.7.1: pct of EntryPrice, not fixed pts) }
+        if v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then begin
+            buy to cover ( "SX_MA_QuickStop_Loss" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+
+        { P1b Time-based (N bars with no profit) }
+        if ExitFired = 0 and
+           v_BarsSince >= QuickStop_MaxBars and
+           Close >= EntryPrice then begin
+            buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+    end;
+
+    { ---- P2: M6 Rule #17 Multi-Layer 1M Monitor ---- }
+    if ExitFired = 0 and ML_On = True then begin
+
+        { v1.8.0: use frozen SL dist, not unfrozen v_StopDist }
+        v_ML_Activation_Level = v_Frozen_SL_Dist * ML_ActivationPct / 100;
+
+        if v_Loss > v_ML_Activation_Level then begin
+
+            { Reset all category scores }
+            v_ML_Cat_1F = 0;
+            v_ML_Cat_2F = 0;
+            v_ML_Cat_3F = 0;
+            v_ML_Cat_4F = 0;
+            v_ML_Cat_5F = 0;
+
+            { 1F K-bar layer: bullish engulfing (adverse for short) }
+            if Close > High[1] and Close > Open then
+                v_ML_Cat_1F = 1;
+
+            { 2F Vol-price layer: volume spike }
+            if Volume > v_ML_AvgVol * ML_VolSpikeMult then
+                v_ML_Cat_2F = 1;
+
+            { 3F Momentum layer: RSI reversal from oversold }
+            v_ML_RSI_Prior = Lowest( RSI( Close, 14 ), 5 );
+            if v_ML_RSI_Prior < 30 and v_ML_RSI > 40 then
+                v_ML_Cat_3F = 1;
+
+            { 4F Structure layer: higher low + close above short MA }
+            if Low > Low[1] and Close > v_ML_MA_Short then
+                v_ML_Cat_4F = 1;
+
+            { 5F Volatility layer: ATR expansion }
+            if v_ML_ATR_Long > 0 and
+               v_ML_ATR_Short / v_ML_ATR_Long > ML_ATR_Ratio then
+                v_ML_Cat_5F = 1;
+
+            { Compute score }
+            v_ML_Score    = v_ML_Cat_1F + v_ML_Cat_2F + v_ML_Cat_3F +
+                            v_ML_Cat_4F + v_ML_Cat_5F;
+            v_ML_Score_Pct = v_ML_Score / 5 * 100;
+            v_ML_CatCount = v_ML_Score;   { 1 factor per category = same }
+
+            v_ML_Trigger = v_ML_Score_Pct >= ML_ScoreTrigger and
+                           v_ML_CatCount >= ML_MinCategories;
+
+            if v_ML_Trigger = True then begin
+                buy to cover ( "SX_MA_ML_Exit" ) next bar at market;
+                ExitFired = 1;
+            end;
+        end;
+    end;
+
+    { ---- P3: M7 True Breakeven + P3b Profit Trail (v1.12.0) ---- }
+    { Both mechanisms produce a protective lock in POINTS. The larger    }
+    { lock wins, and a single stop order is issued at                    }
+    {     EntryPrice - lock                                              }
+    { For a SHORT a bigger lock = lower price level = triggers earlier   }
+    { on the retrace = more profit retained. BE_Cost_Pts is the floor,   }
+    { so the trail can never protect less than true breakeven.           }
+    { Re-issued every bar, ExitFired NOT set (same pattern as P6).       }
+    {                                                                    }
+    { A-5 (audit 2026-08-06) -- PROGRAM ORDER IS NOT FILL ORDER.         }
+    { P3 sits above P4/P5 in the chain but does not set ExitFired, so a  }
+    { market order from GoldenCross or TimeStop can be live for the same }
+    { next bar as this stop. Fill order is decided by order type:        }
+    {     market order -> fills at the NEXT BAR'S OPEN                   }
+    {     stop order   -> fills intrabar when price touches the level    }
+    { The open comes first, so when both are issued on the same bar the  }
+    { MARKET ORDER WINS and P5 overrides P3. That is precisely why the   }
+    { 25 TimeStop exits survive rather than being taken by this stop.    }
+    {                                                                    }
+    { Where this stop DOES preempt is ACROSS bars: issued on bar N, it   }
+    { can fill intrabar on bar N+1, ahead of the QuickStop_Time market   }
+    { order that is only evaluated at bar N+1's CLOSE. That is the case  }
+    { the original comment described, and it is only half the picture.   }
+
+    { Track running peak open profit (bar-close basis, IOG=False) }
+    if v_Profit > v_MaxProfit then
+        v_MaxProfit = v_Profit;
+
+    { Latch activations }
+    if BE_On = True and
+       v_Profit >= EntryPrice * BE_Trigger_Pct / 100 then
+        v_BE_Active = True;
+
+    if Trail_On = True and
+       v_MaxProfit >= EntryPrice * Trail_Trigger_Pct / 100 then
+        v_Trail_Active = True;
+
+    if Struct_On = True and
+       v_MaxProfit >= EntryPrice * Struct_Trigger_Pct / 100 then
+        v_Struct_Active = True;
+
+    { Resolve the binding lock }
+    v_Protect_Lock   = 0;
+    v_Trail_Binding  = False;
+    v_Struct_Binding = False;
+
+    if BE_On = True and v_BE_Active = True then
+        v_Protect_Lock = BE_Cost_Pts;
+
+    if Trail_On = True and v_Trail_Active = True then begin
+        { v1.14.0 B1 tiered giveback. One tier, two parameters -- with
+          only 21 armed trades in 6.4 years a multi-tier table would fit
+          noise. Tier2_On=False reproduces v1.13.0 exactly.
+
+          The rationale is the user's own: giving back 80% of a 1.2% run
+          costs 1% of the index, but giving back 80% of a 5% run costs
+          4%. It is the LARGE profits that must not be handed back, and
+          a single flat giveback pct cannot express that. }
+        v_Trail_Giveback = Trail_Giveback_Pct;
+        if Tier2_On = True and
+           v_MaxProfit >= EntryPrice * Tier2_Trigger_Pct / 100 then
+            v_Trail_Giveback = Tier2_Giveback_Pct;
+
+        v_Trail_Lock = v_MaxProfit * ( 100 - v_Trail_Giveback ) / 100;
+        if v_Trail_Lock > v_Protect_Lock then begin
+            v_Protect_Lock  = v_Trail_Lock;
+            v_Trail_Binding = True;
+        end;
+    end;
+
+    { v1.13.0 A2 structure leg.
+
+      A-1 (audit 2026-08-06) -- WHAT THIS ACTUALLY COMPUTES.
+      The name says "structure trail" and the design doc describes
+      trailing behind a swing high. The algebra says otherwise.
+
+      For a SHORT, profit at any bar is EntryPrice - Close, so a HIGHER
+      close means LESS profit. Highest(Close, N) therefore picks the
+      LEAST profitable bar in the window, and
+
+          v_Struct_Raw = (minimum close-based profit in the window)
+                         - Struct_Buffer_Pts
+
+      And the window barely rolls: it is clamped to bars-since-entry
+      while MaxHoldingBars is 24 and Struct_Lookback is 20, so the first
+      bar only leaves the window on bar 20 of a trade that can live 24.
+
+      So the real mechanism is A LOWEST-PROFIT-SINCE-ENTRY TRAIL, not a
+      swing-high trail. Three independent measurements agree:
+        - Lookback 25/30/35/40 are provably identical (all clamped)
+        - Lookback 5/10/15, the ones that genuinely roll, score WORSE
+        - Struct_Trigger_Pct=0 collapses net 48%, because on the entry
+          bar the window is one bar and the reference is that bar's own
+          close, making the lock equal current profit minus buffer
+
+      DO NOT shrink Struct_Lookback expecting a more responsive
+      structure read. It anchors the lock to a more recent, higher
+      profit and produces a TIGHTER stop.
+
+      Reference = highest close of the recent window. For a SHORT the
+      protected amount is the distance from EntryPrice down to that
+      close plus a buffer. Falling price rolls old closes out of the
+      window, so the reference drops and the lock grows.
+
+      Window is clamped to bars elapsed since entry: without this the
+      lookback reaches back into price structure that predates the trade
+      and has nothing to do with it.
+
+      LATCH is mandatory. A bounce entering the window raises the
+      reference, which would shrink the raw lock and retreat the stop.
+      A trailing stop that retreats is not a trailing stop, so the lock
+      is held at its running maximum and can only ever increase. }
+    if Struct_On = True and v_Struct_Active = True then begin
+
+        v_Struct_Window = MinList( Struct_Lookback, v_BarsSince + 1 );
+        if v_Struct_Window < 1 then
+            v_Struct_Window = 1;
+
+        if Struct_UseClose = True then
+            v_Struct_Ref = Highest( Close, v_Struct_Window )
+        else
+            v_Struct_Ref = Highest( High, v_Struct_Window );
+
+        v_Struct_Raw = EntryPrice - ( v_Struct_Ref + Struct_Buffer_Pts );
+
+        { latch: monotonic non-decreasing, never retreats }
+        if v_Struct_Raw > v_Struct_Lock then
+            v_Struct_Lock = v_Struct_Raw;
+
+        if v_Struct_Lock > v_Protect_Lock then begin
+            v_Protect_Lock   = v_Struct_Lock;
+            v_Trail_Binding  = False;
+            v_Struct_Binding = True;
+        end;
+    end;
+
+    if ExitFired = 0 and v_Protect_Lock > 0 then begin
+        v_BE_Stop_Level = EntryPrice - v_Protect_Lock;
+        if v_Struct_Binding = True then
+            buy to cover ( "SX_MA_Struct" ) next bar at v_BE_Stop_Level stop
+        else if v_Trail_Binding = True then
+            buy to cover ( "SX_MA_Trail" ) next bar at v_BE_Stop_Level stop
+        else
+            buy to cover ( "SX_MA_BE" ) next bar at v_BE_Stop_Level stop;
+    end;
+
+    { ---- P4: Golden Cross main exit ---- }
+    if ExitFired = 0 and v_Golden_Cross = True then begin
+        buy to cover ( "SX_MA_GoldenCross" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P5: M8 Time Stop ---- }
+    if ExitFired = 0 and M8_On = True and
+       v_BarsSince >= MaxHoldingBars then begin
+        buy to cover ( "SX_MA_TimeStop" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { ---- P6: ATR-based Frozen SL (last resort) ---- }
+    if ExitFired = 0 and v_SL_Locked = True then begin
+        buy to cover ( "SX_MA_SL" ) next bar at v_SL_Level Stop;
+    end;
+
+    { P7 handled by SetStopContract + SetStopLoss + SL_Pct in Section 7 }
+
+end;
+
+
+{ ============================================================
+  SECTION 10.9 - STRUCTDIAG ONLY: EMIT ON FILL
+  ============================================================
+  Fires on the bar where a position opens (v_Prev_MP = 0 and MP = -1).
+  v_Prev_MP still holds the previous bar's value here because Section 11
+  updates it on the last line.
+
+  The row carries the FILL bar's Date/Time so it joins the MC trade list
+  directly with no bar arithmetic, and the SIGNAL bar's Date/Time from
+  the snapshot so the gap between them is auditable per trade. Every
+  structure value is the snapshot -- what a filter would have seen when
+  it had to decide, one bar before the fill.
+
+  CSV COLUMNS (no header, Print appends):
+    FillDate, FillTime, FillPrice, SigDate, SigTime, IsReEntry,
+    HIGH_1, HIGH_2, HIGH_1_Bar, LOW_1, LOW_2, LOW_1_Bar,
+    MarkerCount, LineSep, Slope, KBType, SigClose, CurrentBar
+
+  DERIVED OFFLINE (deliberately not computed here, so the raw state is
+  auditable and the derivation can be revised without a re-run):
+    lower-high      = HIGH_1 < HIGH_2 (both non-zero)
+    fall from HIGH_1 = HIGH_1 - FillPrice
+    bars since HIGH_1 = CurrentBar - HIGH_1_Bar
+    new low or not  = FillPrice vs LOW_1
+
+  Zero in HIGH_1 / LOW_1 means NO MARKER EXISTS, not a price of zero.
+  Distinguish before computing any distance.
+
+  Print(File()) APPENDS. Delete the file before every run.
+  ============================================================ }
+if Struct_Diag = True and v_Prev_MP = 0 and MarketPosition = -1 then
+    Print( File( Struct_Diag_Path ),
+           NumToStr( Date, 0 ),          ",",
+           NumToStr( Time, 0 ),          ",",
+           NumToStr( EntryPrice, 2 ),    ",",
+           NumToStr( v_Snp_Date, 0 ),    ",",
+           NumToStr( v_Snp_Time, 0 ),    ",",
+           NumToStr( v_Snp_IsRe, 0 ),    ",",
+           NumToStr( v_Snp_H1, 2 ),      ",",
+           NumToStr( v_Snp_H2, 2 ),      ",",
+           NumToStr( v_Snp_HBar, 0 ),    ",",
+           NumToStr( v_Snp_L1, 2 ),      ",",
+           NumToStr( v_Snp_L2, 2 ),      ",",
+           NumToStr( v_Snp_LBar, 0 ),    ",",
+           NumToStr( v_Snp_Cnt, 0 ),     ",",
+           NumToStr( v_Snp_Sep, 2 ),     ",",
+           NumToStr( v_Snp_Slope, 2 ),   ",",
+           NumToStr( v_Snp_KBType, 0 ),  ",",
+           NumToStr( v_Snp_Close, 2 ),   ",",
+           NumToStr( CurrentBar, 0 ) );
+
+
+{ ============================================================
+  SECTION 11 - PREV_MP TRACKING (last line, per PL Rule 8)
+  ============================================================ }
+v_Prev_MP = MarketPosition;
