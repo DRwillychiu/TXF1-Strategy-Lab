@@ -12,17 +12,37 @@
 
     v1.16.0 flagged Tail_LastEntry_Time as NOT COMPLIANT and v1.17.0
     added Tail_FillSemantic_On to switch <= for <. Both were treating
-    the symptom. The actual defect is that 430 has no derivation at
-    all:
+    the symptom: the input was named for the FILL but gated the
+    SIGNAL, so a 0430 cutoff permitted an 0435 fill. Arguing < versus
+    <= cannot close a one-bar offset.
 
-        docs/research/S16S_v1150_deep_audit_20260806.md line 151
-        Tail_LastEntry_Time | 430 | grade D | v1.3 design judgement
-                                            | NEVER SWEPT
+    CORRECTION 2026-08-10, on the author's own account of the design.
+    An earlier draft of this block asserted 430 "has no derivation"
+    and was "only ten minutes before 440". BOTH CLAIMS WERE WRONG.
+    430 and 440 are SIBLINGS, each measured back from the 0500 night
+    close, and neither is derived from the other:
 
-    Tail_ForceExit_Time = 440 IS derived -- it comes from the 0500
-    close, leaving a 15 minute buffer after its 0445 fill. 430 was
-    only ever "ten minutes before that", with no reason for the ten.
-    Arguing < versus <= was calibrating a number that had no basis.
+        no new position from   0500 - 30 min = 0430
+        force flat from        0500 - 20 min = 0440
+
+    The v1.15.0 audit graded 430 D for "v1.3 design judgement, never
+    swept". "Never swept" stands. "Design judgement" stands and is in
+    fact exactly right -- it is a risk decision about how close to the
+    close a position may still be opened. What did not stand was the
+    later inference that a design judgement with no written rationale
+    must be arbitrary.
+
+    The rationale had simply never been written into the repository,
+    so two separate readers saw a bare 430 and each concluded it was a
+    guess. AN INTENT THAT IS NOT WRITTEN DOWN DOES NOT EXIST. That is
+    the transferable lesson here, more than the time value itself.
+
+    This correction STRENGTHENS the change rather than undermining it.
+    The requirement was always "no position may be opened from 0430",
+    and the old code opened one at 0435. It violated a stated intent,
+    not an arbitrary constant. Nothing in the Tail_Signal_Lead_Bars
+    derivation below depends on where 430 came from -- that argument
+    is about signal-versus-fill and order type alone.
 
     ------------------------------------------------------------------
     THE RULE, RESTATED THE WAY THE REQUIREMENT IS ACTUALLY MEANT
@@ -1326,17 +1346,22 @@ inputs:
     {   which no position may be OPENED. Names the FILL, not the   }
     {   signal -- the signal cutoff is derived from it below and   }
     {   is not separately settable.                                }
-    {   User ruling 2026-08-10: 430, carrying v1.3's intent        }
-    {   forward unchanged. Note the value itself is still graded D }
-    {   in the v1.15.0 audit (never swept); what v1.18.0 fixes is  }
-    {   that the rule built ON it is now derived rather than       }
-    {   guessed. Sweeping 430 remains open.                        }
+    {   DERIVATION (author, recorded 2026-08-10): the night      }
+    {   session closes at 0500 and no new position may be opened  }
+    {   inside the last 30 minutes.  0500 - 30 min = 0430.        }
+    {   This is a SIBLING of Tail_ForceExit_Time, not a derivative }
+    {   of it -- both measure back from the same 0500 close.      }
+    {   An earlier draft of this file claimed 430 was arbitrary.   }
+    {   That was wrong; the rationale existed but had never been  }
+    {   written into the repo. It is written here now.            }
+    {   Still never swept -- sweeping it remains open, but it is  }
+    {   a risk decision, not a performance parameter.             }
     {                                                              }
     { Tail_ForceExit_Time                                          }
     {   Force-flat SIGNAL bar stamp 0440, fill at the 0445 bar's   }
     {   open, i.e. wall-clock ~04:40, leaving 20 minutes to the    }
-    {   0500 close. Unlike 430 this value IS derived -- from the   }
-    {   close time -- and is unchanged since v1.3.                 }
+    {   0500 close. Same construction as 430 -- measured back from }
+    {   the close, with its own buffer -- and unchanged since v1.3.}
     Tail_NoEntry_From       ( 430   ),
     Tail_ForceExit_Time     ( 440   ),
 
