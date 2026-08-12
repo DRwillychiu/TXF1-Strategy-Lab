@@ -2,7 +2,43 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.20.0 Raw Bar Decline As Numerator (2026-08-12, base v1.19.2)
+  Version     : v1.20.0 Raw Bar Decline, Points And Rate (2026-08-12, base v1.19.2)
+
+  v1.20.0 ALSO ADDS FORM 4, AND CORRECTS v1.19.2's REASONING:
+
+    Form 4 is the author's formula written out in full, with no term
+    reinterpreted:
+
+        ( points moved / index level ) / time
+      = ( ( Close[1] - Close ) / Close[1] * 100 ) / v_Elapsed_Min
+
+    v1.19.2 argued the /time term carried no information and turned
+    time into a validity gate instead. THAT ARGUMENT HELD ONLY FOR
+    BarInterval, which is a constant. Dividing by the MEASURED elapsed
+    time is a different operation entirely, and it is not a no-op:
+
+      ranked by percent per BAR      63 of the top 127 are session
+                                     first bars -- half of them
+      ranked by percent per MINUTE    0 of the top 127
+
+    A 300-point gap over 230 minutes instead of 5 collapses by a
+    factor of 46 and falls out of the ranking on its own. The two
+    orderings share only 64 of their top 127 and the whole difference
+    is boundary bars.
+
+    SO FORM 4 SOLVES THE GAP CONTAMINATION BY CONSTRUCTION. The author
+    stated this formula on 2026-08-11; the version that implemented it
+    substituted a constant for the time term and then added a separate
+    switch to do what the original formula already did.
+
+    Not resolved by this: the market did not fall gradually across 230
+    minutes, it gapped. Treating that as a low RATE reaches the right
+    answer by reasoning that is not quite the true one, and no
+    measurement here can separate the two accounts.
+
+    MinSlope_Rate = 0.057859 is iso-count calibrated on the verified
+    offline rebuild, admitting the same 127 crosses as MinSlope = 28.
+
 
   v1.20.0 (2026-08-12) THE NUMERATOR IS OPENED UP:
 
@@ -1829,6 +1865,7 @@ inputs:
     {   1  ZLEMA points   Fast[1] - Fast  > MinSlope      (= v1.18.0) }
     {   2  ZLEMA percent  see MinSlope_Pct    REJECTED, kept readable }
     {   3  RAW points     Close[1] - Close > MinSlope_Raw     v1.20.0 }
+    {   4  RAW pct/min    the author's formula in full         v1.20.0 }
     {                                                                  }
     { Form 3 answers a question the six-formulation bench never asked. }
     { Every mode there changed the UNITS or the SPACING of the same    }
@@ -1901,6 +1938,46 @@ inputs:
     { picks SUSTAINED decline, the raw form picks a SINGLE VIOLENT     }
     { BAR. That is the question this version exists to settle.         }
     MinSlope_Raw            ( 86    ),
+
+    { MinSlope_Rate -- the threshold for Slope_Form = 4, in PERCENT   }
+    { PER MINUTE. This is the author's formula written out in full:   }
+    {                                                                 }
+    {     ( points moved / index level ) / time                       }
+    {   = ( ( Close[1] - Close ) / Close[1] * 100 ) / v_Elapsed_Min   }
+    {                                                                 }
+    { and the time is the REAL elapsed time between the two bars,     }
+    { not the chart's interval setting.                               }
+    {                                                                 }
+    { ISO-COUNT CALIBRATED OFFLINE on the verified rebuild: 0.057859  }
+    { admits the same 127 crosses that MinSlope = 28 admits.          }
+    {                                                                 }
+    { CORRECTION TO v1.19.2's REASONING. That version argued the /time }
+    { term carried no information and dropped it, keeping time as a    }
+    { validity gate instead. THAT ARGUMENT WAS ONLY TRUE FOR           }
+    { BarInterval, which is a constant. Dividing by the MEASURED       }
+    { elapsed time is not a constant division and is not a no-op:      }
+    {                                                                  }
+    {   top 127 by percent per BAR      63 of 127 are session         }
+    {                                   first bars, 50%               }
+    {   top 127 by percent per MINUTE    0 of 127                     }
+    {                                                                  }
+    { A 300-point gap divided by 230 minutes instead of 5 collapses by }
+    { a factor of 46, which drops those bars out of the ranking on     }
+    { their own. The two forms share only 64 of their top 127, and the }
+    { entire difference is boundary bars.                              }
+    {                                                                  }
+    { SO FORM 4 HANDLES THE GAP CONTAMINATION BY CONSTRUCTION, with no }
+    { separate exclusion switch. Slope_Require_Adjacent is still an    }
+    { independent input so the two can be measured apart, but on this  }
+    { form it should have almost nothing left to remove.               }
+    {                                                                  }
+    { The philosophical objection recorded in v1.19.2 still stands and }
+    { is not resolved by this: the market did not fall gradually over  }
+    { 230 minutes, it gapped. Treating that as a low RATE gets the     }
+    { right answer for a reason that is not quite the true one. The    }
+    { two approaches agree on the outcome and differ on why, and the   }
+    { measurement below cannot separate those.                         }
+    MinSlope_Rate           ( 0.057859 ),
 
     { Slope_Require_Adjacent -- the dx fix.                            }
     {                                                                  }
@@ -2055,6 +2132,7 @@ variables:
     { ===== v1.19.1 slope as dy/dx ===== }
     v_Slope_Pct             ( 0     ),
     v_Slope_Raw             ( 0     ),
+    v_Slope_Rate            ( 0     ),
     v_Elapsed_Min           ( 0     ),
     v_Slope_Adjacent        ( False ),
     v_Slope_Pass            ( False ),
@@ -2726,7 +2804,24 @@ v_Slope_Raw = Close[1] - Close;
   something undefined. All three comparisons are strict > , matching
   v1.18.0's "v_Slope > MinSlope" exactly, so form 1 stays bit
   identical rather than merely equivalent. }
-if Slope_Form = 3 then
+{ ---- form 4 numerator: the author's formula, written out ----
+  ( points moved / index level ) / time, where every term is what it
+  says. The decline is the market's own, the level normalises it so
+  the gate means the same thing at 10,000 and at 45,000, and the time
+  is what actually elapsed between the two bars.
+
+  Guards: Close[1] is a futures price and cannot be zero in practice,
+  but v_Elapsed_Min IS zero on the first bar of the run by
+  construction, so the division must be protected. }
+if Close[1] <> 0 and v_Elapsed_Min > 0 then
+    v_Slope_Rate = ( ( Close[1] - Close ) / Close[1] * 100 )
+                   / v_Elapsed_Min
+else
+    v_Slope_Rate = 0;
+
+if Slope_Form = 4 then
+    v_Slope_Pass = v_Slope_Rate > MinSlope_Rate
+else if Slope_Form = 3 then
     v_Slope_Pass = v_Slope_Raw > MinSlope_Raw
 else if Slope_Form = 2 then
     v_Slope_Pass = v_Slope_Pct > MinSlope_Pct
