@@ -34,10 +34,64 @@
     v1.20.0 the file still shipped the v1.18.0 anchor; from here
     the rate form IS the strategy.
 
-    ANCHOR. All defaults must reproduce B2's adopted cell exactly:
-    186 trades / 1,522,000 / PF 1.54 / max intraday DD -548,800 /
-    return on account 300.55. Neither change touches logic, so a
-    mismatch is a conversion error, not a market result.
+    ANCHOR, as first written: 186 trades / 1,522,000 / PF 1.54 /
+    max intraday DD -548,800 / RoA 300.55. CONFIRMED in MC12 on
+    2026-08-12 -- the boolean conversion is proven bit-correct.
+
+  DEFAULTS UPDATED 2026-08-12 AFTER B2b / B3 / B3b:
+
+    B2b re-ran the gap batch with the three on/off switches finally
+    visible to the optimizer. It changed nothing: the adopted cell
+    was already right. What it added was the split -- the -27,600
+    trade it blocks is a DAY trade, and the +6,000 winner that
+    Gap_Rise_Min_Pct = 0.0 over-blocks is a NIGHT trade. See the
+    Group J comment for the full re-measured record.
+
+    B3 swept the tail-time and re-entry group. Two values moved:
+
+      Tail_NoEntry_From    430 -> 415
+      Tail_ForceExit_Time  440 -> 430
+
+    B3b existed because B3's winner sat on the grid's lower edge,
+    and a boundary optimum is a truncation rather than a plateau.
+    Extending the sweep down to 350 confirmed 430 as a real peak
+    with support on both sides. The full profile is recorded at
+    Tail_ForceExit_Time in Group I.
+
+    CURRENT ANCHOR (all defaults):
+      184 trades / 1,678,000 / PF 1.61 / max intraday DD -548,400 /
+      RoA 331.62
+
+    Campaign to date: 748,000 -> 1,678,000, +124.3%, across B1, B2,
+    B2b, B3 and B3b. The entry side is finished. Every EXIT
+    parameter still carries its v1.18.0-era value.
+
+  THE INERT REGISTER (measured, not assumed):
+
+    Each of these was swept and returned bit-identical results at
+    both settings, so it is dead weight at the current defaults.
+    All are HELD rather than removed -- each has a derivation that
+    binds again if a neighbouring parameter moves -- but they are
+    the first candidates if this file is ever simplified.
+
+      Slope_Require_Adjacent   B3    the elapsed-time divisor in
+                                     Slope_Form = 2 already drives
+                                     session-first-bar entries to 0
+      Tail_Signal_Lead_Bars    B3    all five values 0..4 identical
+      ReEntry_Structure_Gate   B3    third independent confirmation;
+                                     the state machine already
+                                     implies Fast < Slow
+      Gap_Night_On             B2b   identical across the adopted
+                                     Gap_Rise_Min_Pct band
+
+    Confirmed LIVE and load-bearing, by contrast:
+      Sess_LastBar_Block_On    +29,200. Its first measured action --
+                               v1.17.0 recorded zero in-sample
+                               triggers, which proved only that it
+                               did not misfire.
+      ReEntry_On / _Slope_Gate / _Close_Gate
+                               all three must be 1; the re-entry leg
+                               survives the population change.
 
     WHAT THIS VERSION DOES NOT DO. Every exit parameter still
     carries its v1.18.0-era value, tuned against a population that
@@ -1650,28 +1704,63 @@ inputs:
     { bounded by Time <= 500 (MC 24hr pitfall rule).               }
     {                                                              }
     { Tail_NoEntry_From (v1.18.0, was Tail_LastEntry_Time)         }
-    {   THE ONLY DECISION IN THIS GROUP. Wall-clock time from      }
-    {   which no position may be OPENED. Names the FILL, not the   }
-    {   signal -- the signal cutoff is derived from it below and   }
-    {   is not separately settable.                                }
-    {   DERIVATION (author, recorded 2026-08-10): the night      }
-    {   session closes at 0500 and no new position may be opened  }
-    {   inside the last 30 minutes.  0500 - 30 min = 0430.        }
-    {   This is a SIBLING of Tail_ForceExit_Time, not a derivative }
-    {   of it -- both measure back from the same 0500 close.      }
-    {   An earlier draft of this file claimed 430 was arbitrary.   }
-    {   That was wrong; the rationale existed but had never been  }
-    {   written into the repo. It is written here now.            }
-    {   Still never swept -- sweeping it remains open, but it is  }
-    {   a risk decision, not a performance parameter.             }
-    {                                                              }
-    { Tail_ForceExit_Time                                          }
-    {   Force-flat SIGNAL bar stamp 0440, fill at the 0445 bar's   }
-    {   open, i.e. wall-clock ~04:40, leaving 20 minutes to the    }
-    {   0500 close. Same construction as 430 -- measured back from }
-    {   the close, with its own buffer -- and unchanged since v1.3.}
-    Tail_NoEntry_From       ( 430   ),
-    Tail_ForceExit_Time     ( 440   ),
+    {   Wall-clock time from which no position may be OPENED. Names  }
+    {   the FILL, not the signal -- the signal cutoff is derived     }
+    {   from it below and is not separately settable.                }
+    {                                                                }
+    {   WAS 430, DERIVED (author, 2026-08-10): the night session     }
+    {   closes at 0500 and no new position may be opened inside the  }
+    {   last 30 minutes. 0500 - 30 = 0430. A sibling of              }
+    {   Tail_ForceExit_Time, not a derivative of it -- both measure  }
+    {   back from the same close.                                    }
+    {                                                                }
+    {   NOW 415, MEASURED (B3 + B3b, 2026-08-12). At                 }
+    {   Tail_ForceExit_Time = 430 every value from 350 to 415 gives  }
+    {   the identical 184 trades / 1,678,000; 425 admits two more    }
+    {   entries worth -48,800. The plateau is ONE-SIDED: flat below, }
+    {   a cliff above. 415 is the widest value still on the flat     }
+    {   side, and taking anything lower would extend the block into  }
+    {   a window with zero observations in 6.4 years -- extrapolating}
+    {   "the tail is bad" to where there is no data. Untested gap:   }
+    {   420, so the true edge lies somewhere in (415, 425].          }
+    {                                                                }
+    {   ENCODING PITFALL, recorded 2026-08-12. This input is read    }
+    {   through TimeToMinutes(), which computes                      }
+    {       int(t/100)*60 + mod(t,100)                               }
+    {   so a value that is not a legal clock time is NOT rejected;   }
+    {   it is quietly reinterpreted. 365 means 3*60+65 = 245 min =   }
+    {   0405, 380 means 0420, 395 means 0435. B3b's sweep grid       }
+    {   contained all three and they looked evenly spaced while      }
+    {   actually jumping. ANY value adopted here must be a legal     }
+    {   clock time, and any future time sweep must step so every     }
+    {   grid point lands inside 00-59 minutes.                       }
+    {                                                                }
+    { Tail_ForceExit_Time                                            }
+    {   Force-flat signal bar stamp; the fill lands one bar later.   }
+    {                                                                }
+    {   WAS 440 (0500 close - 20 min), unchanged since v1.3 and      }
+    {   never swept. B3 swept 430..500 and B3b extended DOWN to 350  }
+    {   because the B3 optimum sat on the grid's lower boundary --   }
+    {   a boundary optimum is a truncation, not a plateau.           }
+    {                                                                }
+    {   MEASURED PROFILE at Tail_NoEntry_From <= 415:                }
+    {       380   1,465,600   PF 1.53                                }
+    {       390   1,542,000   PF 1.56                                }
+    {       420   1,644,000   PF 1.60                                }
+    {       430   1,678,000   PF 1.61   <- adopted                   }
+    {       440   1,522,000   PF 1.54   (the old default)            }
+    {   Supported on BOTH sides -- 420 is 2.0% below and 440 is 9.3% }
+    {   below, each far inside the 40% adjacent-cell rule. 430 costs }
+    {   5,200 more drawdown than 420 and returns 34,000 more net.    }
+    {                                                                }
+    {   MECHANISM. Moving the flat 10 minutes earlier RAISED gross   }
+    {   profit (4,348,800 -> 4,427,200) as well as cutting gross     }
+    {   loss, so this is not simply "fewer trades": positions held   }
+    {   into 0430-0440 were giving profit back. The last half hour   }
+    {   of the night session destroys value on both sides of the     }
+    {   book.                                                        }
+    Tail_NoEntry_From       ( 415   ),
+    Tail_ForceExit_Time     ( 430   ),
 
     { Tail_Signal_Lead_Bars -- NOT A TUNING KNOB.                    }
     {                                                                }
@@ -1696,9 +1785,13 @@ inputs:
     { above -- it is an input only because Rule #1 forbids hard      }
     { constants, and to make the degenerate anchor runnable.         }
     {                                                                }
-    { ANCHOR: 0 makes the cutoff equal Tail_NoEntry_From, which is   }
-    { exactly v1.17.0's default gate, so it MUST reproduce           }
-    { 119 / 3,141,200 / PF 2.065680553670783 bit for bit.            }
+    { MEASURED INERT (B3, 2026-08-12). All five values 0..4 return   }
+    { the identical 184 trades / 1,678,000 at the adopted            }
+    { Tail_NoEntry_From, so at this cutoff the lead has nothing left }
+    { to suppress. Held at the DERIVED 2 rather than collapsed to 0: }
+    { the derivation above covers both order types, and it will bind }
+    { again the moment Tail_NoEntry_From moves later. Recorded in    }
+    { the inert register, first in line if the file is simplified.   }
     Tail_Signal_Lead_Bars   ( 2     ),
 
     { ===== Group J: Session Gap Filter - v1.16.0 (DEFAULT OFF) ===== }
@@ -1722,27 +1815,50 @@ inputs:
     { Gap_Rise_Min_Pct semantics: the test is >=, so the default 0.00  }
     { also blocks a bar that closed exactly at its open. Set 0.01 to   }
     { require a strictly higher close.                                 }
-    { ADOPTED 2026-08-08. Nine measured runs; see the version block  }
-    { at the top of this file. Only Gap_Rise_Min_Pct binds:          }
-    {   Gap_Down_Min_Pct  bit-identical at -999 / 0 / 0.30           }
-    {   Gap_Night_On      bit-identical at True / False              }
-    {   Gap_Scope_Bars    2 gains 3,200 = 0.1%, and bar 2 has a      }
-    {                     clean [1] so the mechanism argues for 1    }
-    { Both inert inputs are kept for readability and as structural   }
-    { cover, NOT because they contribute. First to cut if simplified.}
+    { RE-MEASURED UNDER Slope_Form = 2 (B2 + B2b, 2026-08-12). The    }
+    { findings below SUPERSEDE the v1.16.0/v1.17.0 numbers, which    }
+    { were taken on a population overlapping this one by 28 trades   }
+    { out of 118.                                                    }
     {                                                                }
-    { v1.17.0 ITEM B: Gap_Down_Min_Pct 0.30 -> 0.                    }
-    { The threshold was inert in sample (all 17 observed first-bar   }
-    { entries had a median gap of -1.108%) and run #4 proved 0 is    }
-    { bit-identical to 0.30. Inert in sample is not harmless going   }
-    { forward: at 0.30 a -0.10% gap with an up-closing first bar     }
-    { slips through. At 0 the condition reduces to exactly the one   }
-    { sentence the documentation already claims -- "if the session's }
-    { first bar did not close below its open, do not enter" -- and   }
-    { the code stops overstating its own precision.                  }
-    { The input is retained (not deleted) so the sweep evidence      }
-    { stays reproducible and a threshold can be reinstated without   }
-    { a structural edit.                                             }
+    { THE WHOLE MODULE IS WORTH ONE TRADE. Gap_Filter_On = 0 returns }
+    { exactly the unfiltered 187 / 1,494,400, and so does any        }
+    { Gap_Scope_Bars <= 2. The gross-profit column proves what the   }
+    { one blocked trade was: at 187 and 186 trades gross profit is   }
+    { IDENTICAL while gross loss falls 27,600, so the filter removes }
+    { a pure loser of exactly that size -- and nothing else.         }
+    {                                                                }
+    { WHY SO LITTLE IS LEFT. The gap filter exists to block the      }
+    { session's first bar after a down gap. Under Slope_Form = 2 the }
+    { elapsed-time divisor already drives session-first-bar entries  }
+    { to ZERO (Slope_Form = 1 had 8, worth -54,800). The filter has  }
+    { almost nothing left to block; the one trade it does catch      }
+    { enters on the session's THIRD bar, which is why Gap_Scope_Bars }
+    { must be 3. The gap contamination was solved by the formula,    }
+    { not by this module.                                            }
+    {                                                                }
+    { PARAMETER CHOICES, each on a flat band:                        }
+    {   Gap_Down_Min_Pct  0.0 and 0.1 identical, 0.2+ inert. Took    }
+    {     0.1 because 0.0 is a degenerate boundary -- the test       }
+    {     "<= -0.00" fires on any non-positive gap, which is the     }
+    {     parameter switched off.                                    }
+    {   Gap_Rise_Min_Pct  0.1 / 0.2 / 0.3 identical, 0.0 and 0.4     }
+    {     both change it. Took the centre of the flat band.          }
+    {   Gap_Scope_Bars    only 3 does anything. Forced.              }
+    {   Gap_Day_On        must be 1; the blocked trade is a DAY      }
+    {     trade.                                                     }
+    {   Gap_Night_On      INERT at the adopted cell -- 0 and 1 give  }
+    {     identical results for every Gap_Rise_Min_Pct in the band.  }
+    {     It has never blocked a losing night trade in 6.4 years,    }
+    {     and the one time it acted it removed a +6,000 WINNER (at   }
+    {     Gap_Rise_Min_Pct = 0.0, which is outside the adopted       }
+    {     band). Held at 1 anyway: turning it off on one trade is    }
+    {     the same n=1 fitting this file warns about elsewhere, and  }
+    {     the author ruled on 2026-08-08 that night must be handled  }
+    {     symmetrically. Inert register, cut when simplifying.       }
+    {                                                                }
+    { EVIDENCE GRADE: n = 1. This is a 27,600 rounding correction    }
+    { on 1.5 million, NOT a validated module, and it must not be     }
+    { re-described as one later.                                     }
     Gap_Filter_On           ( 1     ),
     Gap_Day_On              ( 1     ),
     Gap_Night_On            ( 1     ),
