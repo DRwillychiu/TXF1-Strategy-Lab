@@ -2,109 +2,40 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.20.0 Raw Bar Decline, Points And Rate (2026-08-12, base v1.19.2)
+  Version     : v1.20.0 Rate Form (2026-08-12, base v1.19.2)
 
-  v1.20.0 ALSO ADDS FORM 4, AND CORRECTS v1.19.2's REASONING:
+  v1.20.0 (2026-08-12) THE SLOPE AS A RATE OF THE MARKET'S OWN MOVE:
 
-    Form 4 is the author's formula written out in full, with no term
-    reinterpreted:
+    Slope_Form = 2 is the author's formula, stated 2026-08-12:
 
-        ( points moved / index level ) / time
-      = ( ( Close[1] - Close ) / Close[1] * 100 ) / v_Elapsed_Min
+        ( Close[1] - Close ) / Close / elapsed minutes
 
-    v1.19.2 argued the /time term carried no information and turned
-    time into a validity gate instead. THAT ARGUMENT HELD ONLY FOR
-    BarInterval, which is a constant. Dividing by the MEASURED elapsed
-    time is a different operation entirely, and it is not a no-op:
+    the market bar's decline, normalised by the index level, divided
+    by the time it took.
 
-      ranked by percent per BAR      63 of the top 127 are session
-                                     first bars -- half of them
-      ranked by percent per MINUTE    0 of the top 127
+    WHY THE NUMERATOR CHANGED. Every version to date differenced the
+    ZLEMA fast line. A 25-period EMA moves about 2/(25+1) of the gap
+    between its input and its previous value, so Fast[1] - Fast is a
+    damped derivative of a smoothed series, not the market's decline.
+    Close[1] - Close is the decline.
 
-    A 300-point gap over 230 minutes instead of 5 collapses by a
-    factor of 46 and falls out of the ranking on its own. The two
-    orderings share only 64 of their top 127 and the whole difference
-    is boundary bars.
+    WHY THE TIME TERM IS BACK. v1.19.2 dropped it as a constant. That
+    was true of BarInterval and false of the measured elapsed time.
+    Ranked by this formula, ZERO of the top 127 crosses are session
+    first bars; ranked without the time term, 63 of 127 are. A gap
+    spanning 230 minutes divided by 230 instead of 5 collapses by 46x
+    and leaves the ranking on its own, so the formula handles the
+    boundary by construction.
 
-    SO FORM 4 SOLVES THE GAP CONTAMINATION BY CONSTRUCTION. The author
-    stated this formula on 2026-08-11; the version that implemented it
-    substituted a constant for the time term and then added a separate
-    switch to do what the original formula already did.
+    Not settled by that: the market gapped, it did not fall gradually
+    across 230 minutes. Treating it as a low rate gets the right
+    answer for a reason that may not be the true one.
 
-    Not resolved by this: the market did not fall gradually across 230
-    minutes, it gapped. Treating that as a low RATE reaches the right
-    answer by reasoning that is not quite the true one, and no
-    measurement here can separate the two accounts.
+    SHIPS OFF. Slope_Form defaults to 1, so the anchor must reproduce
+    v1.18.0 exactly: 118 trades / 3,098,400 / PF 2.0511602660.
 
-    MinSlope_Rate = 0.057859 is iso-count calibrated on the verified
-    offline rebuild, admitting the same 127 crosses as MinSlope = 28.
-
-
-  v1.20.0 (2026-08-12) THE NUMERATOR IS OPENED UP:
-
-    Every version to date differenced the ZLEMA fast line. The six
-    formulation bench varied the UNITS (points, percent, ATR, z-score)
-    and the SPACING (N-bar), and one mode varied the SERIES PAIR
-    (divergence) but was killed on a proxy before any performance run.
-    NONE of them asked whether the fast line is the right series to
-    difference at all.
-
-    The user's definition of the quantity, stated 2026-08-12, is "the
-    market bar's decline". Fast[1] - Fast is not that. A 25-period EMA
-    moves roughly 2/(25+1) of the distance between its input and its
-    previous value, so the fast line's one-bar change is a damped
-    derivative of a smoothed series. Close[1] - Close is the decline.
-
-    SHIPS OFF. Slope_Form defaults to 1, so this version MUST
-    reproduce v1.18.0 exactly: 118 trades / 3,098,400 / PF
-    2.0511602660.
-
-    ------------------------------------------------------------------
-    THE THRESHOLD IS CALIBRATED, NOT GUESSED
-    ------------------------------------------------------------------
-    MinSlope_Raw = 86 was solved offline so that form 3 admits the
-    same 127 crosses MinSlope = 28 admits. Comparing at unequal counts
-    measures threshold tightness rather than formulation, which is how
-    v0.6's ATR form was misdiagnosed.
-
-    The offline rebuild that produced it was validated first:
-      death crosses    7,778 rebuilt against 7,779 in the bench record
-      MinSlope = 28    127 passes against 127          EXACT
-    Rebuilt in Python from the 1-minute export, 2,070,714 rows
-    aggregated to 418,096 five-minute bars, ZLEMA reconstructed as
-    XAverage(2*Close - Close[lag], length) with lag = (length-1)/2.
-
-    ------------------------------------------------------------------
-    THE TWO FORMS ARE NOT THE SAME GATE IN DIFFERENT CLOTHES
-    ------------------------------------------------------------------
-    Measured at the 7,778 death crosses:
-
-                        median   90th    99th    max
-      Fast[1] - Fast       2.4   10.3    33.1   173.5
-      Close[1] - Close     2.0   24.0   118.0   824.0
-
-    Nearly the same middle, a tail 3.5x fatter. The EMA damping keeps
-    one violent bar from moving the fast line much, while that same
-    bar lands whole in the raw difference. So at equal count the two
-    forms select DIFFERENT POPULATIONS: sustained decline against a
-    single violent bar. Which of those the strategy actually wants has
-    never been measured.
-
-    ------------------------------------------------------------------
-    WHAT THIS VERSION DOES NOT CHANGE
-    ------------------------------------------------------------------
-    dx stays a validity gate rather than a divisor, for the reason
-    established in v1.19.2 and unchanged here: within a session the
-    elapsed time is always BarInterval, so dividing by it is dividing
-    by a constant. Form 3 carries the SAME boundary problem and worse
-    -- at a session's first bar Close[1] - Close IS the overnight gap
-    -- so Slope_Require_Adjacent applies to it unchanged.
-
-    Form 2 (ZLEMA percent) is RETIRED, not deleted. Four independent
-    layers closed it and reopening needs the cost-unit argument
-    refuted first, not another sweep.
-
-  v1.19.2 (2026-08-11) THE FORMULA, RESTATED THE WAY IT WAS MEANT:
+    MinSlope_Rate = 0.058027 is iso-count calibrated, admitting the
+    same 127 crosses MinSlope = 28 admits.
 
   v1.19.2 (2026-08-11) THE FORMULA, RESTATED THE WAY IT WAS MEANT:
 
@@ -1851,133 +1782,39 @@ inputs:
     ReEntry_Slope_Gate      ( True  ),
     ReEntry_Close_Gate      ( True  ),
 
-    { ===== Group M: Slope as dy/dx - v1.19.1 ===== }
-    { Slope_Form                                                       }
-    {   1  dy in POINTS, threshold MinSlope        = v1.18.0           }
-    {   2  dy/dx in PERCENT PER MINUTE, threshold MinSlope_Pct   }
-    {                                                                  }
-    {      dy = ( Fast[1] - Fast ) / Fast * 100      percent           }
-    {      dx = BarInterval                          minutes           }
-    {                                                                  }
-    { Denominator is the fast line's own value rather than Close, so   }
-    { numerator and denominator come from the same series.             }
-    { v1.20.0 adds form 3. The selector now carries THREE forms:      }
-    {   1  ZLEMA points   Fast[1] - Fast  > MinSlope      (= v1.18.0) }
-    {   2  ZLEMA percent  see MinSlope_Pct    REJECTED, kept readable }
-    {   3  RAW points     Close[1] - Close > MinSlope_Raw     v1.20.0 }
-    {   4  RAW pct/min    the author's formula in full         v1.20.0 }
-    {                                                                  }
-    { Form 3 answers a question the six-formulation bench never asked. }
-    { Every mode there changed the UNITS or the SPACING of the same    }
-    { ZLEMA-based numerator. None changed WHICH SERIES is differenced. }
-    { The user's definition of the quantity is "the market bar's       }
-    { decline", and Fast[1] - Fast is not that -- it is the one-bar    }
-    { change of a 25-period ZLEMA, damped to about 7.7% of the move    }
-    { between the average and its input. Close[1] - Close IS that.     }
-    {                                                                  }
-    { Form 2 is RETIRED, not deleted. Four independent layers closed   }
-    { it: the cost-unit mechanism, the six-formulation bench, the 2x2, }
-    { and a 26-cell sweep in which zero cells beat cell 2 on net and   }
-    { PF together and no 0.05-wide band had a spread under 52%.        }
-    { Reopening it requires refuting the cost-unit argument first.     }
+    { ===== Group M: Slope form - v1.20.0 ===== }
+    { Slope_Form                                                      }
+    {   1  Fast[1] - Fast > MinSlope        v1.18.0, the anchor       }
+    {   2  the rate form below              v1.20.0                   }
+    {                                                                 }
+    { v1.19.2's percentage form is gone. Four independent layers      }
+    { closed it -- the cost-unit mechanism, the six-formulation       }
+    { bench, the 2x2, and a 26-cell sweep in which no cell beat the   }
+    { points form on net and profit factor together. It is recoverable}
+    { from git if it is ever reopened.                                }
     Slope_Form              ( 1     ),
 
-    { UNITS CHANGED IN v1.19.2: percent PER BAR, not per minute. The  }
-    { /time term is gone because Slope_Require_Adjacent forces every   }
-    { measured bar to be exactly BarInterval minutes long, which makes }
-    { that division a division by a constant. 0.11658 is v1.19.1's     }
-    { 0.023316 %/min carried over unchanged at 5 minutes per bar.      }
-    {                                                                  }
-    { PROVENANCE: iso-count calibrated on the 7,779-cross export so it }
-    { admits the same 127 crosses MinSlope = 28 admits. The two forms  }
-    { are then compared at equal SELECTIVITY rather than equal         }
-    { looseness. Comparing at unequal counts measures threshold        }
-    { tightness instead, which is how v0.6's ATR form was misdiagnosed }
-    { as a formulation failure when it was a calibration failure.      }
-    {                                                                  }
-    { THE CALIBRATION NO LONGER HOLDS ONCE THE GUARD IS ON. Turning    }
-    { Slope_Require_Adjacent on removes 144 of the 7,779 crosses, so   }
-    { the pass count is no longer 127. Deliberately NOT re-solved:     }
-    { cells 3 and 4 of the 2x2 share this one value, so the comparison }
-    { between them is unaffected by whether the value is optimal.      }
-    { Re-sweep only if cell 4 earns it. Sweeping first would mix "is   }
-    { the formulation right" with "is the threshold tuned" -- the      }
-    { error that buried v1.9.0, which went -1.6% on net with a BETTER  }
-    { profit factor and was abandoned on the net figure alone.         }
-    {                                                                  }
-    { NOT A RECOMMENDATION. The cost floor is denominated in POINTS    }
-    { (10 points of slippage, fixed), so a points gate holds its cost  }
-    { coverage constant at 2.80x across all eight years while this     }
-    { percentage gate ranges from 1.25x in 2019 to 4.45x in 2026. The  }
-    { percentage form is scale-neutral against the INDEX and therefore }
-    { scale-WRONG against the COST. It is here to be measured, not     }
-    { because it is expected to win.                                   }
-    MinSlope_Pct            ( 0.11658  ),
-
-    { MinSlope_Raw -- the threshold for Slope_Form = 3.                }
-    {                                                                  }
-    { ISO-COUNT CALIBRATED OFFLINE, 2026-08-12. The ZLEMA fast line    }
-    { and the 25/70 pair were rebuilt in Python from the 1-minute      }
-    { export (2,070,714 rows aggregated to 418,096 five-minute bars)   }
-    { and the reconstruction was validated against the v1.19.0 bench:  }
-    {   death crosses   7,778 rebuilt against 7,779 recorded           }
-    {   MinSlope = 28   127 passes against 127 recorded  EXACT         }
-    { On that verified base, the raw close difference admits the same  }
-    { 127 crosses at 86 points.                                        }
-    {                                                                  }
-    { WHY THE TWO NUMBERS DIFFER SO MUCH (28 against 86): at a death   }
-    { cross the two numerators have almost the same MEDIAN, 2.4 for    }
-    { the ZLEMA and 2.0 for the raw close, but completely different    }
-    { TAILS -- 99th percentile 33.1 against 118.0, maximum 173.5       }
-    { against 824.0. The EMA damps each bar to roughly 2/(25+1) of the }
-    { move, so a single violent bar barely shifts the fast line while  }
-    { it lands whole in the raw difference.                            }
-    {                                                                  }
-    { So the two forms are NOT the same gate in different units. At    }
-    { equal count they select different populations: the ZLEMA form    }
-    { picks SUSTAINED decline, the raw form picks a SINGLE VIOLENT     }
-    { BAR. That is the question this version exists to settle.         }
-    MinSlope_Raw            ( 86    ),
-
-    { MinSlope_Rate -- the threshold for Slope_Form = 4, in PERCENT   }
-    { PER MINUTE. This is the author's formula written out in full:   }
+    { MinSlope_Rate -- the threshold for Slope_Form = 2.              }
     {                                                                 }
-    {     ( points moved / index level ) / time                       }
-    {   = ( ( Close[1] - Close ) / Close[1] * 100 ) / v_Elapsed_Min   }
+    {     ( Close[1] - Close ) / Close / elapsed minutes  * 100       }
     {                                                                 }
-    { and the time is the REAL elapsed time between the two bars,     }
-    { not the chart's interval setting.                               }
+    { decline in points, divided by the index level so the gate means }
+    { the same thing at 10,000 and at 45,000, divided by the time the }
+    { decline actually took.                                          }
     {                                                                 }
-    { ISO-COUNT CALIBRATED OFFLINE on the verified rebuild: 0.057859  }
-    { admits the same 127 crosses that MinSlope = 28 admits.          }
+    { ISO-COUNT CALIBRATED: 0.058027 admits the same 127 death        }
+    { crosses that MinSlope = 28 admits, so the two forms are         }
+    { compared at equal selectivity rather than equal looseness.      }
+    { Solved on a rebuild validated against the v1.19.0 bench record  }
+    { -- 7,778 crosses against 7,779, and 127 passes against 127.     }
     {                                                                 }
-    { CORRECTION TO v1.19.2's REASONING. That version argued the /time }
-    { term carried no information and dropped it, keeping time as a    }
-    { validity gate instead. THAT ARGUMENT WAS ONLY TRUE FOR           }
-    { BarInterval, which is a constant. Dividing by the MEASURED       }
-    { elapsed time is not a constant division and is not a no-op:      }
-    {                                                                  }
-    {   top 127 by percent per BAR      63 of 127 are session         }
-    {                                   first bars, 50%               }
-    {   top 127 by percent per MINUTE    0 of 127                     }
-    {                                                                  }
-    { A 300-point gap divided by 230 minutes instead of 5 collapses by }
-    { a factor of 46, which drops those bars out of the ranking on     }
-    { their own. The two forms share only 64 of their top 127, and the }
-    { entire difference is boundary bars.                              }
-    {                                                                  }
-    { SO FORM 4 HANDLES THE GAP CONTAMINATION BY CONSTRUCTION, with no }
-    { separate exclusion switch. Slope_Require_Adjacent is still an    }
-    { independent input so the two can be measured apart, but on this  }
-    { form it should have almost nothing left to remove.               }
-    {                                                                  }
-    { The philosophical objection recorded in v1.19.2 still stands and }
-    { is not resolved by this: the market did not fall gradually over  }
-    { 230 minutes, it gapped. Treating that as a low RATE gets the     }
-    { right answer for a reason that is not quite the true one. The    }
-    { two approaches agree on the outcome and differ on why, and the   }
-    { measurement below cannot separate those.                         }
-    MinSlope_Rate           ( 0.057859 ),
+    { The time term is the MEASURED elapsed time, not BarInterval. At }
+    { a session's first bar it is 230 or 80 minutes rather than 5, so }
+    { an overnight gap is divided by up to 46x more and drops out of  }
+    { the ranking on its own. Measured: of the top 127 by this        }
+    { formula, ZERO are session first bars, against 63 of 127 when    }
+    { the time term is left out.                                      }
+    MinSlope_Rate           ( 0.058027 ),
 
     { Slope_Require_Adjacent -- the dx fix.                            }
     {                                                                  }
@@ -2130,8 +1967,6 @@ variables:
     v_Tail_Cutoff           ( 0     ),
 
     { ===== v1.19.1 slope as dy/dx ===== }
-    v_Slope_Pct             ( 0     ),
-    v_Slope_Raw             ( 0     ),
     v_Slope_Rate            ( 0     ),
     v_Elapsed_Min           ( 0     ),
     v_Slope_Adjacent        ( False ),
@@ -2745,88 +2580,33 @@ if BarInterval > 0 then
 else
     v_Slope_Adjacent = False;
 
-{ ---- dy: relative change of the fast line, in percent ----
-  Positive value = the fast line is FALLING.
+{ ---- Slope_Form = 2 : the rate form --------------------------
+  ( Close[1] - Close ) / Close / elapsed minutes, times 100.
 
-  BASE IS THE STARTING VALUE, v_ZLEMA_Fast[1]. Percent change is
-  defined against where the move started. v1.19.1 divided by the
-  ENDING value, which inflates the reading on a fall because the
-  denominator is the smaller number. The difference is about 0.1%
-  relative, so this changes no decision -- it is corrected because
-  it is free to be correct, not because it mattered.
+  Positive value = price FELL, same sign convention as v_Slope.
 
-  NUMERATOR AND DENOMINATOR COME FROM THE SAME SERIES. Close is
-  not used: on a session's first bar Close can gap away from the
-  fast line, which would add a second source of boundary noise to
-  a quantity whose boundary behaviour is exactly what is being
-  controlled here.
+  Every term is what it says: the numerator is the market bar's own
+  decline in points, Close normalises it to a percentage so the gate
+  carries across index levels, and v_Elapsed_Min is the time that
+  decline actually took.
 
-  DEFINITION NOTE, so no later reader mistakes this for velocity:
-  this is the ONE-BAR CHANGE OF A 25-PERIOD ZLEMA, not the price's
-  instantaneous speed. A 25-period EMA moves roughly 2/(25+1) of
-  the distance between its input and its previous value, so this
-  quantity is heavily damped relative to raw price. It is the
-  steepness of the smoothed trend, which is what the strategy
-  trades, but it is not a tick-level rate.
-
-  UNITS: percent per bar. Every bar that passes v_Slope_Adjacent
-  is exactly BarInterval minutes long, so on this chart percent
-  per bar and percent per five minutes are the same statement. }
-if v_ZLEMA_Fast[1] <> 0 then
-    v_Slope_Pct = ( v_ZLEMA_Fast[1] - v_ZLEMA_Fast )
-                  / v_ZLEMA_Fast[1] * 100
-else
-    v_Slope_Pct = 0;
-
-{ ---- which form gates the entry ----
-  Default is form 1, so an out-of-range Slope_Form degrades to
-  v1.18.0 behaviour rather than to something undefined. Both
-  comparisons are strict > , matching v1.18.0's
-  "v_Slope > MinSlope" exactly, so form 1 is bit identical
-  rather than merely equivalent. }
-{ ---- form 3 numerator: the market bar's own decline ----
-  Close[1] - Close, positive when price FELL, exactly like the two
-  other forms. No smoothing, no lag, no damping: this is the number
-  of points the market actually gave back between the previous bar's
-  close and this one's.
-
-  It carries the SAME session-boundary problem as v_Slope, and worse:
-  at a session's first bar Close[1] is the previous session's close,
-  so this quantity IS the overnight gap. Slope_Require_Adjacent
-  therefore applies to form 3 unchanged, and the two switches stay
-  independent for the same reason as before. }
-v_Slope_Raw = Close[1] - Close;
-
-{ ---- which form gates the entry ----
-  Order matters only for readability; the three tests are mutually
-  exclusive. Anything outside 1..3 falls through to form 1, so an
-  out-of-range input degrades to v1.18.0 behaviour rather than to
-  something undefined. All three comparisons are strict > , matching
-  v1.18.0's "v_Slope > MinSlope" exactly, so form 1 stays bit
-  identical rather than merely equivalent. }
-{ ---- form 4 numerator: the author's formula, written out ----
-  ( points moved / index level ) / time, where every term is what it
-  says. The decline is the market's own, the level normalises it so
-  the gate means the same thing at 10,000 and at 45,000, and the time
-  is what actually elapsed between the two bars.
-
-  Guards: Close[1] is a futures price and cannot be zero in practice,
+  Guards: Close is a futures price and cannot be zero in practice,
   but v_Elapsed_Min IS zero on the first bar of the run by
-  construction, so the division must be protected. }
-if Close[1] <> 0 and v_Elapsed_Min > 0 then
-    v_Slope_Rate = ( ( Close[1] - Close ) / Close[1] * 100 )
-                   / v_Elapsed_Min
+  construction. }
+if Close <> 0 and v_Elapsed_Min > 0 then
+    v_Slope_Rate = ( ( Close[1] - Close ) / Close * 100 ) / v_Elapsed_Min
 else
     v_Slope_Rate = 0;
 
-if Slope_Form = 4 then
+{ ---- which form gates the entry ----
+  Anything other than 2 falls through to form 1, so an out-of-range
+  input degrades to v1.18.0 rather than to something undefined. Both
+  comparisons are strict > , matching v1.18.0's "v_Slope > MinSlope"
+  exactly, so form 1 is bit identical rather than merely equivalent. }
+if Slope_Form = 2 then
     v_Slope_Pass = v_Slope_Rate > MinSlope_Rate
-else if Slope_Form = 3 then
-    v_Slope_Pass = v_Slope_Raw > MinSlope_Raw
-else if Slope_Form = 2 then
-    v_Slope_Pass = v_Slope_Pct > MinSlope_Pct
 else
-    v_Slope_Pass = v_Slope     > MinSlope;
+    v_Slope_Pass = v_Slope      > MinSlope;
 
 { ---- the dx guard, as an entry block ----
   Independent of Slope_Form on purpose. Tying them together would
