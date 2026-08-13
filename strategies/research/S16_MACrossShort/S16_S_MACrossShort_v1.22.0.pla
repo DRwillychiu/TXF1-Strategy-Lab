@@ -85,6 +85,36 @@
       v_Day_Cutoff  = Tail_DayNoEntry_From - Lead bars   1335 -> 1325
       v_Tail_Cutoff = Tail_NoEntry_From    - Lead bars   0415 -> 0405
 
+    ------------------------------------------------------------------
+    MEASURED 2026-08-13, THREE RUNS. ALL GATES PASS.
+    ------------------------------------------------------------------
+
+      1350  182 trades / 2,052,800 / PF 1.838288 / DD -408,400
+            DEGENERATE ANCHOR, reproduced field for field.
+      1345  182 trades / 2,052,800 / PF 1.838288 / DD -408,400
+            IDENTICAL to 1350 across all 86 fields, and that is the
+            derivation proving itself: 1345 puts the cutoff at 1335 so
+            the last fill bar is 1340, and the sample holds no fill at
+            1345 for it to block. A DIFFERENT result here would have
+            meant the arithmetic was wrong.
+      1335  180 trades / 2,034,400 / PF 1.840106 / DD -408,400  SHIPPED
+
+    Trade level, 1350 -> 1335: 2 gone, 0 new, 0 P&L drift. Slippage
+    falls exactly 8,000 = 2 trades x 2 lots x 1,000 x 2 sides, which
+    confirms nothing else moved.
+
+    THE PRICE IS SMALLER THAN THE HEADLINE. Net falls 18,400 (-0.9%),
+    but profit factor RISES 1.838288 -> 1.840106 and average win over
+    average loss rises 3.8984 -> 3.9385, because the blocked pair is
+    one winner and one loser and the loser was the larger share of its
+    own side. Max drawdown is UNCHANGED at -408,400 and the worst
+    losing streak is unchanged at 9 / -239,200 -- neither blocked trade
+    sat on the drawdown path, so the rule costs no resilience at all.
+
+    Sharpe 0.1615 -> 0.1583 and Sortino 0.8962 -> 0.8920 are a
+    two-fewer-trades denominator effect, not a quality change; PF and
+    the win/loss ratio both moved the other way.
+
     DEGENERATE ANCHOR: Tail_DayNoEntry_From = 1350 restores v1.21.0
     exactly. At 1350 the cutoff is 1340, so a 1340 signal still fills
     at 1345 and the 1345 signal is blocked by Sess_LastBar_Block_On as
