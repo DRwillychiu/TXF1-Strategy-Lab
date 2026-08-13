@@ -3,6 +3,46 @@
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.22.0 Day Session Tail Rule (2026-08-13, base v1.21.0)
+                Defaults carry B4-B10 as of 2026-08-14
+
+  DEFAULTS UPDATED 2026-08-14 AFTER B8 / B8b / B9 / B10:
+
+    Four values move. Every batch was run exhaustive and each result
+    was confirmed against the previous batch's adopted cell.
+
+      Struct_Trigger_Pct   1.00 -> 0.60    B8   6,156 cells
+      Struct_Buffer_Pts    20   -> 12      B9   2,240 cells
+      BE_Trigger_Pct       0.60 -> 0.70    B9
+      ML_On                1    -> 0       B10    504 cells
+
+    CURRENT ANCHOR (all defaults), measured 2026-08-14:
+      180 trades / 2,328,800 / PF 1.9811257162 / adjusted PF 1.5744 /
+      max strategy drawdown -364,800 (-14.02%) / Sharpe 0.1776 /
+      Sortino 1.0780 / account return 806.37
+
+    Campaign: 748,000 -> 2,328,800, +211.3%, across B1 B2 B2b B3 B3b
+    B4 B5 B6 B7 B8 B8b B9 B10 plus the day-tail defect fix.
+
+    THREE EXIT MODULES ARE NOW OFF OR INERT, ALL BY MEASUREMENT:
+      Trail_On  = 0   B7, 209 of 209 enabled cells lost. Gross loss was
+                      identical with it on and off, so it never
+                      prevented a loss in 6.4 years -- it only
+                      truncated winners.
+      ML_On     = 0   B10, 504 of 504 cells identical.
+      Tier2_On  = 0   retired earlier, B12 will re-test it.
+    Trail_Trigger_Pct, Trail_Giveback_Pct and the six ML detector
+    inputs are LEFT UNCHANGED. Writing a measured-losing cell into a
+    disabled module plants a value in the file that looks adopted.
+
+    ONE THING IS STILL UNEXPLAINED. B9 records the cell
+    (Buffer 12, Struct 0.60, BE 0.70, Cost 20) at 2,276,400 while B10
+    returns 2,328,800 for the same configuration with ML at the file
+    default. The same inputs cannot give two outputs, so one run held
+    a value that its report does not show. It does not block adoption
+    -- ML_On = 0 lands on 2,328,800 under either reading -- and B11's
+    acceptance cell settles it: (ATR_Len 14, StopATRMult 4.0,
+    SL_Pct 1.00) must return 2,328,800.
+
 
   v1.22.0 (2026-08-13) THE DAY SESSION GETS ITS OWN NO-ENTRY RULE,
                        AND B4/B6/B7 WINNERS GO INTO THE DEFAULTS:
@@ -1832,7 +1872,36 @@ inputs:
     QS_MaxLoss_Pct          ( 0.70  ),
 
     { ===== Group C: M6 Rule #17 Multi-Layer Monitor ===== }
-    ML_On                   ( 1     ),
+    { ML_On 1 -> 0, B10 2026-08-14.                                  }
+    {                                                                }
+    { The batch swept ML_On x ActivationPct x ScoreTrigger x         }
+    { MinCategories, 2 x 7 x 9 x 4 = 504 cells exhaustive. EVERY CELL }
+    { RETURNED THE SAME NET, 2,328,800 -- the four decision inputs    }
+    { are jointly inert at the post-B9 configuration.                 }
+    {                                                                }
+    { Two readings, and both land on the same number, which is why   }
+    { 0 could be adopted without waiting for them to be separated:    }
+    {   A  the module genuinely never fires here -- setting 0 changes }
+    {      nothing and removes a dead mechanism                       }
+    {   B  the module fires and every firing deepens a loss -- then   }
+    {      0 is worth the +52,400 that separates this from B9         }
+    {                                                                }
+    { The B9 winner and this batch agree on gross profit to the cent }
+    { (4,702,400), on winners (56), losers (123) and drawdown         }
+    { (-364,800), and differ ONLY in gross loss: -2,426,000 against   }
+    { -2,373,600. Same trades, same winners, losers smaller by        }
+    { 52,400. ML is a loss-side module (Rule #17), so that signature  }
+    { is its own contribution, and the sign is negative.              }
+    {                                                                }
+    { CONFIRMED IN A PLAIN BACKTEST 2026-08-14: SX_MA_ML_Exit is      }
+    { absent from the exit list entirely.                             }
+    {                                                                }
+    { RULE #17 NOTE. This disables the multi-layer monitor. Fine in   }
+    { research; at PROMOTE, Rule #13's operational-risk dimension     }
+    { will ask about it, and the answer is this 504-cell measurement, }
+    { not an omission. The six detector inputs below are untouched so }
+    { the module can be re-enabled with one switch.                   }
+    ML_On                   ( 0     ),
     ML_ActivationPct        ( 20    ),
     ML_ScoreTrigger         ( 60    ),
     ML_MinCategories        ( 3     ),
@@ -1850,8 +1919,19 @@ inputs:
     { BE_Cost_Pts: pts covering slippage. v1.12.0 G1: 5 -> 10.       }
     {   1000 NTD/contract/side x 2 sides = 2000 NTD = 10 pts.        }
     {   5 pts only recovered 1000 NTD -> every BE exit lost money.   }
+    { BE_Trigger_Pct 0.60 -> 0.70, B9 2026-08-14. Joint sweep with   }
+    { Struct, 8 x 5 x 8 x 7 = 2,240 cells exhaustive, because the two }
+    { modules write the same v_BE_Stop_Level and are not separable.   }
+    {   0.7  2,276,400   adopted                                      }
+    {   0.8  2,274,400   2,000 below                                  }
+    {   0.9  2,250,000                                                }
+    {   1.0  2,245,200                                                }
+    {   0.5  2,014,400                                                }
+    { Arming later leaves fewer positions pinned at breakeven: one    }
+    { winner became a loser (56 from 57) but the survivors ran        }
+    { further, average win 82,112 -> 83,971.                          }
     BE_On                   ( 1     ),
-    BE_Trigger_Pct          ( 0.60  ),
+    BE_Trigger_Pct          ( 0.70  ),
     BE_Cost_Pts             ( 20    ),
 
     { ===== Group D2: P3b Profit Trail - v1.12.0 ===== }
@@ -1932,14 +2012,41 @@ inputs:
     { Buffer 0 scored 2,662,400 but parks the stop exactly on the       }
     { recent high where one tick sweeps it. The 16,000 (0.6%) given up  }
     { buys a noise cushion the 2-trade sample could never price.        }
+    { Struct_Buffer_Pts 20 -> 12, B9 2026-08-14.                     }
+    {                                                                 }
+    { B8 swept 10-50 and improved monotonically down to 10, the grid  }
+    { floor, so B8b extended to 0 -- and the trend REVERSED: 0 gives  }
+    { 2,246,800 against 10's 2,258,800. Below 8 the surface is jitter }
+    { with no structure (0/1/4/5/6/7 wander inside 222.8k-224.7k),    }
+    { above it a smooth monotone ridge runs 8 -> 20. So 10 was never  }
+    { a truncated boundary; the function turns over just below it.    }
+    {                                                                 }
+    { Then B9 moved it again. At BE_Trigger 0.6 the best buffer is    }
+    { 10; at BE_Trigger 0.7 it is 12 (2,276,400, with 14 at           }
+    { 2,264,400 and 16 at 2,258,800). The two modules share a stop    }
+    { level, so neither has a standalone optimum -- which is exactly  }
+    { what B9 exists to catch.                                        }
+    {                                                                 }
+    { Struct_Lookback stays 20: values 20 through 50 returned         }
+    { IDENTICAL results in B8, seven cells, because MaxHoldingBars=24 }
+    { is shorter than the window so it barely rolls. Inert register.  }
     Struct_On               ( 1     ),
     Struct_Lookback         ( 20    ),
-    Struct_Buffer_Pts       ( 20    ),
+    Struct_Buffer_Pts       ( 12    ),
     Struct_UseClose         ( 1     ),
     { v1.15.0 C1: 1.20 -> 1.00. 11-cell sweep, plateau centre of        }
     { 0.8/1.0/1.2 (span 3.3%). NOT the top-scoring 0.60, which sits one }
     { grid step from a 535,600 cliff at 0.40. See header C1.            }
-    Struct_Trigger_Pct      ( 1.00  ),
+    {                                                                   }
+    { SUPERSEDED 2026-08-14 BY B8. The reasoning above was measured on   }
+    { the v1.15.0 population under Slope_Form = 1; the entry population  }
+    { has since been replaced almost entirely (28 shared trades out of   }
+    { 118), so the 0.40 cliff it avoids no longer exists in this form.   }
+    { Re-measured across 6,156 exhaustive cells, 0.60 and 0.65 return    }
+    { IDENTICAL results everywhere they appear, with 0.55 and 0.70 both  }
+    { about 45,000 lower -- a genuine two-sided plateau, not a peak      }
+    { beside a cliff. 0.60 is taken as the incumbent of the pair.        }
+    Struct_Trigger_Pct      ( 0.60  ),
 
     { ===== Group D4: B1 Tiered Giveback - v1.14.0 (DEFAULT OFF) ===== }
     { The flat Trail_Giveback_Pct treats a 1.2% run and a 5% run the    }
