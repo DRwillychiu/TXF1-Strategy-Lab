@@ -5,7 +5,56 @@
   Version     : v1.22.0 Day Session Tail Rule (2026-08-13, base v1.21.0)
 
   v1.22.0 (2026-08-13) THE DAY SESSION GETS ITS OWN NO-ENTRY RULE,
-                       AND B4/B6 WINNERS GO INTO THE DEFAULTS:
+                       AND B4/B6/B7 WINNERS GO INTO THE DEFAULTS:
+
+    ------------------------------------------------------------------
+    B7 ADDENDUM (2026-08-13): TRAIL IS TURNED OFF. 209 OF 209.
+    ------------------------------------------------------------------
+
+    Trail_On 1 -> 0. Grid 2 x 19 x 11 = 418, Trail_Trigger_Pct swept
+    0.30-3.00 step 0.15 and Trail_Giveback_Pct 20-70 step 5.
+
+      Trail OFF               182 / 2,165,600 / PF 1.884352 / DD -408,400
+      best Trail ON (2.70/20) 182 / 2,134,400 / PF 1.871600 / DD -408,400
+      previous default (2.00/40)  180 / 2,034,400 / PF 1.840106
+
+    NOT ONE of the 209 enabled cells reaches the disabled figure.
+    Turning it off is worth +131,200 against the shipped default and
+    the drawdown does not move: -408,400 either way.
+
+    THE TERRAIN POINTS ONE WAY FROM BOTH DIRECTIONS. Raising the
+    trigger makes Trail rarer and net rises, converging on 2,134,400
+    at 2.70 and above -- approaching the disabled value without ever
+    reaching it, which is saturation toward OFF and not a truncated
+    grid, so no boundary extension is owed. Loosening the giveback
+    also raises net: at Trigger 1.05, giveback 20 gives 1,668,400 and
+    giveback 70 gives 2,064,800, a spread of 396,400 in favour of
+    letting the position breathe.
+
+    THIRTEEN CELLS DO BEAT THE DISABLED DRAWDOWN. The best is
+    (0.45/20) at -355,200 against -408,400, a 13% improvement -- for a
+    net of 858,000. Paying 1,307,600 of profit for 53,200 of drawdown
+    is the textbook case feedback_trend_let_profits_run exists to
+    prevent, so it is recorded and rejected rather than treated as a
+    trade-off worth weighing.
+
+    This is the FOURTH measured failure of tightening exit-side
+    protection on this desk, after Trail_B at -385K, L5's five SP
+    variants and L5 Stage1_BE at -19K on L26. The memory rule already
+    calls the direction permanently closed; B7 is confirmation, not
+    discovery.
+
+    Trail_Trigger_Pct and Trail_Giveback_Pct are LEFT at 2.00 and 40.
+    They are inert with the switch off, and writing the best enabled
+    cell into them would plant a value in the file that was measured
+    to lose money. Same treatment as ReEntry_Structure_Gate: proven
+    inert, retained unchanged, because a neighbour moving can make it
+    bind again.
+
+    CAMPAIGN BASELINE AFTER B7:
+      182 trades / 2,165,600 / PF 1.884352 / DD -408,400 / RoA 625.17
+    Trade count returns 180 -> 182 because the freed position lets two
+    signals in that Trail had been occupying.
 
     ------------------------------------------------------------------
     THE DEFECT: THE DAY SESSION NEVER HAD A TAIL RULE
@@ -1714,7 +1763,12 @@ inputs:
     { CAVEATS: gain rests on 2 trades (+68,800, 1.40 sigma). Residual}
     {   tail risk is a trade giving back 80% of a >=1.2% run then    }
     {   recovering to a new high -- never observed in 6.4 years.     }
-    Trail_On                ( 1     ),
+    { B7 2026-08-13: 0. All 209 enabled cells lose to the disabled  }
+    { figure; see the B7 addendum in the version block. Trigger and   }
+    { Giveback below are INERT while this is 0 and are deliberately   }
+    { left at their historical values rather than set to the best     }
+    { enabled cell, which was measured to lose money.                 }
+    Trail_On                ( 0     ),
     { v1.15.0 C2: collapsed. The old 1.20/80 base band was measured dead }
     { -- raising the giveback to 99 changed nothing over 129 trades, and }
     { all four Trail exits back-solve to Tier2's rate. Moving the        }
