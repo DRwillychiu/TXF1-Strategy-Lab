@@ -56,6 +56,51 @@
     Trade count returns 180 -> 182 because the freed position lets two
     signals in that Trail had been occupying.
 
+    THIS BASELINE IS THE ANCHOR EVERY LATER BATCH MUST REPRODUCE. Run a
+    plain backtest at the file defaults BEFORE each optimization and
+    confirm all four fields. It is cheap and it is falsifiable: MC12
+    retains input values from the previous run rather than reloading the
+    file, and that footgun has voided five runs this week
+    (Tail_Signal_Lead_Bars=0, BE_Cost_Pts=5, MinSlope_ATRMult=0.35,
+    Slope_Z_K carrying MinSlope_Pct's value, and B8 below).
+
+    ------------------------------------------------------------------
+    B8 ATTEMPT 2026-08-13 13:24:54 -- VOID, NOT A RESULT
+    ------------------------------------------------------------------
+
+    Report_2026-08-13_13-24-54.csv is discarded. Two independent
+    faults, either one sufficient to void it:
+
+    1. THE BASE WAS WRONG. All 256 rows carry 180 trades. At the file
+       defaults the answer is 182. 180 is the signature of Trail_On=1,
+       so the run was made with Trail still enabled and every cell
+       measures a configuration the file does not describe.
+
+    2. THE MODE WAS GENETIC, NOT EXHAUSTIVE. Struct_On held a single
+       value, Struct_Trigger_Pct sampled 6 of 19 points, and those 6
+       are not a lattice: 0.20/0.30/0.40/0.50 carry 254 of the rows
+       while 1.80 and 2.00 carry exactly one each -- a population
+       converged on a high-fitness pocket with two survivors from the
+       initial random draw. 256 = population x generations. An
+       exhaustive sweep cannot produce that shape. The default cell
+       (Trigger 1.00) was never sampled, so the run cannot even
+       self-check against its own base.
+
+    The best cell reported, 1,956,000, is BELOW the 2,165,600 baseline
+    and must not be read as evidence against Struct. Nothing at all is
+    known about Struct yet.
+
+    B8 SPECIFICATION, UNCHANGED, TO BE RUN EXHAUSTIVE:
+      Struct_On          0 -> 1    step 1     ( 2)
+      Struct_Trigger_Pct 0.20 -> 2.00 step 0.10 (19)
+      Struct_UseClose    0 -> 1    step 1     ( 2)
+      Struct_Lookback    10 -> 50  step 5     ( 9)
+      Struct_Buffer_Pts  10 -> 50  step 5     ( 9)
+                                   total  6,156 cells
+    Acceptance: row count is exactly 6,156, and the cell
+    (1, 1.00, 1, 20, 20) is present and equals the campaign baseline.
+    Any other row count means genetic mode or a truncated export.
+
     ------------------------------------------------------------------
     THE DEFECT: THE DAY SESSION NEVER HAD A TAIL RULE
     ------------------------------------------------------------------
