@@ -14,6 +14,9 @@
     Trail_On 1 -> 0. Grid 2 x 19 x 11 = 418, Trail_Trigger_Pct swept
     0.30-3.00 step 0.15 and Trail_Giveback_Pct 20-70 step 5.
 
+    AS REPORTED (see the correction below -- this grid ran on a stale
+    Tail_DayNoEntry_From, so every figure here is 18,400 too high):
+
       Trail OFF               182 / 2,165,600 / PF 1.884352 / DD -408,400
       best Trail ON (2.70/20) 182 / 2,134,400 / PF 1.871600 / DD -408,400
       previous default (2.00/40)  180 / 2,034,400 / PF 1.840106
@@ -51,10 +54,53 @@
     inert, retained unchanged, because a neighbour moving can make it
     bind again.
 
-    CAMPAIGN BASELINE AFTER B7:
-      182 trades / 2,165,600 / PF 1.884352 / DD -408,400 / RoA 625.17
-    Trade count returns 180 -> 182 because the freed position lets two
-    signals in that Trail had been occupying.
+    ------------------------------------------------------------------
+    CORRECTION 2026-08-14: THE B7 GRID RAN ON A STALE DAY-TAIL VALUE
+    ------------------------------------------------------------------
+
+    The anchor protocol below was written the same day and caught this
+    on its FIRST use. A plain backtest at the file defaults returns
+
+        180 trades / 2,147,200 / PF 1.8866864883 / DD -408,400
+
+    not the 182 / 2,165,600 recorded above. The gap is exactly 2 trades
+    and 18,400 -- the day-tail rule's own documented cost. Adding those
+    two trades back to the measured run reproduces the B7 figure in
+    THREE fields at once:
+
+        gross profit  4,568,800 + 45,600 = 4,614,400
+        gross loss    2,421,600 + 27,200 = 2,448,800
+        net                               2,165,600   exact
+        PF            4,614,400/2,448,800 = 1.8843515  to 6 decimals
+        trades        180 + 2             = 182        exact
+
+    So the B7 grid was run with Tail_DayNoEntry_From still at its
+    pre-1335 value. Same footgun as the five runs listed below: MC12
+    retains the previous run's inputs rather than reloading the file.
+
+    B7's CONCLUSION SURVIVES, CONFIRMED BY MEASUREMENT. All 418 cells
+    shared the same stale value, so the ranking is internally
+    consistent; only the level was uniformly high. That uniformity was
+    not assumed -- the top enabled cell was re-run at the corrected
+    defaults on 2026-08-14:
+
+      Trail OFF                180 / 2,147,200 / PF 1.8866864883
+      Trail ON 2.70/20         180 / 2,116,000 / PF 1.8738024447
+      predicted 2,134,400 - 18,400 = 2,116,000        exact
+
+    The 31,200 margin is preserved to the point. Trail stays off.
+
+    AND THE RE-RUN STRENGTHENED THE FINDING. Gross loss is IDENTICAL
+    across the two cells, -2,421,600 either way; the entire difference
+    sits in gross profit, 4,568,800 against 4,537,600. Three trades
+    exited via Trail instead of TimeStop and gave back 31,200 between
+    them. Trail did not prevent a single loss in 6.4 years -- it has no
+    defensive value here at all, it only truncates winners. That is
+    feedback_trend_let_profits_run in its strongest measurable form.
+
+    CAMPAIGN BASELINE AFTER B7 (CORRECTED):
+      180 trades / 2,147,200 / PF 1.8866864883 / DD -408,400 /
+      account return 619.86
 
     THIS BASELINE IS THE ANCHOR EVERY LATER BATCH MUST REPRODUCE. Run a
     plain backtest at the file defaults BEFORE each optimization and
@@ -62,7 +108,8 @@
     retains input values from the previous run rather than reloading the
     file, and that footgun has voided five runs this week
     (Tail_Signal_Lead_Bars=0, BE_Cost_Pts=5, MinSlope_ATRMult=0.35,
-    Slope_Z_K carrying MinSlope_Pct's value, and B8 below).
+    Slope_Z_K carrying MinSlope_Pct's value, and B8 below) plus the B7
+    grid above -- six.
 
     ------------------------------------------------------------------
     B8 ATTEMPT 2026-08-13 13:24:54 -- VOID, NOT A RESULT
@@ -71,10 +118,17 @@
     Report_2026-08-13_13-24-54.csv is discarded. Two independent
     faults, either one sufficient to void it:
 
-    1. THE BASE WAS WRONG. All 256 rows carry 180 trades. At the file
-       defaults the answer is 182. 180 is the signature of Trail_On=1,
-       so the run was made with Trail still enabled and every cell
-       measures a configuration the file does not describe.
+    1. WITHDRAWN 2026-08-14 -- THIS TEST WAS ITSELF WRONG. It read:
+       "All 256 rows carry 180 trades. At the file defaults the answer
+       is 182. 180 is the signature of Trail_On=1." The file defaults
+       return 180, not 182 (see the correction above), so 180 is the
+       CORRECT signature and proves nothing either way. The trade count
+       cannot separate Trail_On=1 from Trail_On=0 here: both return
+       180. Nothing is known about that run's Trail setting.
+
+       Kept visible rather than deleted, because a wrong test that is
+       silently removed gets re-invented. Fault 2 is independent and
+       sufficient on its own; the run stays void, on one ground.
 
     2. THE MODE WAS GENETIC, NOT EXHAUSTIVE. Struct_On held a single
        value, Struct_Trigger_Pct sampled 6 of 19 points, and those 6
@@ -86,8 +140,10 @@
        (Trigger 1.00) was never sampled, so the run cannot even
        self-check against its own base.
 
-    The best cell reported, 1,956,000, is BELOW the 2,165,600 baseline
-    and must not be read as evidence against Struct. Nothing at all is
+    The best cell reported, 1,956,000, is below the baseline on either
+    reading of it (2,165,600 as recorded, 2,147,200 as corrected), but
+    a genetic run that never sampled its own default cell cannot be
+    read as evidence about Struct in any direction. Nothing at all is
     known about Struct yet.
 
     B8 SPECIFICATION, UNCHANGED, TO BE RUN EXHAUSTIVE:
@@ -97,9 +153,28 @@
       Struct_Lookback    10 -> 50  step 5     ( 9)
       Struct_Buffer_Pts  10 -> 50  step 5     ( 9)
                                    total  6,156 cells
-    Acceptance: row count is exactly 6,156, and the cell
-    (1, 1.00, 1, 20, 20) is present and equals the campaign baseline.
-    Any other row count means genetic mode or a truncated export.
+    Acceptance, both required:
+      1. row count is exactly 6,156. Any other number means genetic
+         mode or a truncated export -- discard and re-run.
+      2. the cell (1, 1.00, 1, 20, 20) is present and returns
+         180 / 2,147,200 / PF 1.8866864883, the CORRECTED baseline.
+    Check 2 is the run's self-test: it proves the base and the mode at
+    the same time. Note that trade count alone cannot detect a stale
+    Trail_On -- both settings return 180 -- so the net must be checked
+    too, which is the lesson from withdrawn fault 1 above.
+
+    Boundary watch: if the winner lands on Struct_Trigger_Pct 0.20 or
+    2.00, Struct_Lookback 50, or Struct_Buffer_Pts 50, that is a
+    truncated grid and not an optimum -- extend outward as B3 did into
+    B3b. Struct_Buffer_Pts 10 is a hard floor (the 10-point round-trip
+    slippage) and Struct_Lookback is capped at 99 by MaxBarsBack.
+
+    Prior: B7 has just closed the tighten-exit-protection direction for
+    the fourth time on this desk, and Struct writes to the same
+    v_BE_Stop_Level ratchet. Struct_On = 0 is a live possibility. Run
+    the full 6,156 anyway -- Struct triggers off a structural high
+    rather than a giveback percentage, so the analogy is suggestive,
+    not conclusive.
 
     ------------------------------------------------------------------
     THE DEFECT: THE DAY SESSION NEVER HAD A TAIL RULE
@@ -246,8 +321,6 @@
                                       User ruling: hold 24 until the
                                       ratchet (B7/B8) can catch the
                                       giveback, then re-sweep.
-
-  v1.21.0 (2026-08-12) TWO CHANGES, NEITHER OF THEM LOGIC:
 
   v1.21.0 (2026-08-12) TWO CHANGES, NEITHER OF THEM LOGIC:
 
