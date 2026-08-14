@@ -1,0 +1,376 @@
+<title>S16_S 全版本績效總表 v0.4 → v1.22.0</title>
+<style>
+  :root {
+    --ground:      #12151b;
+    --surface:     #1a1e26;
+    --surface-alt: #1f242d;
+    --line:        #262c37;
+    --line-soft:   #1e232b;
+    --ink:         #e4e8ef;
+    --ink-mid:     #9aa4b4;
+    --ink-dim:     #6b7484;
+    --gold:        #f0a830;
+    --gold-soft:   rgba(240,168,48,.10);
+    --blue:        #6fa8dc;
+    --red:         #e0625c;
+    --green:       #5fbf8f;
+    --bar:         #47505f;
+    --bar-gold:    #f0a830;
+    --bar-red:     #b34e4a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 40px 28px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead { display: flex; flex-direction: column; gap: 10px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-dim); font-weight: 600;
+  }
+  h1 {
+    margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -.01em;
+    text-wrap: balance;
+  }
+  .sub { margin: 0; color: var(--ink-mid); max-width: 74ch; }
+
+  /* ---------- headline comparison ---------- */
+  .headline {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 22px 24px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .headline h2 {
+    margin: 0; font-size: 15px; font-weight: 650; letter-spacing: .01em;
+  }
+  .kpis {
+    display: grid; gap: 1px;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+  }
+  .kpi { background: var(--surface); padding: 13px 15px; display: flex; flex-direction: column; gap: 4px; }
+  .kpi .k { font-size: 11px; color: var(--ink-dim); letter-spacing: .04em; }
+  .kpi .a { font-size: 13px; color: var(--ink-mid); font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; }
+  .kpi .b { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; }
+  .kpi .d { font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .up   { color: var(--green); }
+  .down { color: var(--red); }
+  .kpi.win .b { color: var(--gold); }
+
+  .note {
+    border-left: 2px solid var(--gold);
+    padding: 2px 0 2px 14px;
+    color: var(--ink-mid);
+    font-size: 13px;
+    max-width: 96ch;
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- table ---------- */
+  .tablecard {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow-x: auto;
+    background: var(--surface);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 1180px; }
+
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--ground);
+    color: var(--ink-dim);
+    font-size: 11px; font-weight: 600; letter-spacing: .05em;
+    text-align: right;
+    padding: 12px 14px 11px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  thead th.l { text-align: left; }
+
+  tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    font-size: 13px;
+    color: var(--ink-mid);
+    white-space: nowrap;
+  }
+  tbody td.ver, tbody td.what {
+    text-align: left;
+    font-family: inherit;
+    white-space: normal;
+  }
+  tbody td.ver { color: var(--blue); font-weight: 650; font-size: 13px; }
+  tbody td.ver .tag {
+    display: block; font-size: 10.5px; font-weight: 500;
+    color: var(--ink-dim); letter-spacing: .02em; margin-top: 1px;
+  }
+  tbody td.what { color: var(--ink-mid); font-size: 13px; min-width: 210px; }
+  tbody td.what .tag {
+    display: block; font-size: 10.5px; color: var(--ink-dim); margin-top: 1px;
+  }
+
+  tbody td.net { color: var(--ink); font-weight: 650; font-size: 14px; padding-bottom: 7px; }
+  .netcell { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .track { width: 128px; height: 3px; background: #232935; border-radius: 2px; overflow: hidden; }
+  .fill  { height: 100%; background: var(--bar); border-radius: 2px; }
+
+  tr.hi { background: var(--gold-soft); }
+  tr.hi td { color: var(--gold); }
+  tr.hi td.ver { color: var(--gold); }
+  tr.hi td.what { color: #d8bb8a; }
+  tr.hi td.net { color: var(--gold); }
+  tr.hi .fill { background: var(--bar-gold); }
+
+  tr.dim td { color: var(--ink-dim); }
+  tr.dim td.ver { color: var(--ink-dim); }
+  tr.dim .fill { background: var(--bar-red); }
+
+  tr:hover:not(.hi) { background: var(--surface-alt); }
+
+  td.delta.pos { color: var(--green); }
+  td.delta.neg { color: var(--red); }
+
+  /* ---------- band rows ---------- */
+  tr.band td {
+    background: var(--ground);
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid var(--line);
+    border-top: 1px solid var(--line);
+    text-align: left;
+    font-family: inherit;
+    white-space: normal;
+  }
+  .bandtitle { font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+               color: var(--ink); font-weight: 650; }
+  .bandsub { font-size: 12px; color: var(--ink-dim); margin-top: 3px; }
+
+  tr.break td {
+    background: rgba(224,98,92,.07);
+    border-top: 1px solid rgba(224,98,92,.4);
+    border-bottom: 1px solid rgba(224,98,92,.4);
+  }
+  tr.break .bandtitle { color: var(--red); }
+  tr.break .bandsub { color: var(--ink-mid); }
+
+  /* ---------- year table ---------- */
+  .years { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px;
+           display: flex; flex-direction: column; gap: 14px; }
+  .years h2 { margin: 0; font-size: 15px; font-weight: 650; }
+  .yeargrid { overflow-x: auto; }
+  .yeargrid table { min-width: 620px; }
+  .yeargrid td, .yeargrid th { padding: 9px 12px; }
+  .yeargrid th { text-align: right; }
+  .yeargrid th.l, .yeargrid td.l { text-align: left; font-family: inherit; color: var(--ink); }
+  .zero { color: var(--red); font-weight: 650; }
+  .ok   { color: var(--green); }
+
+  footer {
+    color: var(--ink-dim); font-size: 12px; line-height: 1.7;
+    border-top: 1px solid var(--line); padding-top: 18px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  footer code { color: var(--ink-mid); font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 26px 14px 56px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">TXF1-Strategy-Lab &nbsp;·&nbsp; S16_S MACrossShort</div>
+    <h1>全版本績效總表　v0.4 → v1.22.0</h1>
+    <p class="sub">每一列都是一次可歸因的改動。淨利長條以 3,141,200（歷史最高，v1.16.0）為滿格；
+      Δ 欄位是與上一列的差額。<strong style="color:var(--ink)">v1.20.0 是硬斷點</strong> —— 斜率公式換了分子，
+      該列以下與以上的淨利不可直接相減。</p>
+  </header>
+
+  <section class="headline">
+    <h2>v1.18.0 → v1.22.0：淨利掉 24.8%，但這不是退步</h2>
+    <div class="kpis" id="kpis"></div>
+    <p class="note"><strong>兩者的進場母體只重疊 28 筆（v1.18.0 共 118 筆）。</strong>
+      拿 3,098,400 和 2,328,800 相減等於拿兩支不同策略比淨利。
+      可以直接比的是風險調整後的指標 —— <strong>調整 PF、夏普、索丁諾、最大回檔，v1.22.0 四項全勝，
+      而所需帳戶金額少 40.8%。</strong></p>
+  </section>
+
+  <div class="tablecard">
+    <table>
+      <thead>
+        <tr>
+          <th class="l">版本</th>
+          <th class="l">改了什麼</th>
+          <th>淨利</th>
+          <th>Δ</th>
+          <th>獲利因子</th>
+          <th>調整後<br>獲利因子</th>
+          <th>資本報酬率</th>
+          <th>年化</th>
+          <th>最大回檔</th>
+          <th>回檔%</th>
+          <th>夏普</th>
+          <th>筆數</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <section class="years">
+    <h2>真正的結構性改善：年度交易分布</h2>
+    <div class="yeargrid">
+      <table>
+        <thead>
+          <tr><th class="l">版本</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th>
+              <th>2023</th><th>2024</th><th>2025</th><th>2026</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="l">v1.18.0</td>
+              <td class="zero">0</td><td>1</td><td class="zero">0</td><td>3</td>
+              <td class="zero">0</td><td>11</td><td>11</td><td>93</td></tr>
+          <tr><td class="l">v1.22.0</td>
+              <td>—</td><td class="ok">32</td><td class="ok">17</td><td class="ok">24</td>
+              <td>4</td><td>23</td><td>30</td><td>50</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">v1.18.0 的「6.5 年回測」<strong>實質只有 2.5 年</strong> ——
+      <code style="font-family:ui-monospace,Consolas,monospace;color:var(--ink)">MinSlope = 28</code> 是點數門檻，
+      28 點在 2019 等於 0.28%、在 2026 只有 0.062%，把早年整段濾掉。
+      <strong>這使 W4 九視窗、三市況 PF、Sniper Bear PF 在數學上無法計算</strong>（不是數值難看，是算不出來）。
+      v1.20.0 的百分比化解掉了這個阻擋 —— <strong>而它在淨利欄位上是負的。</strong></p>
+  </section>
+
+  <footer>
+    <div>回測 2020 ~ 2026-08-01｜MC12 傳統模式、細部資料停用｜固定 2 口｜滑價 1,000 元／口／邊｜單一 Data1 = 5M｜原始資金 2,000,000</div>
+    <div><strong style="color:var(--ink-mid)">可比性</strong>：v1.15.0 之前的夏普為不同計算基準，不得與之後並列。
+      B 系列各批僅有最佳化報表欄位，故調整 PF／年化／夏普標記為 —，完整 xlsx 只跑在版本節點上。</div>
+    <div>資料來源 <code>docs/research/S16S_version_performance_history_20260810.md</code>　·
+      格式規範 <code>.claude/skills/version-performance-table/SKILL.md</code></div>
+  </footer>
+
+</div>
+
+<script>
+const MAX = 3141200;
+
+const KPI = [
+  ['交易筆數',      '118',        '180',        '+52.5%',  'up',   0],
+  ['淨利',          '3,098,400',  '2,328,800',  '−24.8%',  'down', 0],
+  ['獲利因子',      '2.0512',     '1.9811',     '−3.4%',   'down', 0],
+  ['調整後獲利因子', '1.5331',    '1.5744',     '+2.7%',   'up',   1],
+  ['夏普',          '0.1623',     '0.1776',     '+9.4%',   'up',   1],
+  ['索丁諾',        '1.0404',     '1.0780',     '+3.6%',   'up',   1],
+  ['最大回檔 %',    '−22.588%',   '−14.023%',   '改善 8.57pp', 'up', 1],
+  ['帳戶所需金額',  '487,600',    '288,800',    '−40.8%',  'up',   1],
+];
+
+document.getElementById('kpis').innerHTML = KPI.map(([k,a,b,d,dir,win]) => `
+  <div class="kpi${win ? ' win' : ''}">
+    <div class="k">${k}</div>
+    <div class="a">v1.18.0　${a}</div>
+    <div class="b">${b}</div>
+    <div class="d ${dir}">${d}</div>
+  </div>`).join('');
+
+// ver, tag, what, whatTag, net, pf, apf, roc, ann, dd, ddp, sharpe, n, style
+const D = [
+  ['band', '早期：策略成形', 'v0.4 – v1.5　·　夏普為不同計算基準，不與後段並列'],
+  ['v0.4',        '', '初版回測',                '', 1059200, '1.903', '—', '—', '—', '−259,000', '—',       '—', 119, ''],
+  ['v0.5-FINAL',  '', 'GA 1024 組合定案',        '', 1028600, '1.885', '—', '—', '—', '−271,600', '−17.97%', '—', 106, ''],
+  ['v0.6',   'REJECTED', 'MinSlope 改 ATR 倍數', '未採用', -128000, '—',  '—', '—', '—', '—',       '—',       '—', 181, 'dim'],
+  ['v1.0-PROD',   '', 'PROMOTE 至 live_simulation', '', 1030000, '1.885', '—', '—', '—', '—',    '−17.97%', '—', 106, ''],
+  ['v1.4-BELATE', '', '保本改延後啟動',          '', 1073200, '1.876', '—', '—', '—', '−228,000', '−18.63%', '—', 109, ''],
+  ['v1.5',        '', '初始停損硬化（三件套）',   '', 2006800, '—',     '—', '—', '—', '−456,000', '−18.31%', '—', null, ''],
+
+  ['band', '出場端連改', 'v1.7.1 – v1.15.0　·　累計 +687,600，母體 126 → 129'],
+  ['v1.7.1',  '', '快速停損改百分比',            '', 2074000, '1.6706', '1.2391', '103.70%', '13.72%', '−515,200', '−21.90%', '0.1323', 126, ''],
+  ['v1.8.1',  '', '二次進場繼承凍結波動',        '', 2413200, '1.7729', '1.3239', '120.66%', '15.97%', '−561,200', '−23.37%', '0.1342', 122, ''],
+  ['v1.9.0',  '', '進場門檻改百分比',            '', 2374000, '1.7826', '1.3254', '118.70%', '15.71%', '−561,200', '−23.37%', '0.1333', 119, ''],
+  ['v1.11.0', '', '保本改固定百分比',            '', 2478000, '1.7425', '1.3053', '123.90%', '16.35%', '−561,200', '−23.41%', '0.1360', 129, ''],
+  ['v1.12.0', '', '保本成本修正 ＋ 回吐停利',     '', 2556800, '1.7685', '1.3294', '127.84%', '16.87%', '−561,200', '−23.12%', '0.1377', 129, ''],
+  ['v1.13.0', '', '結構停利',                    '', 2646400, '1.7954', '1.3496', '132.32%', '17.46%', '−561,200', '−22.87%', '0.1387', 129, ''],
+  ['v1.14.0', '', '分層回吐',                    '', 2670800, '1.8027', '1.3552', '133.54%', '17.62%', '−575,200', '−23.07%', '0.1402', 129, ''],
+  ['v1.14.0', '無時間限制', '拿掉 24 根持倉上限', '對照組，未採用', 2393200, '1.7148', '1.2866', '119.66%', '15.79%', '−737,600', '−22.23%', '0.1690', 129, 'dim'],
+  ['v1.15.0', '', '結構門檻 1.00 ＋ 停利腿塌縮',  '出場端終點', 2761600, '1.8300', '1.3796', '138.08%', '18.22%', '−575,200', '−23.07%', '0.1429', 129, 'hi'],
+
+  ['band', '進場端三版', 'v1.16.0 – v1.18.0　·　累計 +336,800，幾乎全部來自一次改動'],
+  ['v1.16.0', '', '時段開盤缺口濾網',            '進場端第一項改動', 3141200, '2.0657', '1.5483', '157.06%', '20.73%', '−561,200', '−20.99%', '0.1656', 119, 'hi'],
+  ['v1.17.0', '', '時段邊界防護 ＋ 二次進場四開關', '樣本內零觸發', 3141200, '2.0657', '1.5483', '157.06%', '20.73%', '−561,200', '−20.99%', '0.1656', 119, ''],
+  ['v1.18.0', '', '尾盤截止時間改推導式',        '點數式時代終點', 3098400, '2.0512', '1.5331', '154.92%', '20.45%', '−604,000', '−22.59%', '0.1623', 118, 'hi'],
+
+  ['break', 'v1.20.0　斜率公式改寫 —— 可比性斷點',
+   'v_Slope = Fast[1] − Fast（點數）　→　v_Slope_Rate = ( Close[1] − Close ) / Close / 實際經過分鐘（百分比／分鐘）　·　'
+   + '進場配對比對：兩式只重疊 28 筆，78% 的交易被換掉。以下的淨利不可與以上直接相減。'],
+
+  ['v1.20.0', 'Form 2', '速率式斜率上線',        '公式正確性裁示，非績效裁示', 748000, '1.3825', '1.0306', '—', '4.94%', '−496,800', '−22.46%', '0.0856', 128, ''],
+  ['B1',  '', '進場門檻 0.058027 → 0.050',        '833 格', 1494400, '1.52',   '—', '—', '—', '−548,800', '—', '—', 187, ''],
+  ['B2',  '', 'Gap 濾網 0.1 / 0.2 / Scope 3',     '162 ＋ 1,296 格', 1522000, '1.54', '—', '—', '—', '−548,800', '—', '—', 186, ''],
+  ['B3',  '', '尾盤 415 / 430 ＋ 二次進場',        '12,800 ＋ 80 格', 1678000, '1.61', '—', '—', '—', '−548,400', '—', '—', 184, ''],
+  ['B4＋B6', '', 'QuickStop 虧損腿停用 ＋ BE 重調', '330 ＋ 180 格', 2052800, '1.8383', '—', '—', '—', '−408,400', '—', '—', 182, ''],
+  ['日盤尾盤規則', '缺陷修補', '1335 起不得開倉',  'n = 2，依原則採用', 2034400, '1.8401', '—', '—', '—', '−408,400', '—', '—', 180, 'dim'],
+  ['B7',  '', 'Trail 關閉',                       '209/209 啟用格全敗', 2147200, '1.8867', '—', '—', '—', '−408,400', '—', '—', 180, ''],
+  ['B8',  '', 'Struct 0.60 ／ Buffer 10',          '6,156 ＋ 99 格', 2258800, '1.93',  '—', '—', '—', '−364,000', '—', '—', 180, ''],
+  ['B9',  '', 'BE × Struct 聯合（Buffer 12 / BE 0.70）', '2,240 格', 2276400, '1.94', '—', '—', '—', '−364,800', '—', '—', 180, ''],
+  ['v1.22.0', 'B10', 'ML 關閉',                    '504/504 全同值　現行版本', 2328800, '1.9811', '1.5744', '116.44%', '15.37%', '−364,800', '−14.02%', '0.1776', 180, 'hi'],
+  ['B14＋B5b', '', '時間閘重掃',                   '3,319 格，零改動', 2328800, '1.9811', '1.5744', '116.44%', '15.37%', '−364,800', '−14.02%', '0.1776', 180, ''],
+];
+
+const fmt = n => (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('en-US');
+
+let prev = null;
+document.getElementById('rows').innerHTML = D.map(r => {
+  if (r[0] === 'band' || r[0] === 'break') {
+    prev = (r[0] === 'break') ? null : prev;
+    return `<tr class="${r[0] === 'break' ? 'break' : 'band'}"><td colspan="12">
+      <div class="bandtitle">${r[1]}</div><div class="bandsub">${r[2]}</div></td></tr>`;
+  }
+  const [ver, vtag, what, wtag, net, pf, apf, roc, ann, dd, ddp, sh, n, cls] = r;
+  const pct = Math.max(0, Math.min(100, net / MAX * 100));
+  let delta = '—', dcls = '';
+  if (prev !== null && net !== null) {
+    const d = net - prev;
+    if (d !== 0) { delta = (d > 0 ? '+' : '−') + Math.abs(d).toLocaleString('en-US'); dcls = d > 0 ? 'pos' : 'neg'; }
+    else { delta = '±0'; }
+  }
+  if (cls !== 'dim') prev = net;
+  return `<tr class="${cls}">
+    <td class="ver">${ver}${vtag ? `<span class="tag">${vtag}</span>` : ''}</td>
+    <td class="what">${what}${wtag ? `<span class="tag">${wtag}</span>` : ''}</td>
+    <td class="net"><div class="netcell"><span>${fmt(net)}</span>
+      <div class="track"><div class="fill" style="width:${pct}%"></div></div></div></td>
+    <td class="delta ${dcls}">${delta}</td>
+    <td>${pf}</td><td>${apf}</td><td>${roc}</td><td>${ann}</td>
+    <td>${dd}</td><td>${ddp}</td><td>${sh}</td><td>${n ?? '—'}</td>
+  </tr>`;
+}).join('');
+</script>

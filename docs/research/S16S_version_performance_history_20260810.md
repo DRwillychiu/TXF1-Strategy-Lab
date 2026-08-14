@@ -2,6 +2,10 @@
 
 **建立** 2026-08-10（涵蓋至 v1.18.0）｜**最後更新** 2026-08-15（延伸至 v1.22.0）
 
+> 📊 **視覺版**：[`S16S_version_performance_table.html`](S16S_version_performance_table.html)
+> —— 含淨利長條、逐版本 Δ、時代分隔與 v1.20.0 可比性斷點標記
+> 　　格式規範：[`.claude/skills/version-performance-table/SKILL.md`](../../.claude/skills/version-performance-table/SKILL.md)
+
 ---
 
 ## 0. 一頁摘要 —— 這半年到底優化了什麼
