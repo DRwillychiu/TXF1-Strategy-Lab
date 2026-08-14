@@ -48,6 +48,101 @@
                        AND B4/B6/B7 WINNERS GO INTO THE DEFAULTS:
 
     ------------------------------------------------------------------
+    B14 + B5b (2026-08-14): TIME GATES RE-SWEPT. ZERO CHANGE.
+    ------------------------------------------------------------------
+
+    3,319 cells. Not one default moves. The output of this batch is
+    knowledge, not parameters, so it is recorded here rather than in
+    the input block.
+
+    B14, 3,300 cells exhaustive, QuickStop_MaxBars 2-12 step 1 x
+    QS_MaxLoss_Pct 0.10-0.80 step 0.05 x MaxHoldingBars 6-120 step 6.
+    Acceptance cell (4, 0.70, 24) returned 2,328,800 / 180 / PF 1.98 /
+    DD -364,800 -- five fields against the campaign baseline, PASS.
+
+      QuickStop_MaxBars = 4 is an INTERIOR optimum. The top 28 rows all
+      carry 4; the first 5 appears at row 29; 2 and 3 do not reach the
+      top 50. No boundary extension owed.
+
+      QS_MaxLoss_Pct is INERT above 0.70. Cells 0.70 / 0.75 / 0.80
+      return identical net to the last dollar, which is saturation, not
+      a plateau -- the threshold is never reached. Added to the inert
+      registry. DO NOT lower it: B4's order-type defect (price
+      condition executed as a market order, MAE overshooting the
+      threshold) is dormant only because the threshold is unreachable.
+
+    B5b, 19 cells, MaxHoldingBars 18-36 STEP 1. Both acceptance cells
+    present and correct: 24 = 2,328,800 and 30 = 2,437,600.
+
+    NET PROFIT ON THIS PARAMETER IS NOISE. Mean absolute difference
+    between adjacent bar counts is 117,100 over the 18 gaps. The
+    24-vs-30 gap is 108,800 and the 24-vs-27 gap is 89,200. BOTH SIT
+    INSIDE THE NOISE BAND. B14's step-6 grid sampled 18/24/30/36 and
+    drew a clean single peak; step 1 shows a sawtooth. 19 -> 20 alone
+    swings 166,800.
+
+    DRAWDOWN IS WHERE THE STRUCTURE IS, and it is clean:
+
+      18-27   -364,800   ten consecutive values, flat
+      28-30   -370,800
+      31      -390,000
+      32      -512,400   cliff
+      35      -581,600
+
+    THE CLIFF IS AT 31, not at 35 as the coarse grid implied. And the
+    mechanism is visible: at 36 the gross loss is IDENTICAL to 30
+    (-2,394,400) with the same 55/125 win/loss split. The extra
+    drawdown is OPEN-POSITION excursion, not realised loss -- a
+    position held longer simply sits deeper underwater before exiting.
+    That grows continuously with holding time, which is why 31 and 32
+    already carry it.
+
+    MaxHoldingBars STAYS AT 24. It is interior to the flat-drawdown
+    plateau with three bars of clearance; 27 sits on that plateau's
+    right edge with none, and 29/30 are already one bar from the cliff.
+    Their net advantage is inside the noise band, so there is nothing
+    to buy with that clearance.
+
+    24 is also the only value in the range with a written rationale:
+    the v0.5-FINAL design block calls it the momentum burst decay
+    window at 2hr. That is a design hypothesis rather than a measured
+    fact, but 27 and 30 have neither.
+
+    THE "AVOID THE CROWD" ARGUMENT WAS EVALUATED AND REJECTED. An odd
+    bar count could in principle be deliberate differentiation rather
+    than a curve fit, but not for this parameter, on three independent
+    grounds. It is a RELATIVE clock anchored to this strategy's own
+    entry, so two desks both holding 24 bars exit at different wall
+    clock times and never cluster. The entry signal is idiosyncratic
+    (ZLEMA 25/70 plus a bespoke slope gate, 28 trades a year), so there
+    is no shared entry to cluster from. And the exit is a MARKET order
+    (SX_MA_TimeStop, "next bar at market"), which does not exist in the
+    book until it fires and therefore cannot be hunted.
+
+    That question does belong somewhere: Struct, BE and SL exit on
+    "next bar at v_BE_Stop_Level stop" and "at v_SL_Level Stop", which
+    ARE resting orders at levels any reader of the same price series
+    can compute. ATR_Len = 14 is Wilder's default. If crowding is to be
+    considered anywhere in this strategy, it is B11, not here.
+
+    RE-ENTRY WAS NOT RE-TESTED AND DOES NOT NEED TO BE. v_ReEntry_Price
+    is assigned from v_Last_EntryPrice, so the trigger is anchored to
+    the PREVIOUS ENTRY price, never to an exit price. B4 through B14
+    changed exits only, so the anchor cannot have moved. B3's finding
+    stands: ReEntry_On / _Slope_Gate / _Close_Gate must all be 1, and
+    ReEntry_Structure_Gate is inert for the third independent time.
+    Trade count held at 180 across B8/B9/B10/B14, which is what a
+    decoupled leg looks like.
+
+    B11 (ATR/SL, 2,880 cells) and B13 (confirmation loop, ~85 cells)
+    are DEFERRED until after validation. B14 governs 156 of 180 trades
+    and B11 governs 4; roughly 28,000 cells have now been evaluated
+    against 14 adoptions on a sample whose profit leg is 40 trades and
+    whose top five trades are 67.5% of net, with zero OOS remaining.
+    Rule #13, Rule #18 and W4 have not been started. Cells spent before
+    a failed validation are cells wasted.
+
+    ------------------------------------------------------------------
     B7 ADDENDUM (2026-08-13): TRAIL IS TURNED OFF. 209 OF 209.
     ------------------------------------------------------------------
 
