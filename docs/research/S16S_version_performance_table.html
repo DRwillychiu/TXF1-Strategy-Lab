@@ -191,6 +191,29 @@
   .zero { color: var(--red); font-weight: 650; }
   .ok   { color: var(--green); }
 
+  .why { background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+          padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .why h2 { margin: 0; font-size: 15px; font-weight: 650; }
+  .reasons { display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+             background: var(--line-soft); border: 1px solid var(--line-soft); }
+  .reason { background: var(--surface); padding: 16px 17px; display: flex; flex-direction: column; gap: 7px; }
+  .reason .n { font-size: 10.5px; letter-spacing: .13em; color: var(--gold); font-weight: 650; }
+  .reason .t { font-size: 13.5px; font-weight: 650; color: var(--ink); line-height: 1.45; }
+  .reason .b { font-size: 12.5px; color: var(--ink-mid); line-height: 1.6; }
+  .drift { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--ink-mid);
+           background: var(--ground); border: 1px solid var(--line); border-radius: 3px;
+           padding: 12px 14px; line-height: 1.8; white-space: pre; overflow-x: auto; }
+  .drift b { color: var(--gold); font-weight: 600; }
+
+  .todo { background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+          padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .todo h2 { margin: 0; font-size: 15px; font-weight: 650; }
+  .todo ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 13px;
+             color: var(--ink-mid); font-size: 13px; line-height: 1.65; }
+  .todo li::marker { color: var(--gold); font-weight: 650; }
+  .todo strong { color: var(--ink); font-weight: 600; }
+  .todo code { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: var(--blue); }
+
   footer {
     color: var(--ink-dim); font-size: 12px; line-height: 1.7;
     border-top: 1px solid var(--line); padding-top: 18px;
@@ -268,6 +291,65 @@
       28 點在 2019 等於 0.28%、在 2026 只有 0.062%，把早年整段濾掉。
       <strong>這使 W4 九視窗、三市況 PF、Sniper Bear PF 在數學上無法計算</strong>（不是數值難看，是算不出來）。
       v1.20.0 的百分比化解掉了這個阻擋 —— <strong>而它在淨利欄位上是負的。</strong></p>
+  </section>
+
+  <section class="why">
+    <h2>為什麼要換掉斜率公式 —— 三個理由，只有一個跟績效有關</h2>
+    <div class="reasons">
+      <div class="reason">
+        <div class="n">理由 01　最根本</div>
+        <div class="t">拆掉一個必須定期重新擬合的常數</div>
+        <div class="b"><code style="font-family:ui-monospace,Consolas,monospace">MinSlope = 28</code>
+          是 v0.5 的 GA 從 1024 組合裡挑出來的，<strong style="color:var(--ink)">而且單位是點數</strong>。
+          點數門檻的嚴格度會隨指數位階自己漂移 —— 指數翻倍，門檻就自動鬆一半，
+          策略行為改變而無人察覺。<strong style="color:var(--ink)">一個必須定期重新擬合才能維持的常數，
+          本身就是持續產生過擬合的來源。</strong></div>
+      </div>
+      <div class="reason">
+        <div class="n">理由 02</div>
+        <div class="t">交易筆數 118 → 180，統計檢定力才夠用</div>
+        <div class="b">Rule #13 的「樣本數 ≥ 100」從勉強過變成確實過；零交易年從 3 個變成 0 個；
+          <strong style="color:var(--ink)">W4 九視窗、三市況 PF、Sniper Bear PF 從「算不出來」變成「算得出來」</strong>。
+          這是 PROMOTE 的前置條件，不是附帶效果。</div>
+      </div>
+      <div class="reason">
+        <div class="n">理由 03　唯一跟績效有關的</div>
+        <div class="t">績效比 v1.16.0 差，這是已知的代價</div>
+        <div class="b">v1.16.0 的 3,141,200 至今仍是歷史最高淨利。換公式後起點掉到 748,000，
+          重掃 14 批才回到 2,328,800。<strong style="color:var(--ink)">採用速率式是公式正確性的裁示，
+          不是績效裁示</strong> —— 這一點不可被事後重新詮釋成「最佳化的成果」。</div>
+      </div>
+    </div>
+    <div class="drift">點數門檻的漂移，以及百分比門檻為什麼不會
+
+  28 點 ÷ 2019 指數 ~10,000  =  <b>0.280%</b>      早年緊 4.5 倍
+  28 點 ÷ 2026 指數 ~45,000  =  <b>0.062%</b>      同一個常數，完全不同的意義
+
+  MinSlope_Rate = 0.050 %／分鐘                    <b>與指數位階無關，不需要重新擬合</b></div>
+  </section>
+
+  <section class="todo">
+    <h2>進場端兩項未完成 —— 屬於新機制開發，不是參數最佳化</h2>
+    <ol>
+      <li><strong>開盤跳空只處理了一種形態。</strong>
+        現行濾網擋的是「<strong>向下跳空 ＋ 第一根當根 V 轉</strong>」這個單一組合。
+        未處理：向上跳空（任何走法）、向下跳空後續跌（不擋，但從未驗證）、
+        十字／長影線形態（全併入收在開盤上／下的二分）、跳空幅度分級、
+        以及針對第 2、3 根的獨立規則（<code>Gap_Scope_Bars = 3</code> 只是延長同一條規則的作用範圍）。
+        <br><br>⚠️ 與「跳空已被公式解掉」不衝突：那句話講的是<strong>斜率汙染</strong>，
+        這裡講的是<strong>進場品質篩選</strong>，兩件事。</li>
+      <li><strong>K 棒型態尚未接進進場結構。</strong>
+        <code>v_KB_Type</code> 的 18 型分類在 v1.16.0 就寫好了，四個參數也宣告了 ——
+        但<strong>寫 18 次、讀 0 次，完全未接線</strong>，掃那四個參數不會有任何變化。
+        目標是接進進場條件作為多組合判斷的一個維度。
+        <br><br>⚠️ 接線時必須避開循環論證：用一根 K 棒自己的 OHLC 算的統計量，
+        被該棒的分類定義所決定。可用的非循環證據只有<strong>發生頻率</strong>與
+        <strong>第一根型態 → 第 2~N 根走勢</strong>。</li>
+    </ol>
+    <p class="note">兩者都會<strong>改變交易母體</strong> ——
+      一旦動了，B4–B14 的所有出場參數又會落在舊母體上，就是 v1.20.0 之後發生過的事。
+      <strong>建議先完成驗證（W4 / Rule #13 / Rule #18）再開發</strong>，否則母體再變一次，
+      出場端要再重掃一輪。</p>
   </section>
 
   <footer>
