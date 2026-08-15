@@ -14,11 +14,11 @@
   and asserting the remaining code was byte-identical.
 
   CURRENT ANCHOR  (MC12, every input at the default in this file)
-      net profit                2,587,200
+      net profit                2,615,600
       trades                          180
-      profit factor                  2.08
+      profit factor                  2.09
       max strategy drawdown      -364,800
-      return on account            898.33
+      return on account            908.19
 
   Any edit must reproduce those five numbers before its own result is
   read. MC12 keeps the previous run's input values instead of reloading
@@ -88,7 +88,7 @@ inputs:
     M8_On                   ( 1     ),
     MaxHoldingBars          ( 48    ),
     M8_Form                 ( 2     ),     { 1 = bar count (v1.24.0 and earlier). 2 = percentage target + bar backstop. }
-    MaxHold_Pct             ( 2.40  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
+    MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),

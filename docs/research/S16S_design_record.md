@@ -18,11 +18,23 @@ explains it.
 
 | | |
 |---|---|
-| net profit | 2,587,200 |
+| net profit | 2,615,600 |
 | trades | 180 |
-| profit factor | 2.08 |
-| max strategy drawdown | -364,800 |
-| return on account | 898.33 |
+| gross profit / loss | 5,010,000 / -2,394,400 |
+| profit factor | 2.0923822252 |
+| adjusted profit factor | 1.6616251885 |
+| max strategy drawdown | -364,800 (-13.8494%) |
+| sharpe / sortino | 0.1991398428 / 1.1895897597 |
+| win rate | 30.5556% (55 / 125) |
+| return on account | 908.19 |
+| slippage paid | 700,000 -- 20,000 less than v1.24.0 because MC12
+  charges none on the 10 limit fills, which is correct modelling |
+
+**Mechanism verified 2026-08-15**, and the prediction was wrong in an
+instructive way. `SX_MA_TimeStop_Pct` appears 10 times for +2,479,200 as
+predicted, but `SX_MA_GoldenCross` was predicted to FALL and instead went
+from 3 trades / -79,200 to 29 trades / +1,547,600. `SX_MA_TimeStop` is now
+0 trades. See section 2.1 of the version history document.
 
 Any edit to the .pla must reproduce those five numbers before its own
 result is read. MC12 retains the previous run's input values rather than
@@ -32,7 +44,83 @@ reloading the file, and that has voided whole batches in this project.
 
 ## 2. Version history
 
-Verbatim, newest first, exactly as it stood in the .pla header.
+### 2.1  v1.25.0 MaxHold_Pct resolved at 2.3  (2026-08-15)
+
+This entry was written after the slimming, so it lives here rather than
+in the .pla header. **All future version notes go here too** -- that is
+the point of the split.
+
+**Adopted: `MaxHold_Pct` 2.40 -> 2.30. `MaxHoldingBars` stays 48.**
+
+| | before | after | delta |
+|---|---|---|---|
+| net profit | 2,587,200 | **2,615,600** | +28,400 |
+| trades | 180 | 180 | 0 |
+| profit factor | 2.08 | 2.09 | +0.01 |
+| max strategy drawdown | -364,800 | -364,800 | 0 |
+| return on account | 898.33 | 908.19 | +9.86 |
+| avg winning trade | 90,575 | 91,091 | +516 |
+
+#### The sweep's real result is the shape, not the +28,400
+
+85 cells, `MaxHold_Pct` 1.6-3.2 step 0.1 x `MaxHoldingBars` 24/36/48/60/72.
+It was queued because the step-0.2 grid that produced 2.4 could not tell a
+plateau from a spike. Best net profit at each percentage:
+
+| MaxHold_Pct | best net | | MaxHold_Pct | best net |
+|---|---|---|---|---|
+| 2.0 | 2,371,600 | | 2.6 | 2,261,200 |
+| 2.1 | 2,469,600 | | 2.7 | 2,315,600 |
+| 2.2 | 2,522,400 | | 2.8 | 2,369,200 |
+| **2.3** | **2,615,600** | | 2.9 | 2,344,000 |
+| 2.4 | 2,587,200 | | 3.0 | 2,353,600 |
+| 2.5 | 2,342,000 | | 3.1 | 2,394,000 |
+| | | | 3.2 | 2,438,000 |
+
+Monotone rise across four steps to a single peak, then a -273,600 cliff at
+2.5. Not a sawtooth. 2.3 is simultaneously the maximum and the centre of
+the elevated band 2.2 / 2.3 / 2.4, which is the best case available.
+
+#### A mechanism check that passes
+
+Everything from 2.5 to 3.2 collapses into 2.26M - 2.44M, which is the Form 1
+anchor level of 2,328,800. A target set too high is rarely reached, so Form 2
+degenerates back into Form 1. That is what the mechanism predicts, and seeing
+it is evidence the switch does what the code says rather than something else
+that happens to pay.
+
+#### MaxHoldingBars is inert above 36
+
+| MaxHold_Pct | 24 | 36 | 48 | 60 | 72 |
+|---|---|---|---|---|---|
+| 2.3 | - | 2,614,800 | **2,615,600** | **2,615,600** | - |
+| 2.4 | 2,505,200 | 2,577,600 | 2,587,200 | 2,587,200 | 2,587,200 |
+| 2.2 | 2,418,000 | 2,522,400 | 2,507,200 | 2,507,200 | 2,507,200 |
+
+48 / 60 / 72 are identical and 36 differs by 800. `Avg Bars in Winner` is
+22-23 throughout, so the backstop almost never binds -- it is insurance, not
+a mechanism. 24 is genuinely too tight at -82,000. 48 kept because 36 is an
+equivalent choice that would buy a marginally smaller cross-session exposure
+for 800 NTD, and that is not worth an extra decision.
+
+#### The pre-registered rule was NOT literally met
+
+The registered test was "adopt the centre of a run of at least three
+consecutive cells above 2,587,200". Strictly, only 2.3 clears that bar, no
+run of three exists, and the letter of the rule says keep 2.4.
+
+The rule's PURPOSE was to reject a noise spike, and the surface falsifies
+that concern directly: four monotone steps up, one peak, and 2.3 reproducing
+to within 800 NTD across three different values of a second parameter. The
+change was adopted on that reasoning, by the author, with the rule's failure
+stated rather than reinterpreted. Keeping 2.4 would also have been defensible
+at a cost of 28,400, or 1.1%.
+
+Rule 4 -- no adoption that raises drawdown -- was met: -364,800 unchanged.
+
+### 2.2  Everything up to the slimming, verbatim
+
+Exactly as it stood in the .pla header on 2026-08-15.
 
 ```text
 ================================================================================
@@ -3893,8 +3981,8 @@ Fires in order. First hit wins per bar (ExitFired flag).
 2. **`Struct_Lookback` is now unclamped.** The structure window is
    `MinList(Lookback, BarsSince+1)`; at a 24-bar cap anything above 25 was
    inert, and at 48 it is not. The "20 is optimal" finding is stale.
-3. **`MaxHold_Pct` step-0.1 sweep queued.** Step 0.2 cannot tell a plateau
-   from a spike.
+3. ~~`MaxHold_Pct` step-0.1 sweep~~ **DONE 2026-08-15**, 85 cells, adopted
+   2.3. See 2.1.
 4. **`QS_MaxLoss_Pct` re-sweep stopped at 0.50.** 0.25, the v1.7.1 optimum,
    was not literally re-tested. The trend is unambiguous but that part is
    inference, not a measured cell.
