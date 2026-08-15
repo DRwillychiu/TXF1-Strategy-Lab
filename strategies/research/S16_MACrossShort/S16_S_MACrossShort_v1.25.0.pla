@@ -60,15 +60,51 @@
     letting it drift on until a golden cross takes it. That is the
     structural claim, and it is what the sweep is for.
 
-  ALSO CORRECTED HERE (documentation only, no code change)
+  ALSO RECORDED HERE (documentation only, no code change)
 
-    QS_MaxLoss_Pct = 0.70 is a pure percentage with no bar condition,
-    but SX_MA_QuickStop_Loss does not appear in the trade list at all.
-    It fires ZERO times: P1b's 4-bar rule always gets there first. The
-    loss side is NOT running on a percentage today, whatever the input
-    name suggests. Do not lower QS_MaxLoss_Pct to "wake it up" without
-    first fixing that it is a price condition served by a market
-    order.
+    SX_MA_QuickStop_Loss fires ZERO times in the 180-trade anchor, so
+    the loss side is NOT running on a percentage today whatever the
+    input name suggests. That is DELIBERATE, not an oversight, and the
+    distinction matters because an oversight invites a "fix":
+
+      v1.7.1  MC12 sweep 0.05 ~ 0.30 step 0.025, adopted 0.25.
+              At 0.25 the leg was live and firing.
+      B4      0.25 -> 0.70, parking the threshold beyond what a trade
+              can reach inside the 4-bar window that P1b terminates.
+              0.70 / 0.75 / 0.80 return identical results, so this is
+              SATURATION and not a truncated grid. QuickStop keeps
+              only its TIME leg and the loss side reverts to SL_Pct.
+
+    So the optimiser was shown this leg twice and switched it off the
+    second time. DO NOT lower QS_MaxLoss_Pct to "wake it up" -- that
+    reverses a measured decision, and the price condition is still
+    served by a market order, which is a separate latent defect that
+    only stays dormant while the threshold is unreachable.
+
+    The live percentage on the loss side is SL_Pct = 1.00, capping the
+    ATR stop distance. SX_MA_SL takes 3 trades at -131,200.
+
+  THE PATTERN THIS COMPLETES, AND WHAT IT IMPLIES FOR FORM 2
+
+    Every giveback or loss-truncation mechanism this strategy has been
+    offered has been measured and switched OFF:
+
+      Trail_On        -> 0    B8, worth +111,600 to remove
+      ML_On           -> 0    B10
+      QS_MaxLoss_Pct  -> off  B4, parked out of reach
+
+    What survives on the loss side is a BAR rule (P1b, 116 trades) and
+    a last-resort ATR stop (3 trades). The strategy has consistently
+    refused to have its losers cut on price and its winners protected
+    on giveback.
+
+    Form 2 is a profit TARGET, which is also a truncation -- of the
+    right tail. So there is a standing prior against it from three
+    independent measurements. The counter-evidence is that all three
+    of those tested the LOSS side or the giveback; a target on the
+    winner side has never been tested at all, and the 64-trade study
+    puts 2.0% ahead of every bar count in both eras. The sweep, not
+    this note, settles it.
 
                 Gap_KB_Gate_On adopted 2026-08-15
 
