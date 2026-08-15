@@ -341,9 +341,21 @@
   　　　　Trail_On <b>0</b>　　ML_On <b>0</b>　　Tier2_On 0（結構性不可達）
   　　　　Struct 1 / <b>0.60</b> / Buffer <b>12</b> / Lookback 20 / UseClose 1
   防線　　ATR_Len 14　StopATRMult 4.0　SL_Pct 1.00　（B11 未掃，已裁示押後）</div>
-    <p class="note">四道門檻全部通過 —— <strong>但這是樣本內的通過。</strong>
-      約 <strong>28,000 格</strong>評估、<strong>14 次採用決策</strong>，樣本 180 筆（獲利腿 40 筆、6.25 筆／年），
-      <strong>零 OOS 剩餘</strong>。W4 九視窗、Rule #13 十維度、Rule #18 五件套<strong>一項都還沒開始</strong>。</p>
+    <p class="note">五道門檻全部通過 —— <strong>但這是樣本內的通過。</strong>
+      約 <strong>28,300 格</strong>評估、<strong>16 次採用決策</strong>，全部落在同一份 180 筆樣本上，
+      <strong>零 OOS 剩餘</strong>。WFE 與 OOS PF 兩道門檻從未量測，跨期九視窗、Rule #13 十維度、
+      Rule #18 五件套<strong>一項都還沒開始</strong>。<br><br>
+      <strong style="color:var(--ink)">v1.25.0 的機制驗證帶回一個與預測相反的結果。</strong>
+      <code>SX_MA_TimeStop_Pct</code> 如預期出現 10 筆 ＋2,479,200，但
+      <code>SX_MA_GoldenCross</code> 預測會下降，實際從 3 筆／−79,200 暴增到
+      <strong style="color:var(--ink)">29 筆／+1,547,600</strong>，而 <code>SX_MA_TimeStop</code> 歸零。
+      真正的機制是兩件事而只預測到一件：2.3% 目標抓走 10 筆最大走勢，
+      <strong style="color:var(--ink)">後盾 24→48 讓其餘 30 筆走完自己的訊號出場</strong>，後者值 +1,828,400。
+      這也推翻了 B5「延長會把交易交給黃金交叉賠錢」的裁決 —— B5 當時沒有目標腿。<br><br>
+      <strong style="color:var(--ink)">標題數字看不到的代價</strong>：前 5 大贏家佔淨利由 67.5% 升至
+      <strong>72.1%</strong>，跨時段持倉 9 → <strong>11 筆</strong>，且那 10 筆限價出場佔淨利
+      <strong>94.8%</strong>（成交價落在目標下方 0.0~0.9 點，是真實限價成交，
+      但實盤存在排不到單的成交風險，非滑價風險）。</p>
   </section>
 
   <section class="why">
@@ -409,7 +421,7 @@
     <div>回測 2020 ~ 2026-08-01｜MC12 傳統模式、細部資料停用｜固定 2 口｜滑價 1,000 元／口／邊｜單一 Data1 = 5M｜原始資金 2,000,000</div>
     <div><strong style="color:var(--ink-mid)">可比性</strong>：v1.15.0 之前的夏普為不同計算基準，不得與之後並列。
       B 系列各批僅有最佳化報表欄位，故調整 PF／年化／夏普標記為 —，完整 xlsx 只跑在版本節點上。</div>
-    <div><strong style="color:var(--ink-mid)">v1.23.0 / v1.24.0 三列 Δ 皆為 ±0，這是刻意列出的。</strong>
+    <div><strong style="color:var(--ink-mid)">v1.23.0 / v1.24.0 三列 Δ 皆為 ±0，以及 v1.25.0 最末列 Δ ±0，都是刻意列出的。</strong>
       依 <code>version-performance-table</code> SKILL：零改動批次必須列，否則讀者無法分辨
       「這個值被挑戰過而站住」與「這個值從來沒測過」。這三列的產出是
       <strong style="color:var(--ink-mid)">13 格 MC12 證偽測試 ＋ 3,669 個時段開盤的統計 ＋ 一條前瞻保護規則</strong>，
