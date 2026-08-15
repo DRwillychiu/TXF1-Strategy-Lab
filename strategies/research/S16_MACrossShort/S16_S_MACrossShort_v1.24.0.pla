@@ -3,6 +3,123 @@
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.24.0 Up-Gap Rule (2026-08-15, base v1.23.0)
+                Gap_KB_Gate_On adopted 2026-08-15
+
+  ADOPTED 2026-08-15: Gap_KB_Gate_On 0 -> 1
+
+    The long-lower-wick filter goes live. It is the only rule out of
+    everything measured in the session-open programme that has
+    statistical support, and it costs nothing:
+
+      support     3,669 session opens, ONE pre-registered grouping,
+                  permutation p = 0.0010 / 0.0164 / 0.0070 at +1/+2/+3
+      cost        zero. MC12 confirmed 180 trades / 2,328,800 / PF
+                  1.9811257162 / DD -364,800, identical to the anchor,
+                  with all 35 checked inputs at their adopted values
+      class       FILTER. Worst case is a forgone trade, bounded
+      mechanism   a long lower wick means the low was bought back, so
+                  a short entered just after it is entering against
+                  demand that has already shown itself
+
+    IT WILL NOT MOVE ANY BACKTEST NUMBER. It is FORWARD protection.
+    The sample contains no trade in its window, and the reason is
+    arithmetic rather than luck -- see the ceiling below. Author's
+    ruling 2026-08-15: the strategy must handle these regimes in live
+    trading even where the sample never exercised them.
+
+    ------------------------------------------------------------------
+    C MEASURED 2026-08-15: ACCUMULATION IS WORSE THAN THE SNAPSHOT
+    ------------------------------------------------------------------
+
+    The open question was whether recording shape from the first bar
+    ONWARD -- an accumulator rather than a snapshot -- predicts better.
+    Measured on the 3,669 opens, tercile split, permutation tested,
+    forward movement taken from bar N's CLOSE so the bars that define
+    the group never enter the window being predicted:
+
+      predictor                    +1 bar    +2 bars   +3 bars
+      A1   first bar's wick        p=0.05    p=0.01    p=0.00
+      Asum2/3/4/6  running sum     p=0.88    to        p=0.98
+      Acnt2/3/4/6  running count   p=0.63    to        p=0.88
+
+    A1 is the only predictor significant across all three horizons,
+    and its effect GROWS with horizon (-0.0079% / -0.0136% /
+    -0.0245%). Every accumulator is weaker. Bars 2, 3 and 4 carry no
+    forward information, so adding them dilutes bar 1's signal instead
+    of reinforcing it.
+
+    So the snapshot form already in this file is the right form, and
+    the accumulator idea is closed on measurement rather than on the
+    faulty inference made earlier the same day (decay of "bar 1 ->
+    later bars" was wrongly read as evidence about "bar 2 -> later
+    bars", which is a different question).
+
+    ------------------------------------------------------------------
+    THE CONTROL THAT MATTERED MOST: IT IS AN OPEN-BAR PHENOMENON
+    ------------------------------------------------------------------
+
+    The same measurement was run on 11,470 RANDOM mid-session anchors.
+    If it had held there, this would not be a gap rule at all -- it
+    would be a per-bar rule with a population of 418,096 instead of
+    3,669, and the ceiling below would not apply.
+
+    It did not hold. Two of 27 cells fell under p = 0.05, against 1.35
+    expected by chance, and the two differences from the session-open
+    result are decisive:
+
+      sign          session opens NEGATIVE (wick -> price rises)
+                    mid-session   POSITIVE (opposite direction)
+      persistence   session opens STRENGTHEN with horizon
+                                  (p 0.05 -> 0.01 -> 0.00)
+                    mid-session   VANISH
+                                  (p 0.03 -> 0.36 -> 0.62)
+
+    Opposite sign and opposite persistence is not the same effect
+    weakening; it is a different thing, most likely noise. The
+    population stays at 3,669 and must not be extrapolated to every
+    bar.
+
+    ------------------------------------------------------------------
+    THE CEILING, MEASURED THREE TIMES
+    ------------------------------------------------------------------
+
+    A session runs about 120 bars. Any session-open rule reaches the
+    first 3 -- 2.5% of them -- and this strategy takes 180 trades in
+    6.4 years. 2.5% x 180 is between four and five trades, and that is
+    the whole capacity of the idea, independent of how well any rule
+    is written:
+
+      v1.16.0 down-gap filter          1 trade
+      v1.23.0 long lower wick          0 trades
+      v1.24.0 up gap, both modes       0 trades (MC12, six cells)
+
+    ------------------------------------------------------------------
+    COVERAGE: EVERY OPENING REGIME NOW HAS AN ANSWER
+    ------------------------------------------------------------------
+
+    "Fully considered" was defined by the author as every regime being
+    MEASURED, not every regime having a rule. Blanks are what get
+    re-opened blindly; a measured null does not.
+
+      down gap + first bar rose >= X   not significant (p 0.24-0.95)
+                                       rule ON from v1.16.0, n=1 basis
+      down gap + LONG LOWER WICK       p 0.001/0.016/0.007  RULE ON
+      down gap + long upper wick       significant the other way, no rule
+      down gap + no clear wick         flat, no rule
+      up gap + first bar fell >= X     opposite direction to the
+                                       hypothesis; MC12 six cells; no rule
+      up gap + first bar rose >= X     p = 0.661; no rule
+      flat open                        60% directionless; no rule
+      bars 2/3 own shape               accumulator weaker than snapshot
+      per-bar generalisation           control null, sign-flipped
+
+    ONE INVERSION REMAINS, and it is recorded rather than acted on.
+    Gap_Rise_Min_Pct = 0.20 has been live since v1.16.0 on n=1 evidence
+    and does not replicate on 3,669 opens; the long-wick rule that does
+    replicate was the one switched off. Turning it on fixes half of
+    that. Retiring the other half needs its own pre-registered test,
+    not a re-read of the sweep table that found it wanting.
+
 
   v1.24.0 (2026-08-15) THE OTHER HALF OF THE GAP:
 
@@ -2605,9 +2722,12 @@ inputs:
     { Gap_KB_Scope_Bars = 3 is set by where significance ENDS, not by }
     { matching the neighbouring Gap_Scope_Bars. Bar 4 returns 0.12.   }
     {                                                                 }
-    { SHIPS OFF. Gap_KB_Gate_On defaults to 0, so v1.23.0 must        }
-    { reproduce v1.22.0 exactly: 180 trades / 2,328,800 / PF          }
-    { 1.9811257162 / max strategy drawdown -364,800.                  }
+    { ADOPTED 2026-08-15: Gap_KB_Gate_On now defaults to 1. The rule  }
+    { is live and the anchor is UNCHANGED -- MC12 returns 180 trades  }
+    { / 2,328,800 / PF 1.9811257162 / DD -364,800 either way, because }
+    { the sample holds no trade inside its window. This is forward    }
+    { protection, not a performance change, and the header records    }
+    { why that distinction is deliberate.                             }
     {                                                                 }
     { Gap_KB_Group selects which wick class is blocked. Groups 2 and 3}
     { are not candidates for adoption -- they exist so the offline    }
@@ -2625,7 +2745,7 @@ inputs:
     { measurable apart; chaining this one under the v1.16.0 master    }
     { switch would make it impossible to tell which rule a result     }
     { belongs to.                                                     }
-    Gap_KB_Gate_On          ( 0     ),
+    Gap_KB_Gate_On          ( 1     ),
     Gap_KB_Group            ( 1     ),
     Gap_KB_Scope_Bars       ( 3     ),
 
