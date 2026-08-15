@@ -3974,18 +3974,44 @@ Fires in order. First hit wins per bar (ExitFired flag).
 
 ## 4. Open items
 
-1. **Mechanism unverified for v1.25.0 Form 2.** `SX_MA_TimeStop_Pct` must
-   appear in the trade list and `SX_MA_GoldenCross` must fall from its 3
-   trades / -79,200. Right net profit with the wrong mechanism is
-   coincidence and the +258,400 would have to be withdrawn.
-2. **`Struct_Lookback` is now unclamped.** The structure window is
-   `MinList(Lookback, BarsSince+1)`; at a 24-bar cap anything above 25 was
-   inert, and at 48 it is not. The "20 is optimal" finding is stale.
-3. ~~`MaxHold_Pct` step-0.1 sweep~~ **DONE 2026-08-15**, 85 cells, adopted
-   2.3. See 2.1.
-4. **`QS_MaxLoss_Pct` re-sweep stopped at 0.50.** 0.25, the v1.7.1 optimum,
-   was not literally re-tested. The trend is unambiguous but that part is
-   inference, not a measured cell.
-5. **Zero held-out data.** About 28,000 cells and 15 adoptions on one
-   sample. Cross-period stability over nine windows, Rule #13 and Rule #18
-   are all still outstanding.
+### Closed on 2026-08-15
+
+1. ~~`MaxHold_Pct` step-0.1 sweep~~ **DONE.** 85 cells, adopted 2.3. See 2.1.
+2. ~~Mechanism unverified for Form 2~~ **VERIFIED, and the prediction was
+   half wrong.** `SX_MA_TimeStop_Pct` appears 10 times for +2,479,200 as
+   predicted. `SX_MA_GoldenCross` was predicted to FALL and instead went
+   from 3 trades / -79,200 to 29 trades / +1,547,600, while
+   `SX_MA_TimeStop` dropped to zero. The 40 old TimeStop trades account for
+   the whole +286,800 exactly, so the adoption stands, but the mechanism is
+   two things and only one was anticipated -- see 2.1.
+3. ~~`Struct_Lookback` is now unclamped~~ **RE-SWEPT, NO CHANGE.** 105 cells:
+   Lookback 20-50 x Buffer_Pts 8-16 x Trigger_Pct 0.5/0.6/0.7. The
+   prediction was wrong. Lookback 30/35/40/45/50 all return an identical
+   2,605,600, so the window is still clamped -- not by MaxHoldingBars but by
+   BarsSince, because `Avg Bars in Winner` is 23 and trades never live near
+   48 bars. Trigger 0.7 loses on both axes (-105,600 net AND drawdown blown
+   from -364,800 out to -463,200); 0.5 does not reach the top 52. Buffer 12
+   is an interior peak. The best cell in the grid, 2,610,400, is BELOW the
+   incumbent 2,615,600, so 20 / 12 / 0.60 all stay.
+4. ~~Label audit~~ **RE-AUDITED for the new exit.** 17 labels, 2 `SE_` and
+   15 `SX_`, all prefix-compliant including `SX_MA_TimeStop_Pct`. Zero
+   unlabelled orders.
+
+### Still open
+
+5. **`QS_MaxLoss_Pct` re-sweep stopped at 0.50.** 0.25, the v1.7.1 optimum,
+   was not literally re-tested. The trend is unambiguous in both net profit
+   and drawdown, but that part is inference, not a measured cell.
+6. **The ten limit exits carry 94.8% of net profit.** Their fills sit
+   0.0-0.9 points below target, which is tick rounding on a real limit fill,
+   not a fabrication. What a backtest cannot show is queue position: live,
+   the market may touch 2.3% without filling you.
+7. **Concentration rose.** Top-5 winners went from 67.5% to 72.1% of net
+   profit and cross-session holdings from 9 to 11 trades. Cross-session
+   positions have no exit mechanism available during the break.
+8. **Zero held-out data.** About 28,300 cells and 16 adoptions on one
+   sample. WFE and OOS PF have never been measured. Cross-period stability,
+   Rule #13 and Rule #18 are all still outstanding.
+9. **Entry-side K-bar combinations never attempted.** Addressable population
+   is all 180 trades -- the only remaining logic with real leverage -- but it
+   would change the entry population and re-condition every exit finding.
