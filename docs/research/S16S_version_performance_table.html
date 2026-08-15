@@ -205,6 +205,24 @@
            padding: 12px 14px; line-height: 1.8; white-space: pre; overflow-x: auto; }
   .drift b { color: var(--gold); font-weight: 600; }
 
+  .final { background: linear-gradient(180deg, rgba(240,168,48,.07), rgba(240,168,48,.02));
+           border: 1px solid rgba(240,168,48,.35); border-radius: 4px;
+           padding: 24px 26px; display: flex; flex-direction: column; gap: 18px; }
+  .final .eyebrow { color: var(--gold); }
+  .final h2 { margin: 0; font-size: 19px; font-weight: 650; color: var(--gold); }
+  .fgrid { display: grid; gap: 1px; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+           background: rgba(240,168,48,.18); border: 1px solid rgba(240,168,48,.18); }
+  .fcell { background: #191c22; padding: 14px 15px; display: flex; flex-direction: column; gap: 5px; }
+  .fcell .k { font-size: 10.5px; color: var(--ink-dim); letter-spacing: .05em; }
+  .fcell .v { font-size: 19px; font-weight: 650; color: var(--ink);
+              font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .fcell .g { font-size: 10.5px; color: var(--green); }
+  .fcell.pass .v { color: var(--gold); }
+  .cfg { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: var(--ink-mid);
+         background: var(--ground); border: 1px solid var(--line); border-radius: 3px;
+         padding: 14px 16px; line-height: 1.85; white-space: pre; overflow-x: auto; }
+  .cfg b { color: var(--gold); font-weight: 600; }
+
   .todo { background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
           padding: 22px 24px; display: flex; flex-direction: column; gap: 14px; }
   .todo h2 { margin: 0; font-size: 15px; font-weight: 650; }
@@ -291,6 +309,41 @@
       28 點在 2019 等於 0.28%、在 2026 只有 0.062%，把早年整段濾掉。
       <strong>這使 W4 九視窗、三市況 PF、Sniper Bear PF 在數學上無法計算</strong>（不是數值難看，是算不出來）。
       v1.20.0 的百分比化解掉了這個阻擋 —— <strong>而它在淨利欄位上是負的。</strong></p>
+  </section>
+
+  <section class="final">
+    <div class="eyebrow">現行參數下的最終版本</div>
+    <h2>v1.24.0 —— 參數最佳化與進場端研究全部結案</h2>
+    <div class="fgrid">
+      <div class="fcell"><div class="k">交易筆數</div><div class="v">180</div></div>
+      <div class="fcell"><div class="k">淨利</div><div class="v">2,328,800</div>
+        <div class="g">起點 748,000 · +211.3%</div></div>
+      <div class="fcell"><div class="k">獲利因子</div><div class="v">1.9811</div></div>
+      <div class="fcell pass"><div class="k">調整後獲利因子</div><div class="v">1.5744</div>
+        <div class="g">門檻 &gt; 1.3 ✓</div></div>
+      <div class="fcell pass"><div class="k">夏普</div><div class="v">0.1776</div>
+        <div class="g">門檻 ≥ 0.15 ✓</div></div>
+      <div class="fcell"><div class="k">索丁諾</div><div class="v">1.0780</div></div>
+      <div class="fcell pass"><div class="k">最大策略虧損</div><div class="v">−14.02%</div>
+        <div class="g">門檻 &lt; 25% ✓</div></div>
+      <div class="fcell pass"><div class="k">樣本數</div><div class="v">180</div>
+        <div class="g">門檻 ≥ 100 ✓</div></div>
+    </div>
+    <div class="cfg">最終組態　—— 每一個值都由一批窮舉掃描或一次證偽測試決定
+
+  進場　　Slope_Form <b>2</b>　MinSlope_Rate <b>0.050</b>　ZLEMA <b>25 / 70</b>　Slope_Require_Adjacent 0
+  跳空　　Gap_Filter_On 1　Down <b>0.10</b>　Rise <b>0.20</b>　Scope <b>3</b>　Day/Night 1 / 1
+  形態　　<b>Gap_KB_Gate_On 1</b>　Group <b>1</b> 長下影　Scope <b>3</b>　　← v1.24.0 採用
+  向上　　UpGap_Gate_On <b>0</b>　（六格 MC12 實測無訊號，input 保留待未來）
+  時段　　Tail_DayNoEntry_From <b>1335</b>　NoEntry <b>415</b>　ForceExit <b>430</b>　LeadBars 2
+  二次　　ReEntry_On 1　Slope_Gate 1　Close_Gate 1　Structure_Gate 1（惰性）
+  出場　　QuickStop 1 / <b>4</b> / <b>0.70</b>　　M8 1 / <b>24</b>　　BE 1 / <b>0.70</b> / <b>20</b>
+  　　　　Trail_On <b>0</b>　　ML_On <b>0</b>　　Tier2_On 0（結構性不可達）
+  　　　　Struct 1 / <b>0.60</b> / Buffer <b>12</b> / Lookback 20 / UseClose 1
+  防線　　ATR_Len 14　StopATRMult 4.0　SL_Pct 1.00　（B11 未掃，已裁示押後）</div>
+    <p class="note">四道門檻全部通過 —— <strong>但這是樣本內的通過。</strong>
+      約 <strong>28,000 格</strong>評估、<strong>14 次採用決策</strong>，樣本 180 筆（獲利腿 40 筆、6.25 筆／年），
+      <strong>零 OOS 剩餘</strong>。W4 九視窗、Rule #13 十維度、Rule #18 五件套<strong>一項都還沒開始</strong>。</p>
   </section>
 
   <section class="why">
