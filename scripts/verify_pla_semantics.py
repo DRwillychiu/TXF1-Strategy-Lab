@@ -130,7 +130,8 @@ for k in vars_:
         dv.append(k)
     elif rd == 0:
         wo.append('%s (寫%d/讀0)' % (k, wr))
-    elif wr == 0 and not k.startswith('Holiday_') and k not in LOOPVARS:
+    elif (wr == 0 and not k.startswith('Holiday_')
+          and not re.search(r'\bfor\s+' + re.escape(k) + r'\s*=', body, re.I)):
         ro.append('%s (讀%d/寫0，恆為初值 %s)' % (k, rd, vars_[k]))
 f('VAR', '宣告但完全未使用: %s' % ', '.join(sorted(dv))) if dv else \
     o('VAR', '%d 個 variable/array 全部有被使用' % len(vars_))

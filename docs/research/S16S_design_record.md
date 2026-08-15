@@ -3997,6 +3997,39 @@ Fires in order. First hit wins per bar (ExitFired flag).
    15 `SX_`, all prefix-compliant including `SX_MA_TimeStop_Pct`. Zero
    unlabelled orders.
 
+5. ~~Semantic audit~~ **DONE 2026-08-15, four dead lines removed.**
+   `scripts/verify_pla_semantics.py` reads the code rather than the text:
+   dead inputs, variables computed and discarded, exits outside the
+   `ExitFired` guard, label prefixes, clock literals with minutes past 59,
+   lookbacks against MaxBarsBack, switch mirrors, order types, Rule #11/#12
+   structure. **23 checks, all pass** after removing:
+
+   | removed | why |
+   |---|---|
+   | `v_ML_Loss` | declared and never touched anywhere; the ML exit runs on `v_ML_Trigger` |
+   | `v_Prev_Open` / `v_Prev_Close` / `v_Prev_Body` | computed from `Open[1]`/`Close[1]` **every bar** and never read -- leftovers of a removed K-bar pattern feature |
+
+   Two further findings were investigated and are **correct as written**;
+   the verifier now knows both shapes. `SX_MA_Kill` carries no `ExitFired`
+   guard because it heads the Priority-0 cascade -- nothing can have fired
+   before it -- and sets the flag itself. `hidx` is the holiday-table
+   for-loop counter.
+
+   **The verifier's classifier is tested before it is trusted.**
+   PowerLanguage spells assignment and equality with the same `=`, and this
+   file's entry gate is a multi-line `and` chain, so `v_X = False and` is a
+   COMPARISON while `v_X = ( A and` opens an ASSIGNMENT. Getting that
+   backwards produced a screenful of confident false positives three times
+   during development -- one of them made `v_Settlement_Day` look
+   never-written, which would have read as a Rule #11 breach. It now runs 8
+   synthetic cases first and exits rather than report anything if they fail.
+
+   Run repo-wide it also reports that **4 of 10 strategies never declare
+   `[IntrabarOrderGeneration]`** (L2, L3, L5 in live/, S1 in
+   live_simulation/), so their fill behaviour is inherited from the
+   properties dialog rather than pinned in code. Raised separately, not
+   touched here.
+
 ### Still open
 
 5. **`QS_MaxLoss_Pct` re-sweep stopped at 0.50.** 0.25, the v1.7.1 optimum,

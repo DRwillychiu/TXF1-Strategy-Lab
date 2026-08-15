@@ -34,6 +34,10 @@
       #12 SetStopContract + SetStopLoss + SL_Pct
       #15 100 percent ASCII
       #17 multi-layer stop loss
+
+  SEMANTIC AUDIT  scripts/verify_pla_semantics.py -- 22 checks, all pass
+      Four dead lines removed 2026-08-15 (v_ML_Loss, v_Prev_Open,
+      v_Prev_Close, v_Prev_Body). Details in the design record.
 ================================================================================ }
 
 [IntrabarOrderGeneration = False]
@@ -201,7 +205,6 @@ variables:
     v_M8_Target             ( 0     ),
 
     { ===== M6 Multi-Layer state ===== }
-    v_ML_Loss               ( 0     ),
     v_ML_Activation_Level   ( 0     ),
     v_ML_Score              ( 0     ),
     v_ML_Score_Pct          ( 0     ),
@@ -275,9 +278,6 @@ variables:
     v_FirstBar_Block        ( False ),
 
     { ===== v1.16.0 gap measurement (latched on the session first bar) ===== }
-    v_Prev_Open             ( 0     ),
-    v_Prev_Close            ( 0     ),
-    v_Prev_Body             ( 0     ),
     v_Sess_Gap_Pts          ( 0     ),
     v_Sess_Gap_Pct          ( 0     ),
 
@@ -456,9 +456,6 @@ v_Sess_LastBar = ( v_In_Day   and Time = Sess_Day_End   ) or
 
     { ---- Latch the gap and the opening bar OHLC ------------------  -- md 3.28 }
 if v_Sess_First then begin
-    v_Prev_Open  = Open[1];
-    v_Prev_Close = Close[1];
-    v_Prev_Body  = Close[1] - Open[1];
 
     v_Sess_Gap_Pts = Open - Close[1];
     if Close[1] > 0 then
