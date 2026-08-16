@@ -1,0 +1,230 @@
+<title>S16_S K 棒型態規格</title>
+<style>
+  :root{
+    --ground:#12151b; --surface:#1a1e26; --surface2:#1f242d;
+    --line:#262c37; --line-soft:#1e232b;
+    --ink:#e4e8ef; --ink-mid:#9aa4b4; --ink-dim:#6b7484;
+    --gold:#f0a830; --gold-soft:rgba(240,168,48,.09);
+    --red:#e0625c; --green:#5fbf8f; --blue:#6fa8dc;
+    --up:#5fbf8f; --dn:#e0625c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1320px;margin:0 auto;padding:40px 26px 72px;display:flex;flex-direction:column;gap:30px}
+  .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);font-weight:600}
+  h1{margin:0;font-size:26px;font-weight:650;letter-spacing:-.01em}
+  .sub{margin:0;color:var(--ink-mid);max-width:80ch}
+  h2{margin:0;font-size:15px;font-weight:650;letter-spacing:.01em}
+
+  .rules{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:20px 22px;
+         display:flex;flex-direction:column;gap:12px}
+  .rules code{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;color:var(--gold)}
+  .rulegrid{display:grid;gap:1px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+            background:var(--line-soft);border:1px solid var(--line-soft)}
+  .rulecell{background:var(--surface);padding:12px 14px}
+  .rulecell .k{font-size:11px;color:var(--ink-dim);letter-spacing:.04em;margin-bottom:3px}
+  .rulecell .v{font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--ink)}
+
+  .band{display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:9px}
+  .band .n{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold);font-weight:650}
+  .band .t{font-size:13px;color:var(--ink-mid)}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+        display:flex;flex-direction:column;overflow:hidden}
+  .card.dim{opacity:.55}
+  .card .hd{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;border-bottom:1px solid var(--line-soft)}
+  .card .id{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--ink-dim)}
+  .card .nm{font-size:13.5px;font-weight:650;color:var(--ink)}
+  .pill{margin-left:auto;font-size:10.5px;padding:2px 7px;border-radius:2px;font-weight:650;white-space:nowrap}
+  .p-sup{background:rgba(224,98,92,.15);color:var(--red)}
+  .p-opp{background:rgba(95,191,143,.15);color:var(--green)}
+  .p-neu{background:rgba(154,164,180,.13);color:var(--ink-mid)}
+  .card .art{display:flex;justify-content:center;padding:10px 8px 4px;background:var(--surface2)}
+  .card .cnt{padding:7px 14px;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;
+             color:var(--ink-mid);border-top:1px solid var(--line-soft);display:flex;gap:10px;align-items:baseline}
+  .card .cnt b{color:var(--ink);font-size:13px}
+  .no{color:var(--red);font-weight:650}
+  .card pre{margin:0;padding:11px 14px 14px;font-family:ui-monospace,"SF Mono",Consolas,monospace;
+            font-size:11.5px;line-height:1.62;color:var(--ink-mid);white-space:pre-wrap;
+            border-top:1px solid var(--line-soft);overflow-x:auto}
+  .card pre em{color:var(--gold);font-style:normal}
+
+  .note{border-left:2px solid var(--gold);padding:3px 0 3px 14px;color:var(--ink-mid);font-size:13px;max-width:96ch}
+  .note strong{color:var(--ink);font-weight:600}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:8px 12px;border-bottom:1px solid var(--line-soft);text-align:left}
+  th{color:var(--ink-dim);font-size:11px;letter-spacing:.05em;font-weight:600;border-bottom:1px solid var(--line)}
+  td.n{font-family:ui-monospace,Consolas,monospace;text-align:right}
+  footer{color:var(--ink-dim);font-size:12px;border-top:1px solid var(--line);padding-top:16px;
+         display:flex;flex-direction:column;gap:6px}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:9px">
+  <div class="eyebrow">TXF1-Strategy-Lab &nbsp;·&nbsp; S16_S MACrossShort &nbsp;·&nbsp; 進場端 K 棒型態</div>
+  <h1>兩根以上 K 棒型態　判定規格</h1>
+  <p class="sub">母體為 <strong style="color:var(--ink)">7,775 個盤中死叉</strong>（5 分 K，2019-01 ~ 2026-08，實際 1 分 K 聚合）。
+    單根型態不列入；所有依賴跳空的型態已刪除。次數為該型態在死叉當下的實際共現次數，
+    檢定門檻 <strong style="color:var(--ink)">n ≥ 50</strong>。</p>
+</header>
+
+<section class="rules">
+  <h2>共用定義　—　零自由參數</h2>
+  <div class="rulegrid">
+    <div class="rulecell"><div class="k">長實體</div><div class="v">Body / Range ≥ 0.50</div></div>
+    <div class="rulecell"><div class="k">十字</div><div class="v">Body/Range &lt; 0.10 且 Range ≥ 3 且上下影各 ≥ 1</div></div>
+    <div class="rulecell"><div class="k">約略相等</div><div class="v">完全相同（差 0 點）</div></div>
+    <div class="rulecell"><div class="k">星</div><div class="v">Body &lt; 參照根 Body ÷ 2</div></div>
+  </div>
+  <p class="note">三個門檻都釘死、<strong>不進入任何最佳化</strong>。依據分別是幾何自然分界（實體多於影線）與商品最小跳動（1 點）。
+    十字採相對定義是因為絕對點數版本八年間出現率從 15.4% 漂移到 4.6%，相對版本穩定在 8.5~9.6%。</p>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+  <div class="band"><span class="n">A 類</span><span class="t">兩根型態　·　刪除跳空後剩 10 種，全部可測</span></div>
+  <div class="grid" id="gA"></div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+  <div class="band"><span class="n">B 類</span><span class="t">三根型態　·　刪除跳空後剩 11 種，5 種可測 / 6 種樣本不足</span></div>
+  <div class="grid" id="gB"></div>
+</section>
+
+<section class="rules">
+  <h2>已刪除的 17 種　—　全部依賴跳空</h2>
+  <table>
+    <thead><tr><th>類</th><th>型態</th><th>要求</th></tr></thead>
+    <tbody id="del"></tbody>
+  </table>
+  <p class="note"><strong>刪除理由不是「盤中不會跳空」</strong> —— 實測時段內有 14.65% 的 K 棒開盤離開前根實體。
+    但那些「跳空」的<strong>中位數只有 1 點</strong>（時段第一根的真跳空是 17 點），90.5% 在 2 點以內。
+    <strong>條件會被報價雜訊滿足，型態失去它原本描述的現象</strong> —— 若保留會產生 60,716 次假訊號。</p>
+</section>
+
+<footer>
+  <div>資料來源 <code style="font-family:ui-monospace,Consolas,monospace">C:\Users\User\Desktop\MC9_20260108\報價\TXF1 1 分鐘.txt</code>（2,070,714 筆），聚合為 418,096 根 5 分 K</div>
+  <div>管線驗證：173/173 筆死叉進場價與 MC12 實際成交逐筆相符</div>
+  <div>ZLEMA 25 / 70，死叉定義 Fast[1] ≥ Slow[1] and Fast &lt; Slow</div>
+</footer>
+
+</div>
+
+<script>
+const P=[
+['A','A01','空頭吞噬','sup',633,
+ [[40,62,38,58],[62,68,32,36]],
+ 'Up(1) and Dn(0)\nand O >= C[1]\nand C <= O[1]\nand Body(0) > Body(1)'],
+['A','A02','多頭吞噬','opp',319,
+ [[58,62,38,40],[36,68,32,62]],
+ 'Dn(1) and Up(0)\nand O <= C[1]\nand C >= O[1]\nand Body(0) > Body(1)'],
+['A','A05','空頭孕線','sup',371,
+ [[25,80,20,75],[65,70,45,50]],
+ 'Up(1) and 長實體(1)\nand Dn(0)\nand Top(0) <= C[1]\nand Bot(0) >= O[1]'],
+['A','A06','多頭孕線','opp',625,
+ [[75,80,20,25],[40,58,35,55]],
+ 'Dn(1) and 長實體(1)\nand Up(0)\nand Top(0) <= O[1]\nand Bot(0) >= C[1]'],
+['A','A07','空頭十字孕線','sup',75,
+ [[25,80,20,75],[55,66,44,55]],
+ 'Up(1) and 長實體(1)\nand 十字(0)\nand Top(0) <= C[1]\nand Bot(0) >= O[1]'],
+['A','A08','多頭十字孕線','opp',165,
+ [[75,80,20,25],[50,61,39,50]],
+ 'Dn(1) and 長實體(1)\nand 十字(0)\nand Top(0) <= O[1]\nand Bot(0) >= C[1]'],
+['A','A09','內含線','neu',1499,
+ [[35,80,20,70],[60,72,35,45]],
+ 'H <= H[1]\nand L >= L[1]\n\n（不看顏色）'],
+['A','A10','外包線','neu',1177,
+ [[45,65,40,55],[60,80,25,35]],
+ 'H >= H[1]\nand L <= L[1]\n\n（不看顏色）'],
+['A','A18','鑷子頂','sup',267,
+ [[35,75,30,68],[66,75,40,45]],
+ 'H = H[1]  （完全相同）\nand Up(1) and Dn(0)'],
+['A','A19','鑷子底','opp',253,
+ [[68,75,25,35],[38,62,25,58]],
+ 'L = L[1]  （完全相同）\nand Dn(1) and Up(0)'],
+
+['B','B25','三隻烏鴉','sup',30,
+ [[85,88,62,65],[78,80,48,50],[62,65,32,35]],
+ 'Dn(2) and Dn(1) and Dn(0)\nand 長實體 x3\nand C[1] < C[2] and C < C[1]\nand O[1] < O[2] and O[1] > C[2]\nand O < O[1] and O > C[1]'],
+['B','B26','三白兵','opp',3,
+ [[15,38,12,35],[22,52,20,50],[38,68,35,65]],
+ 'Up(2) and Up(1) and Up(0)\nand 長實體 x3\nand C[1] > C[2] and C > C[1]\nand O[1] > O[2] and O[1] < C[2]\nand O > O[1] and O < C[1]'],
+['B','B27','三內部下跌','sup',271,
+ [[30,82,25,78],[68,72,48,52],[52,56,28,32]],
+ '{ 空頭孕線 }\nUp(2) and 長實體(2)\nand Dn(1)\nand Top(1) <= C[2] and Bot(1) >= O[2]\n{ 確認 }\nand Dn(0) and C < C[1]'],
+['B','B28','三內部上漲','opp',185,
+ [[78,82,25,30],[52,68,48,64],[64,88,60,84]],
+ '{ 多頭孕線 }\nDn(2) and 長實體(2)\nand Up(1)\nand Top(1) <= O[2] and Bot(1) >= C[2]\n{ 確認 }\nand Up(0) and C > C[1]'],
+['B','B29','三外部下跌','sup',331,
+ [[48,68,45,62],[68,72,38,42],[42,46,20,24]],
+ '{ 空頭吞噬 }\nUp(2) and Dn(1)\nand O[1] >= C[2] and C[1] <= O[2]\nand Body(1) > Body(2)\n{ 確認 }\nand Dn(0) and C < C[1]'],
+['B','B30','三外部上漲','opp',88,
+ [[62,68,45,48],[42,72,38,68],[68,90,64,86]],
+ '{ 多頭吞噬 }\nDn(2) and Up(1)\nand O[1] <= C[2] and C[1] >= O[2]\nand Body(1) > Body(2)\n{ 確認 }\nand Up(0) and C > C[1]'],
+['B','B34','三胎鴉','sup',58,
+ [[85,88,62,65],[65,67,42,45],[45,47,22,25]],
+ 'Dn x3 and 長實體 x3\nand O[1] = C[2]   （完全相同）\nand O   = C[1]   （完全相同）\nand C[1] < C[2] and C < C[1]'],
+['B','B35','大敵當前','sup',14,
+ [[25,52,22,50],[48,70,45,62],[62,85,60,68]],
+ 'Up x3\nand C[1] > C[2] and C > C[1]\nand Body(1) < Body(2)\nand Body(0) < Body(1)\nand UpSh(1) > 0 and UpSh(0) > 0\nand UpSh(0) > UpSh(2)'],
+['B','B36','步步為營','sup',11,
+ [[25,52,22,50],[50,75,48,73],[75,82,72,78]],
+ 'Up x3\nand 長實體(2) and 長實體(1)\nand C[1] > C[2] and C > C[1]\nand Body(0) < Body(1) / 2\nand O >= C[1]'],
+['B','B37','南方三星','opp',0,
+ [[85,88,30,55],[72,75,38,48],[60,68,45,52]],
+ 'Dn x3\nand 長實體(2) and DnSh(2) > 0\nand O[1] < O[2] and O[1] > C[2]\nand L[1] > L[2]\nand Body(1) < Body(2)\nand H <= H[1] and L >= L[1]\nand Body(0) < Body(1)'],
+['B','B38','獨特三河床','opp',0,
+ [[85,88,45,50],[70,72,35,55],[45,54,42,52]],
+ 'Dn(2) and 長實體(2)\nand Dn(1)\nand O[1] <= O[2] and O[1] >= C[2]\nand L[1] < L[2]\nand C[1] > C[2]\nand Up(0) and Body(0) < Body(1)\nand C < C[1]']
+];
+
+const DEL=[
+['A','烏雲罩頂 / 貫穿線','當根開盤越過前根收盤'],
+['A','頸上線 / 頸內線 / 插入線','當根開盤低於前根最低'],
+['A','空頭 / 多頭分手線','兩根開盤完全相同（等同要求跳離前根收盤）'],
+['A','空頭 / 多頭反擊線','當根開盤越過前根收盤'],
+['A','隔離線','當根開盤越過前根最高 / 最低'],
+['B','夜星 / 晨星','星的實體向上 / 向下跳離前根實體'],
+['B','夜十字星 / 晨十字星','同上'],
+['B','空頭 / 多頭棄嬰','全距完全不重疊（雙邊跳空）'],
+['B','雙飛烏鴉','第二根開盤高於第一根收盤']
+];
+
+const PILL={sup:['p-sup','支持做空'],opp:['p-opp','反對做空'],neu:['p-neu','中性']};
+
+function candle(o,h,l,c,x,w){
+  const up=c>=o, col=up?'var(--up)':'var(--dn)';
+  const y=v=>96-(v*0.9);
+  const bt=y(Math.max(o,c)), bb=y(Math.min(o,c));
+  const bh=Math.max(bb-bt,1.5);
+  return `<line x1="${x+w/2}" y1="${y(h)}" x2="${x+w/2}" y2="${y(l)}" stroke="${col}" stroke-width="1.6"/>`
+       + `<rect x="${x}" y="${bt}" width="${w}" height="${bh}" fill="${up?'none':col}" stroke="${col}" stroke-width="1.6"/>`;
+}
+function art(bars){
+  const w=17, gap=13, x0=(160-(bars.length*w+(bars.length-1)*gap))/2;
+  let s='';
+  bars.forEach((b,i)=>{s+=candle(b[0],b[1],b[2],b[3],x0+i*(w+gap),w);});
+  return `<svg width="160" height="104" viewBox="0 0 160 104" role="img" aria-label="型態示意">${s}</svg>`;
+}
+function card(p){
+  const [cls,id,nm,side,cnt,bars,cond]=p;
+  const ok=cnt>=50;
+  return `<div class="card${ok?'':' dim'}">
+    <div class="hd"><span class="id">${id}</span><span class="nm">${nm}</span>
+      <span class="pill ${PILL[side][0]}">${PILL[side][1]}</span></div>
+    <div class="art">${art(bars)}</div>
+    <div class="cnt"><b>${cnt.toLocaleString()}</b> 次　${(cnt/7775*100).toFixed(2)}%
+      <span style="margin-left:auto">${ok?'可測':'<span class="no">樣本不足</span>'}</span></div>
+    <pre>${cond.replace(/</g,'&lt;')}</pre>
+  </div>`;
+}
+document.getElementById('gA').innerHTML=P.filter(p=>p[0]==='A').map(card).join('');
+document.getElementById('gB').innerHTML=P.filter(p=>p[0]==='B').map(card).join('');
+document.getElementById('del').innerHTML=DEL.map(d=>
+  `<tr><td style="color:var(--ink-dim)">${d[0]}</td><td>${d[1]}</td><td style="color:var(--ink-mid)">${d[2]}</td></tr>`).join('');
+</script>
