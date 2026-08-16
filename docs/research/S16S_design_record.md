@@ -36,6 +36,16 @@ predicted, but `SX_MA_GoldenCross` was predicted to FALL and instead went
 from 3 trades / -79,200 to 29 trades / +1,547,600. `SX_MA_TimeStop` is now
 0 trades. See section 2.1 of the version history document.
 
+**Corrected 2026-08-16.** The gain does NOT split between the target and
+the loosened cap. Pairing the 40 former TimeStop trades one by one: the 10
+that now take the 2.3% target went 2,091,600 -> 2,479,200 (**+387,600**),
+and the other 30, handed to the golden cross and the structure trail, went
+1,909,200 -> 1,808,400 (**-100,800**). Loosening the bar cap on its own
+LOSES money. Its value is that it lets the target fire at all -- at 24
+bars the clock reached most trades first. The earlier note here credited
+the cap with +1,828,400, which was those 30 trades' new LEVEL mistaken for
+their DELTA.
+
 Any edit to the .pla must reproduce those five numbers before its own
 result is read. MC12 retains the previous run's input values rather than
 reloading the file, and that has voided whole batches in this project.
