@@ -125,13 +125,15 @@ print()
 print('=' * 66)
 print('  21 種型態在死叉當下的實際共現次數')
 print('=' * 66)
-print('%-20s %6s %8s %8s %6s' % ('型態', '對空單', '次數', '佔死叉%', '可測?'))
+print('%-20s %6s %8s %8s' % ('型態', '對空單', '次數', '佔死叉%'))
 print('-' * 66)
 for k in sorted(SIDE, key=lambda x: -cnt.get([n for n in cnt if n.startswith(x)][0] if any(n.startswith(x) for n in cnt) else '', 0)):
     nm = next((n for n in cnt if n.startswith(k)), None)
     c = cnt.get(nm, 0) if nm else 0
     label = nm if nm else k
-    print('%-20s %6s %8d %7.2f%% %6s'
-          % (label, SIDE[k], c, c / tot * 100, 'OK' if c >= 50 else '樣本不足'))
+    print('%-20s %6s %8d %7.2f%%' % (label, SIDE[k], c, c / tot * 100))
 print('-' * 66)
-print('  可測門檻 n >= 50')
+print('  本腳本只普查次數,不做分類判定.')
+print('  舊的 n >= 50 門檻已作廢 -- 無依據,見 spec 4.5.1.')
+print('  分類(1 進檢定 / 2 以邏輯納入)見 spec 4.5.3 與 5/6 節的表.')
+print('  正式門檻待 spec 8.0 量出檢定母體基準率後,依 8.1 檢定力計算訂定.')
