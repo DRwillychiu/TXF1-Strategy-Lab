@@ -54,6 +54,122 @@ reloading the file, and that has voided whole batches in this project.
 
 ## 2. Version history
 
+### 2.0  v1.26.0 the K-bar selector  (2026-08-17, NOT YET BACKTESTED)
+
+`strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.26.0.pla`,
+1,395 lines, commit `c97b78c`. **v1.25.0 is untouched and remains the
+adopted version until the sweep says otherwise.**
+
+#### What it adds
+
+All 28 A/B/C class candlestick patterns behind a first-match-wins
+selector. Whichever pattern matches first writes its number into
+`v_KB_Code` and every later test is skipped. The gate is one comparison:
+
+```
+v_KB_Block = ( v_KB_Code <> 0 );
+```
+
+Three switches, all defaulting to 0, cover the entire space in 8 cells:
+`KB_Block_Support` (13 pro-short, codes 1-13), `KB_Block_Oppose` (13
+anti-short, codes 14-26), `KB_Block_Neutral` (inside/outside bar, 27-28).
+All zero is the anchor and must return 180 / 2,615,600 / PF 2.0923822252
+/ -364,800.
+
+#### It was built backwards first, and the measurement caught it
+
+The first cut of this version was an OR gate that ADMITTED crosses
+carrying a bearish pattern, on the assumption that such a pattern marks a
+better short. Measured against the 180 actual v1.25.0 trades:
+
+| | trades | total | average | win% | big fish |
+|---|---|---|---|---|---|
+| carries a bearish pattern | 75 | 34,000 | **453** | 24.0% | 1 |
+| carries none | 105 | 2,581,600 | **24,586** | 35.2% | 6 |
+
+98.7% of net profit comes from entries with no bearish pattern at all.
+The gate was pointing the wrong way and was reversed.
+
+**The evidence is the ordering, not any single cell.** Blocking
+progressively more patterns raises profit factor monotonically --
+2.09, 2.24, 2.50, 2.62, 2.76, 3.06 -- with win rate tracking it at
+30.6, 31.5, 32.4, 32.8, 33.9, 35.2. Cherry-picking losers out of eight
+would not produce that ordering. The effect belongs to the CLASS "a
+pattern is present", not to any member of it. Big-fish count holds at 7
+throughout: what gets removed is small losses, not the tail.
+
+Mechanically, the slope gate already demands a 0.25% fall across the bar.
+Given that, a bearish engulfing says the selling EXHAUSTED itself here,
+while no pattern at all says the fall is still in progress and has not
+resolved into a recognisable shape. A pattern marks a completed event;
+a short wants one still running.
+
+#### Why a selector and not a score
+
+| patterns hit | trades | average | win% | PF |
+|---|---|---|---|---|
+| 0 | 95 | 26,332 | 35.8% | 3.10 |
+| 1 | 65 | 412 | 21.5% | 1.03 |
+| 2 | 14 | 5,171 | 35.7% | 1.44 |
+| 3 | 6 | 2,466 | 33.3% | 1.23 |
+
+Three is no worse than one and two beats one. **With no dose-response,
+weights would be fitted to noise, and each weight is a free parameter
+this file would then have to defend.** The signal is binary -- a pattern
+is present, or none is -- which is exactly what one integer and one
+comparison express, at zero new free parameters.
+
+Because the gate only asks whether the code is zero, test ORDER changes
+the diagnostic label and nothing else. No ordering argument was needed
+and none was made.
+
+#### Why all 28 when only 14 can fire
+
+The slope gate forces a black entry bar, so the 14 patterns ending in a
+white bar are structurally unreachable and must report zero. They are
+coded anyway so MC12 TESTS that claim rather than taking the Python
+census on trust -- which matters while section 2.1 of the K-bar spec has
+that census pipeline under an open audit. A pattern that fires when
+predicted not to is a finding, and it is invisible if it is not coded.
+
+Two anti-short patterns do end on a black bar and can fire: **A21
+matching low** and **B37 three stars in the south**. Both measured 0
+offline. Cells #2 and #5 of the sweep differ only in whether the
+anti-short group is blocked, so **if their trade counts are not
+identical, an anti-short pattern fired** -- and that outcome outranks
+everything else in the table.
+
+#### The cost, and why the backtest has to settle it
+
+| block | trades | /month | net | PF |
+|---|---|---|---|---|
+| nothing | 180 | 2.31 | 2,615,600 | 2.09 |
+| pro-short | 105 | 1.35 | 2,581,600 | 3.06 |
+| pro-short + neutral | 95 | 1.22 | 2,501,600 | 3.10 |
+
+Every option breaks the 156-trade floor **on arithmetic that assumes a
+blocked slot stays empty**. MC12 refills -- blocking a trade frees the
+position for a later cross that was previously skipped -- so each count
+is a FLOOR. How far above it the real number lands is the one thing this
+sweep exists to answer.
+
+Note the last row: net profit FALLS while PF rises. A18 tweezer top, B29
+three outside down and A10 outside bar are profitable and go out with the
+rest. **Quality and size separate there, so "maximise PF" and "maximise
+net" are different instructions.**
+
+#### Removed
+
+`KB_Mode`, `KB_Group`, `KB_Group_Loss`, `KB_Admit_MinSlope` and the
+`SE_MA_KBAdmit` entry label. The admit direction they served was refuted
+by the measurement above and nothing now needs it.
+
+`verify_pla_semantics.py`: FAIL 0 / WARN 0 / PASS 23.
+
+Full pattern derivations: `docs/research/S16S_kbar_pattern_spec_20260816.md`.
+
+---
+
 ### 2.1  v1.25.0 MaxHold_Pct resolved at 2.3  (2026-08-15)
 
 This entry was written after the slimming, so it lives here rather than
@@ -3983,6 +4099,22 @@ Fires in order. First hit wins per bar (ExitFired flag).
 ---
 
 ## 4. Open items
+
+### Open as of 2026-08-17
+
+**A. The v1.26.0 eight-cell sweep is the only thing blocking progress.**
+Three switches, 0 to 1 step 1. Anchor cell must return 180 / 2,615,600 /
+PF 2.0923822252 / -364,800 before any other cell is read. See 2.0.
+
+**B. The trade-count floor needs a ruling.** Every promising cell lands
+below 156 trades on offline arithmetic. MC12's replacement effect will
+raise the real counts by an unknown amount. If it is still short, the
+choice is between relaxing the floor and settling for a weaker filter --
+that is a policy call, not a data question.
+
+**C. Zero held-out data still.** Roughly 28,300 cells and 16 adoptions
+against one sample. The cross-period nine-window test has never been run,
+and 2026's seven months are 78.4% of net profit.
 
 ### Closed on 2026-08-15
 
