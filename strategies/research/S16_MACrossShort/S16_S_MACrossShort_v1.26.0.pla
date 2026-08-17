@@ -4,78 +4,66 @@
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.26.0 K-bar Admission (2026-08-17, base v1.25.0)
 
-  SHIPS OFF. KB_Mode defaults to 0, so v1.26.0 must reproduce v1.25.0
+  SHIPS OFF. All three block switches default to 0, so v1.26.0 must reproduce v1.25.0
   exactly: 180 trades / 2,615,600 / PF 2.0923822252 / -364,800. If it does
   not, stop and fix that before reading any KB cell.
 
   ================================================================
-  THE GATE RUNS BOTH WAYS, AND THE DATA BACKS THE SECOND
+  THE SELECTOR: 28 PATTERNS, ONE INTEGER, NO WEIGHTS
   ================================================================
 
-  KB_Mode 1 ADMITS on a pattern (OR). KB_Mode 2 BLOCKS on one (AND NOT).
-  This file was first written with only mode 1, on the assumption that a
-  bearish pattern marks a better short. Measured against the 180 actual
-  trades, that assumption is backwards:
+  Every A, B and C class pattern is computed here -- 13 pro-short, 13
+  anti-short, 2 neutral. They do not vote and they do not score. The
+  first one that matches writes its own number into v_KB_Code and every
+  later test is skipped. The gate is one comparison: v_KB_Code = 0.
 
-    entry carries a bearish pattern   75 trades   average       453
-    entry carries none               105 trades   average    24,586
+  A SCORE WOULD HAVE NOTHING TO FIT. Measured on the 180 v1.25.0 trades,
+  the number of patterns an entry carries does not predict anything:
 
-  98.7% of the strategy's net profit comes from entries with NO bearish
-  pattern at all. Blocking, not admitting, is what the data supports.
+    patterns hit    trades    average    win%     PF
+        0              95     26,332     35.8    3.10
+        1              65        412     21.5    1.03
+        2              14      5,171     35.7    1.44
+        3               6      2,466     33.3    1.23
 
-  The strength here is not any single cell, it is that the table is
-  MONOTONE. Block more patterns and profit factor rises in order --
-  2.09, 2.24, 2.50, 2.62, 2.76, 3.06 -- with win rate tracking it at
-  30.6, 31.5, 32.4, 32.8, 33.9, 35.2. Cherry-picking five losing patterns
-  out of eight would not produce that ordering. The effect belongs to the
-  CLASS "a pattern is present", not to any member of it.
+  Hitting three is no worse than hitting one; two is better than one.
+  There is no dose-response, so weights would be fitted to noise, and
+  every weight is a free parameter this file would then have to defend.
+  The signal is binary -- a pattern is present, or none is -- and that
+  is exactly what one integer and one comparison express.
 
-  Mechanically it reads: the slope gate already demands a 0.25% fall
-  across the bar. Given that, a bearish engulfing says the selling
-  EXHAUSTED itself on this bar, while no pattern at all says the fall is
-  still in progress and has not yet resolved into a recognisable shape. A
-  pattern marks a completed event; a short wants one still running.
+  Because the gate only asks whether the code is zero, the ORDER of the
+  tests changes the diagnostic label and nothing else. No ordering
+  argument is needed, and none was made.
 
-  WHAT BLOCKING COSTS, AND WHY MC12 MUST SETTLE IT
+  WHY ALL 28 AND NOT THE 14 THAT CAN FIRE
 
-    block                        trades  /month     net       PF
-    nothing                         180    2.31  2,615,600   2.09
-    B27+B34+A05+B25                 162    2.08  2,693,200   2.24
-    A01                             142    1.82  2,740,000   2.50
-    A01+B27+B34+A05+B25             124    1.59  2,817,600   2.76
-    all eight                       105    1.35  2,581,600   3.06
+  The entry gate forces a black bar, so any pattern ending in a white
+  one is structurally unreachable and 14 of the 28 must report zero.
+  They are coded anyway. The offline census claims anti-short patterns
+  never appear on an entry bar; with those 14 present, MC12 tests that
+  claim itself instead of taking the Python census on trust -- which
+  matters, because section 2.1 of the spec has that census pipeline
+  under an open audit. A pattern that fires when it was predicted not
+  to is a finding, and there is no way to see it if it is not coded.
 
-  Those counts are arithmetic on the existing trade list -- they assume a
-  blocked slot simply stays empty. MC12 will REFILL: blocking a trade
-  frees the position for a later cross that was previously skipped. So
-  every count above is a FLOOR, and the 156-trade limit may be a softer
-  obstacle than the arithmetic suggests. Only the backtest knows.
+  WHAT BLOCKING COSTS
 
-  Note that blocking all eight LOWERS net profit while raising PF -- A18
-  tweezer top and B29 three outside down are profitable and get thrown
-  out with the rest. Quality and size pull apart at that end.
+    block                        trades  /month     net      PF
+    nothing                         180    2.31  2,615,600  2.09
+    pro-short only                  105    1.35  2,581,600  3.06
+    pro-short + neutral              95    1.22  2,501,600  3.10
 
-  WHAT THIS VERSION ADDS AND WHY THIS DIRECTION
+  Those counts assume a blocked slot stays empty. MC12 will REFILL --
+  blocking a trade frees the position for a later cross that was
+  previously skipped -- so each count is a FLOOR, and how far above it
+  the real number lands is the one thing this sweep exists to find out.
+  Every option shown already breaks the 156-trade floor on arithmetic.
 
-    The entry gate becomes  death cross AND ( slope passes OR pattern
-    passes ), so the path can only ADD trades. It never blocks one.
-
-    That is not a preference, it is what the data left standing. Of the
-    184 crosses that clear the slope gate, 77 carry a bearish two- or
-    three-bar pattern and ZERO carry a bullish one -- mechanically so,
-    because the gate demands a 0.25% fall over the bar, the open sits at
-    the prior close, so the bar must be black, and every bullish pattern
-    requires an up bar. Blocking bad entries with bullish patterns is
-    therefore impossible: there are none to block. Filtering the 184 down
-    to the 77 confirmed ones breaks the 156-trade floor. What remains is
-    admission, and roughly 1,728 crosses carry a bearish pattern while
-    failing the slope gate.
-
-  ADMITTED ENTRIES CARRY THEIR OWN LABEL
-
-    SE_MA_KBAdmit, so the trade list answers the acceptance question
-    directly instead of by subtraction: how many trades the path added,
-    and what they earned. SE_MA_DeathCross keeps its exact meaning.
+  Note the last row: net profit FALLS while PF rises. A18 tweezer top,
+  B29 three outside down and A10 outside bar are profitable and go out
+  with the rest. Quality and size separate here, so "maximise PF" and
+  "maximise net" are different instructions.
 
   THRESHOLDS ARE PINNED, NOT TUNED
 
@@ -205,10 +193,9 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Mode                 ( 0     ),     { 0 = anchor. 1 = ADMIT (OR). 2 = BLOCK (AND NOT) -- 2 is what data backs. }
-    KB_Group                ( 11    ),     { 1=A01 2=A05 3=A07 4=A18 5=B25 6=B27 7=B29 8=B34 9=all A 10=all B 11=all   }
-    KB_Group_Loss           ( 0     ),     { 1 = the five loss-making patterns only: A01 A05 B25 B27 B34. Overrides.    }
-    KB_Admit_MinSlope       ( 0.020 ),     { ADMIT mode only. An admitted entry still needs this much slope.           }
+    KB_Block_Support        ( 0     ),     { 1 = block on any of the 13 pro-short patterns  (codes 1-13)  }
+    KB_Block_Oppose         ( 0     ),     { 1 = block on any of the 13 anti-short patterns (codes 14-26) }
+    KB_Block_Neutral        ( 0     ),     { 1 = block on inside bar or outside bar         (codes 27-28) }
 
     { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),
@@ -321,32 +308,38 @@ variables:
     v_M8_Target             ( 0     ),
 
     { ===== K-bar admission state (v1.26.0) ===== }
+    v_KB_Sup                ( False ),
+    v_KB_Opp                ( False ),
+    v_KB_Neu                ( False ),
     v_KB_On                 ( False ),
-    v_KB_Admit              ( False ),
     v_KB_Block              ( False ),
-    v_KB_Hit                ( False ),
+    v_KB_Code               ( 0     ),
     v_KB_R0                 ( 0     ),
     v_KB_R1                 ( 0     ),
     v_KB_R2                 ( 0     ),
+    v_KB_R3                 ( 0     ),
+    v_KB_R4                 ( 0     ),
     v_KB_B0                 ( 0     ),
     v_KB_B1                 ( 0     ),
     v_KB_B2                 ( 0     ),
+    v_KB_B3                 ( 0     ),
+    v_KB_B4                 ( 0     ),
     v_KB_T0                 ( 0     ),
     v_KB_T1                 ( 0     ),
+    v_KB_T2                 ( 0     ),
     v_KB_M0                 ( 0     ),
     v_KB_M1                 ( 0     ),
+    v_KB_M2                 ( 0     ),
+    v_KB_S0                 ( 0     ),
+    v_KB_S1                 ( 0     ),
+    v_KB_S2                 ( 0     ),
+    v_KB_N2                 ( 0     ),
     v_KB_L0                 ( False ),
     v_KB_L1                 ( False ),
     v_KB_L2                 ( False ),
+    v_KB_L3                 ( False ),
+    v_KB_L4                 ( False ),
     v_KB_D0                 ( False ),
-    v_KB_A01                ( False ),
-    v_KB_A05                ( False ),
-    v_KB_A07                ( False ),
-    v_KB_A18                ( False ),
-    v_KB_B25                ( False ),
-    v_KB_B27                ( False ),
-    v_KB_B29                ( False ),
-    v_KB_B34                ( False ),
 
     { ===== M6 Multi-Layer state ===== }
     v_ML_Activation_Level   ( 0     ),
@@ -487,7 +480,10 @@ v_Struct_On             = ( Struct_On             <> 0 );
 v_Struct_UseClose       = ( Struct_UseClose       <> 0 );
 v_Tier2_On              = ( Tier2_On              <> 0 );
 v_M8_On                 = ( M8_On                 <> 0 );
-v_KB_On                 = ( KB_Mode               <> 0 );
+v_KB_Sup                = ( KB_Block_Support      <> 0 );
+v_KB_Opp                = ( KB_Block_Oppose       <> 0 );
+v_KB_Neu                = ( KB_Block_Neutral      <> 0 );
+v_KB_On                 = ( v_KB_Sup or v_KB_Opp or v_KB_Neu );
 v_Gap_Filter_On         = ( Gap_Filter_On         <> 0 );
 v_Gap_Day_On            = ( Gap_Day_On            <> 0 );
 v_Gap_Night_On          = ( Gap_Night_On          <> 0 );
@@ -873,126 +869,276 @@ if v_Slope_Require_Adjacent = True and v_Slope_Adjacent = False then
 
 
 
-    { SECTION 8.6 - K-BAR ADMISSION PATTERNS (v1.26.0) }
-    { Eight bearish two- and three-bar patterns. Thresholds are pinned and    }
-    { must never be swept: long body >= 50% of range, doji < 10% of range     }
-    { with a range of at least 3 points and a shadow of at least 1 point each }
-    { side, and "equal" means EXACTLY equal. See                              }
-    { docs/research/S16S_kbar_pattern_spec_20260816.md for the derivations.   }
-    {                                                                         }
-    { Every pattern requires v_Bars_In_Sess so no comparison ever reaches     }
-    { across a session break -- the bar before a session open is a different  }
-    { market, and the gap programme already covers that boundary.             }
+    { SECTION 8.6 - K-BAR PATTERN SELECTOR (v1.26.0) }
+    { 28 patterns. First match writes its code and stops. Gate is code = 0.  }
+    { Thresholds are pinned and must never be swept: long body >= 50% of     }
+    { range, doji < 10% of range with range >= 3 points and each shadow >= 1 }
+    { point, "equal" means EXACTLY equal, "star" means half the reference    }
+    { body. Derivations in docs/research/S16S_kbar_pattern_spec_20260816.md. }
+    {                                                                        }
+    { Every pattern is gated on v_Bars_In_Sess so no comparison reaches      }
+    { across a session break -- the bar before a session open is a different }
+    { market, and the gap programme already covers that boundary.            }
 
-v_KB_A01 = False;
-v_KB_A05 = False;
-v_KB_A07 = False;
-v_KB_A18 = False;
-v_KB_B25 = False;
-v_KB_B27 = False;
-v_KB_B29 = False;
-v_KB_B34 = False;
-v_KB_Hit = False;
+v_KB_Code = 0;
 
 if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
 
-    v_KB_R0 = H - L;
+    v_KB_R0 = H    - L;
     v_KB_R1 = H[1] - L[1];
-    v_KB_B0 = AbsValue( C - O );
+    v_KB_B0 = AbsValue( C    - O    );
     v_KB_B1 = AbsValue( C[1] - O[1] );
-    v_KB_T0 = MaxList( O, C );
+    v_KB_T0 = MaxList( O,    C    );
     v_KB_T1 = MaxList( O[1], C[1] );
-    v_KB_M0 = MinList( O, C );
+    v_KB_M0 = MinList( O,    C    );
     v_KB_M1 = MinList( O[1], C[1] );
+    v_KB_S0 = H    - v_KB_T0;
+    v_KB_S1 = H[1] - v_KB_T1;
     v_KB_L0 = ( v_KB_R0 > 0 ) and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) >= 0.50 );
     v_KB_L1 = ( v_KB_R1 > 0 ) and ( v_KB_B1 / MaxList( v_KB_R1, 1 ) >= 0.50 );
     v_KB_D0 = ( v_KB_R0 >= 3 ) and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) < 0.10 )
-              and ( H - v_KB_T0 >= 1 ) and ( v_KB_M0 - L >= 1 );
-
-    { A01 bearish engulfing }
-    v_KB_A01 = ( C[1] > O[1] ) and ( C < O )
-               and ( O >= C[1] ) and ( C <= O[1] )
-               and ( v_KB_B0 > v_KB_B1 );
-
-    { A05 bearish harami }
-    v_KB_A05 = ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( C < O )
-               and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] );
-
-    { A07 bearish harami cross }
-    v_KB_A07 = ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
-               and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] );
-
-    { A18 tweezer top -- highs EXACTLY equal }
-    v_KB_A18 = ( H = H[1] ) and ( C[1] > O[1] ) and ( C < O );
+              and ( v_KB_S0 >= 1 ) and ( v_KB_M0 - L >= 1 );
 
     if v_Bars_In_Sess >= 3 then begin
         v_KB_R2 = H[2] - L[2];
         v_KB_B2 = AbsValue( C[2] - O[2] );
+        v_KB_T2 = MaxList( O[2], C[2] );
+        v_KB_M2 = MinList( O[2], C[2] );
+        v_KB_S2 = H[2] - v_KB_T2;
+        v_KB_N2 = v_KB_M2 - L[2];
         v_KB_L2 = ( v_KB_R2 > 0 ) and ( v_KB_B2 / MaxList( v_KB_R2, 1 ) >= 0.50 );
-
-        { B25 three black crows -- each opens INSIDE the prior body }
-        v_KB_B25 = ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
-                   and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
-                   and ( C[1] < C[2] ) and ( C < C[1] )
-                   and ( O[1] < O[2] ) and ( O[1] > C[2] )
-                   and ( O < O[1] )    and ( O > C[1] );
-
-        { B27 three inside down }
-        v_KB_B27 = ( C[2] > O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
-                   and ( v_KB_T1 <= C[2] ) and ( v_KB_M1 >= O[2] )
-                   and ( C < O ) and ( C < C[1] );
-
-        { B29 three outside down }
-        v_KB_B29 = ( C[2] > O[2] ) and ( C[1] < O[1] )
-                   and ( O[1] >= C[2] ) and ( C[1] <= O[2] )
-                   and ( v_KB_B1 > v_KB_B2 )
-                   and ( C < O ) and ( C < C[1] );
-
-        { B34 three identical crows -- each opens EXACTLY at the prior close }
-        v_KB_B34 = ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
-                   and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
-                   and ( O[1] = C[2] ) and ( O = C[1] )
-                   and ( C[1] < C[2] ) and ( C < C[1] );
     end;
 
-    if KB_Group_Loss <> 0 then
-        v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_B25 or v_KB_B27 or v_KB_B34
-    else if KB_Group = 1 then
-        v_KB_Hit = v_KB_A01
-    else if KB_Group = 2 then
-        v_KB_Hit = v_KB_A05
-    else if KB_Group = 3 then
-        v_KB_Hit = v_KB_A07
-    else if KB_Group = 4 then
-        v_KB_Hit = v_KB_A18
-    else if KB_Group = 5 then
-        v_KB_Hit = v_KB_B25
-    else if KB_Group = 6 then
-        v_KB_Hit = v_KB_B27
-    else if KB_Group = 7 then
-        v_KB_Hit = v_KB_B29
-    else if KB_Group = 8 then
-        v_KB_Hit = v_KB_B34
-    else if KB_Group = 9 then
-        v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_A07 or v_KB_A18
-    else if KB_Group = 10 then
-        v_KB_Hit = v_KB_B25 or v_KB_B27 or v_KB_B29 or v_KB_B34
-    else
-        v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_A07 or v_KB_A18
-                   or v_KB_B25 or v_KB_B27 or v_KB_B29 or v_KB_B34;
+    if v_Bars_In_Sess >= 5 then begin
+        v_KB_R3 = H[3] - L[3];
+        v_KB_R4 = H[4] - L[4];
+        v_KB_B3 = AbsValue( C[3] - O[3] );
+        v_KB_B4 = AbsValue( C[4] - O[4] );
+        v_KB_L3 = ( v_KB_R3 > 0 ) and ( v_KB_B3 / MaxList( v_KB_R3, 1 ) >= 0.50 );
+        v_KB_L4 = ( v_KB_R4 > 0 ) and ( v_KB_B4 / MaxList( v_KB_R4, 1 ) >= 0.50 );
+    end;
+
+
+    { ---------- CODES 1-13   PRO-SHORT ---------- }
+
+if v_KB_Sup = True then begin
+
+    { 1  A01 bearish engulfing }
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C < O )
+       and ( O >= C[1] ) and ( C <= O[1] ) and ( v_KB_B0 > v_KB_B1 ) then
+        v_KB_Code = 1;
+
+    { 2  A05 bearish harami }
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( C < O )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] ) then
+        v_KB_Code = 2;
+
+    { 3  A07 bearish harami cross }
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] ) then
+        v_KB_Code = 3;
+
+    { 4  A18 tweezer top -- highs EXACTLY equal }
+    if v_KB_Code = 0 and ( H = H[1] ) and ( C[1] > O[1] ) and ( C < O ) then
+        v_KB_Code = 4;
+
+    { 5  A20 matching high -- closes EXACTLY equal }
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( C > O )
+       and ( O > O[1] ) and ( C = C[1] ) then
+        v_KB_Code = 5;
+
+    if v_Bars_In_Sess >= 3 then begin
+
+        { 6  B25 three black crows -- each opens INSIDE the prior body }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( C[1] < C[2] ) and ( C < C[1] )
+           and ( O[1] < O[2] ) and ( O[1] > C[2] )
+           and ( O < O[1] )    and ( O > C[1] ) then
+            v_KB_Code = 6;
+
+        { 7  B27 three inside down }
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
+           and ( v_KB_T1 <= C[2] ) and ( v_KB_M1 >= O[2] )
+           and ( C < O ) and ( C < C[1] ) then
+            v_KB_Code = 7;
+
+        { 8  B29 three outside down }
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] < O[1] )
+           and ( O[1] >= C[2] ) and ( C[1] <= O[2] ) and ( v_KB_B1 > v_KB_B2 )
+           and ( C < O ) and ( C < C[1] ) then
+            v_KB_Code = 8;
+
+        { 9  B34 three identical crows -- each opens EXACTLY at the prior close }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( O[1] = C[2] ) and ( O = C[1] )
+           and ( C[1] < C[2] ) and ( C < C[1] ) then
+            v_KB_Code = 9;
+
+        { 10  B35 advance block -- bodies shrink, upper shadows grow }
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( v_KB_B1 < v_KB_B2 ) and ( v_KB_B0 < v_KB_B1 )
+           and ( v_KB_S1 > 0 ) and ( v_KB_S0 > 0 ) and ( v_KB_S0 > v_KB_S2 ) then
+            v_KB_Code = 10;
+
+        { 11  B36 deliberation -- third body under HALF the second }
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( v_KB_B0 < v_KB_B1 / 2 ) and ( O >= C[1] ) then
+            v_KB_Code = 11;
+    end;
+
+    { 12  C41 falling three methods -- five bars }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] < O[4] ) and ( v_KB_L4 = True )
+       and ( C[3] > O[3] ) and ( C[2] > O[2] ) and ( C[1] > O[1] )
+       and ( v_KB_B3 < v_KB_B4 ) and ( v_KB_B2 < v_KB_B4 ) and ( v_KB_B1 < v_KB_B4 )
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <= H[4] ) and ( L[2] >= L[4] )
+       and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
+       and ( C < O ) and ( v_KB_L0 = True )
+       and ( O > C[1] ) and ( C < C[4] ) then
+        v_KB_Code = 12;
+
+    { 13  C45 bearish three-line strike -- four bars }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 4
+       and ( C[3] > O[3] ) and ( C[2] > O[2] ) and ( C[1] > O[1] )
+       and ( O[2] > O[3] ) and ( O[1] > O[2] )
+       and ( C[2] > C[3] ) and ( C[1] > C[2] )
+       and ( C < O ) and ( O > C[1] ) and ( C < O[3] ) then
+        v_KB_Code = 13;
 end;
 
-    { The admission path never bypasses momentum entirely -- an admitted     }
-    { entry still clears KB_Admit_MinSlope, which is a LOWER bar than        }
-    { MinSlope_Rate, not the absence of one.                                 }
-v_KB_Admit = ( KB_Mode = 1 ) and ( v_KB_Hit = True )
-             and ( v_Slope_Rate > KB_Admit_MinSlope );
-v_KB_Block = ( KB_Mode = 2 ) and ( v_KB_Hit = True );
+
+    { ---------- CODES 14-26   ANTI-SHORT ---------- }
+    { All but 18 and 22 end on a white bar and cannot fire while the slope   }
+    { gate holds. They are coded so MC12 can prove that, not assume it.      }
+
+if v_KB_Opp = True then begin
+
+    { 14  A02 bullish engulfing }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C > O )
+       and ( O <= C[1] ) and ( C >= O[1] ) and ( v_KB_B0 > v_KB_B1 ) then
+        v_KB_Code = 14;
+
+    { 15  A06 bullish harami }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C > O )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
+        v_KB_Code = 15;
+
+    { 16  A08 bullish harami cross }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
+        v_KB_Code = 16;
+
+    { 17  A19 tweezer bottom -- lows EXACTLY equal }
+    if v_KB_Code = 0 and ( L = L[1] ) and ( C[1] < O[1] ) and ( C > O ) then
+        v_KB_Code = 17;
+
+    { 18  A21 matching low -- closes EXACTLY equal. BLACK last bar, so this  }
+    {     is the one anti-short pattern the slope gate does not exclude.     }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C < O )
+       and ( O < O[1] ) and ( C = C[1] ) then
+        v_KB_Code = 18;
+
+    if v_Bars_In_Sess >= 3 then begin
+
+        { 19  B26 three white soldiers -- each opens INSIDE the prior body }
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( O[1] > O[2] ) and ( O[1] < C[2] )
+           and ( O > O[1] )    and ( O < C[1] ) then
+            v_KB_Code = 19;
+
+        { 20  B28 three inside up }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] > O[1] )
+           and ( v_KB_T1 <= O[2] ) and ( v_KB_M1 >= C[2] )
+           and ( C > O ) and ( C > C[1] ) then
+            v_KB_Code = 20;
+
+        { 21  B30 three outside up }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] > O[1] )
+           and ( O[1] <= C[2] ) and ( C[1] >= O[2] ) and ( v_KB_B1 > v_KB_B2 )
+           and ( C > O ) and ( C > C[1] ) then
+            v_KB_Code = 21;
+
+        { 22  B37 three stars in the south. BLACK last bar -- the second     }
+        {     anti-short pattern the slope gate does not exclude.            }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_N2 > 0 )
+           and ( O[1] < O[2] ) and ( O[1] > C[2] ) and ( L[1] > L[2] )
+           and ( v_KB_B1 < v_KB_B2 )
+           and ( H <= H[1] ) and ( L >= L[1] ) and ( v_KB_B0 < v_KB_B1 ) then
+            v_KB_Code = 22;
+
+        { 23  B38 unique three river bottom }
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
+           and ( O[1] <= O[2] ) and ( O[1] >= C[2] ) and ( L[1] < L[2] )
+           and ( C[1] > C[2] )
+           and ( C > O ) and ( v_KB_B0 < v_KB_B1 ) and ( C < C[1] ) then
+            v_KB_Code = 23;
+    end;
+
+    { 24  C42 rising three methods -- five bars }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] > O[4] ) and ( v_KB_L4 = True )
+       and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
+       and ( v_KB_B3 < v_KB_B4 ) and ( v_KB_B2 < v_KB_B4 ) and ( v_KB_B1 < v_KB_B4 )
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <= H[4] ) and ( L[2] >= L[4] )
+       and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
+       and ( C > O ) and ( v_KB_L0 = True )
+       and ( O < C[1] ) and ( C > C[4] ) then
+        v_KB_Code = 24;
+
+    { 25  C43 ladder bottom -- five bars }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] < O[4] ) and ( C[3] < O[3] ) and ( C[2] < O[2] )
+       and ( v_KB_L4 = True ) and ( v_KB_L3 = True ) and ( v_KB_L2 = True )
+       and ( O[3] < O[4] ) and ( O[2] < O[3] )
+       and ( C[3] < C[4] ) and ( C[2] < C[3] )
+       and ( C[1] < O[1] ) and ( v_KB_S1 >= v_KB_B1 )
+       and ( C > O ) and ( O > O[1] ) then
+        v_KB_Code = 25;
+
+    { 26  C46 bullish three-line strike -- four bars }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 4
+       and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
+       and ( O[2] < O[3] ) and ( O[1] < O[2] )
+       and ( C[2] < C[3] ) and ( C[1] < C[2] )
+       and ( C > O ) and ( O < C[1] ) and ( C > O[3] ) then
+        v_KB_Code = 26;
+end;
+
+
+    { ---------- CODES 27-28   NEUTRAL ---------- }
+    { Colour-blind, so both can fire on a black bar. A10 outside bar is the  }
+    { second most frequent pattern on actual entries -- 28 of the 180.       }
+
+if v_KB_Neu = True then begin
+
+    { 27  A09 inside bar }
+    if v_KB_Code = 0 and ( H <= H[1] ) and ( L >= L[1] ) then
+        v_KB_Code = 27;
+
+    { 28  A10 outside bar }
+    if v_KB_Code = 0 and ( H >= H[1] ) and ( L <= L[1] ) then
+        v_KB_Code = 28;
+end;
+
+end;
+
+v_KB_Block = ( v_KB_Code <> 0 );
+
 
     { SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)  -- md 3.48 }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   ( v_Slope_Pass = True or v_KB_Admit = True ) and
+   v_Slope_Pass          = True and
    v_KB_Block            = False and
    v_FirstBar_Block      = False and
    v_Tail_Entry_OK       = True and
@@ -1003,10 +1149,7 @@ if MarketPosition = 0 and
    v_Gap_Block           = False and
    v_Sess_LastBar_Block  = False then begin
     v_IsReEntry = False;
-    if v_Slope_Pass = True then
-        sell short ( "SE_MA_DeathCross" ) next bar at market
-    else
-        sell short ( "SE_MA_KBAdmit" ) next bar at market;
+    sell short ( "SE_MA_DeathCross" ) next bar at market;
 end;
 
     { v1.6 Re-Entry: washout recovery via stop order at original entry price.  -- md 3.49 }
