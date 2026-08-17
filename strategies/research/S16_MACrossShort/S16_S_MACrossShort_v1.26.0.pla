@@ -4,9 +4,56 @@
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.26.0 K-bar Admission (2026-08-17, base v1.25.0)
 
-  SHIPS OFF. KB_Admit_On defaults to 0, so v1.26.0 must reproduce v1.25.0
+  SHIPS OFF. KB_Mode defaults to 0, so v1.26.0 must reproduce v1.25.0
   exactly: 180 trades / 2,615,600 / PF 2.0923822252 / -364,800. If it does
   not, stop and fix that before reading any KB cell.
+
+  ================================================================
+  THE GATE RUNS BOTH WAYS, AND THE DATA BACKS THE SECOND
+  ================================================================
+
+  KB_Mode 1 ADMITS on a pattern (OR). KB_Mode 2 BLOCKS on one (AND NOT).
+  This file was first written with only mode 1, on the assumption that a
+  bearish pattern marks a better short. Measured against the 180 actual
+  trades, that assumption is backwards:
+
+    entry carries a bearish pattern   75 trades   average       453
+    entry carries none               105 trades   average    24,586
+
+  98.7% of the strategy's net profit comes from entries with NO bearish
+  pattern at all. Blocking, not admitting, is what the data supports.
+
+  The strength here is not any single cell, it is that the table is
+  MONOTONE. Block more patterns and profit factor rises in order --
+  2.09, 2.24, 2.50, 2.62, 2.76, 3.06 -- with win rate tracking it at
+  30.6, 31.5, 32.4, 32.8, 33.9, 35.2. Cherry-picking five losing patterns
+  out of eight would not produce that ordering. The effect belongs to the
+  CLASS "a pattern is present", not to any member of it.
+
+  Mechanically it reads: the slope gate already demands a 0.25% fall
+  across the bar. Given that, a bearish engulfing says the selling
+  EXHAUSTED itself on this bar, while no pattern at all says the fall is
+  still in progress and has not yet resolved into a recognisable shape. A
+  pattern marks a completed event; a short wants one still running.
+
+  WHAT BLOCKING COSTS, AND WHY MC12 MUST SETTLE IT
+
+    block                        trades  /month     net       PF
+    nothing                         180    2.31  2,615,600   2.09
+    B27+B34+A05+B25                 162    2.08  2,693,200   2.24
+    A01                             142    1.82  2,740,000   2.50
+    A01+B27+B34+A05+B25             124    1.59  2,817,600   2.76
+    all eight                       105    1.35  2,581,600   3.06
+
+  Those counts are arithmetic on the existing trade list -- they assume a
+  blocked slot simply stays empty. MC12 will REFILL: blocking a trade
+  frees the position for a later cross that was previously skipped. So
+  every count above is a FLOOR, and the 156-trade limit may be a softer
+  obstacle than the arithmetic suggests. Only the backtest knows.
+
+  Note that blocking all eight LOWERS net profit while raising PF -- A18
+  tweezer top and B29 three outside down are profitable and get thrown
+  out with the rest. Quality and size pull apart at that end.
 
   WHAT THIS VERSION ADDS AND WHY THIS DIRECTION
 
@@ -158,9 +205,10 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Admit_On             ( 0     ),     { 0 = anchor, entry unchanged. 1 = the OR path is live.                     }
-    KB_Admit_Group          ( 11    ),     { 1=A01 2=A05 3=A07 4=A18 5=B25 6=B27 7=B29 8=B34 9=all A 10=all B 11=all   }
-    KB_Admit_MinSlope       ( 0.020 ),     { An admitted entry still needs this much slope. 0 = no floor.              }
+    KB_Mode                 ( 0     ),     { 0 = anchor. 1 = ADMIT (OR). 2 = BLOCK (AND NOT) -- 2 is what data backs. }
+    KB_Group                ( 11    ),     { 1=A01 2=A05 3=A07 4=A18 5=B25 6=B27 7=B29 8=B34 9=all A 10=all B 11=all   }
+    KB_Group_Loss           ( 0     ),     { 1 = the five loss-making patterns only: A01 A05 B25 B27 B34. Overrides.    }
+    KB_Admit_MinSlope       ( 0.020 ),     { ADMIT mode only. An admitted entry still needs this much slope.           }
 
     { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),
@@ -273,8 +321,9 @@ variables:
     v_M8_Target             ( 0     ),
 
     { ===== K-bar admission state (v1.26.0) ===== }
-    v_KB_Admit_On           ( False ),
+    v_KB_On                 ( False ),
     v_KB_Admit              ( False ),
+    v_KB_Block              ( False ),
     v_KB_Hit                ( False ),
     v_KB_R0                 ( 0     ),
     v_KB_R1                 ( 0     ),
@@ -438,7 +487,7 @@ v_Struct_On             = ( Struct_On             <> 0 );
 v_Struct_UseClose       = ( Struct_UseClose       <> 0 );
 v_Tier2_On              = ( Tier2_On              <> 0 );
 v_M8_On                 = ( M8_On                 <> 0 );
-v_KB_Admit_On           = ( KB_Admit_On           <> 0 );
+v_KB_On                 = ( KB_Mode               <> 0 );
 v_Gap_Filter_On         = ( Gap_Filter_On         <> 0 );
 v_Gap_Day_On            = ( Gap_Day_On            <> 0 );
 v_Gap_Night_On          = ( Gap_Night_On          <> 0 );
@@ -845,7 +894,7 @@ v_KB_B29 = False;
 v_KB_B34 = False;
 v_KB_Hit = False;
 
-if v_KB_Admit_On = True and v_Bars_In_Sess >= 2 then begin
+if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
 
     v_KB_R0 = H - L;
     v_KB_R1 = H[1] - L[1];
@@ -906,25 +955,27 @@ if v_KB_Admit_On = True and v_Bars_In_Sess >= 2 then begin
                    and ( C[1] < C[2] ) and ( C < C[1] );
     end;
 
-    if KB_Admit_Group = 1 then
+    if KB_Group_Loss <> 0 then
+        v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_B25 or v_KB_B27 or v_KB_B34
+    else if KB_Group = 1 then
         v_KB_Hit = v_KB_A01
-    else if KB_Admit_Group = 2 then
+    else if KB_Group = 2 then
         v_KB_Hit = v_KB_A05
-    else if KB_Admit_Group = 3 then
+    else if KB_Group = 3 then
         v_KB_Hit = v_KB_A07
-    else if KB_Admit_Group = 4 then
+    else if KB_Group = 4 then
         v_KB_Hit = v_KB_A18
-    else if KB_Admit_Group = 5 then
+    else if KB_Group = 5 then
         v_KB_Hit = v_KB_B25
-    else if KB_Admit_Group = 6 then
+    else if KB_Group = 6 then
         v_KB_Hit = v_KB_B27
-    else if KB_Admit_Group = 7 then
+    else if KB_Group = 7 then
         v_KB_Hit = v_KB_B29
-    else if KB_Admit_Group = 8 then
+    else if KB_Group = 8 then
         v_KB_Hit = v_KB_B34
-    else if KB_Admit_Group = 9 then
+    else if KB_Group = 9 then
         v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_A07 or v_KB_A18
-    else if KB_Admit_Group = 10 then
+    else if KB_Group = 10 then
         v_KB_Hit = v_KB_B25 or v_KB_B27 or v_KB_B29 or v_KB_B34
     else
         v_KB_Hit = v_KB_A01 or v_KB_A05 or v_KB_A07 or v_KB_A18
@@ -934,13 +985,15 @@ end;
     { The admission path never bypasses momentum entirely -- an admitted     }
     { entry still clears KB_Admit_MinSlope, which is a LOWER bar than        }
     { MinSlope_Rate, not the absence of one.                                 }
-v_KB_Admit = ( v_KB_Admit_On = True ) and ( v_KB_Hit = True )
+v_KB_Admit = ( KB_Mode = 1 ) and ( v_KB_Hit = True )
              and ( v_Slope_Rate > KB_Admit_MinSlope );
+v_KB_Block = ( KB_Mode = 2 ) and ( v_KB_Hit = True );
 
     { SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)  -- md 3.48 }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
    ( v_Slope_Pass = True or v_KB_Admit = True ) and
+   v_KB_Block            = False and
    v_FirstBar_Block      = False and
    v_Tail_Entry_OK       = True and
    v_Settlement_Day      = False and
