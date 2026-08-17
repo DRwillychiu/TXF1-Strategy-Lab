@@ -108,7 +108,7 @@ setprofittarget xaverage average highest lowest atr avgtruerange truerange minli
 maxlist intportion absvalue mod square squareroot dayofweek dayofmonth month year
 currentdate currenttime iff numericseries numericsimple booleansimple print inputs
 variables arrays crosses above below plot1 plot2 alert barinterval timetominutes
-minutestotime rsi exitfired intrabarordergeneration""".split())
+minutestotime rsi exitfired intrabarordergeneration o h l c""".split())
 
 inps = {k: v for k, (b, v) in DECL.items() if b == 'inputs'}
 vars_ = {k: v for k, (b, v) in DECL.items() if b in ('variables', 'arrays')}
@@ -215,7 +215,7 @@ f('SWITCH', '鏡射建立後未使用: %s' % ', '.join(sorted(unused))) if unuse
 # ---------- 9. 訂單型態 ----------
 bado = []
 for v, n, k in re.findall(
-        r'\b(buy to cover|sell short)\s*\(\s*"([^"]+)"\s*\)\s*next bar at\s+([^;]+?)\s*;', body):
+        r'\b(buy to cover|sell short)\s*\(\s*"([^"]+)"\s*\)\s*next bar at\s+([^;\n]+)', body):
     kk = k.strip().lower()
     if not (kk == 'market' or kk.endswith('stop') or kk.endswith('limit')):
         bado.append('%s -> "%s"' % (n, k.strip()))
