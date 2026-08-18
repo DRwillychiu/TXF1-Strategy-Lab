@@ -9,3 +9,6 @@ scripts/_temp_*.pkl
 # ~5 MB of exchange data, re-fetchable at any time via
 # scripts/fetch_taifex_quotes.py -- the derived JSON is what belongs in git.
 data/_taifex_cache/
+
+# derived cache from s16s_bars.py -- rebuildable, not source
+scripts/research/s16s_5min.csv

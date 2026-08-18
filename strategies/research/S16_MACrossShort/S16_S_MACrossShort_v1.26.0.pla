@@ -197,6 +197,17 @@ inputs:
     KB_Block_Oppose         ( 0     ),     { 1 = block on any of the 13 anti-short patterns (codes 14-26) }
     KB_Block_Neutral        ( 0     ),     { 1 = block on inside bar or outside bar         (codes 27-28) }
 
+    { --- Pattern-selector thresholds. NOTE: these are NOT the KB_Body_* inputs --- }
+    { of the legacy 17-type single-bar classifier in SECTION 6. Two separate       }
+    { systems, two separate meanings of "long body". Sweeping KB_Body_Long does    }
+    { NOT move anything below. User ruling 2026-08-18: exposed as inputs so the    }
+    { decision is made on measured P&L, not on reasoning.                          }
+    KB_Pat_LongBody         ( 0.50  ),     { long body: body >= this share of range. 0.50 = body >= both shadows }
+    KB_Pat_DojiRatio        ( 0.10  ),     { doji: body < this share of range                                   }
+    KB_Pat_DojiMinRange     ( 3     ),     { doji: range must be at least this many points                      }
+    KB_Pat_DojiMinShadow    ( 1     ),     { doji: each shadow at least this many points                        }
+    KB_Pat_MinRange         ( 0     ),     { long body ALSO needs range >= this. 0 = inert, no behaviour change  }
+
     { ===== Group F: ATR SL (Frozen) - v0.5 + v1.5 SL_Pct ===== }
     ATR_Len                 ( 14    ),
     StopATRMult             ( 4.0   ),
@@ -894,10 +905,14 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
     v_KB_M1 = MinList( O[1], C[1] );
     v_KB_S0 = H    - v_KB_T0;
     v_KB_S1 = H[1] - v_KB_T1;
-    v_KB_L0 = ( v_KB_R0 > 0 ) and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) >= 0.50 );
-    v_KB_L1 = ( v_KB_R1 > 0 ) and ( v_KB_B1 / MaxList( v_KB_R1, 1 ) >= 0.50 );
-    v_KB_D0 = ( v_KB_R0 >= 3 ) and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) < 0.10 )
-              and ( v_KB_S0 >= 1 ) and ( v_KB_M0 - L >= 1 );
+    v_KB_L0 = ( v_KB_R0 > 0 ) and ( v_KB_R0 >= KB_Pat_MinRange )
+              and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) >= KB_Pat_LongBody );
+    v_KB_L1 = ( v_KB_R1 > 0 ) and ( v_KB_R1 >= KB_Pat_MinRange )
+              and ( v_KB_B1 / MaxList( v_KB_R1, 1 ) >= KB_Pat_LongBody );
+    v_KB_D0 = ( v_KB_R0 >= KB_Pat_DojiMinRange )
+              and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) < KB_Pat_DojiRatio )
+              and ( v_KB_S0 >= KB_Pat_DojiMinShadow )
+              and ( v_KB_M0 - L >= KB_Pat_DojiMinShadow );
 
     if v_Bars_In_Sess >= 3 then begin
         v_KB_R2 = H[2] - L[2];
@@ -906,7 +921,8 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
         v_KB_M2 = MinList( O[2], C[2] );
         v_KB_S2 = H[2] - v_KB_T2;
         v_KB_N2 = v_KB_M2 - L[2];
-        v_KB_L2 = ( v_KB_R2 > 0 ) and ( v_KB_B2 / MaxList( v_KB_R2, 1 ) >= 0.50 );
+        v_KB_L2 = ( v_KB_R2 > 0 ) and ( v_KB_R2 >= KB_Pat_MinRange )
+                  and ( v_KB_B2 / MaxList( v_KB_R2, 1 ) >= KB_Pat_LongBody );
     end;
 
     if v_Bars_In_Sess >= 5 then begin
@@ -914,8 +930,10 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
         v_KB_R4 = H[4] - L[4];
         v_KB_B3 = AbsValue( C[3] - O[3] );
         v_KB_B4 = AbsValue( C[4] - O[4] );
-        v_KB_L3 = ( v_KB_R3 > 0 ) and ( v_KB_B3 / MaxList( v_KB_R3, 1 ) >= 0.50 );
-        v_KB_L4 = ( v_KB_R4 > 0 ) and ( v_KB_B4 / MaxList( v_KB_R4, 1 ) >= 0.50 );
+        v_KB_L3 = ( v_KB_R3 > 0 ) and ( v_KB_R3 >= KB_Pat_MinRange )
+                  and ( v_KB_B3 / MaxList( v_KB_R3, 1 ) >= KB_Pat_LongBody );
+        v_KB_L4 = ( v_KB_R4 > 0 ) and ( v_KB_R4 >= KB_Pat_MinRange )
+                  and ( v_KB_B4 / MaxList( v_KB_R4, 1 ) >= KB_Pat_LongBody );
     end;
 
 
