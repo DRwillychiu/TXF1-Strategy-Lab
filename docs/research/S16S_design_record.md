@@ -4100,7 +4100,91 @@ Fires in order. First hit wins per bar (ExitFired flag).
 
 ## 4. Open items
 
-### Open as of 2026-08-17
+### The QuickStop_Time mechanism, stated exactly (2026-08-18)
+
+Three inputs, one latch, two legs, sitting at P1 of the exit chain --
+after P0 compliance and the tail flat, before the multi-layer monitor,
+the protective stops, the golden cross, the hold cap and the ATR stop.
+
+```
+if ExitFired = 0 and v_QuickStop_On = True and v_QuickStop_Fired = False then begin
+    if v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then      { P1a, dormant }
+        buy to cover ( "SX_MA_QuickStop_Loss" ) next bar at market;
+    if ExitFired = 0 and v_BarsSince >= QuickStop_MaxBars
+       and Close >= EntryPrice then                          { P1b, 117 fires }
+        buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
+end;
+```
+
+**"4 bars" is really five bar-closes and a fill on the sixth open.**
+v_EntryBar is set on the first bar the position exists, so v_BarsSince is
+0 on that bar and >= 4 first becomes true on the fifth. The order is
+next-bar-at-market, so the fill lands on the sixth. Measured on the trade
+list: 84 of 115 measurable cases are exactly 5 bars, 25 minutes. The rest
+are longer only because of session gaps.
+
+**The threshold is 0 points while the cost floor is 10.** Close >=
+EntryPrice means any raw profit at all keeps the trade alive, but one
+point of raw profit is nine points of net loss after round-trip slippage.
+Whether that matters is not answerable from the trade list -- it needs
+bar-by-bar data, which is not on this machine.
+
+**The gap between decision and fill is real and it is priced.** At the
+trigger bar's close the loss is >= 0 by definition; at the fill the exit
+price sits a median 19 points against, quartiles -48 and -8, worst -212.
+That reconciles exactly: 19 x 200 x 2 = 7,600, plus 4,000 of slippage, is
+11,600, which is the measured median P&L of these trades to the dollar.
+
+### A hard small-loss stop is refuted at every level (2026-08-18)
+
+The obvious response to 117 losing exits is "cut them smaller". Measured
+against the 180 trades, using MAE to decide whether a stop would have been
+touched, every level loses money:
+
+| stop, points | touched | was | becomes | net change |
+|---|---|---|---|---|
+| 30 | 126 | +790,400 | -1,764,000 | **-2,554,400** |
+| 50 | 83 | +340,000 | -1,826,000 | **-2,166,000** |
+| 80 | 43 | -160,400 | -1,462,000 | **-1,301,600** |
+| 100 | 28 | -328,000 | -1,176,000 | **-848,000** |
+| 150 | 10 | -105,200 | -620,000 | **-514,800** |
+| 200 | 7 | +23,200 | -574,000 | **-597,200** |
+
+The reason is structural: this strategy's winners go AGAINST the position
+first and then run. A 30-point stop touches 126 trades of which 35 are
+winners worth 3,663,200 -- more than a full year of net profit. Even at
+150 points it still kills two winners worth 409,600.
+
+**This is an upper bound, not a forecast.** MAE says a level was touched,
+not when. A trade that ran into profit and then retraced onto the stop
+would die earlier than this arithmetic assumes, so the real result is
+worse than the table.
+
+This independently reproduces B4's decision. The optimiser was shown the
+loss leg twice -- v1.7.1 swept 0.05 to 0.30 and adopted 0.25 with the leg
+live and firing; B4 moved it to 0.70, beyond reach, and 0.70 / 0.75 / 0.80
+return identical results, which is saturation. 0.70% of entry price is 140
+points at index 20,000 and 315 at 45,000, both inside the range the table
+above shows to be harmful. **Do not lower it**: the price condition is
+still served by a market order, a latent defect that stays dormant only
+while the threshold is unreachable.
+
+### Open as of 2026-08-18
+
+**A. Two rulings owed.** Whether to build QS_Profit_Offset_Pts -- the
+recommendation is no, since the table above shows "cut earlier" and "cut
+on loss" are both negative here and that input is a third form of the same
+thing. And whether to start the 26-cell K-bar sweep, whose anchor
+precondition is now satisfied.
+
+**B. The trade-count floor still needs a ruling** if the K-bar sweep lands
+below 156 trades after MC12's replacement effect.
+
+**C. Zero held-out data.** Roughly 28,300 cells and 16 adoptions against
+one sample. The cross-period nine-window test has never been run and
+2026's seven months are 78.4% of net profit.
+
+### Superseded -- what was open on 2026-08-17
 
 **A. The v1.26.0 eight-cell sweep is the only thing blocking progress.**
 Three switches, 0 to 1 step 1. Anchor cell must return 180 / 2,615,600 /
