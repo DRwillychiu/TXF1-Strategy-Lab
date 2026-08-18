@@ -47,6 +47,36 @@
   under an open audit. A pattern that fires when it was predicted not
   to is a finding, and there is no way to see it if it is not coded.
 
+  FILTER ORDER: TWO OF THE THREE OPTIONS ARE THE SAME OPTION
+
+  v_Slope_Pass and v_KB_Block are both pure functions of the current bar
+  and neither reads the other -- they meet only in the entry gate, ANDed.
+  AND commutes, so "slope first then pattern" and "pattern first then
+  slope" select the IDENTICAL set of bars. That is provable, not
+  arguable, and no backtest can separate them.
+
+  Order can only matter if a condition is allowed to persist. So each
+  gets an age -- 0 means it holds on this bar, n means it last held n
+  bars ago, 999 means not since the session opened -- and KB_Filter_Mode
+  chooses which one is allowed to be stale:
+
+    0  both must hold on this bar               v1.25.0 exactly
+    1  slope may be up to Win bars old          slope is the first filter
+    2  a clean bar arms for Win bars            pattern is the first filter
+    3  either arms, the other confirms          independent, first to fire
+
+  KB_Filter_Win = 0 pins both ages to 0, so all four modes collapse to
+  the same-bar AND and the anchor cannot drift no matter what mode is
+  left set.
+
+  RE-ENTRY NOW CARRIES THE PATTERN GATE TOO
+
+  SE_MA_ReEntry checked every other block flag but not v_KB_Block, so 7
+  trades worth 152,400 -- 3.9% of trades and 5.8% of net profit -- ran
+  outside the filter being measured. Not a leak of blocked signals, since
+  a blocked entry never opens a position to re-enter, but it would have
+  diluted every cell of the sweep. Fixed.
+
   WHAT BLOCKING COSTS
 
     block                        trades  /month     net      PF
@@ -196,6 +226,8 @@ inputs:
     KB_Block_Support        ( 0     ),     { 1 = block on any of the 13 pro-short patterns  (codes 1-13)  }
     KB_Block_Oppose         ( 0     ),     { 1 = block on any of the 13 anti-short patterns (codes 14-26) }
     KB_Block_Neutral        ( 0     ),     { 1 = block on inside bar or outside bar         (codes 27-28) }
+    KB_Filter_Mode          ( 0     ),     { 0 same bar (anchor). 1 slope arms. 2 pattern arms. 3 either arms }
+    KB_Filter_Win           ( 0     ),     { bars an arm stays valid. 0 = same bar only, all modes collapse    }
 
     { --- Pattern-selector thresholds. NOTE: these are NOT the KB_Body_* inputs --- }
     { of the legacy 17-type single-bar classifier in SECTION 6. Two separate       }
@@ -325,6 +357,9 @@ variables:
     v_KB_On                 ( False ),
     v_KB_Block              ( False ),
     v_KB_Code               ( 0     ),
+    v_Slope_Age             ( 999   ),
+    v_Clean_Age             ( 999   ),
+    v_Filt_Pass             ( False ),
     v_KB_R0                 ( 0     ),
     v_KB_R1                 ( 0     ),
     v_KB_R2                 ( 0     ),
@@ -1153,11 +1188,55 @@ end;
 v_KB_Block = ( v_KB_Code <> 0 );
 
 
+    { SECTION 8.7 - FILTER ORDER (v1.26.0) }
+    { The slope gate and the K-bar gate are both pure functions of the CURRENT }
+    { bar and neither reads the other, so ANDing them is commutative: "slope   }
+    { first" and "pattern first" select the identical set of bars. Order can   }
+    { only matter if one of them is allowed to persist, so each gets an age.   }
+    {                                                                          }
+    {   age 0     the condition holds on THIS bar                              }
+    {   age n     it last held n bars ago                                      }
+    {   age 999   it has not held since the session opened                     }
+    {                                                                          }
+    { KB_Filter_Win = 0 forces both ages to 0, which is the plain same-bar AND,}
+    { so every mode collapses to the anchor and the anchor cannot drift.       }
+
+if v_Slope_Pass = True then
+    v_Slope_Age = 0
+else if v_Bars_In_Sess <= 1 then
+    v_Slope_Age = 999
+else
+    v_Slope_Age = v_Slope_Age + 1;
+
+if v_KB_Block = False then
+    v_Clean_Age = 0
+else if v_Bars_In_Sess <= 1 then
+    v_Clean_Age = 999
+else
+    v_Clean_Age = v_Clean_Age + 1;
+
+if KB_Filter_Mode = 1 then
+        { slope is the first filter: it may be up to Win bars old, and the    }
+        { pattern check must be clean on the entry bar itself                 }
+    v_Filt_Pass = ( v_Slope_Age <= KB_Filter_Win ) and ( v_Clean_Age = 0 )
+else if KB_Filter_Mode = 2 then
+        { pattern is the first filter: a clean bar arms for Win bars, and the }
+        { slope must hold on the entry bar itself                            }
+    v_Filt_Pass = ( v_Clean_Age <= KB_Filter_Win ) and ( v_Slope_Age = 0 )
+else if KB_Filter_Mode = 3 then
+        { independent: whichever fires first arms, the other confirms inside  }
+        { the window                                                          }
+    v_Filt_Pass = ( ( v_Slope_Age <= KB_Filter_Win ) and ( v_Clean_Age = 0 ) )
+               or ( ( v_Clean_Age <= KB_Filter_Win ) and ( v_Slope_Age = 0 ) )
+else
+        { mode 0 -- both on this bar, which is v1.25.0 behaviour exactly      }
+    v_Filt_Pass = ( v_Slope_Age = 0 ) and ( v_Clean_Age = 0 );
+
+
     { SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)  -- md 3.48 }
 if MarketPosition = 0 and
    v_Death_Cross         = True and
-   v_Slope_Pass          = True and
-   v_KB_Block            = False and
+   v_Filt_Pass           = True and
    v_FirstBar_Block      = False and
    v_Tail_Entry_OK       = True and
    v_Settlement_Day      = False and
@@ -1176,6 +1255,7 @@ if MarketPosition = 0 and
    v_ReEntry_Armed       = True and
    ( v_ReEntry_Structure_Gate = False or v_ZLEMA_Fast < v_ZLEMA_Slow ) and
    ( v_ReEntry_Slope_Gate     = False or v_Slope_Pass = True ) and
+   v_KB_Block            = False and
    v_FirstBar_Block      = False and
    ( v_ReEntry_Close_Gate     = False or Close        >= v_ReEntry_Price ) and
    v_Tail_Entry_OK       = True and
