@@ -4,9 +4,71 @@
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
   Version     : v1.26.0 K-bar Admission (2026-08-17, base v1.25.0)
 
-  SHIPS OFF. All three block switches default to 0, so v1.26.0 must reproduce v1.25.0
-  exactly: 180 trades / 2,615,600 / PF 2.0923822252 / -364,800. If it does
-  not, stop and fix that before reading any KB cell.
+  ADOPTED 2026-08-19. This file now SHIPS WITH THE FILTER ON.
+
+    KB_Block_Support 1 / KB_Block_Oppose 1 / KB_Block_Neutral 0
+    KB_Filter_Mode 2 / KB_Filter_Win 3
+
+    anchor   160 trades / 2,796,800 / PF 2.3295303290 / -337,200
+             adjusted PF 1.8282191963 / sharpe 0.2150697367
+             sortino 1.4236697865 / annual return 18.4562%
+
+  To reproduce v1.25.0 from this file, set the three block switches AND
+  KB_Filter_Mode AND KB_Filter_Win all to 0. That returns 180 trades /
+  2,615,600 / PF 2.0923822252 / -364,800 -- verified in MC12 on 2026-08-18.
+  Any edit must reproduce one of those two sets before its own result is
+  read. MC12 retains the previous run's input values rather than reloading
+  the file, and that has voided whole batches in this project.
+
+  ================================================================
+  WHY THIS CELL, AND WHAT IT COST
+  ================================================================
+
+  The comparison is unusually clean: the 160 trades are a strict SUBSET of
+  v1.25.0's 180, no trade was added, and every surviving trade has an
+  IDENTICAL P&L. So the entire +181,200 is exactly the removal of 20
+  trades, with nothing else moving.
+
+  Those 20 were worth -181,200 at a 20% win rate and PF 0.38, and 15 of
+  them died to the 4-bar quick stop. NONE of them was a big fish -- all
+  seven survive, and the top-7 total is 2,384,800 in both versions. The
+  filter did not touch the tail.
+
+  It was not free. It also removed a +80,800 structure exit on 2025-04-09
+  and a +20,800 golden cross on 2020-09-21. 2025 is the only year that
+  gets worse, and that trade is why.
+
+  THE WINDOW IS WHAT MAKES IT AFFORDABLE
+
+  Blocking at the entry bar -- Mode 2 with Win 0, or equivalently Mode 0
+  with the switches on -- leaves 102 trades, 1.31 a month, well under the
+  floor. Requiring only that a CLEAN bar existed within the last three
+  keeps 160. Win is a quality-for-quantity slider and both curves are
+  monotone:
+
+    Win     0      1      2      3      4      5      6
+    trades  102    127    149    160    167    170    174
+    PF     3.29   2.54   2.45   2.33   2.19   2.18   2.13
+    net    2.657  2.447  2.760  2.797  2.661  2.668  2.612  (millions)
+
+  Net peaks at 3 because that is where the two curves cross. Win 3, 4, 5
+  and 6 all land between 2.61M and 2.80M with an IDENTICAL -337,200
+  drawdown -- four of seven values, so the plateau is 57% of the swept
+  range against a 20% requirement. Win 0, 1 and 2 fail the trade floor.
+
+  Win 5 is the alternative if the trade-count margin matters: 170 trades
+  and 14 of headroom instead of 4, costing 129,200. It was rejected
+  because the drawdown is flat across the whole plateau, so those ten
+  extra trades buy no protection -- they only dilute.
+
+  NO REPLACEMENT EFFECT. AT ALL.
+
+  Earlier notes in this file assumed MC12 would refill a blocked slot with
+  a later cross, making every offline count a FLOOR. It does not. Zero
+  trades were added at any Win value; the count moves only as the block
+  loosens. A blocked death cross does not free the position for another
+  one, because the next cross needs a golden cross in between. Offline
+  counts are the actual counts.
 
   ================================================================
   THE SELECTOR: 28 PATTERNS, ONE INTEGER, NO WEIGHTS
@@ -244,11 +306,11 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Block_Support        ( 0     ),     { 1 = block on any of the 13 pro-short patterns  (codes 1-13)  }
-    KB_Block_Oppose         ( 0     ),     { 1 = block on any of the 13 anti-short patterns (codes 14-26) }
-    KB_Block_Neutral        ( 0     ),     { 1 = block on inside bar or outside bar         (codes 27-28) }
-    KB_Filter_Mode          ( 0     ),     { 0 same bar (anchor). 1 slope arms. 2 pattern arms. 3 either arms }
-    KB_Filter_Win           ( 0     ),     { bars an arm stays valid. 0 = same bar only, all modes collapse    }
+    KB_Block_Support        ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 pro-short patterns  }
+    KB_Block_Oppose         ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 anti-short patterns }
+    KB_Block_Neutral        ( 0     ),     { inside / outside bar stay ALLOWED -- blocking them cost trades  }
+    KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
+    KB_Filter_Win           ( 3     ),     { ADOPTED 2026-08-19. Plateau spans 3-6, see the header           }
 
     { --- Pattern-selector thresholds. NOTE: these are NOT the KB_Body_* inputs --- }
     { of the legacy 17-type single-bar classifier in SECTION 6. Two separate       }

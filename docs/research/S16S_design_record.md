@@ -16,39 +16,111 @@ explains it.
 
 ## 1. Current anchor
 
+**ADOPTED 2026-08-19: v1.26.0 with the K-bar filter ON.**
+
 | | |
 |---|---|
-| net profit | 2,615,600 |
-| trades | 180 |
-| gross profit / loss | 5,010,000 / -2,394,400 |
-| profit factor | 2.0923822252 |
-| adjusted profit factor | 1.6616251885 |
-| max strategy drawdown | -364,800 (-13.8494%) |
-| sharpe / sortino | 0.1991398428 / 1.1895897597 |
-| win rate | 30.5556% (55 / 125) |
-| return on account | 908.19 |
-| slippage paid | 700,000 -- 20,000 less than v1.24.0 because MC12
-  charges none on the 10 limit fills, which is correct modelling |
+| net profit | 2,796,800 |
+| trades | 160 |
+| gross profit / loss | 4,900,400 / -2,103,600 |
+| profit factor | 2.3295303290 |
+| adjusted profit factor | 1.8282191963 |
+| max strategy drawdown | -337,200 (-10.9483%) |
+| sharpe / sortino | 0.2150697367 / 1.4236697865 |
+| win rate | 31.8750% (51 / 109) |
+| return on account | 1120.51 |
+| annual return | 18.4562% |
+| slippage paid | 620,000 |
 
-**Mechanism verified 2026-08-15**, and the prediction was wrong in an
-instructive way. `SX_MA_TimeStop_Pct` appears 10 times for +2,479,200 as
-predicted, but `SX_MA_GoldenCross` was predicted to FALL and instead went
-from 3 trades / -79,200 to 29 trades / +1,547,600. `SX_MA_TimeStop` is now
-0 trades. See section 2.1 of the version history document.
+Adopted settings: `KB_Block_Support 1` / `KB_Block_Oppose 1` /
+`KB_Block_Neutral 0` / `KB_Filter_Mode 2` / `KB_Filter_Win 3`, on top of
+`M8_Form 2` / `MaxHold_Pct 2.30` / `MaxHoldingBars 48` /
+`QuickStop_MaxBars 4` / `QS_Time_On 1` / `QS_Loss_On 1` /
+`QS_MaxLoss_Pct 0.70` / `MinSlope_Rate 0.050` / `Struct 20/12/0.60` /
+`Trail_On 0` / `ML_On 0`.
 
-**Corrected 2026-08-16.** The gain does NOT split between the target and
-the loosened cap. Pairing the 40 former TimeStop trades one by one: the 10
-that now take the 2.3% target went 2,091,600 -> 2,479,200 (**+387,600**),
-and the other 30, handed to the golden cross and the structure trail, went
-1,909,200 -> 1,808,400 (**-100,800**). Loosening the bar cap on its own
-LOSES money. Its value is that it lets the target fire at all -- at 24
-bars the clock reached most trades first. The earlier note here credited
-the cap with +1,828,400, which was those 30 trades' new LEVEL mistaken for
-their DELTA.
+**The previous anchor is still reachable and still required.** Setting the
+three block switches, KB_Filter_Mode and KB_Filter_Win all to 0 returns
+180 trades / 2,615,600 / PF 2.0923822252 / -364,800 -- verified in MC12 on
+2026-08-18 as the MaxBars=4 cell of the QuickStop re-sweep. Any edit must
+reproduce one of the two sets before its own result is read.
 
-Any edit to the .pla must reproduce those five numbers before its own
-result is read. MC12 retains the previous run's input values rather than
-reloading the file, and that has voided whole batches in this project.
+### Why this cell was adopted
+
+The comparison against v1.25.0 is unusually clean. The 160 trades are a
+strict SUBSET of the 180: no trade was added, and every surviving trade
+has an IDENTICAL P&L. The entire +181,200 is exactly the removal of 20
+trades and nothing else moved.
+
+Those 20 were worth -181,200 at a 20% win rate and PF 0.38. Fifteen died
+to the 4-bar quick stop. **None was a big fish** -- all seven survive and
+the top-7 total is 2,384,800 in both versions, so the filter did not touch
+the tail. Concentration falls from 91.2% to 85.3% only because the
+denominator grew.
+
+It was not free: it also removed a +80,800 structure exit on 2025-04-09
+and a +20,800 golden cross on 2020-09-21. 2025 is the only year that gets
+worse and that trade is why. Six of seven years improve.
+
+**Ex-2026 it still wins**, which matters given how much of this strategy
+lives in 2026: 2020-2025 goes 564,400 / PF 1.41 to 654,800 / PF 1.55, with
+the closed-equity drawdown improving 288,000 to 226,400.
+
+### The window is what makes it affordable
+
+Blocking at the entry bar leaves 102 trades, 1.31 a month, under the
+floor. Requiring only that a clean bar existed within the last three keeps
+160. Win is a quality-for-quantity slider and both curves are monotone:
+
+| Win | 0 | 1 | 2 | **3** | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| trades | 102 | 127 | 149 | **160** | 167 | 170 | 174 |
+| PF | 3.29 | 2.54 | 2.45 | **2.33** | 2.19 | 2.18 | 2.13 |
+| net (M) | 2.657 | 2.447 | 2.760 | **2.797** | 2.661 | 2.668 | 2.612 |
+
+Net peaks at 3 because that is where the curves cross. Win 3-6 all land
+between 2.61M and 2.80M with an IDENTICAL -337,200 drawdown: four of seven
+values, a 57% plateau against a 20% requirement. Win 0/1/2 fail the trade
+floor at 102/127/149.
+
+Win 5 was the alternative if trade-count margin mattered -- 170 trades and
+14 of headroom instead of 4, costing 129,200. Rejected because the
+drawdown is flat across the plateau, so the extra trades buy no
+protection; they only dilute.
+
+### NO REPLACEMENT EFFECT -- an earlier claim in this file was wrong
+
+Several notes assumed MC12 would refill a blocked slot with a later cross,
+making every offline count a FLOOR, and that assumption was used to argue
+the 156-trade floor was softer than the arithmetic suggested. **It is
+false.** Zero trades were added at any Win value; the count moves only as
+the block loosens. A blocked death cross does not free the position for
+another one, because the next cross needs a golden cross in between.
+Offline counts are the actual counts.
+
+### What is still open at the new anchor
+
+The 1,624-day underwater stretch from 2020-03-27 to 2024-09-06 is
+UNCHANGED in duration -- only its depth improves, 288,000 to 226,400. The
+11 cross-session holds worth 1,086,800 are unchanged. 2023 still has three
+trades and no winners at all. 2026 is still 76.6% of net profit. And WFE
+has never been run.
+
+**Mechanism verified 2026-08-15** for the exit rewrite, and the prediction
+was wrong in an instructive way. `SX_MA_TimeStop_Pct` appears 10 times for
++2,479,200 as predicted, but `SX_MA_GoldenCross` was predicted to FALL and
+instead went from 3 trades / -79,200 to 29 trades / +1,547,600.
+`SX_MA_TimeStop` is now 0 trades. See section 2.1 of the version history.
+
+**Corrected 2026-08-16.** The v1.25.0 gain does NOT split between the
+target and the loosened cap. Pairing the 40 former TimeStop trades one by
+one: the 10 that now take the 2.3% target went 2,091,600 -> 2,479,200
+(**+387,600**), and the other 30, handed to the golden cross and the
+structure trail, went 1,909,200 -> 1,808,400 (**-100,800**). Loosening the
+bar cap on its own LOSES money. Its value is that it lets the target fire
+at all -- at 24 bars the clock reached most trades first. The earlier note
+credited the cap with +1,828,400, which was those 30 trades' new LEVEL
+mistaken for their DELTA.
 
 ---
 
