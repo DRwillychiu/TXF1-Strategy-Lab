@@ -77,6 +77,25 @@
   a blocked entry never opens a position to re-enter, but it would have
   diluted every cell of the sweep. Fixed.
 
+  THE TWO QUICKSTOP LEGS NOW HAVE THEIR OWN SWITCHES
+
+  QuickStop_On turned both legs off together, so "run without the time
+  quick-stop but keep the loss stop" was not expressible and had to be
+  faked by pushing MaxBars past the hold cap. QS_Time_On and QS_Loss_On
+  are explicit, default to 1, and reproduce the old behaviour exactly.
+
+  Both legs are still market orders on a price condition. That is fine
+  for the TIME leg, which is a bar-count rule -- but for the LOSS leg it
+  is a known defect: the threshold is breached at a bar close and the
+  fill lands at the next open, wherever that is. It stays harmless only
+  while QS_MaxLoss_Pct is unreachable at 0.70.
+
+  ** ANY SWEEP CELL THAT ACTUALLY FIRES THE LOSS LEG IS MEASURING THAT
+  DEFECT. ** Those numbers are informative about the mechanism and are
+  NOT a deployment candidate. Fixing it means placing a resting stop
+  every bar, which changes what preempts what in the priority chain --
+  a separate design question, not a parameter.
+
   WHAT BLOCKING COSTS
 
     block                        trades  /month     net      PF
@@ -177,6 +196,8 @@ inputs:
 
     { ===== Group B: M5 Quick Stop - v0.5, v1.7.1 QS_Loss -> Pct ===== }
     QuickStop_On            ( 1     ),
+    QS_Time_On              ( 1     ),     { 1 = time leg live. 0 = off, loss leg unaffected  }
+    QS_Loss_On              ( 1     ),     { 1 = loss leg live. 0 = off, time leg unaffected  }
     QuickStop_MaxBars       ( 4     ),
     QS_MaxLoss_Pct          ( 0.70  ),
 
@@ -346,6 +367,8 @@ variables:
 
     { ===== M5 Quick Stop state ===== }
     v_QuickStop_Fired       ( False ),
+    v_QS_Time_On            ( False ),
+    v_QS_Loss_On            ( False ),
 
     { ===== M8 percentage target (v1.25.0 Form 2) ===== }
     v_M8_Target             ( 0     ),
@@ -519,6 +542,8 @@ arrays:
     { SECTION 2.5 - SWITCH DECODE  -- md 3.22 }
 
 v_QuickStop_On          = ( QuickStop_On          <> 0 );
+v_QS_Time_On            = ( QS_Time_On            <> 0 );
+v_QS_Loss_On            = ( QS_Loss_On            <> 0 );
 v_ML_On                 = ( ML_On                 <> 0 );
 v_BE_On                 = ( BE_On                 <> 0 );
 v_Trail_On              = ( Trail_On              <> 0 );
@@ -1314,14 +1339,15 @@ if MarketPosition = -1 then begin
        v_QuickStop_Fired = False then begin
 
         { P1a Loss-based (v1.7.1: pct of EntryPrice, not fixed pts) }
-        if v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then begin
+        if v_QS_Loss_On = True and
+           v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then begin
             buy to cover ( "SX_MA_QuickStop_Loss" ) next bar at market;
             v_QuickStop_Fired = True;
             ExitFired = 1;
         end;
 
         { P1b Time-based (N bars with no profit) }
-        if ExitFired = 0 and
+        if ExitFired = 0 and v_QS_Time_On = True and
            v_BarsSince >= QuickStop_MaxBars and
            Close >= EntryPrice then begin
             buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
