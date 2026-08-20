@@ -284,6 +284,17 @@
 
 [IntrabarOrderGeneration = False]
 inputs:
+    { ===== Group 0: BUILD STAMP -- declared FIRST so it is the first row in ===== }
+    { the MC12 settings dialog. The strategy NAME does not change when the file }
+    { is patched, so before this there was no way to tell from the dialog which }
+    { build MC had loaded. MC12 retains input values rather than reloading the  }
+    { file, and that has voided six batches in this project.                    }
+    {                                                                           }
+    { Format YYMMDD of the last behaviour-changing edit. Compare against        }
+    { docs/build_snapshots/ before trusting any run. Generated and checked by   }
+    { scripts/snapshot_pla_inputs.py.                                           }
+    Build_ID                ( 260820 ),
+
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
     ZLEMA_Slow              ( 70    ),
@@ -642,6 +653,14 @@ variables:
 
 arrays:
     Holiday_Tail[80](0);
+
+
+    { SECTION 2.4 - BUILD STAMP  -- one line per run, into the output log }
+    { A second, independent record of which build actually ran. The dialog     }
+    { shows Build_ID as its first row; this puts the same number in the print  }
+    { log, so a saved report can be traced back to a file even months later.   }
+if CurrentBar = 1 then
+    Print( "S16_S build ", Build_ID );
 
 
     { SECTION 2.5 - SWITCH DECODE  -- md 3.22 }

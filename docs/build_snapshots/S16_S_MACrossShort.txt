@@ -1,0 +1,44 @@
+==========================================================================
+  PLA INPUT SNAPSHOT
+==========================================================================
+  file     : strategies/live_simulation/S16_S_MACrossShort/S16_S_MACrossShort.pla
+  bytes    : 32397
+  md5      : 471786564a662951cf8fec97eb3a5462
+  Build_ID : (none)
+  inputs   : 32
+==========================================================================
+
+  順序 = 宣告順序 = MC12 參數對話框的顯示順序，可逐列對照。
+
+    1  ZLEMA_Fast             25
+    2  ZLEMA_Slow             70
+    3  MinSlope               28
+    4  QuickStop_On           True
+    5  QuickStop_MaxBars      4
+    6  QuickStop_MaxLoss_Pts  60
+    7  ML_On                  True
+    8  ML_ActivationPct       20
+    9  ML_ScoreTrigger        60
+   10  ML_MinCategories       3
+   11  ML_VolAvgLen           15
+   12  ML_VolSpikeMult        2.0
+   13  ML_MA_ShortLen         10
+   14  ML_ATR_ShortLen        3
+   15  ML_ATR_LongLen         90
+   16  ML_ATR_Ratio           2.5
+   17  BE_On                  True
+   18  BE_Trigger_ATR         2.5
+   19  BE_Buffer_Pts          15
+   20  BE_Tier2_ATR           3.5
+   21  BE_Tier2_Buffer_Pts    20
+   22  M8_On                  True
+   23  MaxHoldingBars         24
+   24  ATR_Len                14
+   25  StopATRMult            4.0
+   26  SL_Pct                 1.00
+   27  Holiday_Flat_Time      415
+   28  Registry_Valid_Until   1270101
+   29  Manual_Kill_Switch     False
+   30  Settlement_Flat_Time   1230
+   31  Tail_LastEntry_Time    430
+   32  Tail_ForceExit_Time    440

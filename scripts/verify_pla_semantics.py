@@ -50,7 +50,14 @@ for a, b in sorted(spans, reverse=True):
     body = body[:a] + chr(10) * body[a:b].count(chr(10)) + body[b:]
 
 BODY_LINES = [l.strip() for l in body.split(chr(10))]
-occ = collections.Counter(re.findall(r'\b([A-Za-z_]\w*)\b', body))
+
+# 2026-08-20 修正：字串常數的內容不是識別字。
+# 舊版直接對 body 取詞，於是 Print( "S16_S build ", ... ) 裡的 S16_S 與 build
+# 都被當成未宣告識別字。L1_TrendLong 那一長串 DECL 假警告（Green / Red /
+# TAIFEX / HOLIDAY / CALENDAR / REGISTRY ...）全部來自同一個原因。
+# 只在取詞時剝掉字串；BODY_LINES 保留原文，因為指派/比較分類器要看原始敘述。
+_tok_src = re.sub(r'"[^"\n]*"', '""', body)
+occ = collections.Counter(re.findall(r'\b([A-Za-z_]\w*)\b', _tok_src))
 
 # ---------- 分類器：指派 vs 比較 ----------
 # 判準是「敘述起始」：上一個非空行以 ; / begin / then / else 收尾。
