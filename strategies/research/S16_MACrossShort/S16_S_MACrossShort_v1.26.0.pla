@@ -13,12 +13,45 @@
              adjusted PF 1.8282191963 / sharpe 0.2150697367
              sortino 1.4236697865 / annual return 18.4562%
 
+  2026-08-20 -- TWO DEFECT FIXES SHIP ON BY DEFAULT, SO THE ANCHOR MOVED.
+
+  Sess_GapReset_On 1 and ReEntry_Filt_Mode 1 both change behaviour. The
+  160 / 2,796,800 figure above was measured BEFORE them and is therefore
+  reachable only with BOTH set to 0. Re-run and record the new anchor
+  before reading any further result off this file.
+
+    Sess_GapReset_On   v_Bars_In_Sess could not see a session boundary when
+                       an entire session was missing from the data. Measured:
+                       20210901 0850 to 20210906 1345 counted as one 240-bar
+                       "day session". The K-bar session gate then over-permits
+                       -- a 3 or 5 bar pattern built across a boundary nobody
+                       detected. 131 of 3,670 sessions are abnormal, of which
+                       91 are settlement days ending 1330 and legitimate.
+
+    ReEntry_Filt_Mode  the two entry paths were using DIFFERENT K-bar rules.
+                       The death cross gate reads v_Filt_Pass, which at Win = 3
+                       accepts a clean bar up to three back. Re-entry read
+                       v_KB_Block, demanding the entry bar itself be clean --
+                       stricter than the path the sweep measured. Not a
+                       decision; the flag was added after the death cross gate
+                       had already moved to v_Filt_Pass.
+
   To reproduce v1.25.0 from this file, set the three block switches AND
   KB_Filter_Mode AND KB_Filter_Win all to 0. That returns 180 trades /
   2,615,600 / PF 2.0923822252 / -364,800 -- verified in MC12 on 2026-08-18.
-  Any edit must reproduce one of those two sets before its own result is
-  read. MC12 retains the previous run's input values rather than reloading
-  the file, and that has voided whole batches in this project.
+  The two 2026-08-20 switches do not need to be zeroed for that: with
+  KB_Filter_Win 0 the re-entry mode collapses, but Sess_GapReset_On still
+  bites, so zero it as well for a bit-exact v1.25.0.
+
+  Any edit must reproduce one of those sets before its own result is read.
+  MC12 retains the previous run's input values rather than reloading the
+  file, and that has voided whole batches in this project.
+
+  STILL OPEN, ranked: the K-bar filter's +181,200 was selected and measured
+  on the SAME 180 trades, so it is not out-of-sample evidence. A permutation
+  test, a transfer to S16_S_10M or L2_TrendShort without retuning, and W4
+  WFA with PER-WINDOW re-derivation are the three things that would test it.
+  None has been run.
 
   ================================================================
   WHY THIS CELL, AND WHAT IT COST
@@ -312,6 +345,13 @@ inputs:
     KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
     KB_Filter_Win           ( 3     ),     { ADOPTED 2026-08-19. Plateau spans 3-6, see the header           }
 
+    { --- 2026-08-20 defect fixes. BOTH default to the FIXED behaviour, so the --- }
+    { 160T / 2,796,800 anchor now needs Sess_GapReset_On = 0 AND                   }
+    { ReEntry_Filt_Mode = 0. Setting both to 0 restores 2026-08-19 exactly.        }
+    Sess_GapReset_On        ( 1     ),     { 1 = a wall-clock gap > one bar also starts a session. 0 = old }
+    ReEntry_Filt_Mode       ( 1     ),     { 1 = re-entry uses v_Filt_Pass, same as the death cross.       }
+                                           { 0 = old, re-entry demanded a clean bar on the entry bar only. }
+
     { --- Pattern-selector thresholds. NOTE: these are NOT the KB_Body_* inputs --- }
     { of the legacy 17-type single-bar classifier in SECTION 6. Two separate       }
     { systems, two separate meanings of "long body". Sweeping KB_Body_Long does    }
@@ -445,6 +485,9 @@ variables:
     v_Slope_Age             ( 999   ),
     v_Clean_Age             ( 999   ),
     v_Filt_Pass             ( False ),
+    v_Sess_GapMin           ( 0     ),
+    v_Sess_Gap_Seen         ( False ),
+    v_ReEntry_Filt_OK       ( False ),
     v_KB_R0                 ( 0     ),
     v_KB_R1                 ( 0     ),
     v_KB_R2                 ( 0     ),
@@ -708,11 +751,36 @@ v_In_Day   = Time >  Sess_Day_Start   and Time <= Sess_Day_End;
 v_In_Night = Time >  Sess_Night_Start or  Time <= Sess_Night_End;
 
     { ---- First bar of a session ----------------------------------  -- md 3.26 }
+    { 2026-08-20 DEFECT FIX. The transition test alone CANNOT see a boundary    }
+    { when an entire session is missing from the data. Measured: 20210901 0850  }
+    { through 20210906 1345 was counted as ONE 240-bar "day session", because   }
+    { the night sessions in between have no bars at all, so v_In_Day never went }
+    { False and the counter never reset. The K-bar session gate then over-      }
+    { permits: a 3 or 5 bar pattern can reach across a boundary nobody saw.     }
+    {                                                                           }
+    { A wall-clock gap larger than one bar now also starts a session. Date is   }
+    { carried through DateToJulian so a multi-DAY hole is measured, which the   }
+    { existing v_Elapsed_Min cannot do -- it wraps at 1440 and would report a   }
+    { five-day hole as a few minutes.                                           }
+    {                                                                           }
+    { Erring toward RESET is the safe direction. A spurious reset only makes    }
+    { patterns unavailable for a few bars; a MISSED reset lets a pattern be     }
+    { built out of bars from two different markets.                             }
+v_Sess_GapMin = 0;
+if CurrentBar > 1 then
+    v_Sess_GapMin = ( DateToJulian( Date ) - DateToJulian( Date[1] ) ) * 1440
+                  + ( TimeToMinutes( Time ) - TimeToMinutes( Time[1] ) );
+
+v_Sess_Gap_Seen = ( Sess_GapReset_On <> 0 ) and ( CurrentBar > 1 )
+                  and ( BarInterval > 0 ) and ( v_Sess_GapMin > BarInterval );
+
 v_Day_First   = False;
 v_Night_First = False;
 if CurrentBar > 1 then begin
-    if v_In_Day   and v_In_Day[1]   = False then v_Day_First   = True;
-    if v_In_Night and v_In_Night[1] = False then v_Night_First = True;
+    if v_In_Day   and ( v_In_Day[1]   = False or v_Sess_Gap_Seen ) then
+        v_Day_First   = True;
+    if v_In_Night and ( v_In_Night[1] = False or v_Sess_Gap_Seen ) then
+        v_Night_First = True;
 end;
 v_Sess_First = v_Day_First or v_Night_First;
 
@@ -1336,13 +1404,24 @@ if MarketPosition = 0 and
     sell short ( "SE_MA_DeathCross" ) next bar at market;
 end;
 
+    { 2026-08-20 DEFECT FIX. The two entry paths were using DIFFERENT K-bar     }
+    { rules. The death cross gate reads v_Filt_Pass, which at Win = 3 accepts a  }
+    { clean bar up to three bars back. Re-entry read v_KB_Block directly, which  }
+    { demands the entry bar ITSELF be clean -- STRICTER than the path the sweep  }
+    { actually measured. That asymmetry was not a decision; the flag was added   }
+    { on 2026-08-19 after the death cross gate had already moved to v_Filt_Pass. }
+if ReEntry_Filt_Mode <> 0 then
+    v_ReEntry_Filt_OK = v_Filt_Pass
+else
+    v_ReEntry_Filt_OK = ( v_KB_Block = False );
+
     { v1.6 Re-Entry: washout recovery via stop order at original entry price.  -- md 3.49 }
 if MarketPosition = 0 and
    v_ReEntry_On            = True and
    v_ReEntry_Armed       = True and
    ( v_ReEntry_Structure_Gate = False or v_ZLEMA_Fast < v_ZLEMA_Slow ) and
    ( v_ReEntry_Slope_Gate     = False or v_Slope_Pass = True ) and
-   v_KB_Block            = False and
+   v_ReEntry_Filt_OK     = True and
    v_FirstBar_Block      = False and
    ( v_ReEntry_Close_Gate     = False or Close        >= v_ReEntry_Price ) and
    v_Tail_Entry_OK       = True and

@@ -108,7 +108,11 @@ setprofittarget xaverage average highest lowest atr avgtruerange truerange minli
 maxlist intportion absvalue mod square squareroot dayofweek dayofmonth month year
 currentdate currenttime iff numericseries numericsimple booleansimple print inputs
 variables arrays crosses above below plot1 plot2 alert barinterval timetominutes
-minutestotime rsi exitfired intrabarordergeneration o h l c""".split())
+minutestotime rsi exitfired intrabarordergeneration o h l c
+datetojulian juliantodate""".split())
+# datetojulian / juliantodate added 2026-08-20: standard PowerLanguage builtins,
+# in use across every live strategy (L1-L5, S1, S3 family). They were missing from
+# this list, so any file using them drew a false DECL warning.
 
 inps = {k: v for k, (b, v) in DECL.items() if b == 'inputs'}
 vars_ = {k: v for k, (b, v) in DECL.items() if b in ('variables', 'arrays')}
