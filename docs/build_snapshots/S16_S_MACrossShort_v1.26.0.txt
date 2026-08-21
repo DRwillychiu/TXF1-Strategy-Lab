@@ -2,8 +2,8 @@
   PLA INPUT SNAPSHOT
 ==========================================================================
   file     : strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.26.0.pla
-  bytes    : 71093
-  md5      : 0986107c7ea8c78975ee88bf63e385e0
+  bytes    : 73049
+  md5      : dc4b3ef8c58178c979e7c965e2159ab2
   Build_ID : 260820
   inputs   : 91
 ==========================================================================
@@ -53,7 +53,7 @@
    41  KB_Filter_Mode          2
    42  KB_Filter_Win           3
    43  Sess_GapReset_On        1
-   44  ReEntry_Filt_Mode       1
+   44  ReEntry_Filt_Mode       0
    45  KB_Pat_LongBody         0.50
    46  KB_Pat_DojiRatio        0.10
    47  KB_Pat_DojiMinRange     3

@@ -13,12 +13,42 @@
              adjusted PF 1.8282191963 / sharpe 0.2150697367
              sortino 1.4236697865 / annual return 18.4562%
 
-  2026-08-20 -- TWO DEFECT FIXES SHIP ON BY DEFAULT, SO THE ANCHOR MOVED.
+  2026-08-21 -- THE TWO 2026-08-20 FIXES ARE MEASURED. ANCHOR UNCHANGED.
 
-  Sess_GapReset_On 1 and ReEntry_Filt_Mode 1 both change behaviour. The
-  160 / 2,796,800 figure above was measured BEFORE them and is therefore
-  reachable only with BOTH set to 0. Re-run and record the new anchor
-  before reading any further result off this file.
+  A 4-cell sweep settled both, and the attribution is exact.
+
+    Sess_GapReset  ReEntry  net        trades  gross loss   drawdown
+       0              0     2,796,800    160   -2,103,600   -337,200
+       1              0     2,796,800    160   -2,103,600   -337,200   ADOPTED
+       0              1     2,769,200    161   -2,131,200   -364,800
+       1              1     2,769,200    161   -2,131,200   -364,800
+
+  Sess_GapReset_On is FREE. Rows sharing a ReEntry value are bit-identical,
+  so it changed not one trade in sample. It still ships ON -- the 240-bar
+  phantom day session was measured and is real; this sample simply held no
+  entry decision on an affected bar. Insurance at zero cost.
+
+  ReEntry_Filt_Mode carries the ENTIRE difference, and it is one trade.
+  Gross profit is identical at 4,900,400 in all four cells; gross loss moves
+  by exactly 27,600 and the drawdown deepens by exactly 27,600. Setting it to
+  1 opens one extra re-entry, that trade loses 27,600, and it lands inside
+  the worst stretch.
+
+  USER RULING 2026-08-21: ReEntry_Filt_Mode = 0. Explicitly NOT because it
+  is better in sample -- that is n = 1 and would be a bad reason. Because:
+
+    the re-entry path's filter rule has never been swept EITHER way, so
+    Mode 2 / Win 3 exists only as a death-cross measurement and pushing it
+    onto re-entry extrapolates a result off the path it was measured on;
+
+    the two paths are not the same event -- a fresh death cross at market
+    versus a stop order at a price that already failed once -- so demanding
+    the entry bar itself be clean is a coherent higher bar for a retry,
+    independent of any number;
+
+    re-entry is 7 to 8 trades and can never be measured to significance, so
+    this was always going to be a design decision. Better to say so than to
+    dress it as an optimisation.
 
     Sess_GapReset_On   v_Bars_In_Sess could not see a session boundary when
                        an entire session was missing from the data. Measured:
@@ -356,12 +386,16 @@ inputs:
     KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
     KB_Filter_Win           ( 3     ),     { ADOPTED 2026-08-19. Plateau spans 3-6, see the header           }
 
-    { --- 2026-08-20 defect fixes. BOTH default to the FIXED behaviour, so the --- }
-    { 160T / 2,796,800 anchor now needs Sess_GapReset_On = 0 AND                   }
-    { ReEntry_Filt_Mode = 0. Setting both to 0 restores 2026-08-19 exactly.        }
+    { --- 2026-08-20 defect fixes, 2026-08-21 measured and settled by 4 cells --- }
+    { Sess_GapReset_On is FREE: cells (0,0) and (1,0) are bit-identical, as are   }
+    { (0,1) and (1,1). It closed a real defect and changed no trade in sample.    }
+    { ReEntry_Filt_Mode stays 0 by USER RULING -- see the header. The anchor is   }
+    { unchanged at 160T / 2,796,800.                                              }
     Sess_GapReset_On        ( 1     ),     { 1 = a wall-clock gap > one bar also starts a session. 0 = old }
-    ReEntry_Filt_Mode       ( 1     ),     { 1 = re-entry uses v_Filt_Pass, same as the death cross.       }
-                                           { 0 = old, re-entry demanded a clean bar on the entry bar only. }
+    ReEntry_Filt_Mode       ( 0     ),     { 0 = ADOPTED. Re-entry demands a clean bar on the entry bar    }
+                                           { itself, stricter than the death cross path. 1 = unify with    }
+                                           { v_Filt_Pass, costs one trade at -27,600. Design decision, not }
+                                           { an optimisation -- neither value was ever swept on this path. }
 
     { --- Pattern-selector thresholds. NOTE: these are NOT the KB_Body_* inputs --- }
     { of the legacy 17-type single-bar classifier in SECTION 6. Two separate       }
