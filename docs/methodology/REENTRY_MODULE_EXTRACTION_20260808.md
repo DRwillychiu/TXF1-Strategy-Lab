@@ -594,7 +594,7 @@ strategies/live_simulation/S16_S_MACrossShort/IND_S16_S_Monitor.pla   <- 指標�
 | U4 | B1 從「must fix before live_simulation」降級為「deferred / OPEN」的**具體理由** | 只找到結果（`S16_S_EXIT_AUDIT_20260729.md:198-200, :223, :234`） | 論證本身。`strategy_logic_inventory_20260804.md:444` 自己也說「是刻意暫緩還是漏掉」不明 |
 | U5 | 其他策略是否滿足 P4（離散主訊號）與 P6（IOG=False） | 僅 S16_S 確認（`v1.17.0.pla:926`） | 逐支讀碼 |
 | U6 | Priority-0 強制平倉後 armed 跨假日/結算日存活，歷史上是否真的造成過壞交易（N5） | 靜態行為已確認；`S16S_entry_side_gap_analysis_20260808.md:146` 的 D-2 只查證了正常出場（11 筆間隔 0.1~1.1 小時），未涵蓋強制平倉情境 | MC12 逐筆交易檢視 |
-| U7 | MaxBarsBack 到底是 100 還是 200 | `v1.17.0.pla:923` 寫 `>= 200`、專案 CLAUDE.md 寫 100 | MC12 實際設定截圖 |
+| ~~U7~~ | ~~MaxBarsBack 到底是 100 還是 200~~ | **CLOSED 2026-08-21**：用戶確認 MC12 實際設定 **100**。`v1.17.0.pla` 的 `>= 200` 是錯誤註解（且在 `:984` 不是 `:923`）。詳見 `BACKTEST_COST_SPEC.md` 4.2 | — |
 | U8 | re-entry stop 單與出場 stop 單在 MC 的同根交互行為 | 程式碼順序已確認；`v1.17.0.pla:1928-1941`（A-5）說明市價單/停損單的成交先後 | MC12 實測 |
 
 ---

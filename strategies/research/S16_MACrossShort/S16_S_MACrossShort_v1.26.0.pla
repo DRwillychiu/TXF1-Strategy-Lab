@@ -323,7 +323,7 @@ inputs:
     { Format YYMMDD of the last behaviour-changing edit. Compare against        }
     { docs/build_snapshots/ before trusting any run. Generated and checked by   }
     { scripts/snapshot_pla_inputs.py.                                           }
-    Build_ID                ( 260820 ),
+    Build_ID                ( 260821 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -380,7 +380,9 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Block_Support        ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 pro-short patterns  }
+    KB_Block_Support        ( 0     ),     { RULING 2026-08-21. All 13 pro-short structures PASS. The 1 was }
+                                           { read off the P&L of 180 executed fills -- selection on the      }
+                                           { outcome variable, so it never had evidence behind it.           }
     KB_Block_Oppose         ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 anti-short patterns }
     KB_Block_Neutral        ( 0     ),     { inside / outside bar stay ALLOWED -- blocking them cost trades  }
     KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
@@ -1182,7 +1184,7 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
 
     { ---------- CODES 1-13   PRO-SHORT ---------- }
 
-if v_KB_Sup = True then begin
+if v_KB_Sup = True and v_Bars_In_Sess >= 2 then begin
 
     { 1  A01 bearish engulfing }
     if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C < O )
@@ -1278,7 +1280,7 @@ end;
     { All but 18 and 22 end on a white bar and cannot fire while the slope   }
     { gate holds. They are coded so MC12 can prove that, not assume it.      }
 
-if v_KB_Opp = True then begin
+if v_KB_Opp = True and v_Bars_In_Sess >= 2 then begin
 
     { 14  A02 bullish engulfing }
     if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C > O )
@@ -1380,7 +1382,7 @@ end;
     { Colour-blind, so both can fire on a black bar. A10 outside bar is the  }
     { second most frequent pattern on actual entries -- 28 of the 180.       }
 
-if v_KB_Neu = True then begin
+if v_KB_Neu = True and v_Bars_In_Sess >= 2 then begin
 
     { 27  A09 inside bar }
     if v_KB_Code = 0 and ( H <= H[1] ) and ( L >= L[1] ) then
