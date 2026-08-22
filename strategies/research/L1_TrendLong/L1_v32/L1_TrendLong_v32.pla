@@ -290,7 +290,10 @@ Inputs:
     ReEntry_Weekly_Gate     ( 1    ),  { weekly filter still true }
     ReEntry_MABase_Gate     ( 0    ),  { W2: maBase not below entry value. ships OFF }
     ReEntry_WeeklyTier_Gate ( 0    ),  { W3: weekly tier not degraded. ships OFF }
-    ReEntry_Trend_Ratio     ( 0.50 );  { PLACEHOLDER. MC sweep decides the default }
+    ReEntry_Trend_Ratio     ( 0.20 );  { MC sweep 0.0-1.0, adopted 2026-08-22.
+                                        0.1 and 0.2 are bit-identical; 0.2 keeps
+                                        more of the designed guard. 1.00 fires
+                                        ZERO re-entries in 6.7 years. }
 
 Variables:
     maBase(0),
