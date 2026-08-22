@@ -166,27 +166,30 @@ FIX = [
       [(120,121, 99,100),(104,109,103,108),(107,112,106,111),(110,115,109,114),(115,116, 94, 95)], (4,'C',8)),
  (13, 'C45 bearish three-line strike',
       [(100,111, 99,110),(105,116,104,115),(110,121,109,120),(122,123, 97, 98)],    (3,'C',5)),
+ (14, 'D47 bearish hikkake',
+      [(100,115, 95,110),(105,112, 98,108),(110,120,105,118),(117,119,110,112),(111,113, 95, 96)], (1,'H', 5)),
+ (15, 'D48 descending hawk',   [(100,121, 99,120),(105,116,104,115)],            (0,'C',-10)),
 
- (14, 'A02 bullish engulfing',   [(110,111, 99,100),( 98,113, 97,112)],            (1,'O', 3)),
- (15, 'A06 bullish harami',      [(120,121, 99,100),(105,116,104,115)],            (0,'C',10)),
- (16, 'A08 bullish harami cross',[(120,121, 99,100),(110,112,108,110)],            (1,'C', 3)),
- (17, 'A19 tweezer bottom',      [(110,111, 98,100),(101,110, 98,109)],            (1,'L', 1)),
- (18, 'A21 matching low',        [(120,121, 99,100),(110,111, 99,100)],            (1,'C', 1)),
- (19, 'B26 three white soldiers',[(100,121, 99,120),(105,126,104,125),(110,131,109,130)], (2,'O',20)),
- (20, 'B28 three inside up',     [(120,121, 99,100),(105,116,104,115),(114,121,113,120)], (2,'C',-6)),
- (21, 'B30 three outside up',    [(110,111, 99,100),( 98,113, 97,112),(113,119,112,118)], (1,'C',-5)),
- (22, 'B37 three stars in south',[(120,121, 90,100),(115,116, 95,105),(112,114,100,108)], (1,'L',-6)),
- (23, 'B38 unique three river bottom',
+ (16, 'A02 bullish engulfing',   [(110,111, 99,100),( 98,113, 97,112)],            (1,'O', 3)),
+ (17, 'A06 bullish harami',      [(120,121, 99,100),(105,116,104,115)],            (0,'C',10)),
+ (18, 'A08 bullish harami cross',[(120,121, 99,100),(110,112,108,110)],            (1,'C', 3)),
+ (19, 'A19 tweezer bottom',      [(110,111, 98,100),(101,110, 98,109)],            (1,'L', 1)),
+ (20, 'A21 matching low',        [(120,121, 99,100),(110,111, 99,100)],            (1,'C', 1)),
+ (21, 'B26 three white soldiers',[(100,121, 99,120),(105,126,104,125),(110,131,109,130)], (2,'O',20)),
+ (22, 'B28 three inside up',     [(120,121, 99,100),(105,116,104,115),(114,121,113,120)], (2,'C',-6)),
+ (23, 'B30 three outside up',    [(110,111, 99,100),( 98,113, 97,112),(113,119,112,118)], (1,'C',-5)),
+ (24, 'B37 three stars in south',[(120,121, 90,100),(115,116, 95,105),(112,114,100,108)], (1,'L',-6)),
+ (25, 'B38 unique three river bottom',
       [(120,121, 99,100),(115,116, 95,105),(100,104, 99,103)],                     (2,'C', 4)),
- (24, 'C42 rising three methods',
+ (26, 'C42 rising three methods',
       [(100,121, 99,120),(116,117,111,112),(113,114,108,109),(110,111,105,106),(105,126,104,125)], (4,'C',-6)),
- (25, 'C43 ladder bottom',
+ (27, 'C43 ladder bottom',
       [(120,121, 99,100),(115,116, 94, 95),(110,111, 89, 90),( 92,100, 87, 88),( 95,106, 94,105)], (4,'O',-4)),
- (26, 'C46 bullish three-line strike',
+ (28, 'C46 bullish three-line strike',
       [(110,111, 99,100),(105,106, 94, 95),(100,101, 89, 90),( 88,113, 87,112)],   (3,'C',-3)),
 
- (27, 'A09 inside bar',          [(100,115, 95,110),(105,112, 98,108)],            (1,'H', 4)),
- (28, 'A10 outside bar',         [(105,112, 98,108),(100,115, 95,110)],            (1,'H',-4)),
+ (29, 'A09 inside bar',          [(100,115, 95,110),(105,112, 98,108)],            (1,'H', 4)),
+ (30, 'A10 outside bar',         [(105,112, 98,108),(100,115, 95,110)],            (1,'H',-4)),
 ]
 FIELD = {'O': 0, 'H': 1, 'L': 2, 'C': 3}
 
@@ -213,8 +216,8 @@ def main():
     print()
 
     codes = [c for c, _ in rules]
-    assert codes == list(range(1, 29)), 'codes not 1..28 in order: %s' % codes
-    assert [c for c, _, _, _ in FIX] == list(range(1, 29)), 'fixture codes out of order'
+    assert codes == list(range(1, 31)), 'codes not 1..28 in order: %s' % codes
+    assert [c for c, _, _, _ in FIX] == list(range(1, 31)), 'fixture codes out of order'
     COND = dict(rules)
 
     def fires(bars, code):
@@ -260,7 +263,7 @@ def main():
     print('=' * 78)
     overlaps = []
     for code, name, bars, _ in FIX:
-        hit = [c for c in range(1, 29) if fires(bars, c) is True]
+        hit = [c for c in range(1, 31) if fires(bars, c) is True]
         others = [c for c in hit if c != code]
         if others:
             overlaps.append((code, name, others))
@@ -275,11 +278,11 @@ def main():
     print(' T5 priority masking -- is this code the one REPORTED on its own fixture?')
     print('=' * 78)
     GROUP = {}
-    for c in range(1, 29):
+    for c in range(1, 31):
         GROUP[c] = 'SUP' if c <= 13 else ('OPP' if c <= 26 else 'NEU')
     masked = []
     for code, name, bars, _ in FIX:
-        hit = [c for c in range(1, 29) if fires(bars, c) is True]
+        hit = [c for c in range(1, 31) if fires(bars, c) is True]
         # cascade order is group block order (SUP, OPP, NEU) then code order
         rank = {'SUP': 0, 'OPP': 1, 'NEU': 2}
         winner = sorted(hit, key=lambda c: (rank[GROUP[c]], c))[0]
@@ -296,8 +299,8 @@ def main():
     print('=' * 78)
     n1 = sum(1 for c, n, b, _ in FIX if fires(b, c) is True)
     n4 = sum(1 for c, n, b, br in FIX if fires(perturb(b, br), c) is not True)
-    print('  T1  %d/28 patterns fire on their own fixture' % n1)
-    print('  T4  %d/28 die on a one-tick perturbation' % n4)
+    print('  T1  %d/30 patterns fire on their own fixture' % n1)
+    print('  T4  %d/30 die on a one-tick perturbation' % n4)
     print('  T3  %d fixtures also trigger another pattern' % len(overlaps))
     print('  T5  %d patterns are MASKED -- they fire but a lower code reports first'
           % len(masked))

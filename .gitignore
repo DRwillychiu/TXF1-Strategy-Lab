@@ -12,3 +12,5 @@ data/_taifex_cache/
 
 # derived cache from s16s_bars.py -- rebuildable, not source
 scripts/research/s16s_5min.csv
+
+scripts/research/s16s_5min.csv

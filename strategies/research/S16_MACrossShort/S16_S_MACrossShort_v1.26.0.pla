@@ -323,7 +323,7 @@ inputs:
     { Format YYMMDD of the last behaviour-changing edit. Compare against        }
     { docs/build_snapshots/ before trusting any run. Generated and checked by   }
     { scripts/snapshot_pla_inputs.py.                                           }
-    Build_ID                ( 260821 ),
+    Build_ID                ( 260822 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -380,11 +380,11 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Block_Support        ( 0     ),     { RULING 2026-08-21. All 13 pro-short structures PASS. The 1 was }
+    KB_Block_Support        ( 0     ),     { RULING 2026-08-21. All 15 pro-short structures PASS. The 1 was }
                                            { read off the P&L of 180 executed fills -- selection on the      }
                                            { outcome variable, so it never had evidence behind it.           }
     KB_Block_Oppose         ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 anti-short patterns }
-    KB_Block_Neutral        ( 0     ),     { inside / outside bar stay ALLOWED -- blocking them cost trades  }
+    KB_Block_Neutral        ( 0     ),     { inside / outside bar stay ALLOWED (codes 29-30)                 }
     KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
     KB_Filter_Win           ( 3     ),     { ADOPTED 2026-08-19. Plateau spans 3-6, see the header           }
 
@@ -1126,7 +1126,7 @@ if v_Slope_Require_Adjacent = True and v_Slope_Adjacent = False then
 
 
     { SECTION 8.6 - K-BAR PATTERN SELECTOR (v1.26.0) }
-    { 28 patterns. First match writes its code and stops. Gate is code = 0.  }
+    { 30 patterns. First match writes its code and stops. Gate is code = 0.  }
     { Thresholds are pinned and must never be swept: long body >= 50% of     }
     { range, doji < 10% of range with range >= 3 points and each shadow >= 1 }
     { point, "equal" means EXACTLY equal, "star" means half the reference    }
@@ -1182,7 +1182,7 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
     end;
 
 
-    { ---------- CODES 1-13   PRO-SHORT ---------- }
+    { ---------- CODES 1-15   PRO-SHORT ---------- }
 
 if v_KB_Sup = True and v_Bars_In_Sess >= 2 then begin
 
@@ -1273,80 +1273,104 @@ if v_KB_Sup = True and v_Bars_In_Sess >= 2 then begin
        and ( C[2] > C[3] ) and ( C[1] > C[2] )
        and ( C < O ) and ( O > C[1] ) and ( C < O[3] ) then
         v_KB_Code = 13;
+
+    { 14  D47 bearish hikkake -- five bars, no gap anywhere in it       }
+    {     bar[3] sits inside bar[4]; bar[2] breaks UP out of it and     }
+    {     fails; this bar takes out bar[3]'s low, which is the trap     }
+    {     closing. Chesler's own window is three bars -- here the       }
+    {     window is one, because the current architecture requires a    }
+    {     pattern to COMPLETE on the entry bar. The two- and three-bar  }
+    {     delayed confirmations need the persistence state machine and  }
+    {     are deliberately NOT coded yet.                               }
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] > H[3] )  and ( L[2] > L[3] )
+       and ( L < L[3] ) then
+        v_KB_Code = 14;
+
+    { 15  D48 descending hawk -- two bars. Both white, the second's     }
+    {     body contained in the first's and smaller: a rally losing     }
+    {     its stride. STRUCTURALLY INERT under the slope gate, which    }
+    {     forces a black entry bar -- coded so MC12 proves that rather  }
+    {     than the spec assuming it, same as codes 16-28.               }
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C > O )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] )
+       and ( v_KB_B0 < v_KB_B1 ) then
+        v_KB_Code = 15;
 end;
 
 
-    { ---------- CODES 14-26   ANTI-SHORT ---------- }
-    { All but 18 and 22 end on a white bar and cannot fire while the slope   }
+    { ---------- CODES 16-28   ANTI-SHORT ---------- }
+    { All but 20 and 24 end on a white bar and cannot fire while the slope   }
     { gate holds. They are coded so MC12 can prove that, not assume it.      }
 
 if v_KB_Opp = True and v_Bars_In_Sess >= 2 then begin
 
-    { 14  A02 bullish engulfing }
+    { 16  A02 bullish engulfing }
     if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C > O )
        and ( O <= C[1] ) and ( C >= O[1] ) and ( v_KB_B0 > v_KB_B1 ) then
-        v_KB_Code = 14;
-
-    { 15  A06 bullish harami }
-    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C > O )
-       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
-        v_KB_Code = 15;
-
-    { 16  A08 bullish harami cross }
-    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
-       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
         v_KB_Code = 16;
 
-    { 17  A19 tweezer bottom -- lows EXACTLY equal }
-    if v_KB_Code = 0 and ( L = L[1] ) and ( C[1] < O[1] ) and ( C > O ) then
+    { 17  A06 bullish harami }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C > O )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
         v_KB_Code = 17;
 
-    { 18  A21 matching low -- closes EXACTLY equal. BLACK last bar, so this  }
-    {     is the one anti-short pattern the slope gate does not exclude.     }
+    { 18  A08 bullish harami cross }
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
+        v_KB_Code = 18;
+
+    { 19  A19 tweezer bottom -- lows EXACTLY equal }
+    if v_KB_Code = 0 and ( L = L[1] ) and ( C[1] < O[1] ) and ( C > O ) then
+        v_KB_Code = 19;
+
+    { 20  A21 matching low -- closes EXACTLY equal. BLACK last bar, so this  }
+    {     is one of two anti-short patterns the slope gate does not exclude. }
     if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C < O )
        and ( O < O[1] ) and ( C = C[1] ) then
-        v_KB_Code = 18;
+        v_KB_Code = 20;
 
     if v_Bars_In_Sess >= 3 then begin
 
-        { 19  B26 three white soldiers -- each opens INSIDE the prior body }
+        { 21  B26 three white soldiers -- each opens INSIDE the prior body }
         if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
            and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
            and ( C[1] > C[2] ) and ( C > C[1] )
            and ( O[1] > O[2] ) and ( O[1] < C[2] )
            and ( O > O[1] )    and ( O < C[1] ) then
-            v_KB_Code = 19;
+            v_KB_Code = 21;
 
-        { 20  B28 three inside up }
+        { 22  B28 three inside up }
         if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] > O[1] )
            and ( v_KB_T1 <= O[2] ) and ( v_KB_M1 >= C[2] )
            and ( C > O ) and ( C > C[1] ) then
-            v_KB_Code = 20;
+            v_KB_Code = 22;
 
-        { 21  B30 three outside up }
+        { 23  B30 three outside up }
         if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] > O[1] )
            and ( O[1] <= C[2] ) and ( C[1] >= O[2] ) and ( v_KB_B1 > v_KB_B2 )
            and ( C > O ) and ( C > C[1] ) then
-            v_KB_Code = 21;
+            v_KB_Code = 23;
 
-        { 22  B37 three stars in the south. BLACK last bar -- the second     }
+        { 24  B37 three stars in the south. BLACK last bar -- the second     }
         {     anti-short pattern the slope gate does not exclude.            }
         if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
            and ( v_KB_L2 = True ) and ( v_KB_N2 > 0 )
            and ( O[1] < O[2] ) and ( O[1] > C[2] ) and ( L[1] > L[2] )
            and ( v_KB_B1 < v_KB_B2 )
            and ( H <= H[1] ) and ( L >= L[1] ) and ( v_KB_B0 < v_KB_B1 ) then
-            v_KB_Code = 22;
+            v_KB_Code = 24;
 
-        { 23  B38 unique three river bottom }
+        { 25  B38 unique three river bottom }
         if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
            and ( O[1] <= O[2] ) and ( O[1] >= C[2] ) and ( L[1] < L[2] )
            and ( C[1] > C[2] )
            and ( C > O ) and ( v_KB_B0 < v_KB_B1 ) and ( C < C[1] ) then
-            v_KB_Code = 23;
+            v_KB_Code = 25;
     end;
 
-    { 24  C42 rising three methods -- five bars }
+    { 26  C42 rising three methods -- five bars }
     if v_KB_Code = 0 and v_Bars_In_Sess >= 5
        and ( C[4] > O[4] ) and ( v_KB_L4 = True )
        and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
@@ -1356,9 +1380,9 @@ if v_KB_Opp = True and v_Bars_In_Sess >= 2 then begin
        and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
        and ( C > O ) and ( v_KB_L0 = True )
        and ( O < C[1] ) and ( C > C[4] ) then
-        v_KB_Code = 24;
+        v_KB_Code = 26;
 
-    { 25  C43 ladder bottom -- five bars }
+    { 27  C43 ladder bottom -- five bars }
     if v_KB_Code = 0 and v_Bars_In_Sess >= 5
        and ( C[4] < O[4] ) and ( C[3] < O[3] ) and ( C[2] < O[2] )
        and ( v_KB_L4 = True ) and ( v_KB_L3 = True ) and ( v_KB_L2 = True )
@@ -1366,31 +1390,31 @@ if v_KB_Opp = True and v_Bars_In_Sess >= 2 then begin
        and ( C[3] < C[4] ) and ( C[2] < C[3] )
        and ( C[1] < O[1] ) and ( v_KB_S1 >= v_KB_B1 )
        and ( C > O ) and ( O > O[1] ) then
-        v_KB_Code = 25;
+        v_KB_Code = 27;
 
-    { 26  C46 bullish three-line strike -- four bars }
+    { 28  C46 bullish three-line strike -- four bars }
     if v_KB_Code = 0 and v_Bars_In_Sess >= 4
        and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
        and ( O[2] < O[3] ) and ( O[1] < O[2] )
        and ( C[2] < C[3] ) and ( C[1] < C[2] )
        and ( C > O ) and ( O < C[1] ) and ( C > O[3] ) then
-        v_KB_Code = 26;
+        v_KB_Code = 28;
 end;
 
 
-    { ---------- CODES 27-28   NEUTRAL ---------- }
+    { ---------- CODES 29-30   NEUTRAL ---------- }
     { Colour-blind, so both can fire on a black bar. A10 outside bar is the  }
     { second most frequent pattern on actual entries -- 28 of the 180.       }
 
 if v_KB_Neu = True and v_Bars_In_Sess >= 2 then begin
 
-    { 27  A09 inside bar }
+    { 29  A09 inside bar }
     if v_KB_Code = 0 and ( H <= H[1] ) and ( L >= L[1] ) then
-        v_KB_Code = 27;
+        v_KB_Code = 29;
 
-    { 28  A10 outside bar }
+    { 30  A10 outside bar }
     if v_KB_Code = 0 and ( H >= H[1] ) and ( L <= L[1] ) then
-        v_KB_Code = 28;
+        v_KB_Code = 30;
 end;
 
 end;

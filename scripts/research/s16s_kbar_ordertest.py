@@ -50,10 +50,10 @@ SEQ = 200000
 SEED = 20260818
 
 GROUP_OF = {}
-for _c in range(1, 29):
-    GROUP_OF[_c] = 'SUP' if _c <= 13 else ('OPP' if _c <= 26 else 'NEU')
+for _c in range(1, 31):
+    GROUP_OF[_c] = 'SUP' if _c <= 15 else ('OPP' if _c <= 28 else 'NEU')
 GROUPS = ['SUP', 'OPP', 'NEU']
-MEMBERS = dict((g, [c for c in range(1, 29) if GROUP_OF[c] == g]) for g in GROUPS)
+MEMBERS = dict((g, [c for c in range(1, 31) if GROUP_OF[c] == g]) for g in GROUPS)
 
 
 def make_bars(rng, n):
@@ -86,8 +86,8 @@ def main():
     fail_c1 = dict((k, 0) for k in combos)
     fail_c2 = dict((k, 0) for k in combos)
     nblock = dict((k, 0) for k in combos)
-    report_src = dict((c, 0) for c in range(1, 29))
-    report_spec = dict((c, 0) for c in range(1, 29))
+    report_src = dict((c, 0) for c in range(1, 31))
+    report_spec = dict((c, 0) for c in range(1, 31))
     nfire_any = 0
 
     perms = []
@@ -103,7 +103,7 @@ def main():
         bars = make_bars(rng, 5)
         e = Env(bars, thr)
         e.run_helpers(helpers)
-        hit = set(c for c in range(1, 29) if e.ev(rules[c]) is True)
+        hit = set(c for c in range(1, 31) if e.ev(rules[c]) is True)
 
         if hit:
             nfire_any += 1
@@ -172,7 +172,7 @@ def main():
     print('=' * 78)
     print('  %-4s %-10s %4s %10s %10s %10s' %
           ('code', 'group', 'cls', 'src order', 'specific', 'delta'))
-    for c in range(1, 29):
+    for c in range(1, 31):
         a, b = report_src[c], report_spec[c]
         if a == 0 and b == 0:
             continue
