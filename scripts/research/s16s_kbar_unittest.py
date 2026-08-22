@@ -41,7 +41,7 @@ def load_source():
 
 def extract_section(src):
     a = src.index('{ SECTION 8.6 - K-BAR PATTERN SELECTOR')
-    b = src.index('v_KB_Block = ( v_KB_Code <> 0 );')
+    b = src.index('{ SECTION 8.7 -')
     return src[a:b]
 
 

@@ -38,7 +38,7 @@
 [IntrabarOrderGeneration = False]
 inputs:
     { Group 0: BUILD STAMP -- declared FIRST so it is the first row in -- see design record, block 2 }
-    Build_ID                ( 260822 ),
+    Build_ID                ( 260823 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -95,17 +95,12 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Block_Support        ( 0     ),     { RULING 2026-08-21. All 15 pro-short structures PASS. The 1 was }
+    KB_Entry_Mode           ( 0     ),     { 0 = source A only (v1.26.0 anchor). 1 = A+B. 2 = A+B+C.       }
                                            { read off the P&L of 180 executed fills -- selection on the      }
                                            { outcome variable, so it never had evidence behind it.           }
-    KB_Block_Oppose         ( 1     ),     { ADOPTED 2026-08-19. Block on any of the 13 anti-short patterns }
-    KB_Block_Neutral        ( 0     ),     { inside / outside bar stay ALLOWED (codes 29-30)                 }
-    KB_Filter_Mode          ( 2     ),     { ADOPTED 2026-08-19. A clean bar arms for Win bars               }
-    KB_Filter_Win           ( 3     ),     { ADOPTED 2026-08-19. Plateau spans 3-6, see the header           }
 
     { 2026-08-20 defect fixes, 2026-08-21 measured and settled by 4 cells -- see design record, block 3 }
     Sess_GapReset_On        ( 1     ),     { 1 = a wall-clock gap > one bar also starts a session. 0 = old }
-    ReEntry_Filt_Mode       ( 0     ),     { 0 = ADOPTED. Re-entry demands a clean bar on the entry bar    }
                                            { itself, stricter than the death cross path. 1 = unify with    }
                                            { v_Filt_Pass, costs one trade at -27,600. Design decision, not }
                                            { an optimisation -- neither value was ever swept on this path. }
@@ -230,14 +225,14 @@ variables:
     v_M8_Target             ( 0     ),
 
     { ===== K-bar admission state (v1.26.0) ===== }
-    v_KB_Sup                ( False ),
-    v_KB_Opp                ( False ),
-    v_KB_Neu                ( False ),
-    v_KB_On                 ( False ),
-    v_KB_Block              ( False ),
     v_KB_Code               ( 0     ),
-    v_Slope_Age             ( 999   ),
-    v_Clean_Age             ( 999   ),
+    v_KB_SupCode            ( 0     ),
+    v_KB_SupAge             ( 999   ),
+    v_KB_SupLife            ( 0     ),
+    v_KB_SupLive            ( False ),
+    v_KB_BullNow            ( False ),
+    v_DX_Age                ( 999   ),
+    v_Entry_Src             ( 0     ),
     v_Filt_Pass             ( False ),
     v_Sess_GapMin           ( 0     ),
     v_Sess_Gap_Seen         ( False ),
@@ -418,10 +413,9 @@ v_Struct_On             = ( Struct_On             <> 0 );
 v_Struct_UseClose       = ( Struct_UseClose       <> 0 );
 v_Tier2_On              = ( Tier2_On              <> 0 );
 v_M8_On                 = ( M8_On                 <> 0 );
-v_KB_Sup                = ( KB_Block_Support      <> 0 );
-v_KB_Opp                = ( KB_Block_Oppose       <> 0 );
-v_KB_Neu                = ( KB_Block_Neutral      <> 0 );
-v_KB_On                 = ( v_KB_Sup or v_KB_Opp or v_KB_Neu );
+    { The selector always runs now. There is no switch that turns the      }
+    { structures off, because they are no longer a veto -- they are an      }
+    { entry source and a safety rule, and both must be permanently live.    }
 v_Gap_Filter_On         = ( Gap_Filter_On         <> 0 );
 v_Gap_Day_On            = ( Gap_Day_On            <> 0 );
 v_Gap_Night_On          = ( Gap_Night_On          <> 0 );
@@ -821,7 +815,7 @@ if v_Slope_Require_Adjacent = True and v_Slope_Adjacent = False then
 
 v_KB_Code = 0;
 
-if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
+if v_Bars_In_Sess >= 2 then begin
 
     v_KB_R0 = H    - L;
     v_KB_R1 = H[1] - L[1];
@@ -867,7 +861,7 @@ if v_KB_On = True and v_Bars_In_Sess >= 2 then begin
 
     { ---------- CODES 1-15   PRO-SHORT ---------- }
 
-if v_KB_Sup = True and v_Bars_In_Sess >= 2 then begin
+if v_Bars_In_Sess >= 2 then begin
 
     { 1  A01 bearish engulfing }
     if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C < O )
@@ -976,7 +970,7 @@ end;
     { All but 20 and 24 end on a white bar and cannot fire while the slope   }
     { gate holds. They are coded so MC12 can prove that, not assume it.      }
 
-if v_KB_Opp = True and v_Bars_In_Sess >= 2 then begin
+if v_Bars_In_Sess >= 2 then begin
 
     { 16  A02 bullish engulfing }
     if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C > O )
@@ -1078,7 +1072,7 @@ end;
     { Colour-blind, so both can fire on a black bar. A10 outside bar is the  }
     { second most frequent pattern on actual entries -- 28 of the 180.       }
 
-if v_KB_Neu = True and v_Bars_In_Sess >= 2 then begin
+if v_Bars_In_Sess >= 2 then begin
 
     { 29  A09 inside bar }
     if v_KB_Code = 0 and ( H <= H[1] ) and ( L >= L[1] ) then
@@ -1091,46 +1085,79 @@ end;
 
 end;
 
-v_KB_Block = ( v_KB_Code <> 0 );
+    { v_KB_Block is gone. A structure is no longer a veto -- the only veto }
+    { left is R1, a BULLISH structure on the entry bar, and it lives in     }
+    { SECTION 8.7 where the sources are decided.                            }
 
 
-    { SECTION 8.7 - FILTER ORDER (v1.26.0) -- see design record, block 9 }
+    { SECTION 8.7 - STRUCTURE VALIDITY AND ENTRY SOURCES (v1.27.0) }
+    { A structure stays valid for as many bars as it took to FORM. Two bars }
+    { to build, two bars of validity; five to build, five. No constant to   }
+    { fit, and it lengthens by itself in a slow market, which is where a    }
+    { fixed N would hurt most. Ruled 2026-08-21.                            }
+    {                                                                       }
+    { Life by family: codes 1-5 and 15 are two-bar, 6-11 are three-bar, 13  }
+    { is four-bar, 12 and 14 are five-bar.                                  }
 
-if v_Slope_Pass = True then
-    v_Slope_Age = 0
+v_KB_BullNow = ( v_KB_Code >= 16 ) and ( v_KB_Code <= 28 );
+
+if ( v_KB_Code >= 1 ) and ( v_KB_Code <= 15 ) then begin
+    v_KB_SupCode = v_KB_Code;
+    v_KB_SupAge  = 0;
+    if v_KB_Code = 12 or v_KB_Code = 14 then
+        v_KB_SupLife = 5
+    else if v_KB_Code = 13 then
+        v_KB_SupLife = 4
+    else if v_KB_Code >= 6 and v_KB_Code <= 11 then
+        v_KB_SupLife = 3
+    else
+        v_KB_SupLife = 2;
+end
+else if v_Bars_In_Sess <= 1 then begin
+    v_KB_SupAge  = 999;
+    v_KB_SupCode = 0;
+    v_KB_SupLife = 0;
+end
+else
+    v_KB_SupAge = v_KB_SupAge + 1;
+
+v_KB_SupLive = ( v_KB_SupAge <= v_KB_SupLife ) and ( v_KB_SupCode > 0 );
+
+if v_Death_Cross = True then
+    v_DX_Age = 0
 else if v_Bars_In_Sess <= 1 then
-    v_Slope_Age = 999
+    v_DX_Age = 999
 else
-    v_Slope_Age = v_Slope_Age + 1;
+    v_DX_Age = v_DX_Age + 1;
 
-if v_KB_Block = False then
-    v_Clean_Age = 0
-else if v_Bars_In_Sess <= 1 then
-    v_Clean_Age = 999
-else
-    v_Clean_Age = v_Clean_Age + 1;
+    { Three sources, ORed. A is v1.26.0 untouched. B fires when the         }
+    { structure arrived FIRST and is still live as the cross lands, which   }
+    { lets shape stand in for momentum. C fires when the cross came first   }
+    { and the structure completes inside the cross's own window.            }
+    {                                                                       }
+    { R1 is not a source, it is a veto and it has no switch: a bullish      }
+    { structure on the entry bar stops the order. It costs nothing today    }
+    { because source A's bar is always black, but B and C can enter on      }
+    { bars that are not, and there it is real protection.                   }
 
-if KB_Filter_Mode = 1 then
-        { slope is the first filter: it may be up to Win bars old, and the    }
-        { pattern check must be clean on the entry bar itself                 }
-    v_Filt_Pass = ( v_Slope_Age <= KB_Filter_Win ) and ( v_Clean_Age = 0 )
-else if KB_Filter_Mode = 2 then
-        { pattern is the first filter: a clean bar arms for Win bars, and the }
-        { slope must hold on the entry bar itself                            }
-    v_Filt_Pass = ( v_Clean_Age <= KB_Filter_Win ) and ( v_Slope_Age = 0 )
-else if KB_Filter_Mode = 3 then
-        { independent: whichever fires first arms, the other confirms inside  }
-        { the window                                                          }
-    v_Filt_Pass = ( ( v_Slope_Age <= KB_Filter_Win ) and ( v_Clean_Age = 0 ) )
-               or ( ( v_Clean_Age <= KB_Filter_Win ) and ( v_Slope_Age = 0 ) )
-else
-        { mode 0 -- both on this bar, which is v1.25.0 behaviour exactly      }
-    v_Filt_Pass = ( v_Slope_Age = 0 ) and ( v_Clean_Age = 0 );
+v_Entry_Src = 0;
+if v_KB_BullNow = False then begin
+    if v_Death_Cross = True and v_Slope_Pass = True then
+        v_Entry_Src = 1
+    else if KB_Entry_Mode >= 1 and v_Death_Cross = True
+            and v_KB_SupLive = True then
+        v_Entry_Src = 2
+    else if KB_Entry_Mode >= 2 and v_KB_SupAge = 0
+            and v_DX_Age <= v_KB_SupLife
+            and v_ZLEMA_Fast < v_ZLEMA_Slow then
+        v_Entry_Src = 3;
+end;
+
+v_Filt_Pass = ( v_Entry_Src > 0 );
 
 
     { SECTION 9 - ENTRY (Death Cross + M1 Slope + Rule #11 gates)  -- md 3.48 }
 if MarketPosition = 0 and
-   v_Death_Cross         = True and
    v_Filt_Pass           = True and
    v_FirstBar_Block      = False and
    v_Tail_Entry_OK       = True and
@@ -1141,18 +1168,22 @@ if MarketPosition = 0 and
    v_Gap_Block           = False and
    v_Sess_LastBar_Block  = False then begin
     v_IsReEntry = False;
-    sell short ( "SE_MA_DeathCross" ) next bar at market;
+    if v_Entry_Src = 1 then
+        sell short ( "SE_MA_DeathCross" ) next bar at market
+    else if v_Entry_Src = 2 then
+        sell short ( "SE_MA_StructLead" ) next bar at market
+    else
+        sell short ( "SE_MA_StructLate" ) next bar at market;
 end;
 
     { 2026-08-20 DEFECT FIX. The two entry paths were using DIFFERENT K-bar -- see design record, block 10 }
-if ReEntry_Filt_Mode <> 0 then
-    v_ReEntry_Filt_OK = v_Filt_Pass
-else
-    v_ReEntry_Filt_OK = ( v_KB_Block = False );
+    { Re-entry now carries the same rule as the main path: no bullish      }
+    { structure on the bar it fills. ReEntry_Filt_Mode is gone with the     }
+    { filter it selected between.                                          }
+v_ReEntry_Filt_OK = ( v_KB_BullNow = False );
 
-    { v1.6 Re-Entry: washout recovery via stop order at original entry price.  -- md 3.49 }
 if MarketPosition = 0 and
-   v_ReEntry_On            = True and
+   v_ReEntry_On          = True and
    v_ReEntry_Armed       = True and
    ( v_ReEntry_Structure_Gate = False or v_ZLEMA_Fast < v_ZLEMA_Slow ) and
    ( v_ReEntry_Slope_Gate     = False or v_Slope_Pass = True ) and
