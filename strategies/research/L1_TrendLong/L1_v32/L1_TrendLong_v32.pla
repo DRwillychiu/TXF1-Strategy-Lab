@@ -1,7 +1,11 @@
 { ============================================================
   ADAPTIVE FARMER - TREND LONG STRATEGY
   Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
-  MC Load Name: WILLY_ATR_LONG_60M
+  MC Load Name: WILLY_ATR_LONG_45M_V32_RESEARCH
+                *** DO NOT load this over the live signal name
+                WILLY_ATR_LONG_60M. This is a research build; saving
+                it under the live name overwrites the deployed code
+                inside MultiCharts. Save it as a NEW signal. ***
   Version     : V3.2 (V3.1 base + re-entry module, STEP 1: leg OFF)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
