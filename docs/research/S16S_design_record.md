@@ -4172,6 +4172,42 @@ Fires in order. First hit wins per bar (ExitFired flag).
 
 ## 4. Open items
 
+### 2026-08-23 -- the K-bar entry hypothesis is closed
+
+Three entry sources were built and measured. The bearish structures cannot
+substitute for the slope gate and cannot confirm after it. Source B ran
+3,212 trades at PF 0.52 against source A's 165 at PF 1.89 -- the same death
+crosses, differing only in whether the second condition was slope or shape.
+
+The structures do not even find the tail: 3 big fish in 3,212 trades
+against 7 in 165, a hit rate 45 times worse, in a strategy where the top
+seven winners are over 90% of net profit.
+
+Read the other way, this is the strongest evidence any component of this
+strategy has ever had. The slope gate rejects 97.6% of death crosses --
+7,704 down to 187 -- and admitting 42% of the rejects costs 11,826,800. The
+edge is in the SELECTIVITY, not in pattern recognition.
+
+Full record: docs/research/S16S_entry_source_verdict_20260823.md
+
+### Open as of 2026-08-23
+
+**A. Cross-period nine-window validation is now the top item.** The only
+genuinely unseen data this strategy has faced -- three trades from
+2026-07-31 to 08-22 -- lost all three, including a -90,400 that exceeds the
+worst single loss in the whole in-sample history. n=3 proves nothing, but
+it is the only out-of-sample evidence that exists and it is negative.
+
+**B. One K-bar direction remains untested**: structure as a REQUIREMENT on
+top of slope, rather than a substitute for it. Expected 172 -> ~73 trades,
+which breaks the two-a-month floor. Given that structure presence carries
+almost no information across 3,212 trades, it is unlikely to carry any
+across 172. Not recommended, ruling owed.
+
+**C. Zero held-out data still.** Roughly 29,000 in-sample cells against a
+sample that, as computed on 2026-08-22, cannot detect an entry filter
+smaller than a doubling of the average trade.
+
 ### The QuickStop_Time mechanism, stated exactly (2026-08-18)
 
 Three inputs, one latch, two legs, sitting at P1 of the exit chain --
