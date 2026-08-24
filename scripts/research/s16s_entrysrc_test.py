@@ -12,7 +12,8 @@ Four things have to be true and none should be taken on trust:
       cannot drift no matter what else is set
   A2  the structure life mapping is exactly 2 / 3 / 4 / 5 for the four
       families, for every code 1..15, with no gaps
-  A3  a bullish structure on the entry bar (codes 16-28) vetoes ALL THREE
+  A3  a bullish structure on the entry bar (codes 16-28 and 31-33)
+      vetoes ALL THREE
       sources -- R1 has no switch and no exception
   A4  mode 1 is a strict superset of mode 0, and mode 2 of mode 1; adding a
       source can only ever add entries
@@ -28,7 +29,7 @@ PLA = os.path.join(REPO, 'strategies', 'research', 'S16_MACrossShort',
                    'S16_S_MACrossShort_v1.26.0.pla')
 
 AGES = list(range(0, 12)) + [999]
-CODES = list(range(0, 31))
+CODES = list(range(0, 34))
 
 
 def strip_comments(t):
@@ -70,6 +71,36 @@ def main():
     print()
 
     fail = 0
+
+    # ---------------- A5: which codes count as bullish, parsed ----------------
+    # R1 is always on and has no switch, so widening v_KB_BullNow silently
+    # changes the anchor. The three gap patterns added on 2026-08-24 sit at
+    # 31-33, outside the original 16-28 range, and the test has to see that
+    # the definition was actually widened -- not take the .pla's word for it.
+    print('=' * 74)
+    print(' A5  v_KB_BullNow covers 16-28 AND 31-33, and never 29/30')
+    print('=' * 74)
+    mb = re.search(r'v_KB_BullNow = ([^;]+);', ' '.join(strip_comments(src).split()))
+    assert mb, 'v_KB_BullNow not parseable'
+    expr = mb.group(1)
+    print('  %s' % expr)
+    pex = expr.replace('>=', '@G@').replace('<=', '@L@')
+    pex = re.sub(r'(?<![<>!=])=(?!=)', '==', pex)
+    pex = pex.replace('@G@', '>=').replace('@L@', '<=').replace(' and ', ' and ').replace(' or ', ' or ')
+    cc = compile(pex, '<b>', 'eval')
+    badb = []
+    for c in range(0, 34):
+        got = bool(eval(cc, {'__builtins__': {}}, {'v_KB_Code': c}))
+        exp = (16 <= c <= 28) or (31 <= c <= 33)
+        if got != exp:
+            badb.append((c, got, exp))
+    print('  codes checked: 34   mismatches: %d' % len(badb))
+    for c, g, e in badb:
+        print('     code %d: source says %s, expected %s' % (c, g, e))
+    fail += len(badb)
+    if not badb:
+        print('  OK -- 16-28 and 31-33 bullish, 0/29/30 and 1-15 not')
+    print()
 
     # ---------------- A2: life mapping parsed from source ----------------
     print('=' * 74)

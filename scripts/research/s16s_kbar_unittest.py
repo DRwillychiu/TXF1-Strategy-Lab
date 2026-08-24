@@ -207,6 +207,13 @@ FIX = [
 
  (29, 'A09 inside bar',          [(100,115, 95,110),(105,112, 98,108)],            (1,'H', 4)),
  (30, 'A10 outside bar',         [(105,112, 98,108),(100,115, 95,110)],            (1,'H',-4)),
+
+ # the three bullish gaps, 2026-08-24. Fixtures built from the SPEC TEXT in
+ # docs/research/S16S_bullish_catalogue_20260824.md, not from the code.
+ (31, 'bullish hikkake (close-conf)',
+      [(100,120, 90,110),(105,115, 95,108),(100,110, 88, 92),( 92,100, 88, 95),( 95,125, 94,120)], (4,'C',-6)),
+ (32, 'homing pigeon',            [(120,121, 99,100),(115,116,104,105)],            (0,'C', 6)),
+ (33, 'stick sandwich',           [(110,112, 98,100),(102,112,101,110),(108,109, 99,100)], (2,'C', 1)),
 ]
 FIELD = {'O': 0, 'H': 1, 'L': 2, 'C': 3}
 
@@ -233,8 +240,8 @@ def main():
     print()
 
     codes = [c for c, _ in rules]
-    assert codes == list(range(1, 31)), 'codes not 1..28 in order: %s' % codes
-    assert [c for c, _, _, _ in FIX] == list(range(1, 31)), 'fixture codes out of order'
+    assert codes == list(range(1, 34)), 'codes not 1..33 in order: %s' % codes
+    assert [c for c, _, _, _ in FIX] == list(range(1, 34)), 'fixture codes out of order'
     COND = dict(rules)
 
     def fires(bars, code):
@@ -280,7 +287,7 @@ def main():
     print('=' * 78)
     overlaps = []
     for code, name, bars, _ in FIX:
-        hit = [c for c in range(1, 31) if fires(bars, c) is True]
+        hit = [c for c in range(1, 34) if fires(bars, c) is True]
         others = [c for c in hit if c != code]
         if others:
             overlaps.append((code, name, others))
@@ -295,13 +302,15 @@ def main():
     print(' T5 priority masking -- is this code the one REPORTED on its own fixture?')
     print('=' * 78)
     GROUP = {}
-    for c in range(1, 31):
-        GROUP[c] = 'SUP' if c <= 13 else ('OPP' if c <= 26 else 'NEU')
+    for c in range(1, 34):
+        # cascade block order: SUP 1-15, OPP 16-28, NEU 29-30, GAP 31-33
+        GROUP[c] = ('SUP' if c <= 15 else 'OPP' if c <= 28
+                    else 'NEU' if c <= 30 else 'GAP')
     masked = []
     for code, name, bars, _ in FIX:
-        hit = [c for c in range(1, 31) if fires(bars, c) is True]
+        hit = [c for c in range(1, 34) if fires(bars, c) is True]
         # cascade order is group block order (SUP, OPP, NEU) then code order
-        rank = {'SUP': 0, 'OPP': 1, 'NEU': 2}
+        rank = {'SUP': 0, 'OPP': 1, 'NEU': 2, 'GAP': 3}
         winner = sorted(hit, key=lambda c: (rank[GROUP[c]], c))[0]
         ok = (winner == code)
         if not ok:
@@ -323,14 +332,19 @@ def main():
     raw = open(PLA, 'rb').read().decode('ascii')
     flag_codes = sorted(int(x) for x in re.findall(
         r'v_KB_Bull3 = True;\s*\n\s*if v_KB_Code = 0 then v_KB_Code = (\d+);', raw))
-    want = list(range(21, 29))
+    # code 31 bullish hikkake raises the flag from a STANDALONE block sitting
+    # after its own cascade line, so it does not match the 21-28 shape
+    if re.search(r'and \( C > H\[3\] \) then\s*\n\s*v_KB_Bull3 = True;', raw):
+        flag_codes.append(31)
+        flag_codes.sort()
+    want = list(range(21, 29)) + [31]
     bad6 = 0
     print('  codes raising the flag: %s' % flag_codes)
     if flag_codes != want:
         print('  FAIL -- expected %s' % want)
         bad6 += 1
     else:
-        print('  OK -- exactly the eight 3-bar-or-longer bullish structures')
+        print('  OK -- exactly the nine 3-bar-or-longer bullish structures')
     reset = len(re.findall(r'v_KB_Bull3 = False;', raw))
     print('  reset sites: %d %s' % (reset, 'OK' if reset == 1 else 'FAIL'))
     bad6 += (reset != 1)
@@ -338,8 +352,8 @@ def main():
         if code not in want:
             continue
         f = fires(bars, code)
-        w = [c for c in range(1, 31) if fires(bars, c) is True]
-        rank = {'SUP': 0, 'OPP': 1, 'NEU': 2}
+        w = [c for c in range(1, 34) if fires(bars, c) is True]
+        rank = {'SUP': 0, 'OPP': 1, 'NEU': 2, 'GAP': 3}
         rep = sorted(w, key=lambda c: (rank[GROUP[c]], c))[0]
         ok = (f is True)
         bad6 += (not ok)
@@ -355,8 +369,8 @@ def main():
     print('=' * 78)
     n1 = sum(1 for c, n, b, _ in FIX if fires(b, c) is True)
     n4 = sum(1 for c, n, b, br in FIX if fires(perturb(b, br), c) is not True)
-    print('  T1  %d/30 patterns fire on their own fixture' % n1)
-    print('  T4  %d/30 die on a one-tick perturbation' % n4)
+    print('  T1  %d/33 patterns fire on their own fixture' % n1)
+    print('  T4  %d/33 die on a one-tick perturbation' % n4)
     print('  T3  %d fixtures also trigger another pattern' % len(overlaps))
     print('  T5  %d patterns are MASKED -- they fire but a lower code reports first'
           % len(masked))

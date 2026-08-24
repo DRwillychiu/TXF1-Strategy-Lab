@@ -38,7 +38,7 @@
 [IntrabarOrderGeneration = False]
 inputs:
     { Group 0: BUILD STAMP -- declared FIRST so it is the first row in -- see design record, block 2 }
-    Build_ID                ( 260824 ),
+    Build_ID                ( 260825 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -1104,6 +1104,75 @@ if v_Bars_In_Sess >= 2 then begin
         v_KB_Code = 30;
 end;
 
+    { ---- the three genuine bullish gaps, added 2026-08-24 ----------------- }
+    { The bullish set was built as a mirror of the bearish one and inherited  }
+    { its blind spots. Enumerating the bullish universe against the same      }
+    { sources found exactly three real gaps -- everything else in the         }
+    { literature is either gap-dependent (structurally excluded, same as the  }
+    { bearish side), single-bar (excluded by the two-bar floor), or already   }
+    { coded. Full record: docs/research/S16S_bullish_catalogue_20260824.md    }
+    {                                                                        }
+    { They sit at 31-33 rather than being renumbered into the 16-28 range     }
+    { because 29/30 are the neutral pair and every downstream script and      }
+    { document keys off those numbers. v_KB_BullNow is widened instead.       }
+    {                                                                        }
+    { ANCHOR: measured on all 421,513 bars, none of these three fires on any  }
+    { of the 187 death-cross-plus-slope signal bars, so R1 -- which is always }
+    { on and has no switch -- vetoes exactly zero additional entries and the  }
+    { 172-trade anchor is unmoved. That measurement is the reason these could }
+    { be added without a switch. scripts/research/s16s_bull_gap_census.py     }
+
+    { 31  bullish hikkake -- five bars, the mirror of D47 code 14.           }
+    { CLOSE-CONFIRMED, and deliberately not a pure mirror. D47 tests the      }
+    { EXTREME only ( L < L[3] ), so its mirror ( H > H[3] ) fires on any bar  }
+    { that merely pokes above the inside bar. On 2026-04-08 21:55 that form   }
+    { fired on a bar which opened 35335 and closed 35212 -- 123 points DOWN   }
+    { -- and it is one of the 187 entry signals. Flattening a short on a bar  }
+    { like that, in the name of a bullish reversal, is indefensible. The      }
+    { extreme form fires on a black bar 1,925 times out of 6,749; requiring   }
+    { the CLOSE beyond removes all of them and takes the count to 4,035.      }
+    { D47 has the same hole on its own side -- it is inert at                 }
+    { KB_Entry_Mode = 0, so it is left alone and logged as an open item.      }
+if v_Bars_In_Sess >= 5 then begin
+    if v_KB_Code = 0
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <  H[3] ) and ( L[2] <  L[3] )
+       and ( C > H[3] ) then
+        v_KB_Code = 31;
+    if ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <  H[3] ) and ( L[2] <  L[3] )
+       and ( C > H[3] ) then
+        v_KB_Bull3 = True;
+end;
+
+    { 32  homing pigeon -- two bars, the exact mirror of D48 code 15.        }
+    { Both black, the second's body inside the first's and smaller. Two bars }
+    { so it never reaches v_KB_Bull3; it is an R1 veto only.                 }
+if v_Bars_In_Sess >= 2 then begin
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C < O )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] )
+       and ( v_KB_B0 < v_KB_B1 ) then
+        v_KB_Code = 32;
+end;
+
+    { 33  stick sandwich -- three bars, black / white / black with the two   }
+    { blacks closing at EXACTLY the same price. Bullish-only in the          }
+    { literature, which is the mirror image of advance block, deliberation   }
+    { and identical three crows being bearish-only.                         }
+    {                                                                       }
+    { NOT in v_KB_Bull3, and this is a judgement call worth stating: its     }
+    { completing bar is BLACK by definition -- 3,331 out of 3,331. The exit  }
+    { rule exists because the user described "a very strong bullish reversal }
+    { structure"; a pattern that finishes on a black candle is a support     }
+    { test, not that. It still blocks entry through R1, where its meaning is }
+    { "do not sell into a level that just held twice".                      }
+if v_Bars_In_Sess >= 3 then begin
+    if v_KB_Code = 0
+       and ( C[2] < O[2] ) and ( C[1] > O[1] ) and ( C < O )
+       and ( C = C[2] ) and ( C[1] > C[2] ) then
+        v_KB_Code = 33;
+end;
+
 end;
 
     { v_KB_Block is gone. A structure is no longer a veto -- the only veto }
@@ -1120,7 +1189,10 @@ end;
     { Life by family: codes 1-5 and 15 are two-bar, 6-11 are three-bar, 13  }
     { is four-bar, 12 and 14 are five-bar.                                  }
 
-v_KB_BullNow = ( v_KB_Code >= 16 ) and ( v_KB_Code <= 28 );
+    { 16-28 are the mirrored bullish set, 31-33 the three gaps found on }
+    { 2026-08-24. 29/30 stay neutral and are deliberately NOT included.  }
+v_KB_BullNow = ( ( v_KB_Code >= 16 ) and ( v_KB_Code <= 28 ) )
+               or ( ( v_KB_Code >= 31 ) and ( v_KB_Code <= 33 ) );
 
 if ( v_KB_Code >= 1 ) and ( v_KB_Code <= 15 ) then begin
     v_KB_SupCode = v_KB_Code;
