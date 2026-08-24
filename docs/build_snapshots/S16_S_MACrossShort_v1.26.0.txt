@@ -2,15 +2,15 @@
   PLA INPUT SNAPSHOT
 ==========================================================================
   file     : strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.26.0.pla
-  bytes    : 64864
-  md5      : 9ea265f6819f436ad19d12f51e9ef3a2
-  Build_ID : 260825
-  inputs   : 87
+  bytes    : 65816
+  md5      : b3020792df1bf9b6cc233effb24dd378
+  Build_ID : 260826
+  inputs   : 88
 ==========================================================================
 
   順序 = 宣告順序 = MC12 參數對話框的顯示順序，可逐列對照。
 
-    1  Build_ID                260825
+    1  Build_ID                260826
     2  ZLEMA_Fast              25
     3  ZLEMA_Slow              70
     4  MinSlope                28
@@ -49,51 +49,52 @@
    37  MaxHold_Pct             2.30
    38  KB_Entry_Mode           0
    39  BullExit_Mode           0
-   40  Sess_GapReset_On        1
-   41  KB_Pat_LongBody         0.50
-   42  KB_Pat_DojiRatio        0.10
-   43  KB_Pat_DojiMinRange     3
-   44  KB_Pat_DojiMinShadow    1
-   45  KB_Pat_MinRange         0
-   46  ATR_Len                 14
-   47  StopATRMult             4.0
-   48  SL_Pct                  1.00
-   49  Holiday_Flat_Time       415
-   50  Registry_Valid_Until    1270101
-   51  Manual_Kill_Switch      False
-   52  Settlement_Flat_Time    1230
-   53  Tail_NoEntry_From       415
-   54  Tail_ForceExit_Time     430
-   55  Tail_DayNoEntry_From    1335
-   56  Tail_Signal_Lead_Bars   2
-   57  Gap_Filter_On           1
-   58  Gap_Day_On              1
-   59  Gap_Night_On            1
-   60  Gap_Down_Min_Pct        0.10
-   61  Gap_Rise_Min_Pct        0.20
-   62  Gap_Scope_Bars          3
-   63  Gap_KB_Gate_On          1
-   64  Gap_KB_Group            1
-   65  Gap_KB_Scope_Bars       3
-   66  UpGap_Gate_On           0
-   67  UpGap_Mode              1
-   68  UpGap_Min_Pct           0.10
-   69  UpGap_Bar1_Pct          0.20
-   70  UpGap_Scope_Bars        3
-   71  UpGap_Relax_Mult        0.50
-   72  Sess_Day_Start          845
-   73  Sess_Day_End            1345
-   74  Sess_Night_Start        1500
-   75  Sess_Night_End          500
-   76  Sess_LastBar_Block_On   1
-   77  KB_Body_Long            0.75
-   78  KB_Body_Mid             0.30
-   79  KB_Body_Small           0.05
-   80  KB_Shadow_Ratio         2.00
-   81  ReEntry_On              1
-   82  ReEntry_Structure_Gate  1
-   83  ReEntry_Slope_Gate      1
-   84  ReEntry_Close_Gate      1
-   85  Slope_Form              2
-   86  MinSlope_Rate           0.050
-   87  Slope_Require_Adjacent  0
+   40  KB_Gap_Pat              1
+   41  Sess_GapReset_On        1
+   42  KB_Pat_LongBody         0.50
+   43  KB_Pat_DojiRatio        0.10
+   44  KB_Pat_DojiMinRange     3
+   45  KB_Pat_DojiMinShadow    1
+   46  KB_Pat_MinRange         0
+   47  ATR_Len                 14
+   48  StopATRMult             4.0
+   49  SL_Pct                  1.00
+   50  Holiday_Flat_Time       415
+   51  Registry_Valid_Until    1270101
+   52  Manual_Kill_Switch      False
+   53  Settlement_Flat_Time    1230
+   54  Tail_NoEntry_From       415
+   55  Tail_ForceExit_Time     430
+   56  Tail_DayNoEntry_From    1335
+   57  Tail_Signal_Lead_Bars   2
+   58  Gap_Filter_On           1
+   59  Gap_Day_On              1
+   60  Gap_Night_On            1
+   61  Gap_Down_Min_Pct        0.10
+   62  Gap_Rise_Min_Pct        0.20
+   63  Gap_Scope_Bars          3
+   64  Gap_KB_Gate_On          1
+   65  Gap_KB_Group            1
+   66  Gap_KB_Scope_Bars       3
+   67  UpGap_Gate_On           0
+   68  UpGap_Mode              1
+   69  UpGap_Min_Pct           0.10
+   70  UpGap_Bar1_Pct          0.20
+   71  UpGap_Scope_Bars        3
+   72  UpGap_Relax_Mult        0.50
+   73  Sess_Day_Start          845
+   74  Sess_Day_End            1345
+   75  Sess_Night_Start        1500
+   76  Sess_Night_End          500
+   77  Sess_LastBar_Block_On   1
+   78  KB_Body_Long            0.75
+   79  KB_Body_Mid             0.30
+   80  KB_Body_Small           0.05
+   81  KB_Shadow_Ratio         2.00
+   82  ReEntry_On              1
+   83  ReEntry_Structure_Gate  1
+   84  ReEntry_Slope_Gate      1
+   85  ReEntry_Close_Gate      1
+   86  Slope_Form              2
+   87  MinSlope_Rate           0.050
+   88  Slope_Require_Adjacent  0

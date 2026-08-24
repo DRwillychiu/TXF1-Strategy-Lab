@@ -41,9 +41,10 @@ NAMES = {
     20: 'A21 低價配', 21: 'B26 三白兵', 22: 'B28 三內部上漲', 23: 'B30 三外部上漲',
     24: 'B37 南方三星', 25: 'B38 獨特三河床', 26: 'C42 上升三法', 27: 'C43 梯底',
     28: 'C46 三線打擊(漲)', 29: 'A09 內含線', 30: 'A10 外包線',
+    31: 'D 多頭Hikkake', 32: 'D 家鴿', 33: 'D 三明治',
 }
 GROUP = dict((c, '支持' if c <= 15 else ('反對' if c <= 28 else '中性'))
-             for c in range(1, 31))
+             for c in range(1, 34))
 
 
 def load_cache():
@@ -69,7 +70,7 @@ def main():
     thr = parse_inputs(src)
     rules = dict(parse_rules(sec))
     helpers = parse_helpers(sec)
-    assert sorted(rules) == list(range(1, 31)), sorted(rules)
+    assert sorted(rules) == list(range(1, 34)), sorted(rules)
     print('rules parsed: %d   helpers: %d' % (len(rules), len(helpers)))
 
     O, H, L, C, BIS, ZF, ZS = load_cache()
@@ -84,9 +85,9 @@ def main():
     if m:
         minslope = float(m.group(1))
 
-    cnt_all = dict((c, 0) for c in range(1, 31))
-    cnt_dx = dict((c, 0) for c in range(1, 31))
-    cnt_sl = dict((c, 0) for c in range(1, 31))
+    cnt_all = dict((c, 0) for c in range(1, 34))
+    cnt_dx = dict((c, 0) for c in range(1, 34))
+    cnt_sl = dict((c, 0) for c in range(1, 34))
     n_dx = n_sl = 0
     any_all = any_dx = any_sl = 0
 
@@ -109,7 +110,7 @@ def main():
                 g[name] = None
 
         hits = []
-        for c in range(1, 31):
+        for c in range(1, 34):
             try:
                 if eval(rcode[c], g) is True:
                     hits.append(c)
@@ -153,7 +154,7 @@ def main():
     print('=' * 96)
     print('  %-4s %-18s %-5s %10s %8s %10s %8s %10s %8s'
           % ('代碼', '型態', '家族', '全部', '佔%', '死叉', '佔%', '過閘門', '佔%'))
-    for c in range(1, 31):
+    for c in range(1, 34):
         print('  %-4d %-18s %-5s %10d %7.2f%% %10d %7.2f%% %10d %7.2f%%'
               % (c, NAMES[c], GROUP[c],
                  cnt_all[c], 100.0 * cnt_all[c] / (N - 5),
@@ -174,7 +175,7 @@ def main():
     print('=' * 96)
     print('  結構性惰性檢查 —— 在「過閘門」母體上為 0 的型態')
     print('=' * 96)
-    dead = [c for c in range(1, 31) if cnt_sl[c] == 0]
+    dead = [c for c in range(1, 34) if cnt_sl[c] == 0]
     for c in dead:
         print('  %-4d %-18s %-5s   全部 %d 次，死叉 %d 次，過閘門 0 次'
               % (c, NAMES[c], GROUP[c], cnt_all[c], cnt_dx[c]))

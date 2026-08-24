@@ -89,17 +89,19 @@ def main():
     pex = pex.replace('@G@', '>=').replace('@L@', '<=').replace(' and ', ' and ').replace(' or ', ' or ')
     cc = compile(pex, '<b>', 'eval')
     badb = []
-    for c in range(0, 34):
-        got = bool(eval(cc, {'__builtins__': {}}, {'v_KB_Code': c}))
-        exp = (16 <= c <= 28) or (31 <= c <= 33)
-        if got != exp:
-            badb.append((c, got, exp))
-    print('  codes checked: 34   mismatches: %d' % len(badb))
+    for gp in (True, False):        # KB_Gap_Pat on and off
+        for c in range(0, 34):
+            got = bool(eval(cc, {'__builtins__': {}},
+                            {'v_KB_Code': c, 'v_KB_Gap_Pat': gp}))
+            exp = (16 <= c <= 28) or (gp and 31 <= c <= 33)
+            if got != exp:
+                badb.append(('gap=%s code %d' % (gp, c), got, exp))
+    print('  codes checked: 68 (34 x KB_Gap_Pat on/off)   mismatches: %d' % len(badb))
     for c, g, e in badb:
-        print('     code %d: source says %s, expected %s' % (c, g, e))
+        print('     %s: source says %s, expected %s' % (c, g, e))
     fail += len(badb)
     if not badb:
-        print('  OK -- 16-28 and 31-33 bullish, 0/29/30 and 1-15 not')
+        print('  OK -- 31-33 bullish only when KB_Gap_Pat is on; 29/30 never')
     print()
 
     # ---------------- A2: life mapping parsed from source ----------------

@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.26.0   Build_ID 260825
+  Version     : v1.26.0   Build_ID 260826
 
   ANCHOR -- every input at the default in this file
       160 trades / 2,796,800 / PF 2.3295303290 / -337,200
@@ -38,7 +38,7 @@
 [IntrabarOrderGeneration = False]
 inputs:
     { Group 0: BUILD STAMP -- declared FIRST so it is the first row in -- see design record, block 2 }
-    Build_ID                ( 260825 ),
+    Build_ID                ( 260826 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -96,7 +96,8 @@ inputs:
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
     KB_Entry_Mode           ( 0     ),
-    BullExit_Mode           ( 0     ),     { 0 = off. 1 = flatten only when losing. 2 = flatten regardless }     { 0 = source A only (v1.26.0 anchor). 1 = A+B. 2 = A+B+C.       }
+    BullExit_Mode           ( 0     ),
+    KB_Gap_Pat              ( 1     ),     { 0 = codes 31-33 do not count as bullish. Isolates the 2026-08-24 anchor shift }     { 0 = off. 1 = flatten only when losing. 2 = flatten regardless }     { 0 = source A only (v1.26.0 anchor). 1 = A+B. 2 = A+B+C.       }
                                            { read off the P&L of 180 executed fills -- selection on the      }
                                            { outcome variable, so it never had evidence behind it.           }
 
@@ -234,6 +235,7 @@ variables:
     v_KB_BullNow            ( False ),
     v_KB_Bull3              ( False ),
     v_BullExit_On           ( False ),
+    v_KB_Gap_Pat            ( False ),
     v_DX_Age                ( 999   ),
     v_Entry_Src             ( 0     ),
     v_Filt_Pass             ( False ),
@@ -409,6 +411,7 @@ if CurrentBar = 1 then
 v_QuickStop_On          = ( QuickStop_On          <> 0 );
 v_QS_Time_On            = ( QS_Time_On            <> 0 );
 v_BullExit_On           = ( BullExit_Mode         <> 0 );
+v_KB_Gap_Pat            = ( KB_Gap_Pat            <> 0 );
 v_QS_Loss_On            = ( QS_Loss_On            <> 0 );
 v_ML_On                 = ( ML_On                 <> 0 );
 v_BE_On                 = ( BE_On                 <> 0 );
@@ -1190,9 +1193,19 @@ end;
     { is four-bar, 12 and 14 are five-bar.                                  }
 
     { 16-28 are the mirrored bullish set, 31-33 the three gaps found on }
-    { 2026-08-24. 29/30 stay neutral and are deliberately NOT included.  }
+    { 2026-08-24. 29/30 stay neutral and are deliberately NOT included. }
+    {                                                                   }
+    { KB_Gap_Pat exists because the census measured ZERO extra vetoes on }
+    { the 187 PRIMARY entry signal bars and the anchor moved anyway --   }
+    { 172 trades to 176, +229,200. The census only covered the primary   }
+    { path. v_ReEntry_Filt_OK reads v_KB_BullNow too, and blocking a     }
+    { re-entry leaves the strategy FLAT, which lets it take a later      }
+    { signal it would otherwise have been in a position for. An entry    }
+    { veto is therefore NOT monotonic in trade count -- a claim made on  }
+    { 2026-08-24 and wrong. Set 0 to reproduce the 172-trade anchor.     }
 v_KB_BullNow = ( ( v_KB_Code >= 16 ) and ( v_KB_Code <= 28 ) )
-               or ( ( v_KB_Code >= 31 ) and ( v_KB_Code <= 33 ) );
+               or ( v_KB_Gap_Pat = True
+                    and ( v_KB_Code >= 31 ) and ( v_KB_Code <= 33 ) );
 
 if ( v_KB_Code >= 1 ) and ( v_KB_Code <= 15 ) then begin
     v_KB_SupCode = v_KB_Code;
