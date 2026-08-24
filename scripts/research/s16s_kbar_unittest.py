@@ -59,13 +59,30 @@ def parse_inputs(src):
 
 def parse_rules(sec):
     """Every 'if v_KB_Code = 0 and <cond> then v_KB_Code = N;' in source order."""
-    pat = re.compile(
-        r'if\s+v_KB_Code\s*=\s*0\s+and\s+(.*?)\s+then\s*\n?\s*v_KB_Code\s*=\s*(\d+)\s*;',
-        re.S)
+    # Two shapes since 2026-08-24. The plain cascade line, and the eight
+    # 3-bar-or-longer bullish blocks, which raise v_KB_Bull3 unconditionally
+    # and only then compete for the code -- the cascade masks them otherwise
+    # (B28 three-inside-up contains a bullish harami, which is checked first).
+    #
+    # [^;] not .*? : a condition contains no semicolon, so a match cannot run
+    # from one block into the next. Written with .*? and re.S the first time,
+    # this silently swallowed twenty blocks.
+    plain = re.compile(
+        r'if\s+v_KB_Code\s*=\s*0\s+and\s+([^;]*?)\s+then\s*\n?\s*v_KB_Code\s*=\s*(\d+)\s*;')
+    flagged = re.compile(
+        r'if\s+([^;]*?)\s+then begin\s*\n\s*v_KB_Bull3 = True;\s*\n'
+        r'\s*if v_KB_Code = 0 then v_KB_Code\s*=\s*(\d+)\s*;')
     out = []
-    for m in pat.finditer(sec):
-        out.append((int(m.group(2)), ' '.join(m.group(1).split())))
-    return out
+    for pat in (plain, flagged):
+        for m in pat.finditer(sec):
+            cond = ' '.join(m.group(1).split())
+            # code 21 sits immediately after "if v_Bars_In_Sess >= 3 then
+            # begin", which the flagged pattern happily starts on. A pattern
+            # condition never contains the token "if", so the real condition
+            # is whatever follows the LAST one.
+            cond = cond.rsplit(' if ', 1)[-1]
+            out.append((int(m.group(2)), cond))
+    return sorted(out)
 
 
 def parse_helpers(sec):
@@ -292,6 +309,45 @@ def main():
         print('  %-4s %-2d %-34s  reported as %-2d %s'
               % ('OK' if ok else 'MASK', code, name, winner,
                  '' if ok else '<-- ' + dict((c, n) for c, n, _, _ in FIX)[winner]))
+
+    print()
+    print('=' * 78)
+    print(' T6 v_KB_Bull3 -- the exit flag must survive the masking T5 just found')
+    print('=' * 78)
+    # BullExit_Mode reads v_KB_Bull3, not the code range, precisely because
+    # T5 shows C42 and C46 lose their own fixture to A02. Two things are
+    # checked against the shipped source, neither taken on trust:
+    #   a) exactly codes 21..28 raise the flag -- the 3-bar-or-longer bullish
+    #      set, no more and no less
+    #   b) each raises it on its own fixture EVEN WHEN MASKED
+    raw = open(PLA, 'rb').read().decode('ascii')
+    flag_codes = sorted(int(x) for x in re.findall(
+        r'v_KB_Bull3 = True;\s*\n\s*if v_KB_Code = 0 then v_KB_Code = (\d+);', raw))
+    want = list(range(21, 29))
+    bad6 = 0
+    print('  codes raising the flag: %s' % flag_codes)
+    if flag_codes != want:
+        print('  FAIL -- expected %s' % want)
+        bad6 += 1
+    else:
+        print('  OK -- exactly the eight 3-bar-or-longer bullish structures')
+    reset = len(re.findall(r'v_KB_Bull3 = False;', raw))
+    print('  reset sites: %d %s' % (reset, 'OK' if reset == 1 else 'FAIL'))
+    bad6 += (reset != 1)
+    for code, name, bars, _ in FIX:
+        if code not in want:
+            continue
+        f = fires(bars, code)
+        w = [c for c in range(1, 31) if fires(bars, c) is True]
+        rank = {'SUP': 0, 'OPP': 1, 'NEU': 2}
+        rep = sorted(w, key=lambda c: (rank[GROUP[c]], c))[0]
+        ok = (f is True)
+        bad6 += (not ok)
+        print('  %-4s %-2d %-30s flag=%-5s  code reports %-2d%s'
+              % ('OK' if ok else 'FAIL', code, name, f, rep,
+                 '   <-- MASKED, flag is the only way to see it'
+                 if rep != code else ''))
+    fail += bad6
 
     print()
     print('=' * 78)

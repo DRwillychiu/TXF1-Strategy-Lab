@@ -38,7 +38,7 @@
 [IntrabarOrderGeneration = False]
 inputs:
     { Group 0: BUILD STAMP -- declared FIRST so it is the first row in -- see design record, block 2 }
-    Build_ID                ( 260823 ),
+    Build_ID                ( 260824 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),
@@ -95,7 +95,8 @@ inputs:
     MaxHold_Pct             ( 2.30  ),     { Form 2 only. Cover at EntryPrice - EntryPrice*Pct/100, LIMIT order.        }
 
     { ===== Group N: K-bar admission - v1.26.0 (SHIPS OFF) ===== }
-    KB_Entry_Mode           ( 0     ),     { 0 = source A only (v1.26.0 anchor). 1 = A+B. 2 = A+B+C.       }
+    KB_Entry_Mode           ( 0     ),
+    BullExit_Mode           ( 0     ),     { 0 = off. 1 = flatten only when losing. 2 = flatten regardless }     { 0 = source A only (v1.26.0 anchor). 1 = A+B. 2 = A+B+C.       }
                                            { read off the P&L of 180 executed fills -- selection on the      }
                                            { outcome variable, so it never had evidence behind it.           }
 
@@ -231,6 +232,8 @@ variables:
     v_KB_SupLife            ( 0     ),
     v_KB_SupLive            ( False ),
     v_KB_BullNow            ( False ),
+    v_KB_Bull3              ( False ),
+    v_BullExit_On           ( False ),
     v_DX_Age                ( 999   ),
     v_Entry_Src             ( 0     ),
     v_Filt_Pass             ( False ),
@@ -405,6 +408,7 @@ if CurrentBar = 1 then
 
 v_QuickStop_On          = ( QuickStop_On          <> 0 );
 v_QS_Time_On            = ( QS_Time_On            <> 0 );
+v_BullExit_On           = ( BullExit_Mode         <> 0 );
 v_QS_Loss_On            = ( QS_Loss_On            <> 0 );
 v_ML_On                 = ( ML_On                 <> 0 );
 v_BE_On                 = ( BE_On                 <> 0 );
@@ -814,6 +818,7 @@ if v_Slope_Require_Adjacent = True and v_Slope_Adjacent = False then
     { SECTION 8.6 - K-BAR PATTERN SELECTOR (v1.26.0) -- see design record, block 6 }
 
 v_KB_Code = 0;
+v_KB_Bull3 = False;
 
 if v_Bars_In_Sess >= 2 then begin
 
@@ -1000,44 +1005,54 @@ if v_Bars_In_Sess >= 2 then begin
     if v_Bars_In_Sess >= 3 then begin
 
         { 21  B26 three white soldiers -- each opens INSIDE the prior body }
-        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+        if ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
            and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
            and ( C[1] > C[2] ) and ( C > C[1] )
            and ( O[1] > O[2] ) and ( O[1] < C[2] )
-           and ( O > O[1] )    and ( O < C[1] ) then
-            v_KB_Code = 21;
+           and ( O > O[1] )    and ( O < C[1] ) then begin
+            v_KB_Bull3 = True;
+            if v_KB_Code = 0 then v_KB_Code = 21;
+        end;
 
         { 22  B28 three inside up }
-        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] > O[1] )
+        if ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] > O[1] )
            and ( v_KB_T1 <= O[2] ) and ( v_KB_M1 >= C[2] )
-           and ( C > O ) and ( C > C[1] ) then
-            v_KB_Code = 22;
+           and ( C > O ) and ( C > C[1] ) then begin
+            v_KB_Bull3 = True;
+            if v_KB_Code = 0 then v_KB_Code = 22;
+        end;
 
         { 23  B30 three outside up }
-        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] > O[1] )
+        if ( C[2] < O[2] ) and ( C[1] > O[1] )
            and ( O[1] <= C[2] ) and ( C[1] >= O[2] ) and ( v_KB_B1 > v_KB_B2 )
-           and ( C > O ) and ( C > C[1] ) then
-            v_KB_Code = 23;
+           and ( C > O ) and ( C > C[1] ) then begin
+            v_KB_Bull3 = True;
+            if v_KB_Code = 0 then v_KB_Code = 23;
+        end;
 
         { 24  B37 three stars in the south. BLACK last bar -- the second     }
         {     anti-short pattern the slope gate does not exclude.            }
-        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+        if ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
            and ( v_KB_L2 = True ) and ( v_KB_N2 > 0 )
            and ( O[1] < O[2] ) and ( O[1] > C[2] ) and ( L[1] > L[2] )
            and ( v_KB_B1 < v_KB_B2 )
-           and ( H <= H[1] ) and ( L >= L[1] ) and ( v_KB_B0 < v_KB_B1 ) then
-            v_KB_Code = 24;
+           and ( H <= H[1] ) and ( L >= L[1] ) and ( v_KB_B0 < v_KB_B1 ) then begin
+            v_KB_Bull3 = True;
+            if v_KB_Code = 0 then v_KB_Code = 24;
+        end;
 
         { 25  B38 unique three river bottom }
-        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
+        if ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
            and ( O[1] <= O[2] ) and ( O[1] >= C[2] ) and ( L[1] < L[2] )
            and ( C[1] > C[2] )
-           and ( C > O ) and ( v_KB_B0 < v_KB_B1 ) and ( C < C[1] ) then
-            v_KB_Code = 25;
+           and ( C > O ) and ( v_KB_B0 < v_KB_B1 ) and ( C < C[1] ) then begin
+            v_KB_Bull3 = True;
+            if v_KB_Code = 0 then v_KB_Code = 25;
+        end;
     end;
 
     { 26  C42 rising three methods -- five bars }
-    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+    if v_Bars_In_Sess >= 5
        and ( C[4] > O[4] ) and ( v_KB_L4 = True )
        and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
        and ( v_KB_B3 < v_KB_B4 ) and ( v_KB_B2 < v_KB_B4 ) and ( v_KB_B1 < v_KB_B4 )
@@ -1045,26 +1060,32 @@ if v_Bars_In_Sess >= 2 then begin
        and ( H[2] <= H[4] ) and ( L[2] >= L[4] )
        and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
        and ( C > O ) and ( v_KB_L0 = True )
-       and ( O < C[1] ) and ( C > C[4] ) then
-        v_KB_Code = 26;
+       and ( O < C[1] ) and ( C > C[4] ) then begin
+        v_KB_Bull3 = True;
+        if v_KB_Code = 0 then v_KB_Code = 26;
+    end;
 
     { 27  C43 ladder bottom -- five bars }
-    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+    if v_Bars_In_Sess >= 5
        and ( C[4] < O[4] ) and ( C[3] < O[3] ) and ( C[2] < O[2] )
        and ( v_KB_L4 = True ) and ( v_KB_L3 = True ) and ( v_KB_L2 = True )
        and ( O[3] < O[4] ) and ( O[2] < O[3] )
        and ( C[3] < C[4] ) and ( C[2] < C[3] )
        and ( C[1] < O[1] ) and ( v_KB_S1 >= v_KB_B1 )
-       and ( C > O ) and ( O > O[1] ) then
-        v_KB_Code = 27;
+       and ( C > O ) and ( O > O[1] ) then begin
+        v_KB_Bull3 = True;
+        if v_KB_Code = 0 then v_KB_Code = 27;
+    end;
 
     { 28  C46 bullish three-line strike -- four bars }
-    if v_KB_Code = 0 and v_Bars_In_Sess >= 4
+    if v_Bars_In_Sess >= 4
        and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
        and ( O[2] < O[3] ) and ( O[1] < O[2] )
        and ( C[2] < C[3] ) and ( C[1] < C[2] )
-       and ( C > O ) and ( O < C[1] ) and ( C > O[3] ) then
-        v_KB_Code = 28;
+       and ( C > O ) and ( O < C[1] ) and ( C > O[3] ) then begin
+        v_KB_Bull3 = True;
+        if v_KB_Code = 0 then v_KB_Code = 28;
+    end;
 end;
 
 
@@ -1259,6 +1280,34 @@ if MarketPosition = -1 then begin
            Close >= EntryPrice then begin
             buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
             v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+    end;
+
+    { ---- P1.5: bullish reversal structure, 3 bars or longer ---- }
+    { A trader watching a short position who sees three white soldiers form  }
+    { does not wait for the moving average to agree -- he flattens. This is  }
+    { that rule. Willy, 2026-08-24.                                          }
+    {                                                                        }
+    { THREE BARS IS THE STRENGTH TEST, and it is not a fitted one: a         }
+    { reversal that takes three or more bars to build is structurally more   }
+    { substantial than a two-bar one, and the same "life equals formation    }
+    { bars" logic already governs the entry side. It also cuts the trigger   }
+    { surface by three: the five two-bar bullish patterns occur on 18.4% of  }
+    { bars, the eight three-bar-or-longer ones on 6.0%.                      }
+    {                                                                        }
+    { Mode 1 fires only while the position is losing, which protects the     }
+    { tail by construction -- the big winners spend almost all of their life }
+    { in profit, so the rule cannot reach them. Mode 2 fires regardless and  }
+    { is the upper bound on what this protection is worth. Both must be      }
+    { measured; mode 2 is the one that can destroy SX_MA_TimeStop_Pct.       }
+    {                                                                        }
+    { Sits after P1 so the existing fast risk control still goes first, and  }
+    { before P2 so it cannot be preempted by the profit-protection legs.     }
+
+    if ExitFired = 0 and v_BullExit_On = True and v_KB_Bull3 = True then begin
+        if BullExit_Mode = 2 or v_Loss > 0 then begin
+            buy to cover ( "SX_MA_BullStruct" ) next bar at market;
             ExitFired = 1;
         end;
     end;
