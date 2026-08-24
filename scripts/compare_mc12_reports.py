@@ -50,14 +50,29 @@ IGNORE = set()
 
 
 def read_settings(path):
+    """Return (strategy_name, {field: value}).
+
+    The settings sheet opens with a sheet-title row and then a row carrying
+    the strategy name with no value. Those two are identity, not settings.
+    Leaving them in the dict made every cross-version compare report a
+    settings mismatch on the strategy name alone.
+    """
     wb = openpyxl.load_workbook(path, data_only=True)
     if SETUP not in wb.sheetnames:
         sys.exit('%s has no settings sheet' % path)
+    rows = [r for r in wb[SETUP].iter_rows(values_only=True)
+            if r and r[0] is not None]
+    name = ''
     out = {}
-    for r in wb[SETUP].iter_rows(values_only=True):
-        if r and r[0] is not None:
-            out[str(r[0]).strip()] = '' if r[1] is None else str(r[1]).strip()
-    return out
+    for i, r in enumerate(rows):
+        k = str(r[0]).strip()
+        v = '' if len(r) < 2 or r[1] is None else str(r[1]).strip()
+        if i < 2 and v == '':
+            if k != SETUP:
+                name = k
+            continue
+        out[k] = v
+    return name, out
 
 
 def read_trades(path):
@@ -102,7 +117,8 @@ def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     pa, pb = sys.argv[1], sys.argv[2]
-    sa, sb = read_settings(pa), read_settings(pb)
+    na, sa = read_settings(pa)
+    nb, sb = read_settings(pb)
     ta, tb = read_trades(pa), read_trades(pb)
 
     print('=' * 74)
@@ -113,12 +129,28 @@ def main():
     verdict = 0
 
     # ---- gate 1: settings ----
-    keys = sorted(set(sa) | set(sb))
-    sdiff = [(k, sa.get(k, '<missing>'), sb.get(k, '<missing>'))
-             for k in keys if k not in IGNORE and sa.get(k) != sb.get(k)]
-    print('\n[1] SETTINGS  %d fields, %d differ' % (len(keys), len(sdiff)))
+    # A field present in only ONE file is a VERSION DELTA, not an
+    # incomparability. v17 adding four form switches does not by itself mean
+    # the two runs differ -- whether the new fields changed anything is
+    # exactly what gate 3 measures, and gate 3 is the authority.
+    # Only fields present in BOTH files with different values are a genuine
+    # mismatch. (2026-08-24: the first version of this failed the L4 v17
+    # anchor with EXIT=2 while all 79 trades were identical.)
+    shared = sorted(set(sa) & set(sb))
+    only_a = sorted(set(sa) - set(sb))
+    only_b = sorted(set(sb) - set(sa))
+    sdiff = [(k, sa[k], sb[k]) for k in shared
+             if k not in IGNORE and sa[k] != sb[k]]
+    print('\n[1] SETTINGS   A=%s   B=%s' % (na or '?', nb or '?'))
+    print('      %d shared fields, %d differ' % (len(shared), len(sdiff)))
     for k, x, y in sdiff:
-        print('      %-28s A=%-26s B=%s' % (k, x, y))
+        print('      ** %-26s A=%-24s B=%s' % (k, x, y))
+    if only_a or only_b:
+        print('      version delta -- informational, gate 3 decides:')
+        for k in only_a:
+            print('         only in A   %-24s = %s' % (k, sa[k]))
+        for k in only_b:
+            print('         only in B   %-24s = %s' % (k, sb[k]))
     if sdiff:
         verdict = 2
 
@@ -181,6 +213,8 @@ def main():
     print({0: 'VERDICT: comparable and identical',
            1: 'VERDICT: comparable, but the trades diverge -- real behaviour difference',
            2: 'VERDICT: NOT COMPARABLE -- fix this before reading any number'}[verdict])
+    if verdict == 0 and (only_a or only_b):
+        print('DEGENERACY ANCHOR HELD -- the new fields changed nothing.')
     print('=' * 74)
     return verdict
 
