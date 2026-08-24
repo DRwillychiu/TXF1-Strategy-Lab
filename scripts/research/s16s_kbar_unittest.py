@@ -345,6 +345,16 @@ def main():
         bad6 += 1
     else:
         print('  OK -- exactly the nine 3-bar-or-longer bullish structures')
+    # the header comment carried a stale Build_ID for three days and caused a
+    # real "which build am I even running" incident on 2026-08-21. Header and
+    # input must agree, and the test is the only thing that will notice.
+    hb = re.search(r'Version\s*:\s*v[\d.]+\s+Build_ID\s+(\d+)', raw)
+    ib = re.search(r'Build_ID\s*\(\s*(\d+)\s*\)', raw)
+    assert hb and ib, 'Build_ID not parseable'
+    ok_b = (hb.group(1) == ib.group(1))
+    print('  Build_ID header %s / input %s  %s'
+          % (hb.group(1), ib.group(1), 'OK' if ok_b else 'FAIL -- they disagree'))
+    bad6 += (not ok_b)
     reset = len(re.findall(r'v_KB_Bull3 = False;', raw))
     print('  reset sites: %d %s' % (reset, 'OK' if reset == 1 else 'FAIL'))
     bad6 += (reset != 1)
