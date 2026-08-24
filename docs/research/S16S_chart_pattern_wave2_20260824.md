@@ -3,6 +3,7 @@
 **日期** 2026-08-24　**腳本** `scripts/research/s16s_chart_pattern_wave2.py`（**無損益欄**）
 **結論** 新增 16 個型態；**累計 33 個檢定，沒有一個過 Bonferroni（門檻 3.17）**。
 唯一候選 **P47 號角頂**，family-wise p = 0.673。
+**線上圖鑑** https://claude.ai/code/artifact/22fa588b-51f5-43ce-8e11-bc301d4c35ef
 
 ---
 

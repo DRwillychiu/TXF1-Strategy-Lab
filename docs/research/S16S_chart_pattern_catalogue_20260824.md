@@ -4,6 +4,7 @@
 **用途** 進場濾網（用戶 2026-08-24 指定）
 **腳本** `scripts/research/s16s_chart_pattern_census.py`（**無損益欄**）
 **結論** **17 個型態，沒有一個在有檢定力的母體上分離未來報酬。最大 |t| = 1.90。**
+**線上圖鑑** https://claude.ai/code/artifact/22fa588b-51f5-43ce-8e11-bc301d4c35ef
 
 ---
 
