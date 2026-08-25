@@ -203,9 +203,19 @@ def main():
         print('      ** FIRST DIVERGENCE at trade #%d **' % (first + 1))
         for lbl, S in (('A', ta), ('B', tb)):
             t = S[first]
-            print('        %s  %s @%.0f -> %s @%.0f  %-14s %s'
+            print('        %s  %s @%.0f -> %s @%.0f  %-14s %-14s %s'
                   % (lbl, t['t_in'], t['p_in'], t['t_out'], t['p_out'],
-                     t['exit_sig'], format(int(t['pnl']), ',')))
+                     t['entry_sig'], t['exit_sig'], format(int(t['pnl']), ',')))
+        # Name the fields that actually moved. Without this a pure label
+        # change prints two visually identical lines and reads as a bug.
+        # (2026-08-25: L2 v5.4 did exactly that.)
+        moved = [f for f in ('entry_sig', 'exit_sig', 't_in', 't_out',
+                             'p_in', 'p_out', 'pnl')
+                 if ta[first][f] != tb[first][f]]
+        print('        fields that differ: %s' % ', '.join(moved))
+        if moved == ['entry_sig']:
+            print('        ** only the ENTRY LABEL moved on this trade --'
+                  ' check whether the whole run is a relabel **')
         if verdict == 0:
             verdict = 1
 
