@@ -1,0 +1,232 @@
+<title>L1 逐年績效</title>
+<style>
+*{box-sizing:border-box}
+.rt{--s1:#fcfcfb;--s2:#f4f3f0;--tp:#0b0b0b;--ts:#52514e;--tm:#84837c;--bd:#e2e1dc;
+--pos:#2a78d6;--neg:#e34948;--grid:#e8e7e2;--zero:#b9b8b1;
+font-family:"Segoe UI","Noto Sans TC","PingFang TC",system-ui,sans-serif;
+background:var(--s1);color:var(--tp);padding:28px 22px;max-width:960px;margin:0 auto;line-height:1.6}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .rt{
+--s1:#1a1a19;--s2:#232322;--tp:#fff;--ts:#c3c2b7;--tm:#8d8c84;--bd:#33332f;
+--pos:#3987e5;--neg:#e66767;--grid:#2b2b28;--zero:#4a4a45}}
+:root[data-theme="dark"] .rt{--s1:#1a1a19;--s2:#232322;--tp:#fff;--ts:#c3c2b7;--tm:#8d8c84;
+--bd:#33332f;--pos:#3987e5;--neg:#e66767;--grid:#2b2b28;--zero:#4a4a45}
+h1{font-size:1.5rem;margin:0 0 3px}
+h2{font-size:1.05rem;margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.sub{color:var(--ts);font-size:.85rem;margin:0 0 20px}
+.heroes{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:18px 0 6px}
+.hero{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:13px 15px}
+.hero .k{font-size:.73rem;color:var(--tm);letter-spacing:.04em}
+.hero .v{font-size:1.4rem;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+svg{display:block;min-width:880px}
+.grid{stroke:var(--grid);stroke-width:1}
+.zero{stroke:var(--zero);stroke-width:1.5}
+.axis{fill:var(--tm);font-size:11px;font-variant-numeric:tabular-nums}
+.val{fill:var(--ts);font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.hit{fill:transparent}
+.bg.pos .bar{fill:var(--pos)}
+.bg.neg .bar{fill:var(--neg)}
+.bg:hover .bar{opacity:.72}
+.bg:focus{outline:none}
+.bg:focus .bar{stroke:var(--tp);stroke-width:2}
+.cumline{fill:none;stroke:var(--pos);stroke-width:2;stroke-linejoin:round}
+.dot{fill:var(--pos)}
+.ring{fill:var(--s1)}
+table{width:100%;border-collapse:collapse;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 9px;border-bottom:1px solid var(--bd);text-align:left}
+th{font-size:.73rem;color:var(--tm);font-weight:600;letter-spacing:.03em;white-space:nowrap}
+td.num{text-align:right}
+td.y{font-weight:650}
+td.p{color:var(--pos)}
+td.n{color:var(--neg)}
+tbody tr:hover{background:var(--s2)}
+code{background:var(--s2);padding:1px 5px;border-radius:4px;font-size:.86em}
+.note{background:var(--s2);border:1px solid var(--bd);border-left:3px solid var(--neg);
+border-radius:8px;padding:13px 16px;margin:15px 0;font-size:.86rem;color:var(--ts)}
+.note b{color:var(--tp)}
+.legend{display:flex;gap:16px;font-size:.79rem;color:var(--ts);margin:6px 0 2px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+ul{margin:8px 0;padding-left:20px}
+li{margin:5px 0;font-size:.86rem;color:var(--ts)}
+</style>
+<div class="rt">
+<h1>L1_TrendLong 逐年績效</h1>
+<p class="sub">回測區間 2020-08-17 ~ 2026-07-22　·　固定 2 口　·　原始資本 2,000,000 NTD　·　來源 <code>TXF1 L1_TrendLong 策略回測績效報告.xls</code>（2026-07-27 匯出）</p>
+
+<div class="heroes">
+<div class="hero"><div class="k">淨利</div><div class="v">+3,771,200</div></div>
+<div class="hero"><div class="k">交易筆數</div><div class="v">483</div></div>
+<div class="hero"><div class="k">勝率</div><div class="v">37.06%</div></div>
+<div class="hero"><div class="k">獲利因子</div><div class="v">1.3370</div></div>
+<div class="hero"><div class="k">最大策略虧損</div><div class="v">-843,600</div></div>
+</div>
+
+<h2>逐年淨利</h2>
+<div class="legend"><span><span class="sw" style="background:var(--pos)"></span>獲利年</span><span><span class="sw" style="background:var(--neg)"></span>虧損年</span></div>
+<div class="wrap"><svg viewBox="0 0 880 300" width="100%" height="300" role="group" aria-label="逐年淨利長條圖"><line class="grid" x1="78" y1="254.0" x2="860" y2="254.0"/>
+<text class="axis" x="68" y="258.0" text-anchor="end">-54,800</text>
+<line class="grid" x1="78" y1="198.0" x2="860" y2="198.0"/>
+<text class="axis" x="68" y="202.0" text-anchor="end">413,500</text>
+<line class="grid" x1="78" y1="142.0" x2="860" y2="142.0"/>
+<text class="axis" x="68" y="146.0" text-anchor="end">881,800</text>
+<line class="grid" x1="78" y1="86.0" x2="860" y2="86.0"/>
+<text class="axis" x="68" y="90.0" text-anchor="end">1,350,100</text>
+<line class="grid" x1="78" y1="30.0" x2="860" y2="30.0"/>
+<text class="axis" x="68" y="34.0" text-anchor="end">1,818,400</text>
+<line class="zero" x1="78" y1="247.4" x2="860" y2="247.4"/>
+<g class="bg pos" tabindex="0" role="img" aria-label="2020 年 淨利 +250,800，36 筆，勝率 27.8%">
+<rect class="hit" x="78.0" y="30" width="111.7" height="224"/>
+<rect class="bar" x="104.9" y="217.5" width="58.0" height="30.0" rx="4"/>
+<text class="val" x="133.9" y="208.5" text-anchor="middle">+250,800</text>
+<text class="axis" x="133.9" y="278.0" text-anchor="middle">2020</text>
+<title>2020　淨利 +250,800　36 筆　勝率 27.8%　PF 1.43</title>
+</g>
+<g class="bg pos" tabindex="0" role="img" aria-label="2021 年 淨利 +465,200，85 筆，勝率 41.2%">
+<rect class="hit" x="189.7" y="30" width="111.7" height="224"/>
+<rect class="bar" x="216.6" y="191.8" width="58.0" height="55.6" rx="4"/>
+<text class="val" x="245.6" y="182.8" text-anchor="middle">+465,200</text>
+<text class="axis" x="245.6" y="278.0" text-anchor="middle">2021</text>
+<title>2021　淨利 +465,200　85 筆　勝率 41.2%　PF 1.30</title>
+</g>
+<g class="bg pos" tabindex="0" role="img" aria-label="2022 年 淨利 +8,400，30 筆，勝率 30.0%">
+<rect class="hit" x="301.4" y="30" width="111.7" height="224"/>
+<rect class="bar" x="328.3" y="246.4" width="58.0" height="2.0" rx="4"/>
+<text class="val" x="357.3" y="237.4" text-anchor="middle">+8,400</text>
+<text class="axis" x="357.3" y="278.0" text-anchor="middle">2022</text>
+<title>2022　淨利 +8,400　30 筆　勝率 30.0%　PF 1.01</title>
+</g>
+<g class="bg neg" tabindex="0" role="img" aria-label="2023 年 淨利 -54,800，92 筆，勝率 26.1%">
+<rect class="hit" x="413.1" y="30" width="111.7" height="224"/>
+<rect class="bar" x="440.0" y="247.4" width="58.0" height="6.6" rx="4"/>
+<text class="val" x="469.0" y="270.0" text-anchor="middle">-54,800</text>
+<text class="axis" x="469.0" y="278.0" text-anchor="middle">2023</text>
+<title>2023　淨利 -54,800　92 筆　勝率 26.1%　PF 0.97</title>
+</g>
+<g class="bg pos" tabindex="0" role="img" aria-label="2024 年 淨利 +962,000，95 筆，勝率 38.9%">
+<rect class="hit" x="524.9" y="30" width="111.7" height="224"/>
+<rect class="bar" x="551.7" y="132.4" width="58.0" height="115.0" rx="4"/>
+<text class="val" x="580.7" y="123.4" text-anchor="middle">+962,000</text>
+<text class="axis" x="580.7" y="278.0" text-anchor="middle">2024</text>
+<title>2024　淨利 +962,000　95 筆　勝率 38.9%　PF 1.44</title>
+</g>
+<g class="bg pos" tabindex="0" role="img" aria-label="2025 年 淨利 +321,200，81 筆，勝率 37.0%">
+<rect class="hit" x="636.6" y="30" width="111.7" height="224"/>
+<rect class="bar" x="663.4" y="209.0" width="58.0" height="38.4" rx="4"/>
+<text class="val" x="692.4" y="200.0" text-anchor="middle">+321,200</text>
+<text class="axis" x="692.4" y="278.0" text-anchor="middle">2025</text>
+<title>2025　淨利 +321,200　81 筆　勝率 37.0%　PF 1.15</title>
+</g>
+<g class="bg pos" tabindex="0" role="img" aria-label="2026 年 淨利 +1,818,400，64 筆，勝率 53.1%">
+<rect class="hit" x="748.3" y="30" width="111.7" height="224"/>
+<rect class="bar" x="775.1" y="30.0" width="58.0" height="217.4" rx="4"/>
+<text class="val" x="804.1" y="21.0" text-anchor="middle">+1,818,400</text>
+<text class="axis" x="804.1" y="278.0" text-anchor="middle">2026</text>
+<title>2026　淨利 +1,818,400　64 筆　勝率 53.1%　PF 1.71</title>
+</g></svg></div>
+
+<h2>累計淨利</h2>
+<div class="wrap"><svg viewBox="0 0 880 250" width="100%" height="250" role="group" aria-label="累計淨利折線圖"><line class="grid" x1="78" y1="204.0" x2="860" y2="204.0"/>
+<text class="axis" x="68" y="208.0" text-anchor="end">0</text>
+<line class="grid" x1="78" y1="159.5" x2="860" y2="159.5"/>
+<text class="axis" x="68" y="163.5" text-anchor="end">942,800</text>
+<line class="grid" x1="78" y1="115.0" x2="860" y2="115.0"/>
+<text class="axis" x="68" y="119.0" text-anchor="end">1,885,600</text>
+<line class="grid" x1="78" y1="70.5" x2="860" y2="70.5"/>
+<text class="axis" x="68" y="74.5" text-anchor="end">2,828,400</text>
+<line class="grid" x1="78" y1="26.0" x2="860" y2="26.0"/>
+<text class="axis" x="68" y="30.0" text-anchor="end">3,771,200</text>
+<path class="cumline" d="M133.9,192.2 L245.6,170.2 L357.3,169.8 L469.0,172.4 L580.7,127.0 L692.4,111.8 L804.1,26.0"/>
+<g class="cg" tabindex="0" role="img" aria-label="2020 年底累計 +250,800">
+<circle class="ring" cx="133.9" cy="192.2" r="6"/>
+<circle class="dot" cx="133.9" cy="192.2" r="4"/>
+<text class="axis" x="133.9" y="228.0" text-anchor="middle">2020</text>
+<title>2020 年底累計 +250,800</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2021 年底累計 +716,000">
+<circle class="ring" cx="245.6" cy="170.2" r="6"/>
+<circle class="dot" cx="245.6" cy="170.2" r="4"/>
+<text class="axis" x="245.6" y="228.0" text-anchor="middle">2021</text>
+<title>2021 年底累計 +716,000</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2022 年底累計 +724,400">
+<circle class="ring" cx="357.3" cy="169.8" r="6"/>
+<circle class="dot" cx="357.3" cy="169.8" r="4"/>
+<text class="axis" x="357.3" y="228.0" text-anchor="middle">2022</text>
+<title>2022 年底累計 +724,400</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2023 年底累計 +669,600">
+<circle class="ring" cx="469.0" cy="172.4" r="6"/>
+<circle class="dot" cx="469.0" cy="172.4" r="4"/>
+<text class="axis" x="469.0" y="228.0" text-anchor="middle">2023</text>
+<title>2023 年底累計 +669,600</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2024 年底累計 +1,631,600">
+<circle class="ring" cx="580.7" cy="127.0" r="6"/>
+<circle class="dot" cx="580.7" cy="127.0" r="4"/>
+<text class="axis" x="580.7" y="228.0" text-anchor="middle">2024</text>
+<title>2024 年底累計 +1,631,600</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2025 年底累計 +1,952,800">
+<circle class="ring" cx="692.4" cy="111.8" r="6"/>
+<circle class="dot" cx="692.4" cy="111.8" r="4"/>
+<text class="axis" x="692.4" y="228.0" text-anchor="middle">2025</text>
+<title>2025 年底累計 +1,952,800</title>
+</g>
+<g class="cg" tabindex="0" role="img" aria-label="2026 年底累計 +3,771,200">
+<circle class="ring" cx="804.1" cy="26.0" r="6"/>
+<circle class="dot" cx="804.1" cy="26.0" r="4"/>
+<text class="axis" x="804.1" y="228.0" text-anchor="middle">2026</text>
+<title>2026 年底累計 +3,771,200</title>
+</g>
+<text class="val" x="804.1" y="13.0" text-anchor="end">+3,771,200</text></svg></div>
+
+<h2>逐年明細</h2>
+<div class="wrap"><table>
+<thead><tr><th>年度</th><th>筆數</th><th style="text-align:right">淨利</th><th style="text-align:right">累計</th><th style="text-align:right">勝率</th><th style="text-align:right">PF</th><th style="text-align:right">毛利</th><th style="text-align:right">毛損</th><th style="text-align:right">最大單筆賺</th><th style="text-align:right">最大單筆賠</th></tr></thead>
+<tbody><tr><td class="y">2020</td><td>36</td><td class="num p">+250,800</td><td class="num">+250,800</td><td class="num">27.8%</td><td class="num">1.43</td><td class="num">832,400</td><td class="num">-581,600</td><td class="num">172,000</td><td class="num">-49,600</td></tr>
+<tr><td class="y">2021</td><td>85</td><td class="num p">+465,200</td><td class="num">+716,000</td><td class="num">41.2%</td><td class="num">1.30</td><td class="num">1,990,800</td><td class="num">-1,525,600</td><td class="num">157,600</td><td class="num">-290,400</td></tr>
+<tr><td class="y">2022</td><td>30</td><td class="num p">+8,400</td><td class="num">+724,400</td><td class="num">30.0%</td><td class="num">1.01</td><td class="num">594,800</td><td class="num">-586,400</td><td class="num">132,800</td><td class="num">-49,600</td></tr>
+<tr><td class="y">2023</td><td>92</td><td class="num n">-54,800</td><td class="num">+669,600</td><td class="num">26.1%</td><td class="num">0.97</td><td class="num">1,561,600</td><td class="num">-1,616,400</td><td class="num">209,200</td><td class="num">-65,200</td></tr>
+<tr><td class="y">2024</td><td>95</td><td class="num p">+962,000</td><td class="num">+1,631,600</td><td class="num">38.9%</td><td class="num">1.44</td><td class="num">3,138,800</td><td class="num">-2,176,800</td><td class="num">492,000</td><td class="num">-55,200</td></tr>
+<tr><td class="y">2025</td><td>81</td><td class="num p">+321,200</td><td class="num">+1,952,800</td><td class="num">37.0%</td><td class="num">1.15</td><td class="num">2,473,600</td><td class="num">-2,152,400</td><td class="num">259,600</td><td class="num">-76,400</td></tr>
+<tr><td class="y">2026</td><td>64</td><td class="num p">+1,818,400</td><td class="num">+3,771,200</td><td class="num">53.1%</td><td class="num">1.71</td><td class="num">4,370,400</td><td class="num">-2,552,000</td><td class="num">1,339,600</td><td class="num">-201,200</td></tr></tbody></table></div>
+
+<h2>出場標籤分布</h2>
+<div class="wrap"><table>
+<thead><tr><th>標籤</th><th>筆數</th><th style="text-align:right">佔比</th><th style="text-align:right">合計損益</th><th style="text-align:right">勝率</th></tr></thead>
+<tbody><tr><td><code>TL_SL</code></td><td>241</td><td class="num">49.9%</td><td class="num n">-8,900,800</td><td class="num">0.0%</td></tr>
+<tr><td><code>TL_SP</code></td><td>109</td><td class="num">22.6%</td><td class="num p">+6,254,000</td><td class="num">99.1%</td></tr>
+<tr><td><code>TL_TP</code></td><td>51</td><td class="num">10.6%</td><td class="num p">+4,751,600</td><td class="num">88.2%</td></tr>
+<tr><td><code>TL_SL_Gap</code></td><td>31</td><td class="num">6.4%</td><td class="num n">-1,448,000</td><td class="num">0.0%</td></tr>
+<tr><td><code>TL_TSL</code></td><td>25</td><td class="num">5.2%</td><td class="num n">-820,000</td><td class="num">0.0%</td></tr>
+<tr><td><code>TL_Holiday</code></td><td>14</td><td class="num">2.9%</td><td class="num p">+1,282,000</td><td class="num">100.0%</td></tr>
+<tr><td><code>TL_Settlement</code></td><td>12</td><td class="num">2.5%</td><td class="num p">+2,652,400</td><td class="num">100.0%</td></tr></tbody></table></div>
+
+<h2>二次進場優化對照（v32）</h2>
+<div class="note"><b>此節數字為使用者提供的 MC12 畫面轉錄，非本工具解析。</b>對應的明細匯出檔不在本機，因此無法做逐年拆解。</div>
+<div class="wrap"><table>
+<thead><tr><th>指標</th><th style="text-align:right">優化前</th><th style="text-align:right">優化後</th><th style="text-align:right">變化</th></tr></thead>
+<tbody>
+<tr><td>淨利</td><td class="num">5,133,200</td><td class="num">5,483,600</td><td class="num p">+350,400</td></tr>
+<tr><td>獲利因子</td><td class="num">1.4529</td><td class="num">1.4863</td><td class="num p">+2.30%</td></tr>
+<tr><td>年度夏普</td><td class="num">0.9632</td><td class="num">1.0070</td><td class="num p">+4.55%</td></tr>
+<tr><td>最大策略虧損</td><td class="num">-892,000</td><td class="num">-892,000</td><td class="num">0</td></tr>
+<tr><td><b>交易總次數</b></td><td class="num">498</td><td class="num">500</td><td class="num p"><b>+2</b></td></tr>
+<tr><td>滑價支付</td><td class="num">1,992,000</td><td class="num">2,000,000</td><td class="num">+8,000</td></tr>
+</tbody></table></div>
+<div class="note">
+<b>整個 +350,400 來自恰好 2 筆交易。</b>滑價欄自證：+8,000 = 2 筆 × 2 口 × 2 邊 × 1,000 NTD。平均每筆新交易 +175,200。
+風險面全數未動（MDD、最大平倉虧損、帳戶所需金額、最長持平期間皆 ±0），代表這 2 筆沒有碰到回檔路徑。
+但 <b>+6.83% 建立在 2 筆之上，統計上未確立</b> —— 這與 S16_S A2 是相同形狀（該案「效益僅來自 2 筆、+158,400、配對檢定 1.36 sigma、未達 2 sigma」）。
+年度夏普「突破 1.0」同樣由這 2 筆推動，門檻跨越不具獨立意義。
+</div>
+
+<h2>資料出處與保留事項</h2>
+<ul>
+<li><b>細部資料（Bar Magnifier）已停用</b> —— 成交價為 bar 層級推定，非 1 分鐘真實路徑。這正落在專案 SOP 附錄 C「幻想成交」陷阱的射程內。</li>
+<li>本機另有一份 <code>L1_TrendLong_v31 ... 0.5.xls</code>，為 <b>1 口 / 原始資本 1M</b>，與專案標準（2 口 / 2M）不符，<b>未採用</b>。兩份策略參數完全相同，淨利差異主因為口數。</li>
+<li>最大策略虧損 -843,600 由逐筆權益曲線重算，與報表摘要頁的欄位定義可能不同。</li>
+<li>本頁所有數字來自單一次回測，<b>未經 Walk-Forward、Monte Carlo 或 Rule #18 五件套驗證</b>。</li>
+<li>既有研究記載 L1 前 10 大贏家佔淨利 104.4%，逐年數字須配合集中度一併解讀。</li>
+</ul>
+</div>
