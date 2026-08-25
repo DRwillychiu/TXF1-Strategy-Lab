@@ -1,10 +1,12 @@
 { ============================================================
   ADAPTIVE FARMER - TREND BEARISH STRATEGY
-  Signal Name : Trendbearish_V1
-  MC Load Name: Trendbearish_V1
+  Signal Name : Trendbearish_V54_RESEARCH
+  MC Load Name: Trendbearish_V54_RESEARCH
+                *** DO NOT save over the live signal name
+                Trendbearish_V1. This is a research build. ***
   Description : Trend Short - weekly SMA13 bear filter + Donchian30 breakdown
                 + ZLEMA momentum. Short only.
-  Version     : 5.3 + SetStopContract + SL_Pct (v5.2 base)
+  Version     : 5.4 RESEARCH (v5.3 base + re-entry LABEL only)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
   Timeframe   : 60-Minute (Day + Night Sessions, grid verified
@@ -12,6 +14,60 @@
                 16:00-05:00 hourly close stamps)
 
   CHANGELOG:
+    5.4  (2026-08-25) RESEARCH. Re-entry LABEL. Zero behaviour change.
+
+         WHY. L2 has always re-entered. All four entry conditions are
+         STATES -- price below the Donchian lower band minus 0.45 ATR,
+         ZLEMA falling, ZLEMA below EMA20, prior weekly close under the
+         weekly SMA -- and there is no Cooldown_Bars anywhere in the
+         file. The moment L2 is flat and the states still hold, it
+         enters again. The measured minimum gap between an exit and the
+         next entry is 60 minutes: exactly one 60M bar.
+
+         What was missing is the LABEL. Every entry shipped as TS_Entry,
+         so a re-entry could not be told from a first entry in any
+         report and had to be inferred from timestamps and prices. That
+         inference put 22 re-entries at +1,089,200, which is 40.8 pct of
+         the strategy's net, including its single largest trade at
+         +892,800 -- but inferred, not read.
+
+         WHAT CHANGED. One if/else around the label string:
+
+           If ( previous trade lost ) And ( Close <= its entry price )
+              SellShort( "TS_ReEntry" )   else   SellShort( "TS_Entry" )
+
+         The four entry conditions, the Rule #11 gates, the order type
+         and the timing are untouched to the character. Exactly one
+         SellShort is still placed per qualifying bar. Only the string
+         differs, so the anchor must reproduce every metric exactly.
+
+         DEFINITION. Identical to the one measured on the trade list on
+         2026-08-24. Requiring a stop-family exit was tested and changes
+         nothing: all 45 losing exits in L2 are already stop exits (22
+         TS_InitSL_D, 18 TS_InitSL_N, 4 engine Stop Loss, 1 TS_TSL_N,
+         nothing else), so both definitions return the same 22 trades
+         and the same +1,089,200. The simpler test is used.
+
+         PositionProfit(1) <= 0 rather than < 0. Net = gross - 4,000 on
+         two lots and the smallest loss in the file is exactly -4,000
+         net, i.e. gross 0. With <= the test answers the same whether MC
+         reports gross or net, and it cannot false-arm because a
+         positive net needs gross above 4,000.
+
+         NO DISARM, deliberately. L4 v18 fired zero times because its
+         disarm condition was implied by its own stop. Here the flag is
+         simply held until the next entry consumes it, labelled either
+         way, so it cannot go stale. This also matches the measurement,
+         which had no time limit -- and carries the same caveat: those
+         22 gaps run from 60 minutes to 34 days, and the long ones are
+         probably the next independent signal that happened to be lower.
+
+         Anchor: must reproduce live v5.3 exactly -- 77 trades /
+         2,670,000 / PF 2.7456 / MDD -484,400. The only thing that may
+         change is the split: TS_Entry 55 + TS_ReEntry 22 = 77.
+
+         Run card: docs/research/L2_reentry_label_runcard_20260825.md
+
     5.1  Label unification (TS_ prefix). No logic changes.
     5.2  (2026-06-12) Holiday Flat Rule v3 + safety rails:
          - Iron Rule: flat (0 position) BEFORE the 05:00 close of
@@ -217,6 +273,18 @@ Variables:
    { Loop counter and exit control }
    LoopIdx              ( 0     ),
    ExitFired            ( 0     ),
+
+   { Re-entry LABELLING (2026-08-25). No behaviour, no new input.
+     L2 already re-enters -- all four entry conditions are STATES and
+     there is no Cooldown_Bars, so the moment it is flat and the states
+     still hold it enters again. Measured minimum gap between an exit
+     and the next entry is 60 minutes, exactly one 60M bar.
+     What was missing is the LABEL, so those entries could not be told
+     apart in a report and had to be inferred from timestamps. }
+   v_Prev_MP            ( 0     ),   { Rule #8, updated on the last line }
+   v_Last_EntryPrice    ( 0     ),   { EntryPrice is unusable once flat }
+   v_ReEntry_Armed      ( False ),   { previous trade closed at a loss }
+   v_ReEntry_Price      ( 0     ),   { that trade's entry = the threshold }
 
    { Holiday Flat Rule v3 }
    v_Holiday_Block      ( False ),
@@ -502,14 +570,58 @@ If MarketPosition >= 0 Then Begin
    SetStopLoss( v_Guard_Distance * BigPointValue );
 End;
 
+{ ---- Re-entry state, LABEL ONLY ----------------------------------
+  Definition, identical to the one measured on the trade list:
+  the previous trade closed at a LOSS, and this entry is at or below
+  that trade's entry price. For a short, "price came back down".
+
+  In L2 every losing exit is already a stop-family exit -- 22
+  TS_InitSL_D, 18 TS_InitSL_N, 4 engine Stop Loss, 1 TS_TSL_N, and
+  nothing else -- so "closed at a loss" and "stopped out" pick the same
+  45 trades. The simpler test is used.
+
+  PositionProfit(1) <= 0 rather than < 0: net = gross - 4,000 for two
+  lots, and the smallest loss in the file is exactly -4,000 net, which
+  is gross 0. Using <= makes the test give the same answer whether
+  PositionProfit reports gross or net. No winner can reach gross <= 0,
+  because a positive net needs gross above 4,000.
+
+  Capture runs while short; the latch runs on the bar we go flat, and
+  both sit BEFORE the entry block so v_Last_EntryPrice still holds the
+  value from the last bar in position. }
+
+If MarketPosition = -1 Then
+   v_Last_EntryPrice = EntryPrice;
+
+If ( v_Prev_MP = -1 ) And ( MarketPosition = 0 ) Then Begin
+   v_ReEntry_Armed = ( PositionProfit(1) <= 0 );
+   v_ReEntry_Price = v_Last_EntryPrice;
+End;
+
+{ The entry conditions below are UNTOUCHED. Exactly one SellShort is
+  placed either way, same order type, same bar, same price. Only the
+  label string differs, so the degeneracy anchor must reproduce every
+  trade to the yen with TS_Entry + TS_ReEntry summing to the old
+  TS_Entry count. }
+
 If FilterOK = True And
    C0       = True And
    C_A      = True And
    C_B      = True And
    ( v_Holiday_Block = False ) And
    ( v_Settlement_Day = False ) And
-   ( MarketPosition = 0 ) Then
-   SellShort( "TS_Entry" ) Next Bar at Market;
+   ( MarketPosition = 0 ) Then Begin
+
+   If ( v_ReEntry_Armed = True ) And
+      ( v_ReEntry_Price > 0 ) And
+      ( Close <= v_ReEntry_Price ) Then
+      SellShort( "TS_ReEntry" ) Next Bar at Market
+   Else
+      SellShort( "TS_Entry" ) Next Bar at Market;
+
+   v_ReEntry_Armed = False;
+
+End;
 
 
 { ============================================================
@@ -780,3 +892,8 @@ If MarketPosition = -1 Then Begin
    End;
 
 End;
+
+{ CLAUDE.md Rule #8: v_Prev_MP is updated on the LAST line, so every
+  block above reads the PREVIOUS bar's position. The re-entry latch
+  depends on it. }
+v_Prev_MP = MarketPosition;

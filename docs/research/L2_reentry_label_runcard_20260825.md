@@ -1,6 +1,8 @@
 # L2 二次進場標籤 —— 執行卡（2026-08-25）
 
 **改動性質：純標籤。零新增 input，零行為變化。**
+**檔案：`strategies/research/L2_TrendShort/L2_v54/L2_TrendShort_v54.pla`（v5.3 base）**
+**`strategies/live/` 已復原至 `fc833c8`，未動。**
 依據：[`label_taxonomy_audit_20260824.md`](label_taxonomy_audit_20260824.md) 規則 **L-3**
 ＋ [`L2_reentry_L28_check_20260824.md`](L2_reentry_L28_check_20260824.md)（L2 已有 22 次二次進場）
 
@@ -110,7 +112,7 @@
 
 | 項目 | 值 |
 |---|---|
-| MC 載入名稱 | **`Trendbearish_V1`** |
+| MC 載入名稱 | **`Trendbearish_V54_RESEARCH`** ⚠ 不可存回 live 的 `Trendbearish_V1` |
 | 壓縮 | **60 Minutes** |
 | 原始資本 / 口數 | **2,000,000 / 2 口** |
 | 滑價 | 1,000 每口每邊 ｜ 佣金 無 |
@@ -163,15 +165,26 @@
 
 ## 6. ⚠ 必須講清楚的兩件事
 
-### 6.1 這次改的是 `strategies/live/`，不是 research
+### 6.1 本版位於 research，live 已復原
 
-**理由**：同日 `fc833c8` 已經把 L2 的**出場**標籤直接改在 live 上
-（`v_SL_Src` 分流），並在 commit 訊息裡論證其 P&L 中性。**本次是同一類改動，沿用同一判準。**
+**使用者 2026-08-25 裁示：改動建在 `research/`，`live/` 復原。**
 
-**風險**：MC 載入名稱是 `Trendbearish_V1`，**與實盤訊號同名**。
-在 MC 匯入回測會覆寫該訊號定義。**live `.pla` 自 `fc833c8` 起已與 MC9 部署版本不同。**
+| | |
+|---|---|
+| 研究版 | `strategies/research/L2_TrendShort/L2_v54/L2_TrendShort_v54.pla`（900 行） |
+| MC 載入名稱 | **`Trendbearish_V54_RESEARCH`**，與 live 的 `Trendbearish_V1` **不同名** |
+| live | 已 `git checkout fc833c8 --` 復原，**逐位元組相同**，782 行，只有 `TS_Entry` |
 
-**若你認為應該改走 research 副本，現在說，我十分鐘內搬過去。**
+**⚠ 過程中的事故（已修正，記錄供警惕）**
+
+我在 2026-08-25 21:5x 把 `.pla` 改在 live 之後，**平行 S16_S session 的 `4e9dac5`
+（一個 P29 摘要的 commit）把那個 `.pla` 改動整個掃進去了**，
+我自己的 `f4540f7` 只剩下這份文件。
+
+**這是 2026-08-24 handoff §7.3 記過的同一件事，這次吞掉的是 `.pla` 而不是 `.md`。**
+
+**規則（再次強調）**：多 session 並行時，`git add` **只列明確路徑**，
+不得使用 `-A` / `-a` / `git commit -a`。
 
 ### 6.2 這不會改善任何績效
 
