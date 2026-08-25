@@ -2,6 +2,8 @@
   ADAPTIVE FARMER - TREND BEARISH STRATEGY
   Signal Name : Trendbearish_V1
   MC Load Name: Trendbearish_V1
+  Description : Trend Short - weekly SMA13 bear filter + Donchian30 breakdown
+                + ZLEMA momentum. Short only.
   Version     : 5.3 + SetStopContract + SL_Pct (v5.2 base)
   Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
   Platform    : MultiCharts 9.0 PowerLanguage x64
@@ -69,6 +71,28 @@
     Avg Trade     : 44,345 TWD
     Sharpe (ann.) : 0.847
     Sortino       : 1.233
+
+    PERFORMANCE CAVEATS (added 2026-08-25 audit):
+      - The source Excel is NOT in the repo. These numbers cannot be
+        reproduced from anything under version control. Treat as
+        UNVERIFIED until the report is archived alongside the .pla.
+      - "Initial Capital 1M" contradicts CLAUDE.md, which fixes the
+        account basis at 2,000,000 for percent and MDD-percent. Note
+        also that -484,400 / 1,000,000 = -48.4%, not the -14.99%
+        printed above. One of the three figures is wrong. UNRESOLVED
+        - do not rely on the percentages until this is settled.
+      - Contracts, slippage and backtest window are not stated here.
+        CLAUDE.md standard is 2 contracts, 1,000 NTD per side per lot.
+
+    STATUS (as of 2026-08-25):
+      Last closed trade 2025-06-03. 443 days (14.6 months) with zero
+      trades; 2026 year-to-date = 0 trades. Rule #13 (minimum two
+      trades per month) heavily breached.
+      Probable cause, INFERRED and NOT MEASURED: FilterOK requires the
+      weekly close below SMA(13) while the index ran 21,000 -> 47,000.
+      A short-only strategy idling through a bull regime is expected
+      behaviour, but the duration warrants a review.
+      Source: docs/research/L2_reentry_L28_check_20260824.md
   ============================================================ }
 
 
@@ -206,7 +230,7 @@ Variables:
 
 
 { ============================================================
-  SECTION 3 - ARRAY
+  SECTION 3 - ARRAYS
   WkCloses stores last WkSMA_Len completed weekly closes.
   Size 21 covers indices 0 to 20. Only indices 1 to 20 used.
   WkSMA_Len = 13, so indices 1 to 13 are actively used.
@@ -217,8 +241,12 @@ Array: WkCloses[ 21 ] ( 0 ), Holiday_Tail[ 80 ] ( 0 );
 
 { ============================================================
   SECTION 4 - SESSION DETECTION
-  IsDay   : bar open time 08:45 to 12:45 (Time 845 to 1245)
-  IsNight : all other bars (15:00 to 04:00)
+  IsDay   : 60M CLOSE stamps 09:45 to 12:45 (Time 945..1245).
+            The 845 lower bound never binds - no bar carries a
+            stamp in 845..944. NOTE the 13:45 day-session close
+            bar is NOT included and falls into IsNight.
+  IsNight : every other bar = night close stamps 16:00 to 05:00,
+            PLUS the 13:45 day-session close bar.
   ============================================================ }
 
 If ( Time >= 845 ) And ( Time <= 1245 ) Then
@@ -461,7 +489,9 @@ Else
   SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
   Only called when not short -> freezes at signal-bar values once position opens.
   v5.3: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
-         SL_Pct caps engine stop distance as pct of Close. }
+         SL_Pct caps engine stop distance as pct of Close.
+    Close is used here because EntryPrice does not exist before the
+    fill; the custom stop in Section 8 anchors on EntryPrice instead. }
 If MarketPosition >= 0 Then Begin
    v_Guard_Distance = AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close );
    If SL_Pct > 0 Then
@@ -640,6 +670,7 @@ End;
     TS_Kill        : manual kill switch (typhoon / emergency)
     TS_RegistryEnd : holiday-registry horizon fail-safe exit
     TS_Holiday     : pre-holiday forced flat (iron rule)
+    TS_Settlement  : monthly settlement forced flat (12:30)
     TS_WeeklyExit  : weekly filter forced exit (trend reversal)
     TS_StructureTP : structure reversal take profit
     TS_TTP         : trailing take profit
@@ -650,7 +681,8 @@ End;
     TS_InitSL_N    : initial stop loss night session
 
   PRIORITY ORDER:
-    0. TS_Kill / TS_RegistryEnd / TS_Holiday (Next Bar at Market)
+    0. TS_Kill / TS_RegistryEnd / TS_Holiday / TS_Settlement
+       (Next Bar at Market)
     1. TS_WeeklyExit   (Next Bar at Market)
     2. TS_StructureTP  (Next Bar at Market)
     3. TS_TTP          (Next Bar at Market)
