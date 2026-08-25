@@ -38,7 +38,7 @@
 [IntrabarOrderGeneration = False]
 inputs:
     { Group 0: BUILD STAMP -- declared FIRST so it is the first row in -- see design record, block 2 }
-    Build_ID                ( 260826 ),
+    Build_ID                ( 260825 ),
 
     { ===== Group A: Entry (ZLEMA) - v0.5-FINAL 2026-07-10 ===== }
     ZLEMA_Fast              ( 25    ),

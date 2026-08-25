@@ -2,15 +2,15 @@
   PLA INPUT SNAPSHOT
 ==========================================================================
   file     : strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.26.0.pla
-  bytes    : 65816
-  md5      : b3020792df1bf9b6cc233effb24dd378
-  Build_ID : 260826
+  bytes    : 64256
+  md5      : 6c264e9d07949fa8d69cd53980624bce
+  Build_ID : 260825
   inputs   : 88
 ==========================================================================
 
   順序 = 宣告順序 = MC12 參數對話框的顯示順序，可逐列對照。
 
-    1  Build_ID                260826
+    1  Build_ID                260825
     2  ZLEMA_Fast              25
     3  ZLEMA_Slow              70
     4  MinSlope                28
