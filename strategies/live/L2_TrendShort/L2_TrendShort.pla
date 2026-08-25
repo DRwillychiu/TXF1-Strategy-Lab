@@ -199,6 +199,8 @@ Variables:
    TSL_Line             ( 0     ),
    Active_TSL           ( 0     ),
    Active_SL            ( 0     ),
+   v_SL_Src             ( 0     ),   { 0=flat 1=trailing 2=frozen initial. Mirrors
+                                       whatever set Active_SL, for label routing. }
 
    { Trailing take profit }
    LowestClose          ( 0     ),
@@ -587,16 +589,20 @@ If MarketPosition = -1 Then Begin
 
       Active_TSL = TSL_Line + ( ATR_Val * SL_ATR_Ratio );
 
-      If TSL_Line < SL_Trig Then
-         Active_SL = Active_TSL
-      Else
+      If TSL_Line < SL_Trig Then Begin
+         Active_SL = Active_TSL;
+         v_SL_Src  = 1;
+      End Else Begin
          Active_SL = SL_Trig;
+         v_SL_Src  = 2;
+      End;
 
    End Else Begin
       New_TSL    = 0;
       TSL_Line   = 0;
       Active_TSL = 0;
       Active_SL  = SL_Trig;
+      v_SL_Src   = 2;
    End;
 
 End Else Begin
@@ -604,6 +610,7 @@ End Else Begin
    TSL_Line   = 0;
    Active_TSL = 0;
    Active_SL  = 0;
+   v_SL_Src   = 0;
 End;
 
 
@@ -753,10 +760,11 @@ If MarketPosition = -1 Then Begin
    If ( ExitFired = 0 ) And
       ( IsDay = True ) And
       ( Active_SL > 0 ) Then Begin
-      If TSL_Armed = True Then
+      If v_SL_Src = 1 Then
          BuyToCover( "TS_TSL_D" ) Next Bar at Active_SL Stop
       Else
          BuyToCover( "TS_InitSL_D" ) Next Bar at Active_SL Stop;
+      ExitFired = 1;
    End;
 
    { Priority 6 - Night session close confirmed exit }
@@ -764,10 +772,11 @@ If MarketPosition = -1 Then Begin
       ( IsNight = True ) And
       ( Active_SL > 0 ) And
       ( Close > Active_SL ) Then Begin
-      If TSL_Armed = True Then
+      If v_SL_Src = 1 Then
          BuyToCover( "TS_TSL_N" ) Next Bar at Market
       Else
          BuyToCover( "TS_InitSL_N" ) Next Bar at Market;
+      ExitFired = 1;
    End;
 
 End;

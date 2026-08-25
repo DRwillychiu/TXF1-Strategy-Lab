@@ -301,6 +301,31 @@ def discover_deployed(repo_root=None, include_indicators=False):
 # Reporting helpers (shared by the verification scripts)
 # --------------------------------------------------------------------------
 
+def resolve(stem, repo_root=None, tiers=DEPLOYED_TIERS):
+    """Repo-relative path of the deployed strategy whose filename stem matches.
+
+    This exists so callers never hardcode a path.  The 2026-07-26 folder
+    reorganisation silently broke every script that did, and the breakage went
+    unnoticed for nine days because a missing file looked like a crash rather
+    than a failed check.
+
+    Fails LOUDLY on a miss: raises LookupError listing what was actually found.
+    Never returns a guess.
+    """
+    want = stem[:-4] if stem.lower().endswith('.pla') else stem
+    want = os.path.basename(want).lower()
+    found = [f for f in discover_strategies(repo_root, tiers)
+             if os.path.splitext(f.name)[0].lower() == want]
+    if len(found) == 1:
+        return found[0].rel
+    if not found:
+        avail = ', '.join(sorted(os.path.splitext(f.name)[0]
+                                 for f in discover_strategies(repo_root, tiers)))
+        raise LookupError('no deployed strategy named %r. found: %s' % (stem, avail))
+    raise LookupError('%r is ambiguous: %s'
+                      % (stem, ', '.join(f.rel for f in found)))
+
+
 def group_by_tier(files):
     """Return OrderedDict tier -> [PlaFile], in canonical tier order."""
     groups = OrderedDict((t, []) for t in ALL_TIERS)

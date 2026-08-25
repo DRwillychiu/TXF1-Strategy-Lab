@@ -12,6 +12,7 @@ Checks per strategy:
   9. Exactly 1 SetStopLoss call (outside comments)
 """
 import re, sys, io
+from strategy_discovery import resolve
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def strip_comments(s):
@@ -32,7 +33,7 @@ def chk(name, ok, detail=''):
 strategies = [
     {
         'name': 'L3 ConsolidationLong',
-        'file': 'strategies/live/L3_ConsolidationLong.pla',
+        'file': resolve('L3_ConsolidationLong'),
         'version_pat': r'ImmediateStop',
         'changelog_pat': r'v13\.4\+.*P3b\s+Immediate\s+Stop',
         'ssl_pat': r'SetStopLoss\s*\(\s*AbsValue\s*\(\s*Close\s*-\s*\(\s*v_Box_Btm\s*-\s*v_ATR_Buffer\s*\)\s*\)\s*\*\s*BigPointValue\s*\)',
@@ -43,7 +44,7 @@ strategies = [
     },
     {
         'name': 'L4 ConsolidationShort',
-        'file': 'strategies/live/L4_ConsolidationShort.pla',
+        'file': resolve('L4_ConsolidationShort'),
         'version_pat': r'ImmediateStop',
         'changelog_pat': r'v14\.4\+.*P3b\s+Immediate\s+Stop',
         'ssl_pat': r'SetStopLoss\s*\(\s*AbsValue\s*\(\s*\(\s*v_Box_Top\s*\+\s*v_Current_ATR\s*\*\s*ATR_Stop_Mult\s*\)\s*-\s*Close\s*\)\s*\*\s*BigPointValue\s*\)',
@@ -54,7 +55,7 @@ strategies = [
     },
     {
         'name': 'L5 BreakoutLong',
-        'file': 'strategies/live/L5_BreakoutLong.pla',
+        'file': resolve('L5_BreakoutLong'),
         'version_pat': r'ImmediateStop',
         'changelog_pat': r'v19\.8\+.*P3b\s+Immediate\s+Stop',
         'ssl_pat': r'SetStopLoss\s*\(\s*AbsValue\s*\(\s*Close\s*-\s*\(\s*v_Box_Btm\s*-\s*v_ATR_Buffer\s*\)\s*\)\s*\*\s*BigPointValue\s*\)',

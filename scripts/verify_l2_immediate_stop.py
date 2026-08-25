@@ -13,9 +13,10 @@ Checks:
   10. Exactly 1 SetStopLoss call (outside comments)
 """
 import re, sys, io
+from strategy_discovery import resolve
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-PLA = 'strategies/live/L2_TrendShort.pla'
+PLA = resolve('L2_TrendShort')
 
 def strip_comments(s):
     out = []; depth = 0

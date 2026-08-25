@@ -18,9 +18,10 @@ Checks:
   13. SetStopContract declared (per-contract basis, lot-count invariant)
 """
 import re, sys, io
+from strategy_discovery import resolve
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-PLA = 'strategies/live/L1_TrendLong.pla'
+PLA = resolve('L1_TrendLong')
 
 results = []
 def chk(name, ok, detail=''):

@@ -11,14 +11,15 @@ Supersedes verify_l4_v141.py / verify_l4_v141_precision.py
 verify_l4_v142.py kept as the L4-specific deep dive.
 """
 import re, sys, io, os
+from strategy_discovery import resolve
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 FILES = {
-    'L1': 'strategies/live/L1_TrendLong.pla',
-    'L2': 'strategies/live/L2_TrendShort.pla',
-    'L3': 'strategies/live/L3_ConsolidationLong.pla',
-    'L4': 'strategies/live/L4_ConsolidationShort.pla',
-    'L5': 'strategies/live/L5_BreakoutLong.pla',
+    'L1': resolve('L1_TrendLong'),
+    'L2': resolve('L2_TrendShort'),
+    'L3': resolve('L3_ConsolidationLong'),
+    'L4': resolve('L4_ConsolidationShort'),
+    'L5': resolve('L5_BreakoutLong'),
 }
 content = {}
 for k, p in FILES.items():
