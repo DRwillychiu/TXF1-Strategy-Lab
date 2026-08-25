@@ -37,6 +37,21 @@ def main():
     N = len(rows)
     print('母體 %d 根   %s ~ %s' % (N, Y[0], Y[-1]))
 
+    # ---- S1 window-2 pivots, for the robustness SCORE (ruling D) ----
+    # Not a filter. Every pattern keeps a 0-6 count of how many of its six
+    # pivots also survive the wider neighbourhood. Filtering on it would cost
+    # 90% of the population and empty out three whole years; recording it
+    # costs nothing and leaves the threshold decision for later, on evidence.
+    def piv2(hi_lo, cmp2):
+        out = []
+        for i in range(2, N - 2):
+            if S[i] < 3 or any(S[t] == 1 for t in range(i - 1, i + 3)):
+                continue
+            if all(cmp2(hi_lo[i], hi_lo[i + d]) for d in (-2, -1, 1, 2)):
+                out.append(i)
+        return out
+    W2 = set(piv2(H, lambda a, b: a > b)) | set(piv2(L, lambda a, b: a < b))
+
     PH = [i for i in range(1, N - 1)
           if S[i] >= 2 and S[i + 1] >= 3 and H[i] > H[i - 1] and H[i] > H[i + 1]]
     PL = [i for i in range(1, N - 1)
@@ -68,7 +83,11 @@ def main():
         mid_old = (H[hs[0]] + L[ls[0]]) / 2.0
         mid_new = (H[hs[2]] + L[ls[2]]) / 2.0
         drift = mid_new - mid_old
-        hits.append(dict(k=kind, a=a, b=b, span=b - a, drift=drift,
+        s1 = sum(1 for t in idx if t in W2)          # 0-6 robustness score
+        su = (H[hs[2]] - H[hs[0]]) / float(hs[2] - hs[0])
+        sl = (L[ls[2]] - L[ls[0]]) / float(ls[2] - ls[0])
+        m2 = (su + sl) / 2.0                          # adopted direction measure
+        hits.append(dict(k=kind, a=a, b=b, span=b - a, drift=drift, s1=s1, m2=m2,
                          hs=hs, ls=ls, last=w[-1][1],
                          ymd=Y[a], sess='day' if 845 <= int(rows[a]['hhmm']) <= 1345 else 'night'))
 
@@ -118,8 +137,37 @@ def main():
     print('  時段  日盤 %d   夜盤 %d' % (ss['day'], ss['night']))
     print('  年均  %.1f 個' % (tot / 7.64))
 
+    print()
+    print('=' * 78)
+    print(' 4. 六格分類（裁示：M2 兩線斜率平均 ＋ 排列攤開）')
+    print('=' * 78)
+    print('  %-22s %5s %8s %8s %8s' % ('排列', 'n', '上升', '下降', '水平'))
+    for lab, kk in (('先出現高（以低收尾）', 'H_first'), ('先出現低（以高收尾）', 'L_first')):
+        sub = [x for x in hits if x['k'] == kk]
+        n = len(sub)
+        u = sum(1 for x in sub if x['m2'] > 1e-9)
+        d = sum(1 for x in sub if x['m2'] < -1e-9)
+        print('  %-22s %5d %7.1f%% %7.1f%% %7.1f%%'
+              % (lab, n, 100.0 * u / n, 100.0 * d / n, 100.0 * (n - u - d) / n))
+    u = sum(1 for x in hits if x['m2'] > 1e-9)
+    d = sum(1 for x in hits if x['m2'] < -1e-9)
+    print('  %-22s %5d %7.1f%% %7.1f%% %7.1f%%'
+          % ('合計', tot, 100.0 * u / tot, 100.0 * d / tot, 100.0 * (tot - u - d) / tot))
+
+    print()
+    print('=' * 78)
+    print(' 5. S1 穩健度分數（裁示 D：屬性，不是濾網）')
+    print('=' * 78)
+    sc = collections.Counter(x['s1'] for x in hits)
+    for k in range(7):
+        n = sc.get(k, 0)
+        bar = '#' * int(round(40.0 * n / max(sc.values())))
+        print('  %d / 6 個樞紐通過視窗 2   %4d  %5.1f%%  %s'
+              % (k, n, 100.0 * n / tot, bar))
+    print('  平均 %.2f / 6' % (sum(x['s1'] for x in hits) / float(tot)))
+
     json.dump([dict(k=x['k'], a=x['a'], b=x['b'], span=x['span'], drift=x['drift'],
-                    hs=x['hs'], ls=x['ls'], ymd=x['ymd'])
+                    s1=x['s1'], m2=x['m2'], hs=x['hs'], ls=x['ls'], ymd=x['ymd'])
                for x in hits],
               open(os.path.join(HERE, 's16s_p29_clean.json'), 'w', encoding='utf-8'))
     print()
