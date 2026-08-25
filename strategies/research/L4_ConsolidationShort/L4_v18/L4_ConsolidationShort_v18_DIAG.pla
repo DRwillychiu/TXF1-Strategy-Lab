@@ -1,5 +1,5 @@
 {================================================================================
- Script Name : _Live_Adaptive_Farmer_v14.2B_SpringOnly
+ Script Name : _Research_Adaptive_Farmer_v18_DIAG
  MC Load Name: STRATEGY_WILLY_SHORT_V18_DIAG
                *** DO NOT save over the live signal name
                STRATEGY_WILLY_SHORT_CTEST2. Research build. ***
@@ -83,6 +83,23 @@
           trigger sits AT entry, separated by the stop distance. They can
           never coincide. L1 needed its arm anchored on the moving average
           for exactly this reason; L4 does not.
+
+          KNOWN DEFECT, recorded 2026-08-24. The paragraph above is
+          correct about the TRIGGER but it never checked the DISARM
+          condition against the stop. With ReEntry_On = 1 this fires
+          ZERO times: CS_Entry 79, CS_ReEntry 0, tick for tick
+          identical to the ReEntry_On = 0 anchor. The frozen stop is
+          box top + 2 x ATR, so being stopped out ALREADY IMPLIES
+          price crossed above the box top - which is exactly what
+          DISARM tests. The flag is cleared on the same bar it is set.
+          Same error shape caught in L1 two days earlier, mirrored
+          for the short side.
+          Static inference, NOT confirmed by DIAG - the user ruled
+          against spending a run on it.
+          Proposed fix if this is ever revived: anchor DISARM on the
+          ORIGINAL STOP PRICE rather than the box top. UNVERIFIED.
+          See docs/research/L4_REENTRY_FINAL_VERDICT_20260824.md and
+          docs/research/L4_v18_reentry_zero_fire_20260824.md
 
           STOP INHERITANCE. Going flat wipes v_SL_Locked and v_Frozen_ATR,
           so without this the re-entry would re-freeze on fresh ATR and
@@ -265,7 +282,22 @@
           DEPLOY ONLY WHEN FLAT (changes historical stop fills).
           Production defaults = all off = v14.1 (regression-safe).
 
- PERFORMANCE (v14.6 = PRODUCTION, sealed 2026-07-26):
+ PERFORMANCE (v14.6, re-measured 2026-08-24):
+   Net Profit    : 877,200 TWD
+   Profit Factor : 1.4902  (Adjusted PF 1.0726)
+   Win Rate      : 41.7722%
+   MDD           : -789,200  (-23.5470%)
+   Total Trades  : 79
+   Source        : docs/research/L4_v18_anchor_result_and_analysis_20260824.md
+   Confirmed three times over - live v14.6, the v17 anchor and the
+   v18 anchor all produced the same 24 figures to four decimals.
+
+ SUPERSEDED PERFORMANCE - kept for the audit trail, DO NOT cite.
+ The block below was headed "sealed 2026-07-26". It cannot be
+ reconciled with the figures above: both claim 79 trades, so if no
+ trade occurred between 2026-07-26 and 2026-08-20 the net profit
+ must match, and 894,400 does not equal 877,200. The provenance of
+ the older measurement could not be recovered.
    Net Profit    : 894,400 TWD
    Profit Factor : 1.54
    Win Rate      : 43.04%

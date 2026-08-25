@@ -1,6 +1,8 @@
 {================================================================================
  Script Name : _Research_Adaptive_Farmer_v16
- MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
+ MC Load Name: STRATEGY_WILLY_SHORT_V16_RESEARCH
+                *** DO NOT save over the live signal name
+                STRATEGY_WILLY_SHORT_CTEST2. Research build. ***
  Description : Consolidation Short - Regime-Adaptive (v16 research)
  Version     : v16.0 (research; based on v14.4 PRODUCTION + v15 lessons)
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
