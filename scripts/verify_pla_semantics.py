@@ -119,12 +119,15 @@ maxlist intportion absvalue mod square squareroot dayofweek dayofmonth month yea
 currentdate currenttime iff numericseries numericsimple booleansimple print inputs
 variables arrays crosses above below alert barinterval timetominutes
 plot1 plot2 plot3 plot4 plot5 plot6 plot7 plot8 plot9 noplot
-setplotcolor setplotwidth setplottype
+setplotcolor setplotwidth setplottype plotpaintbar
 tl_new tl_delete tl_setcolor tl_setsize tl_setend tl_setbegin
 tl_setextright tl_setextleft tl_setstyle tl_getactive
 red green blue cyan magenta yellow white black darkred darkgreen darkblue
 minutestotime rsi exitfired intrabarordergeneration o h l c
 datetojulian juliantodate""".split())
+# plotpaintbar added 2026-08-26: the standard PowerLanguage paintbar plot.
+# It occupies Plot1..Plot4 internally, which is why IND_S16S_P29's own plots
+# start at 5 -- worth remembering before adding a plot to that file.
 # datetojulian / juliantodate added 2026-08-20: standard PowerLanguage builtins,
 # in use across every live strategy (L1-L5, S1, S3 family). They were missing from
 # this list, so any file using them drew a false DECL warning.

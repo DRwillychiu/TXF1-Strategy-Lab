@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260826.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260827.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -48,7 +48,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260826 ),
+    Build_ID                ( 260827 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -61,7 +61,11 @@ inputs:
     Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
     Col_Upper               ( Red   ),
     Col_Lower               ( Cyan  ),
-    Line_Width              ( 3     );
+    Line_Width              ( 3     ),
+    Paint_Mode              ( 1     ),     { 0 off, 1 recolour the pattern's own bars }
+    Col_Form                ( Yellow  ),   { the bar the pattern completes on }
+    Col_Active              ( Cyan    ),   { state 1, alive and waiting }
+    Col_Testing             ( Magenta );   { state 2, price is testing an edge }
 
 variables:
     v_In_Day                ( False ),
@@ -82,7 +86,8 @@ variables:
     v_H1b( 0 ), v_H2b( 0 ), v_H3b( 0 ),    { their bar numbers }
     v_L1b( 0 ), v_L2b( 0 ), v_L3b( 0 ),
 
-    v_State                 ( 0     ),     { 0 none 1 active 2 testing 3 dead }
+    v_State                 ( 0     ),
+    v_PaintCol              ( 0     ),     { 0 none 1 active 2 testing 3 dead }
     v_Kind                  ( 0     ),     { 49 top, 50 bottom }
     v_TestDir               ( 0     ),     { 1 up, 2 down }
     v_StartBar              ( 0     ),
@@ -511,35 +516,75 @@ end;
       Colours and width are set in code so the picture does not depend on
       whatever the Format dialog happens to remember.                     }
 
-SetPlotColor( 1, Col_Upper );
-SetPlotColor( 2, Col_Lower );
-SetPlotWidth( 1, Line_Width );
-SetPlotWidth( 2, Line_Width );
+    { ---------- SECTION 8a - PAINT THE PATTERN'S OWN BARS -------------
+      The reason this exists is not that too little was drawn.  It is that
+      the patterns cannot be FOUND: 202 of them across 421,513 bars is one
+      every 2,086 bars, about one per nine trading days, so scrolling will
+      essentially never land on one.  Two trendlines on an empty chart are
+      invisible until you already know where to look.
+
+      PlotPaintBar recolours the price bars themselves, so a pattern reads
+      as a coloured band in the price series.  It costs no drawing objects,
+      which matters because 202 patterns times nine objects each would sit
+      near MultiCharts' ceiling -- the paint is never subject to that.
+
+      Colour carries the state, so the picture says what the state machine
+      holds without a second pane:
+
+          yellow    the bar the pattern completed on
+          cyan      state 1, alive and waiting
+          magenta   state 2, price is testing an edge
+
+      A dead pattern paints nothing, exactly as it plots nothing.
+
+      PlotPaintBar occupies Plot1..Plot4 internally.  That is why the
+      trendline plots moved to 5/6, the pivots to 7/8 and the state to 9.  }
+
+if Paint_Mode <> 0 and ( v_State = 1 or v_State = 2 ) then begin
+    if v_State = 1 and v_State[1] <> 1 then
+        v_PaintCol = Col_Form
+    else if v_State = 2 then
+        v_PaintCol = Col_Testing
+    else
+        v_PaintCol = Col_Active;
+    PlotPaintBar( High, Low, Open, Close, "P29", v_PaintCol );
+end
+else begin
+    NoPlot( 1 );
+    NoPlot( 2 );
+    NoPlot( 3 );
+    NoPlot( 4 );
+end;
+
+SetPlotColor( 5, Col_Upper );
+SetPlotColor( 6, Col_Lower );
+SetPlotWidth( 5, Line_Width );
+SetPlotWidth( 6, Line_Width );
 
 { Line_Mode 2 keeps the old plots for comparison.  It interpolates across
   gaps -- that is the defect, kept switchable rather than deleted so the
   difference can be seen side by side. }
 if Line_Mode = 2 and ( v_State = 1 or v_State = 2 ) then begin
-    Plot1( v_UpLine, "UpperLine" );
-    Plot2( v_DnLine, "LowerLine" );
+    Plot5( v_UpLine, "UpperLine" );
+    Plot6( v_DnLine, "LowerLine" );
 end
 else begin
-    NoPlot( 1 );
-    NoPlot( 2 );
+    NoPlot( 5 );
+    NoPlot( 6 );
 end;
 
 if Show_Pivots <> 0 and v_IsPvH then
-    Plot3[1]( High[1], "PivotHigh" )
+    Plot7[1]( High[1], "PivotHigh" )
 else
-    NoPlot( 3 );
+    NoPlot( 7 );
 if Show_Pivots <> 0 and v_IsPvL then
-    Plot4[1]( Low[1],  "PivotLow"  )
+    Plot8[1]( Low[1],  "PivotLow"  )
 else
-    NoPlot( 4 );
+    NoPlot( 8 );
 
 if Show_State <> 0 then
-    Plot5( v_State, "State" )
+    Plot9( v_State, "State" )
 else
-    NoPlot( 5 );
+    NoPlot( 9 );
 
 if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
