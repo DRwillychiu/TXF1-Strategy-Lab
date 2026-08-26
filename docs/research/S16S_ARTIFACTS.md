@@ -6,6 +6,7 @@
 | 頁面 | 網址 | repo 原始檔 | 產生器 |
 |---|---|---|---|
 | **型態全圖鑑**（143 種） | https://claude.ai/code/artifact/22fa588b-51f5-43ce-8e11-bc301d4c35ef | `docs/research/S16S_pattern_atlas_full.html` | `scripts/research/s16s_make_full_atlas.py` ＋ `_atlas.css` |
+| **P49 / P50 擴散頂底示意圖** | https://claude.ai/code/artifact/30ee09ef-fae0-4742-9323-12c7a3cb7e67 | `docs/research/S16S_P49_P50_diagram.html` | `scripts/research/s16s_p49_make_diagram.py` |
 | **P29 擴散三角示意圖** | https://claude.ai/code/artifact/79ff51ff-ec21-4a24-9bc1-be99c4215c25 | `docs/research/S16S_P29_diagram.html` | `scripts/research/s16s_p29_make_diagram.py` |
 | K 棒型態圖鑑（33 種） | https://claude.ai/code/artifact/5dbdffac-f3aa-4096-870b-bf8453f2427b | `docs/research/S16S_kbar_atlas_33.html` | `scripts/research/s16s_make_atlas.py` |
 | 全版本績效總表 | https://claude.ai/code/artifact/365d908f-8ca1-4c09-ba9c-f13381efb8cc | `docs/research/S16S_version_performance_table.html` | 資料寫在 HTML 的 `const D = [...]` |
