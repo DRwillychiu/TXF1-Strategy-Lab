@@ -61,7 +61,7 @@ L5 的 `SL_Pct = 1.0`（不是 0）。引擎層 `SetStopLoss` 可以在**沒有�
 
 ## 6. 改了什麼
 
-檔案：`strategies/research/L5_BreakoutLong/L5_v199/L5_BreakoutLong_v199.pla`
+檔案：`strategies/research/L5_BreakoutLong/L5_v199_R1/L5_BreakoutLong_v199_R1.pla`
 （live 一個位元組沒動）
 
 ```
