@@ -458,8 +458,12 @@ else begin
     NoPlot( 2 );
 end;
 
-if v_IsPvH then Plot3( High[1], "PivotHigh" ) else NoPlot( 3 );
-if v_IsPvL then Plot4( Low[1],  "PivotLow"  ) else NoPlot( 4 );
+{ Back-plot by one bar.  The pivot sits on bar [1] but is only confirmed
+  here, and Plot3( High[1] ) would paint that value on the CURRENT bar --
+  every marker one bar right of the turn it marks.  PlotN[1] puts it where
+  the pivot actually is, which is what a screenshot has to show. }
+if v_IsPvH then Plot3[1]( High[1], "PivotHigh" ) else NoPlot( 3 );
+if v_IsPvL then Plot4[1]( Low[1],  "PivotLow"  ) else NoPlot( 4 );
 
 { State is 0-3 and would drag the price axis down to zero if it shared the
   scale.  Set this plot to its own subgraph in Format Indicator, or leave
