@@ -12,7 +12,7 @@ PowerLanguage .pla 語意交叉驗證器
 
 usage: python scripts/verify_pla_semantics.py <path-to.pla>
 """
-import io, sys, re, collections
+import io, os, sys, re, collections
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 if len(sys.argv) < 2:
@@ -63,7 +63,10 @@ occ = collections.Counter(re.findall(r'\b([A-Za-z_]\w*)\b', _tok_src))
 # 判準是「敘述起始」：上一個非空行以 ; / begin / then / else 收尾。
 # 多行條件的續行（上一行以 = 或 and / or 收尾）一律視為比較。
 STMT_END = re.compile(r'(;|\]|\bbegin\b|\bthen\b|\belse\b)\s*$', re.I)
-ASSIGN = re.compile(r'^(?:for\s+)?([A-Za-z_]\w*)\s*=(?!=)')
+# 陣列元素指派 v_PvPx[v_j] = ... 也是一次寫入。舊版的 \w* 後面直接接 =，
+# 於是整個陣列被判成「只讀不寫，恆為初值」—— 假 WARN，而假 WARN 會讓
+# 真的「宣告了卻忘記賦值」被忽略。下標整段可選。
+ASSIGN = re.compile(r'^(?:for\s+)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*=(?!=)')
 
 
 def classify(src):
@@ -114,7 +117,8 @@ buy sell short cover next bar at market stop limit this setstoploss setstopcontr
 setprofittarget xaverage average highest lowest atr avgtruerange truerange minlist
 maxlist intportion absvalue mod square squareroot dayofweek dayofmonth month year
 currentdate currenttime iff numericseries numericsimple booleansimple print inputs
-variables arrays crosses above below plot1 plot2 alert barinterval timetominutes
+variables arrays crosses above below alert barinterval timetominutes
+plot1 plot2 plot3 plot4 plot5 plot6 plot7 plot8 plot9 noplot
 minutestotime rsi exitfired intrabarordergeneration o h l c
 datetojulian juliantodate""".split())
 # datetojulian / juliantodate added 2026-08-20: standard PowerLanguage builtins,
@@ -210,8 +214,15 @@ f('TIME', '分鐘數 > 59 的非法時間: %s' % ', '.join(bt)) if bt else \
 lng = [(float(v), k) for k, v in inps.items()
        if re.search(r'len|length|lookback', k, re.I) and re.match(r'^[\d.]+$', v.strip())]
 over = ['%s = %g' % (k, n) for n, k in lng if n > 99]
-f('MBB', '超過 MaxBarsBack 99: %s' % ', '.join(over)) if over else \
+if over:
+    f('MBB', '超過 MaxBarsBack 99: %s' % ', '.join(over))
+elif lng:
     o('MBB', '最長回看 %s = %g，未超過 99' % (max(lng)[1], max(lng)[0]))
+else:
+    # 沒有 len/length/lookback 命名的 input。指標與純鎖存式模組會走到這裡
+    # （IND_S16S_P29 把樞紐價格鎖存進陣列，型態判定完全不回看）。
+    # 舊版直接 max([]) 會 ValueError 讓驗證器整個崩掉 —— 守門員自己倒下。
+    o('MBB', '無 len/length/lookback 型 input，無回看長度可查')
 
 # ---------- 8. 開關鏡射 ----------
 mir = dict(re.findall(r'(v_\w+)\s*=\s*\(\s*(\w+)\s*<>\s*0\s*\)', body))
@@ -234,17 +245,35 @@ f('ORDER', '指定價格但缺 stop/limit 關鍵字: %s' % ', '.join(bado)) if b
     o('ORDER', '所有下單型態關鍵字完整（market / stop / limit）')
 
 # ---------- 10. 規範與已知陷阱 ----------
-o('IOG', 'IntrabarOrderGeneration = False 存在') if re.search(
-    r'\[IntrabarOrderGeneration\s*=\s*False\]', code) else f('IOG', 'IOG 宣告遺失')
-for pat, why in (('SetStopContract', 'Rule #12 每口停損'), ('SetStopLoss', 'Rule #12 引擎停損'),
-                 ('v_Settlement_Day', 'Rule #11 結算日'), ('v_Prev_MP', '前根部位追蹤')):
-    c = len(re.findall(pat, code))
-    (o if c else f)('RULE', '%s 出現 %d 次（%s）' % (pat, c, why))
-a, b = code.find('SetStopContract'), code.find('SetStopLoss')
-(o if 0 <= a < b else f)('RULE', 'SetStopContract %s SetStopLoss' % ('先於' if 0 <= a < b else '未先於'))
-(f if re.search(r'\[\s*0\s*\]', body) else o)('FUTURE', '無前瞻索引 [0]')
+# 這一段全部是 Rule #11 / #12 的策略專屬規範。指標沒有部位、不下單、
+# 沒有結算日出場，套上去只會產生假 FAIL —— 而假 FAIL 讓真 FAIL 沒人看。
+# 判定沿用 verify_settlement_flat.py 的做法：IND_ 前綴且無下單語句。
+_IS_IND = ( os.path.basename(P).upper().startswith('IND_')
+            and not re.search(r'(buy|sell short|sell|buy to cover)\s*\(', body, re.I) )
+if _IS_IND:
+    o('RULE', '指標：Rule #11 / #12 與 IOG 不適用，已跳過')
+else:
+    o('IOG', 'IntrabarOrderGeneration = False 存在') if re.search(
+        r'\[IntrabarOrderGeneration\s*=\s*False\]', code) else f('IOG', 'IOG 宣告遺失')
+    for pat, why in (('SetStopContract', 'Rule #12 每口停損'), ('SetStopLoss', 'Rule #12 引擎停損'),
+                     ('v_Settlement_Day', 'Rule #11 結算日'), ('v_Prev_MP', '前根部位追蹤')):
+        c = len(re.findall(pat, code))
+        (o if c else f)('RULE', '%s 出現 %d 次（%s）' % (pat, c, why))
+    a, b = code.find('SetStopContract'), code.find('SetStopLoss')
+    (o if 0 <= a < b else f)('RULE', 'SetStopContract %s SetStopLoss' % ('先於' if 0 <= a < b else '未先於'))
+# 前瞻索引 [0]。舊版用 re.search(r'\[\s*0\s*\]', body) 一律判死，分不出
+# 棒位偏移 Close[0] 與陣列下標 v_PvPx[0]。任何用陣列的檔案都會拿到假 FAIL，
+# 而真的前瞻會淹沒在雜訊裡 —— 守門員必須吵得準，不是吵得大聲。
+_ARRNAMES = set(k.lower() for k, (b, _) in DECL.items() if b == 'arrays')
+_fwd = [m.group(1) for m in re.finditer(r'([A-Za-z_]\w*)\s*\[\s*0\s*\]', body)
+        if m.group(1).lower() not in _ARRNAMES]
+(f if _fwd else o)('FUTURE', '無前瞻索引 [0]%s'
+                   % ('' if not _fwd else '：' + ', '.join(sorted(set(_fwd)))))
 last = [t for t in BODY_LINES if t][-1]
-(o if 'v_Prev_MP' in last else w_)('FLOW', '腳本最末行: %s' % last[:56])
+if _IS_IND:
+    o('FLOW', '指標：最末行 v_Prev_MP 規範不適用')
+else:
+    (o if 'v_Prev_MP' in last else w_)('FLOW', '腳本最末行: %s' % last[:56])
 
 print()
 print('=' * 82)

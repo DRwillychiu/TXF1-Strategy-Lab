@@ -375,13 +375,74 @@ def main():
 </div>
 
 <div class="card">
-  <h2>八、還沒做的事</h2>
+  <h2>八、生命週期 — 型態是狀態，不是訊號</h2>
+  <p class="note">2026-08-26 裁示 20：底層只維護狀態，永不下單。中層進場與上層二次進場
+  都是<b>讀者</b>。假突破與假跌破都回到有效，型態不因發出訊號而消耗。</p>
+  <pre>有效  --收盤突破上緣或跌破下緣-->  測試中
+測試中  --下一個樞紐時已回到型態內-->  有效        假突破 25 ／ 假跌破 11
+測試中  --下一個樞紐時仍在型態外-->    失效
+有效  --存活根數 > 形成根數-->        失效</pre>
+  <div class="grid2" style="margin-top:16px">
+    <div>
+      <h3>結局分布（n = 202）</h3>
+      <table>
+        <tr><th>結局</th><th class="n">個數</th><th class="n">佔比</th></tr>
+        <tr><td><b>有效期屆滿</b></td><td class="n"><b>138</b></td><td class="n"><b>68.3%%</b></td></tr>
+        <tr><td>價格破壞（三根紅K）</td><td class="n">21</td><td class="n">10.4%%</td></tr>
+        <tr><td>真跌破（三根黑K）</td><td class="n">16</td><td class="n">7.9%%</td></tr>
+        <tr><td>真跌破（樞紐確認）</td><td class="n">15</td><td class="n">7.4%%</td></tr>
+        <tr><td>真突破（樞紐確認）</td><td class="n">12</td><td class="n">5.9%%</td></tr>
+      </table>
+      <p class="note">型態存活中位 <b>10 根</b>。空方訊號 <b>47 次</b>，
+      其中三黑 16 ／ 待樞紐確認 31（裁示 19 的兩級強度）。</p>
+    </div>
+    <div>
+      <h3>裁示 18：長實體條件被實測否決</h3>
+      <table>
+        <tr><th>版本</th><th class="n">向上突破符合</th><th class="n">向下跌破符合</th></tr>
+        <tr><td><b>純紅黑（採用）</b></td><td class="n"><b>45.5%%</b></td><td class="n"><b>40.0%%</b></td></tr>
+        <tr><td>加 Body >= 50%% 區間</td><td class="n warn">4.5%%</td><td class="n warn">5.0%%</td></tr>
+      </table>
+      <p class="note">加上長實體條件，44 個向上突破裡只有 <b>2 個</b>會走這條路
+      —— <span class="warn">那條規則等於不存在</span>。</p>
+      <p class="note"><b>「價格破壞」也被重新定義。</b>舊版是「收盤越過最高樞紐」，
+      但擴散的定義就是高點不斷創高，那條規則把「正在擴散」判成「被破壞」，
+      且會讓假突破存活路徑變成 <b>0 次的死碼</b>。改成「三根同向」之後，
+      觸發率從 41.6%% 降到 10.4%%，假突破路徑活了過來。</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>九、指標已寫好</h2>
+  <pre>strategies/research/S16_MACrossShort/indicators/IND_S16S_P29.pla   420 行</pre>
+  <table>
+    <tr><th>檢查</th><th>結果</th></tr>
+    <tr><td>Rule #15 ASCII</td><td class="ok">73 / 73 PASS</td></tr>
+    <tr><td>語意驗證</td><td class="ok">FAIL 0 ／ WARN 0 ／ PASS 18</td></tr>
+    <tr><td>前瞻索引 [0]</td><td class="ok">無</td></tr>
+    <tr><td>下單語句</td><td class="ok">0 筆（裁示 20：型態層不下單）</td></tr>
+    <tr><td>MC12 編譯</td><td class="warn">尚未執行</td></tr>
+    <tr><td>逐筆對照 Python 202 筆</td><td class="warn">尚未執行</td></tr>
+  </table>
+  <p class="note">指標把樞紐價格、棒號與 M7 <b>鎖存進陣列</b>，型態判定是純算術，
+  完全不回看 —— MaxBarsBack 只需覆蓋 M7 的 13 根收盤。
+  <code>Print</code> 每個事件一行，供 diff 對照。</p>
+  <p class="note">過程中修好驗證器四個盲點：陣列下標被誤判為前瞻索引、
+  陣列元素指派不算寫入、<code>Plot3-9</code> 與 <code>NoPlot</code> 不在內建表、
+  策略專屬規範（Rule #11／#12／IOG／<code>v_Prev_MP</code>）被套到指標上。
+  <b>修完後既有策略仍是 FAIL 0 ／ WARN 0 ／ PASS 23，無回歸。</b></p>
+</div>
+
+<div class="card">
+  <h2>十、還沒做的事</h2>
   <table>
     <tr><th>項目</th><th>狀態</th></tr>
     <tr><td>M7 量法（裁示 12）</td><td class="ok">已定：12 根最小平方斜率</td></tr>
     <tr><td>開口大小（裁示 13）</td><td class="ok">已定：記成屬性，不設門檻</td></tr>
     <tr><td>S1 雙尺度在 202 母體上重跑</td><td class="warn">舊數字跑在 172 上，尚未重測</td></tr>
-    <tr><td>指標 IND_S16S_P29.pla ＋ 逐筆對照 202 筆</td><td class="warn">未寫</td></tr>
+    <tr><td>指標 IND_S16S_P29.pla</td><td class="ok">已寫，驗證全過</td></tr>
+    <tr><td>MC12 編譯 ＋ 逐筆對照 202 筆</td><td class="warn">尚未執行</td></tr>
     <tr><td>寫進 .pla</td><td class="warn">一行都沒寫</td></tr>
     <tr><td>報酬檢定</td><td class="warn">從未進行，且不應在用戶同意前進行</td></tr>
     <tr><td>P51–P54（§2 要重寫）</td><td class="warn">未規劃</td></tr>
