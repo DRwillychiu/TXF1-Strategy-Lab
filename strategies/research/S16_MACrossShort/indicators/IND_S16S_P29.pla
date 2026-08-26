@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260827.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260828.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -48,7 +48,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260827 ),
+    Build_ID                ( 260828 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -63,9 +63,11 @@ inputs:
     Col_Lower               ( Cyan  ),
     Line_Width              ( 3     ),
     Paint_Mode              ( 1     ),     { 0 off, 1 recolour the pattern's own bars }
-    Col_Form                ( Yellow  ),   { the bar the pattern completes on }
     Col_Active              ( Cyan    ),   { state 1, alive and waiting }
-    Col_Testing             ( Magenta );   { state 2, price is testing an edge }
+    Col_Testing             ( Magenta ),   { state 2, price is testing an edge }
+    Col_Shape               ( Yellow  ),   { the pattern's own six-pivot span }
+    Paint_MaxBack           ( 60      );   { cap on the back-paint.  Longest span
+                                             measured is 43; CLAUDE.md allows 99 }
 
 variables:
     v_In_Day                ( False ),
@@ -87,7 +89,9 @@ variables:
     v_L1b( 0 ), v_L2b( 0 ), v_L3b( 0 ),
 
     v_State                 ( 0     ),
-    v_PaintCol              ( 0     ),     { 0 none 1 active 2 testing 3 dead }
+    v_PaintCol              ( 0     ),
+    v_PaintBack             ( 0     ),
+    v_pk                    ( 0     ),     { 0 none 1 active 2 testing 3 dead }
     v_Kind                  ( 0     ),     { 49 top, 50 bottom }
     v_TestDir               ( 0     ),     { 1 up, 2 down }
     v_StartBar              ( 0     ),
@@ -540,10 +544,36 @@ end;
       PlotPaintBar occupies Plot1..Plot4 internally.  That is why the
       trendline plots moved to 5/6, the pivots to 7/8 and the state to 9.  }
 
+{ ---- the pattern's OWN span, painted backwards on the forming bar ----
+  This is the half that matters and the half Build_ID 260827 missed.
+  v_State only turns 1 when the sixth pivot is CONFIRMED, which is after
+  the shape is complete: on 2026-06-11 the six pivots run 01:20 to 02:05
+  and state turns 1 at 02:10.  Painting forward from there colours bars
+  that are not part of the pattern and leaves every pivot uncoloured.
+
+  v_PvBar already holds each pivot's bar number, so the distance back to
+  the first pivot is known without a lookback on price.  Offsets 1 to span
+  are painted; offset 0 is the confirming bar and belongs to the forward
+  paint below.
+
+  Span median is 12 bars and the longest measured is 43, so the two paints
+  together mark roughly 24 bars -- enough to catch the eye at a normal
+  zoom, with the six pivots INSIDE the coloured region rather than to the
+  left of it.                                                             }
+
+if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 then begin
+    v_PaintBack = CurrentBar - v_PvBar[0];
+    if v_PaintBack > Paint_MaxBack then
+        v_PaintBack = Paint_MaxBack;
+    for v_pk = 1 to v_PaintBack begin
+        PlotPaintBar[v_pk]( High[v_pk], Low[v_pk], Open[v_pk], Close[v_pk],
+                            "P29", Col_Shape );
+    end;
+end;
+
+{ ---- forward: while the pattern is still able to act ---- }
 if Paint_Mode <> 0 and ( v_State = 1 or v_State = 2 ) then begin
-    if v_State = 1 and v_State[1] <> 1 then
-        v_PaintCol = Col_Form
-    else if v_State = 2 then
+    if v_State = 2 then
         v_PaintCol = Col_Testing
     else
         v_PaintCol = Col_Active;
