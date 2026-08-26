@@ -57,7 +57,11 @@ inputs:
     Sess_Night_End          ( 500   ),
     Show_Lines              ( 1     ),     { plot the two extended trendlines }
     Print_Events            ( 1     ),     { emit one line per event for diff }
-    Show_State              ( 0     );     { 0 = off.  Plot5 shares the price axis. }
+    Show_State              ( 0     ),     { 0 = off.  Plot5 shares the price axis. }
+    Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
+    Col_Upper               ( Red   ),
+    Col_Lower               ( Cyan  ),
+    Line_Width              ( 3     );
 
 variables:
     v_In_Day                ( False ),
@@ -446,8 +450,25 @@ if v_State = 1 or v_State = 2 then begin
 end;
 
     { ---------- SECTION 8 - PLOTS -------------------------------------
-      Lines only while the pattern can still act.  A dead pattern plots
-      nothing, so the chart shows exactly what the state machine holds. }
+      Only the two extended trendlines, and only while the pattern can
+      still act.  A dead pattern plots nothing, so what is on screen is
+      exactly what the state machine holds.
+
+      Show_Pivots defaults to OFF, and that is the important part.
+      Plot3/Plot4 fire on EVERY fractal pivot in the series -- 75,145 highs
+      plus 76,032 lows across 421,513 bars, or 35.9% of all bars.  Drawn as
+      a line that is a full-screen zigzag, and the 25-per-year patterns
+      vanish inside it.  The first screenshot attempt on 2026-08-26 showed
+      exactly that.  Turn them on only to inspect pivot detection itself,
+      and set their style to Point in Format Indicator when you do.
+
+      Colours and width are set in code so the picture does not depend on
+      whatever the Format dialog happens to remember.                     }
+
+SetPlotColor( 1, Col_Upper );
+SetPlotColor( 2, Col_Lower );
+SetPlotWidth( 1, Line_Width );
+SetPlotWidth( 2, Line_Width );
 
 if Show_Lines <> 0 and ( v_State = 1 or v_State = 2 ) then begin
     Plot1( v_UpLine, "UpperLine" );
@@ -458,16 +479,18 @@ else begin
     NoPlot( 2 );
 end;
 
-{ Back-plot by one bar.  The pivot sits on bar [1] but is only confirmed
-  here, and Plot3( High[1] ) would paint that value on the CURRENT bar --
-  every marker one bar right of the turn it marks.  PlotN[1] puts it where
-  the pivot actually is, which is what a screenshot has to show. }
-if v_IsPvH then Plot3[1]( High[1], "PivotHigh" ) else NoPlot( 3 );
-if v_IsPvL then Plot4[1]( Low[1],  "PivotLow"  ) else NoPlot( 4 );
+if Show_Pivots <> 0 and v_IsPvH then
+    Plot3[1]( High[1], "PivotHigh" )
+else
+    NoPlot( 3 );
+if Show_Pivots <> 0 and v_IsPvL then
+    Plot4[1]( Low[1],  "PivotLow"  )
+else
+    NoPlot( 4 );
 
-{ State is 0-3 and would drag the price axis down to zero if it shared the
-  scale.  Set this plot to its own subgraph in Format Indicator, or leave
-  Show_State at 0 -- it is a diagnostic, not part of the picture. }
-if Show_State <> 0 then Plot5( v_State, "State" ) else NoPlot( 5 );
+if Show_State <> 0 then
+    Plot5( v_State, "State" )
+else
+    NoPlot( 5 );
 
 if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
