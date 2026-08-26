@@ -593,9 +593,10 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
   BLIND SPOT THIS CLOSES
   SL_Pct = 1.0, so the MC engine SetStopLoss can close a position
-  with no Sell () statement firing at all (1 of 178 fills,
-  2020-2026 backtest, reported as "Stop Loss"). An exit side
-  label can never mark that path. This log marks it.
+  with no Sell () statement firing at all. Confirmed in the MC12
+  run of 2026-08-26: 1 of 171 fills is reported as "Stop Loss"
+  with no matching Sell label. An exit side label can never mark
+  that path. This log marks it.
 
   READING THE OUTPUT
   L5_ENTRY, Date, Time, EntryPrice, EpisodeID, EntryNo, BoxTop, BoxBtm
