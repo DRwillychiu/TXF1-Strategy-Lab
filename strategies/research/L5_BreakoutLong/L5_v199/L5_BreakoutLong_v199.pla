@@ -1,13 +1,37 @@
 {================================================================================
- Script Name : _Live_Adaptive_Farmer_v19_9_BreakoutLong
- MC Load Name: STRATEGY_WILLY_LONG_BREAKOUT_C
+ Script Name : _Research_L5_v19_9_R1_BreakoutLong
+ MC Load Name: STRATEGY_L5_V199_R1_RESEARCH
  Description : L1+L3 Hybrid - L3 entry + L1 StopProfit philosophy (A/B engine)
- Version     : v19.9 + SetStopContract + SL_Pct + HolidayFlat_v3 + FrozenSL + ImmediateStop
+ Version     : v19.9-R1 = v19.9 + re-entry observability log. NO ORDER CHANGE.
+
+ ***************************************************************************
+ * RESEARCH BUILD - DO NOT LOAD OVER THE LIVE SIGNAL                       *
+ *                                                                         *
+ * Live MC9 signal name is STRATEGY_WILLY_LONG_BREAKOUT_C. Loading this    *
+ * file under that name overwrites production. Use the research name.      *
+ *                                                                         *
+ * L5 is inside its six month validation window. This build adds only a    *
+ * Print statement and three counters. It issues no order and feeds no     *
+ * order price, so the object under test is unchanged.                     *
+ ***************************************************************************
  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
  Platform    : MultiCharts 9.0 PowerLanguage x64
  Timeframe   : Data1 = 15M / Data2 = Daily / Data3 = Weekly
 
  CHANGELOG:
+   v19.9-R1 (2026-08-26) Re-entry observability. LOG ONLY, no order change.
+          WHY NOT A LABEL: all 28 exit orders bind from Entry ("BL_Entry_Bot")
+          or from Entry ("BL_Entry_Mid"). Renaming an entry orphans every exit
+          bound to it and the position loses all stops. L2 / L3 / L4 have zero
+          from Entry bindings, which is why they carry entry side re-entry
+          labels and L5 does not. Measured, not assumed: grep count is 28.
+          ADDED: Debug_Entry_Log input, v_Prev_MP, v_Episode_ID,
+          v_Episode_Entries, one rising edge episode counter, one Print.
+          DELETED: nothing. Two semicolons became commas to extend the
+          declaration lists. Comment stripped diff vs live shows zero change
+          to any Buy / Sell / from Entry / SetStopLoss line.
+          ALSO FIXES: L5 had no v_Prev_MP, violating PowerLanguage rule 8.
+
    v19.6  Prior production: God Mode + Daily Commander + Weekly AND Filter
           + Scale-Out + MFE 3-tier dynamic trail.
 
@@ -250,7 +274,9 @@ inputs:
                                      B/C/D/E/F all killed 3 mega-winners
                                      (2026-04-07 +376K, 2026-03-31 +177K,
                                      2026-03-12 +131K) reducing them to +7~+38K. }
-    SP_Retain_Pct(50);             { inert while SP_Trigger_Pts = 0 }
+    SP_Retain_Pct(50),             { inert while SP_Trigger_Pts = 0 }
+    Debug_Entry_Log(true);         { v19.9-R1 entry CSV to output window.
+                                     Set False before MC optimization sweeps. }
 
 variables:
     { [SEC-0] Time filter state }
@@ -320,7 +346,12 @@ variables:
     v_Bot_Base_Stop(0),            { Stage 1 base SL for Bot leg }
     v_Mid_Base_Stop(0),            { Stage 1 base SL for Mid leg }
     v_SL_Pct_Floor(0),             { v19.9: SL_Pct stop price floor }
-    v_Guard_Distance(0);           { v19.9: P3b guard temp (replaces Value1) }
+    v_Guard_Distance(0),           { v19.9: P3b guard temp (replaces Value1) }
+
+    { [SEC-10] v19.9-R1 re-entry observability (no order reads these) }
+    v_Prev_MP(0),                  { PL rule 8: prior bar MarketPosition }
+    v_Episode_ID(0),               { +1 on each new consolidation box }
+    v_Episode_Entries(0);          { entries taken inside the current box }
 
 arrays:
     Holiday_Tail[80](0);
@@ -455,6 +486,18 @@ if v_is_in_consolidation then begin
     if (High of Data2 > v_Box_Top) or (Low of Data2 < v_Box_Btm) then
         v_is_in_consolidation = false;
 end;
+{ ==========================================
+  [SEC-1c] v19.9-R1  BOX EPISODE COUNTER   (observability only)
+  Rising edge of v_is_in_consolidation opens a new episode.
+  Structural, not price based. L4 v18 fired zero times because
+  its disarm condition was implied by its own stop; see
+  docs/research/L3_reentry_barlevel_research_20260825.md
+  Writes no order and feeds no order price.
+  ========================================== }
+if v_is_in_consolidation and (v_is_in_consolidation[1] = false) then begin
+    v_Episode_ID      = v_Episode_ID + 1;
+    v_Episode_Entries = 0;
+end;
 
 { ==========================================
   [SEC-2] ATR CACHE (Data1 - once per bar)
@@ -533,6 +576,44 @@ if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
 
         end;
     end;
+{ ==========================================
+  [SEC-3b] v19.9-R1  RE-ENTRY OBSERVABILITY   (log only)
+
+  Emits one CSV line per fill to the MC output window. Places no
+  order and writes no variable that any order statement reads,
+  so the degenerate anchor is an identity, not a claim that a
+  backtest has to confirm.
+
+  WHY LOGGED AND NOT LABELLED
+  All 28 exit orders bind from Entry ("BL_Entry_Bot") or
+  from Entry ("BL_Entry_Mid"). Renaming an entry orphans every
+  exit bound to it and the position loses all stops. L2 / L3 / L4
+  have zero from Entry bindings, which is why they carry
+  re-entry labels on the entry side and L5 does not.
+
+  BLIND SPOT THIS CLOSES
+  SL_Pct = 1.0, so the MC engine SetStopLoss can close a position
+  with no Sell () statement firing at all (1 of 178 fills,
+  2020-2026 backtest, reported as "Stop Loss"). An exit side
+  label can never mark that path. This log marks it.
+
+  READING THE OUTPUT
+  L5_ENTRY, Date, Time, EntryPrice, EpisodeID, EntryNo, BoxTop, BoxBtm
+  EntryNo = 1  -> first entry inside this box
+  EntryNo >= 2 -> re-entry
+  Join to the trade report on Date + Time.
+
+  Set Debug_Entry_Log = False before any MC optimization sweep.
+  Print inside a 10k iteration run is slow.
+  ========================================== }
+if (v_Prev_MP <= 0) and (MarketPosition = 1) then begin
+    v_Episode_Entries = v_Episode_Entries + 1;
+    if Debug_Entry_Log then
+        Print( "L5_ENTRY,", Date:7:0, ",", Time:4:0, ",",
+               EntryPrice:6:0, ",", v_Episode_ID:6:0, ",",
+               v_Episode_Entries:3:0, ",", v_Box_Top:6:0, ",",
+               v_Box_Btm:6:0 );
+end;
 
     { ==========================================
       [SEC-4] EXIT LOGIC
@@ -727,3 +808,10 @@ if MarketPosition = 0 then begin
     v_Mid_Base_Stop       = 0;
     v_SL_Pct_Floor        = 0;
 end;
+{ ==========================================
+  [SEC-6] v19.9-R1  PREVIOUS BAR STATE
+  PowerLanguage rule 8: v_Prev_MP is updated on the last line of
+  the script so every earlier block reads the prior bar value.
+  L5 had no v_Prev_MP before v19.9-R1.
+  ========================================== }
+v_Prev_MP = MarketPosition;
