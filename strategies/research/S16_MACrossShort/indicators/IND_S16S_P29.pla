@@ -55,7 +55,7 @@ inputs:
     Sess_Day_End            ( 1345  ),
     Sess_Night_Start        ( 1500  ),
     Sess_Night_End          ( 500   ),
-    Show_Lines              ( 1     ),     { plot the two extended trendlines }
+    Line_Mode               ( 1     ),     { 0 off, 1 trendline objects, 2 legacy Plot }
     Print_Events            ( 1     ),     { emit one line per event for diff }
     Show_State              ( 0     ),     { 0 = off.  Plot5 shares the price axis. }
     Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
@@ -103,6 +103,8 @@ variables:
     v_PendB                 ( -1    ),     { second slot, outside bars only }
     v_k                     ( 0     ),
     v_Push                  ( False ),
+    v_TLup                  ( -1    ),     { drawing-object ids for this pattern }
+    v_TLdn                  ( -1    ),
     v_RunUp                 ( False ),     { Run_Bars consecutive up closes }
     v_RunDn                 ( False ),
     v_Ymd                   ( 0     );
@@ -112,7 +114,9 @@ arrays:
     v_PvBar[7]              ( 0     ),
     v_PvTyp[7]              ( 0     ),     { 1 = high, 2 = low }
     v_PvM7[7]               ( 0     ),
-    v_PvW2[7]               ( 0     );     { 1 if also a window-2 pivot }
+    v_PvW2[7]               ( 0     ),     { 1 if also a window-2 pivot }
+    v_PvDt[7]               ( 0     ),     { latched so TL_New needs no lookback }
+    v_PvTm[7]               ( 0     );
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
@@ -267,6 +271,8 @@ for v_k = 1 to 2 begin
         v_PvTyp[v_Chain] = v_k;
         v_PvM7[v_Chain]  = v_M7[1];
         v_PvW2[v_Chain]  = 0;
+        v_PvDt[v_Chain]  = Date[1];
+        v_PvTm[v_Chain]  = Time[1];
         if v_PendA < 0 then
             v_PendA = v_Chain
         else
@@ -345,6 +351,39 @@ for v_k = 1 to 2 begin
             v_TestDir = 0;
             v_Sig     = 0;
 
+            { ---- draw the two E1 lines as OBJECTS, not as plots ----
+              Plot1/Plot2 looked right in isolation and wrong on a chart:
+              MC12 joins across a NoPlot gap, so the last bar of one
+              pattern was connected by a straight line to the first bar of
+              the next, days later.  On 2026-06-10 18:00 to 06-11 13:10
+              only 9 of 185 bars should carry a line -- 4.9 percent -- and
+              the screenshot showed two lines spanning the whole chart.
+              A trendline object is a discrete segment and joins nothing. }
+            v_TLup = -1;
+            v_TLdn = -1;
+            if Line_Mode = 1 then begin
+                if v_Order = 1 then begin
+                    v_TLup = TL_New( v_PvDt[2], v_PvTm[2], v_PvPx[2],
+                                     Date, Time, v_H3 + v_SlopeUp * ( CurrentBar - v_H3b ) );
+                    v_TLdn = TL_New( v_PvDt[3], v_PvTm[3], v_PvPx[3],
+                                     Date, Time, v_L3 + v_SlopeDn * ( CurrentBar - v_L3b ) );
+                end
+                else begin
+                    v_TLup = TL_New( v_PvDt[3], v_PvTm[3], v_PvPx[3],
+                                     Date, Time, v_H3 + v_SlopeUp * ( CurrentBar - v_H3b ) );
+                    v_TLdn = TL_New( v_PvDt[2], v_PvTm[2], v_PvPx[2],
+                                     Date, Time, v_L3 + v_SlopeDn * ( CurrentBar - v_L3b ) );
+                end;
+                if v_TLup >= 0 then begin
+                    TL_SetColor( v_TLup, Col_Upper );
+                    TL_SetSize( v_TLup, Line_Width );
+                end;
+                if v_TLdn >= 0 then begin
+                    TL_SetColor( v_TLdn, Col_Lower );
+                    TL_SetSize( v_TLdn, Line_Width );
+                end;
+            end;
+
             if Print_Events <> 0 then begin
                 v_Ymd = Date + 19000000;
                 Print( "P29 FORM ", v_Ymd:8:0, " ", Time:4:0,
@@ -373,6 +412,13 @@ if v_State = 1 or v_State = 2 then begin
 
     v_UpLine = v_H3 + v_SlopeUp * ( CurrentBar - v_H3b );
     v_DnLine = v_L3 + v_SlopeDn * ( CurrentBar - v_L3b );
+
+    { extend while alive.  Once the pattern dies the object stops growing
+      and stays on the chart, so history can be scrolled back and read. }
+    if Line_Mode = 1 then begin
+        if v_TLup >= 0 then TL_SetEnd( v_TLup, Date, Time, v_UpLine );
+        if v_TLdn >= 0 then TL_SetEnd( v_TLdn, Date, Time, v_DnLine );
+    end;
 
     if CurrentBar - v_LastBar > v_Life then begin
         v_State = 3;
@@ -470,7 +516,10 @@ SetPlotColor( 2, Col_Lower );
 SetPlotWidth( 1, Line_Width );
 SetPlotWidth( 2, Line_Width );
 
-if Show_Lines <> 0 and ( v_State = 1 or v_State = 2 ) then begin
+{ Line_Mode 2 keeps the old plots for comparison.  It interpolates across
+  gaps -- that is the defect, kept switchable rather than deleted so the
+  difference can be seen side by side. }
+if Line_Mode = 2 and ( v_State = 1 or v_State = 2 ) then begin
     Plot1( v_UpLine, "UpperLine" );
     Plot2( v_DnLine, "LowerLine" );
 end

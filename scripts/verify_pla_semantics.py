@@ -120,6 +120,8 @@ currentdate currenttime iff numericseries numericsimple booleansimple print inpu
 variables arrays crosses above below alert barinterval timetominutes
 plot1 plot2 plot3 plot4 plot5 plot6 plot7 plot8 plot9 noplot
 setplotcolor setplotwidth setplottype
+tl_new tl_delete tl_setcolor tl_setsize tl_setend tl_setbegin
+tl_setextright tl_setextleft tl_setstyle tl_getactive
 red green blue cyan magenta yellow white black darkred darkgreen darkblue
 minutestotime rsi exitfired intrabarordergeneration o h l c
 datetojulian juliantodate""".split())
