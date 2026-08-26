@@ -1,0 +1,217 @@
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P49 / P50 規格示意圖</title><style>
+:root{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--m7:#b8860b;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(184,134,11,.085);
+  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
+  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--m7:#e8b93c;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(232,185,60,.11);
+}}
+:root[data-theme="dark"]{
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--m7:#e8b93c;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(232,185,60,.11);
+}
+:root[data-theme="light"]{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--m7:#b8860b;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(184,134,11,.085);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px;
+  display:flex;flex-direction:column;gap:34px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink3)}
+h1{font-family:var(--serif);font-weight:700;margin:0;
+  font-size:clamp(26px,4vw,38px);letter-spacing:-.01em}
+h2{font-family:var(--serif);font-weight:700;margin:0 0 14px;font-size:21px}
+h3{font-weight:600;margin:0 0 6px;font-size:15px}
+.lead{color:var(--ink2);font-size:16px;margin:6px 0 0;max-width:74ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:24px 26px}
+.chartbox{overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid var(--line2);padding:8px 10px;text-align:left}
+th{color:var(--ink3);font-weight:600;font-size:12px;letter-spacing:.04em}
+td.n,th.n{text-align:right;font-family:var(--mono);
+  font-variant-numeric:tabular-nums}
+code{font-family:var(--mono);font-size:13px;background:var(--line2);
+  padding:1px 5px;border-radius:4px}
+pre{font-family:var(--mono);font-size:13px;background:var(--line2);
+  padding:14px 16px;border-radius:8px;overflow-x:auto;margin:0}
+.note{color:var(--ink2);font-size:14px;margin:10px 0 0}
+.tag{display:inline-block;font-family:var(--mono);font-size:11px;
+  padding:2px 8px;border-radius:999px;border:1px solid var(--line);
+  color:var(--ink2);margin-right:6px}
+.ok{color:var(--dn);font-weight:600}
+.warn{color:var(--up);font-weight:600}
+.k{stroke-width:1.1}
+.kb{stroke-width:5.2}
+.up{stroke:var(--up)}
+.dn{stroke:var(--dn)}
+.tl{stroke:var(--ph);stroke-width:1.3;stroke-dasharray:6 4;fill:none}
+.pvH{fill:var(--ph)}
+.pvL{fill:var(--pl)}
+.pvr{fill:none;stroke:var(--card);stroke-width:2}
+.ax{stroke:var(--line);stroke-width:1}
+.gl{stroke:var(--line2);stroke-width:1}
+.lbl{font-family:var(--mono);font-size:11px;fill:var(--ink3)}
+.lblb{font-family:var(--sans);font-size:13px;fill:var(--ink);font-weight:600}
+.lbl2{font-family:var(--sans);font-size:12px;fill:var(--ink2)}
+.zone{fill:var(--zone);stroke:var(--m7);stroke-width:.8;stroke-dasharray:5 4}
+.m7{stroke:var(--m7);stroke-width:2.4;fill:none}
+.ah{fill:var(--m7)}
+</style>
+<div class="wrap">
+
+<div class="top">
+  <div class="eyebrow">S16_S · 圖形型態 · 逐一邏輯規劃</div>
+  <h1>P49 擴散頂 ／ P50 擴散底</h1>
+  <p class="lead">兩個型態的喇叭形<b>一模一樣</b>。六個樞紐的條件、趨勢線、突破確認、有效期
+  全部繼承 P29，一行都不改。唯一的差別在型態出現<b>之前那一小時</b>——價格是漲是跌。
+  下面兩張都是真實的 TXF1 5 分 K，不是示意草圖。</p>
+</div>
+
+<div class="card">
+  <h2>一、真實案例 — P49 擴散頂</h2>
+  <div class="chartbox"><svg viewBox="0 0 1040 400" width="1040" height="400" role="img"><title>P49 擴散頂</title><defs><marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9" class="ah"/></marker></defs><line class="gl" x1="58.0" y1="125.9" x2="890.0" y2="125.9"/><text class="lbl" x="50.0" y="129.9" text-anchor="end">47000</text><rect class="zone" x="56.5" y="30.0" width="307.4" height="324.0" rx="4"/><text class="lbl" x="62.5" y="46.0">12 根回看窗 = 1 小時</text><line class="m7" x1="70.2" y1="296.7" x2="359.9" y2="150.0" marker-end="url(#am)"/><line class="tl" x1="461.8" y1="155.2" x2="755.4" y2="57.0"/><line class="tl" x1="363.9" y1="162.3" x2="608.6" y2="223.2"/><line class="k up" x1="70.2" y1="295.8" x2="70.2" y2="327.0"/><line class="kb up" x1="70.2" y1="296.7" x2="70.2" y2="311.2" stroke-linecap="butt"/><line class="k up" x1="94.7" y1="278.8" x2="94.7" y2="300.4"/><line class="kb up" x1="94.7" y1="286.5" x2="94.7" y2="297.7" stroke-linecap="butt"/><line class="k dn" x1="119.2" y1="280.4" x2="119.2" y2="298.6"/><line class="kb dn" x1="119.2" y1="286.8" x2="119.2" y2="298.6" stroke-linecap="butt"/><line class="k dn" x1="143.6" y1="289.6" x2="143.6" y2="302.0"/><line class="kb dn" x1="143.6" y1="297.3" x2="143.6" y2="299.8" stroke-linecap="butt"/><line class="k up" x1="168.1" y1="273.6" x2="168.1" y2="309.7"/><line class="kb up" x1="168.1" y1="278.8" x2="168.1" y2="299.5" stroke-linecap="butt"/><line class="k up" x1="192.6" y1="264.0" x2="192.6" y2="287.8"/><line class="kb up" x1="192.6" y1="271.1" x2="192.6" y2="277.9" stroke-linecap="butt"/><line class="k up" x1="217.1" y1="254.1" x2="217.1" y2="274.2"/><line class="kb up" x1="217.1" y1="258.4" x2="217.1" y2="267.1" stroke-linecap="butt"/><line class="k dn" x1="241.5" y1="251.6" x2="241.5" y2="266.1"/><line class="kb dn" x1="241.5" y1="260.3" x2="241.5" y2="263.7" stroke-linecap="butt"/><line class="k up" x1="266.0" y1="243.9" x2="266.0" y2="265.5"/><line class="kb up" x1="266.0" y1="251.6" x2="266.0" y2="264.6" stroke-linecap="butt"/><line class="k up" x1="290.5" y1="218.6" x2="290.5" y2="253.2"/><line class="kb up" x1="290.5" y1="218.6" x2="290.5" y2="247.9" stroke-linecap="butt"/><line class="k up" x1="314.9" y1="151.5" x2="314.9" y2="249.5"/><line class="kb up" x1="314.9" y1="153.7" x2="314.9" y2="218.6" stroke-linecap="butt"/><line class="k up" x1="339.4" y1="124.0" x2="339.4" y2="159.9"/><line class="kb up" x1="339.4" y1="141.6" x2="339.4" y2="151.5" stroke-linecap="butt"/><line class="k dn" x1="363.9" y1="135.2" x2="363.9" y2="162.3"/><line class="kb dn" x1="363.9" y1="143.5" x2="363.9" y2="150.0" stroke-linecap="butt"/><line class="k dn" x1="388.4" y1="138.9" x2="388.4" y2="158.3"/><line class="kb dn" x1="388.4" y1="150.0" x2="388.4" y2="151.2" stroke-linecap="butt"/><line class="k dn" x1="412.8" y1="143.2" x2="412.8" y2="175.0"/><line class="kb dn" x1="412.8" y1="154.0" x2="412.8" y2="165.4" stroke-linecap="butt"/><line class="k dn" x1="437.3" y1="168.2" x2="437.3" y2="190.8"/><line class="kb dn" x1="437.3" y1="168.5" x2="437.3" y2="171.3" stroke-linecap="butt"/><line class="k up" x1="461.8" y1="155.2" x2="461.8" y2="202.8"/><line class="kb up" x1="461.8" y1="163.0" x2="461.8" y2="168.8" stroke-linecap="butt"/><line class="k dn" x1="486.2" y1="161.4" x2="486.2" y2="187.1"/><line class="kb dn" x1="486.2" y1="163.0" x2="486.2" y2="183.0" stroke-linecap="butt"/><line class="k up" x1="510.7" y1="163.6" x2="510.7" y2="185.2"/><line class="kb up" x1="510.7" y1="169.8" x2="510.7" y2="184.6" stroke-linecap="butt"/><line class="k up" x1="535.2" y1="148.1" x2="535.2" y2="175.0"/><line class="kb up" x1="535.2" y1="150.6" x2="535.2" y2="171.0" stroke-linecap="butt"/><line class="k dn" x1="559.6" y1="143.8" x2="559.6" y2="154.9"/><line class="kb dn" x1="559.6" y1="149.1" x2="559.6" y2="151.2" stroke-linecap="butt"/><line class="k dn" x1="584.1" y1="147.5" x2="584.1" y2="192.9"/><line class="kb dn" x1="584.1" y1="152.8" x2="584.1" y2="192.9" stroke-linecap="butt"/><line class="k up" x1="608.6" y1="158.9" x2="608.6" y2="223.2"/><line class="kb up" x1="608.6" y1="167.9" x2="608.6" y2="190.5" stroke-linecap="butt"/><line class="k dn" x1="633.1" y1="138.2" x2="633.1" y2="205.6"/><line class="kb dn" x1="633.1" y1="161.4" x2="633.1" y2="182.1" stroke-linecap="butt"/><line class="k up" x1="657.5" y1="104.9" x2="657.5" y2="194.8"/><line class="kb up" x1="657.5" y1="135.2" x2="657.5" y2="181.8" stroke-linecap="butt"/><line class="k up" x1="682.0" y1="84.5" x2="682.0" y2="147.8"/><line class="kb up" x1="682.0" y1="100.6" x2="682.0" y2="136.4" stroke-linecap="butt"/><line class="k up" x1="706.5" y1="65.6" x2="706.5" y2="104.6"/><line class="kb up" x1="706.5" y1="78.9" x2="706.5" y2="101.2" stroke-linecap="butt"/><line class="k up" x1="730.9" y1="58.2" x2="730.9" y2="95.3"/><line class="kb up" x1="730.9" y1="58.5" x2="730.9" y2="79.2" stroke-linecap="butt"/><line class="k dn" x1="755.4" y1="57.0" x2="755.4" y2="78.9"/><line class="kb dn" x1="755.4" y1="58.5" x2="755.4" y2="72.4" stroke-linecap="butt"/><line class="k dn" x1="779.9" y1="73.1" x2="779.9" y2="100.2"/><line class="kb dn" x1="779.9" y1="73.4" x2="779.9" y2="94.7" stroke-linecap="butt"/><line class="k up" x1="804.4" y1="59.5" x2="804.4" y2="118.2"/><line class="kb up" x1="804.4" y1="83.3" x2="804.4" y2="94.4" stroke-linecap="butt"/><line class="k dn" x1="828.8" y1="80.5" x2="828.8" y2="140.7"/><line class="kb dn" x1="828.8" y1="84.2" x2="828.8" y2="120.9" stroke-linecap="butt"/><line class="k dn" x1="853.3" y1="117.9" x2="853.3" y2="176.2"/><line class="kb dn" x1="853.3" y1="120.6" x2="853.3" y2="169.1" stroke-linecap="butt"/><line class="k dn" x1="877.8" y1="163.0" x2="877.8" y2="247.6"/><line class="kb dn" x1="877.8" y1="168.8" x2="877.8" y2="222.6" stroke-linecap="butt"/><circle class="pvr" cx="461.8" cy="155.2" r="5.6"/><circle class="pvH" cx="461.8" cy="155.2" r="4.2"/><text class="lbl" x="461.8" y="143.2" text-anchor="middle">PH3</text><circle class="pvr" cx="559.6" cy="143.8" r="5.6"/><circle class="pvH" cx="559.6" cy="143.8" r="4.2"/><text class="lbl" x="559.6" y="131.8" text-anchor="middle">PH2</text><circle class="pvr" cx="755.4" cy="57.0" r="5.6"/><circle class="pvH" cx="755.4" cy="57.0" r="4.2"/><text class="lbl" x="755.4" y="45.0" text-anchor="middle">PH1</text><circle class="pvr" cx="363.9" cy="162.3" r="5.6"/><circle class="pvL" cx="363.9" cy="162.3" r="4.2"/><text class="lbl" x="363.9" y="182.3" text-anchor="middle">PL3</text><circle class="pvr" cx="461.8" cy="202.8" r="5.6"/><circle class="pvL" cx="461.8" cy="202.8" r="4.2"/><text class="lbl" x="461.8" y="222.8" text-anchor="middle">PL2</text><circle class="pvr" cx="608.6" cy="223.2" r="5.6"/><circle class="pvL" cx="608.6" cy="223.2" r="4.2"/><text class="lbl" x="608.6" y="243.2" text-anchor="middle">PL1</text><text class="lblb" x="904.0" y="64.0">P49 擴散頂</text><text class="lbl2" x="904.0" y="86.0">喇叭形之前的一小時</text><text class="lbl2" x="904.0" y="105.0">收盤 46447 → 46922</text><text class="lbl2" x="904.0" y="124.0">+475 點，往上</text><text class="lbl2" x="904.0" y="143.0"></text><text class="lbl2" x="904.0" y="162.0">2026-07-02 夜盤</text><text class="lbl2" x="904.0" y="181.0">S1 穩健度 5/6</text><text class="lblb" x="904.0" y="206.0">→ 前段上漲 = 擴散頂</text><line class="ax" x1="58.0" y1="354.0" x2="890.0" y2="354.0"/><text class="lbl" x="70.2" y="374.0" text-anchor="middle">1945</text><text class="lbl" x="363.9" y="374.0" text-anchor="middle">2045</text><text class="lbl" x="755.4" y="374.0" text-anchor="middle">2205</text><text class="lbl" x="877.8" y="374.0" text-anchor="middle">2230</text><text class="lbl" x="58.0" y="392.0">2026-07-02</text></svg></div>
+  <p class="note">橘色框是回看窗，橘色箭頭是 M7。綠點為樞紐高（PH3→PH1 一路墊高），
+  橘點為樞紐低（PL3→PL1 一路下移），兩條虛線往外張開。
+  <b>回看窗那一小時漲了 +475 點，所以是頂不是底。</b></p>
+</div>
+
+<div class="card">
+  <h2>二、真實案例 — P50 擴散底</h2>
+  <div class="chartbox"><svg viewBox="0 0 1040 400" width="1040" height="400" role="img"><title>P50 擴散底</title><defs><marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9" class="ah"/></marker></defs><line class="gl" x1="58.0" y1="351.1" x2="890.0" y2="351.1"/><text class="lbl" x="50.0" y="355.1" text-anchor="end">16500</text><line class="gl" x1="58.0" y1="254.7" x2="890.0" y2="254.7"/><text class="lbl" x="50.0" y="258.7" text-anchor="end">16600</text><line class="gl" x1="58.0" y1="158.2" x2="890.0" y2="158.2"/><text class="lbl" x="50.0" y="162.2" text-anchor="end">16700</text><line class="gl" x1="58.0" y1="61.8" x2="890.0" y2="61.8"/><text class="lbl" x="50.0" y="65.8" text-anchor="end">16800</text><rect class="zone" x="56.4" y="30.0" width="337.1" height="324.0" rx="4"/><text class="lbl" x="62.4" y="46.0">12 根回看窗 = 1 小時</text><line class="m7" x1="71.4" y1="80.1" x2="389.5" y2="249.9" marker-end="url(#am)"/><line class="tl" x1="393.5" y1="227.7" x2="608.2" y2="216.1"/><line class="tl" x1="420.3" y1="284.6" x2="742.4" y2="296.1"/><line class="k dn" x1="71.4" y1="57.0" x2="71.4" y2="84.0"/><line class="kb dn" x1="71.4" y1="61.8" x2="71.4" y2="80.1" stroke-linecap="butt"/><line class="k dn" x1="98.3" y1="79.2" x2="98.3" y2="116.8"/><line class="kb dn" x1="98.3" y1="81.1" x2="98.3" y2="103.3" stroke-linecap="butt"/><line class="k dn" x1="125.1" y1="91.7" x2="125.1" y2="109.1"/><line class="kb dn" x1="125.1" y1="103.3" x2="125.1" y2="104.2" stroke-linecap="butt"/><line class="k dn" x1="151.9" y1="88.8" x2="151.9" y2="138.0"/><line class="kb dn" x1="151.9" y1="103.3" x2="151.9" y2="134.1" stroke-linecap="butt"/><line class="k dn" x1="178.8" y1="115.8" x2="178.8" y2="174.6"/><line class="kb dn" x1="178.8" y1="133.2" x2="178.8" y2="163.1" stroke-linecap="butt"/><line class="k dn" x1="205.6" y1="150.5" x2="205.6" y2="193.0"/><line class="kb dn" x1="205.6" y1="165.0" x2="205.6" y2="179.5" stroke-linecap="butt"/><line class="k dn" x1="232.5" y1="165.0" x2="232.5" y2="203.6"/><line class="kb dn" x1="232.5" y1="177.5" x2="232.5" y2="198.8" stroke-linecap="butt"/><line class="k dn" x1="259.3" y1="189.1" x2="259.3" y2="233.5"/><line class="kb dn" x1="259.3" y1="197.8" x2="259.3" y2="224.8" stroke-linecap="butt"/><line class="k up" x1="286.1" y1="197.8" x2="286.1" y2="237.3"/><line class="kb up" x1="286.1" y1="209.4" x2="286.1" y2="222.9" stroke-linecap="butt"/><line class="k dn" x1="313.0" y1="206.5" x2="313.0" y2="250.8"/><line class="kb dn" x1="313.0" y1="207.4" x2="313.0" y2="247.9" stroke-linecap="butt"/><line class="k dn" x1="339.8" y1="241.2" x2="339.8" y2="272.0"/><line class="kb dn" x1="339.8" y1="248.9" x2="339.8" y2="251.8" stroke-linecap="butt"/><line class="k dn" x1="366.6" y1="240.2" x2="366.6" y2="280.7"/><line class="kb dn" x1="366.6" y1="249.9" x2="366.6" y2="251.8" stroke-linecap="butt"/><line class="k up" x1="393.5" y1="227.7" x2="393.5" y2="267.2"/><line class="kb up" x1="393.5" y1="249.9" x2="393.5" y2="251.8" stroke-linecap="butt"/><line class="k dn" x1="420.3" y1="247.9" x2="420.3" y2="284.6"/><line class="kb dn" x1="420.3" y1="247.9" x2="420.3" y2="254.7" stroke-linecap="butt"/><line class="k up" x1="447.2" y1="219.0" x2="447.2" y2="261.4"/><line class="kb up" x1="447.2" y1="246.0" x2="447.2" y2="254.7" stroke-linecap="butt"/><line class="k up" x1="474.0" y1="220.9" x2="474.0" y2="247.0"/><line class="kb up" x1="474.0" y1="230.6" x2="474.0" y2="244.1" stroke-linecap="butt"/><line class="k dn" x1="500.8" y1="229.6" x2="500.8" y2="253.7"/><line class="kb dn" x1="500.8" y1="230.6" x2="500.8" y2="253.7" stroke-linecap="butt"/><line class="k dn" x1="527.7" y1="238.3" x2="527.7" y2="273.0"/><line class="kb dn" x1="527.7" y1="253.7" x2="527.7" y2="272.0" stroke-linecap="butt"/><line class="k up" x1="554.5" y1="243.1" x2="554.5" y2="295.2"/><line class="kb up" x1="554.5" y1="246.0" x2="554.5" y2="271.1" stroke-linecap="butt"/><line class="k up" x1="581.4" y1="232.5" x2="581.4" y2="247.9"/><line class="kb up" x1="581.4" y1="239.2" x2="581.4" y2="246.0" stroke-linecap="butt"/><line class="k up" x1="608.2" y1="216.1" x2="608.2" y2="243.1"/><line class="kb up" x1="608.2" y1="231.5" x2="608.2" y2="238.3" stroke-linecap="butt"/><line class="k dn" x1="635.0" y1="229.6" x2="635.0" y2="248.9"/><line class="kb dn" x1="635.0" y1="232.5" x2="635.0" y2="241.2" stroke-linecap="butt"/><line class="k dn" x1="661.9" y1="237.3" x2="661.9" y2="262.4"/><line class="kb dn" x1="661.9" y1="241.2" x2="661.9" y2="253.7" stroke-linecap="butt"/><line class="k dn" x1="688.7" y1="252.8" x2="688.7" y2="280.7"/><line class="kb dn" x1="688.7" y1="252.8" x2="688.7" y2="273.0" stroke-linecap="butt"/><line class="k dn" x1="715.5" y1="263.4" x2="715.5" y2="295.2"/><line class="kb dn" x1="715.5" y1="271.1" x2="715.5" y2="279.8" stroke-linecap="butt"/><line class="k up" x1="742.4" y1="274.9" x2="742.4" y2="296.1"/><line class="kb up" x1="742.4" y1="276.9" x2="742.4" y2="278.8" stroke-linecap="butt"/><line class="k dn" x1="769.2" y1="276.9" x2="769.2" y2="295.2"/><line class="kb dn" x1="769.2" y1="276.9" x2="769.2" y2="290.4" stroke-linecap="butt"/><line class="k up" x1="796.1" y1="254.7" x2="796.1" y2="292.3"/><line class="kb up" x1="796.1" y1="263.4" x2="796.1" y2="290.4" stroke-linecap="butt"/><line class="k dn" x1="822.9" y1="250.8" x2="822.9" y2="275.9"/><line class="kb dn" x1="822.9" y1="261.4" x2="822.9" y2="263.4" stroke-linecap="butt"/><line class="k dn" x1="849.7" y1="262.4" x2="849.7" y2="301.0"/><line class="kb dn" x1="849.7" y1="263.4" x2="849.7" y2="300.0" stroke-linecap="butt"/><line class="k dn" x1="876.6" y1="297.1" x2="876.6" y2="327.0"/><line class="kb dn" x1="876.6" y1="301.0" x2="876.6" y2="319.3" stroke-linecap="butt"/><circle class="pvr" cx="393.5" cy="227.7" r="5.6"/><circle class="pvH" cx="393.5" cy="227.7" r="4.2"/><text class="lbl" x="393.5" y="215.7" text-anchor="middle">PH3</text><circle class="pvr" cx="447.2" cy="219.0" r="5.6"/><circle class="pvH" cx="447.2" cy="219.0" r="4.2"/><text class="lbl" x="447.2" y="207.0" text-anchor="middle">PH2</text><circle class="pvr" cx="608.2" cy="216.1" r="5.6"/><circle class="pvH" cx="608.2" cy="216.1" r="4.2"/><text class="lbl" x="608.2" y="204.1" text-anchor="middle">PH1</text><circle class="pvr" cx="420.3" cy="284.6" r="5.6"/><circle class="pvL" cx="420.3" cy="284.6" r="4.2"/><text class="lbl" x="420.3" y="304.6" text-anchor="middle">PL3</text><circle class="pvr" cx="554.5" cy="295.2" r="5.6"/><circle class="pvL" cx="554.5" cy="295.2" r="4.2"/><text class="lbl" x="554.5" y="315.2" text-anchor="middle">PL2</text><circle class="pvr" cx="742.4" cy="296.1" r="5.6"/><circle class="pvL" cx="742.4" cy="296.1" r="4.2"/><text class="lbl" x="742.4" y="316.1" text-anchor="middle">PL1</text><text class="lblb" x="904.0" y="64.0">P50 擴散底</text><text class="lbl2" x="904.0" y="86.0">喇叭形之前的一小時</text><text class="lbl2" x="904.0" y="105.0">收盤 16781 → 16605</text><text class="lbl2" x="904.0" y="124.0">-176 點，往下</text><text class="lbl2" x="904.0" y="143.0"></text><text class="lbl2" x="904.0" y="162.0">2021-10-01 日盤</text><text class="lbl2" x="904.0" y="181.0">S1 穩健度 5/6</text><text class="lblb" x="904.0" y="206.0">→ 前段下跌 = 擴散底</text><line class="ax" x1="58.0" y1="354.0" x2="890.0" y2="354.0"/><text class="lbl" x="71.4" y="374.0" text-anchor="middle">0850</text><text class="lbl" x="393.5" y="374.0" text-anchor="middle">0950</text><text class="lbl" x="742.4" y="374.0" text-anchor="middle">1055</text><text class="lbl" x="876.6" y="374.0" text-anchor="middle">1120</text><text class="lbl" x="58.0" y="392.0">2021-10-01</text></svg></div>
+  <p class="note">同樣六個樞紐、同樣兩條張開的線。<b>差別只有回看窗那一小時跌了 176 點。</b>
+  注意這個例子的開口只有 31 點，而 P49 那個是 874 點——
+  <b>定義不含尺度門檻，兩者被當成同一件事</b>（裁示 1：樞紐不加 ATR 門檻的直接後果）。</p>
+</div>
+
+<div class="card">
+  <h2>三、M7 判別器 — 唯一的新東西</h2>
+  <pre>M7 = 第一個樞紐往前 12 根（1 小時）的走勢
+
+      往上  →  P49 擴散頂（空）
+      往下  →  P50 擴散底（多）</pre>
+  <div class="grid2" style="margin-top:16px">
+    <div>
+      <h3>兩種量法</h3>
+      <table>
+        <tr><th>量法</th><th class="n">P49</th><th class="n">P50</th><th class="n">持平</th></tr>
+        <tr><td>端點差</td><td class="n">105</td><td class="n">93</td><td class="n">4</td></tr>
+        <tr><td>12 根最小平方斜率</td><td class="n">112</td><td class="n">90</td><td class="n">0</td></tr>
+      </table>
+      <p class="note">兩法方向一致 <b>89.6%</b>。量法未定，等 P29 程式碼化之後再議。</p>
+    </div>
+    <div>
+      <h3>為什麼是 12 根</h3>
+      <p class="note">用戶裁示：以一小時為前置觀察區間。<b>它是常數不是掃描結果</b>，
+      與 <code>Tail_DayNoEntry_From = 1335</code> 同類（交易理由，非最佳化）。
+      <b>必須釘死，永不進最佳化掃描。</b></p>
+      <p class="note">巧合值得記一筆：P29 自己的跨度中位數是 <b>12 根</b>，
+      前段窗與型態本身等長。</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>四、三個檢查 — 都過了</h2>
+  <table>
+    <tr><th>檢查</th><th>結果</th><th>判讀</th></tr>
+    <tr><td>被「排列」污染？</td><td class="n">57.7% vs 53.1%，差 4.6pp</td>
+        <td><span class="ok">過</span> 雜訊本身 14.4pp，遠大於它</td></tr>
+    <tr><td>與 M2 重複？</td><td class="n">同號 55.4%</td>
+        <td><span class="ok">過</span> 獨立為 50%，兩者量不同東西</td></tr>
+    <tr><td>分派自帶偏差？</td><td class="n">55.4% vs 隨機 52.5%</td>
+        <td><span class="ok">過</span> 落在隨機範圍 47.0–61.4% 內</td></tr>
+  </table>
+  <p class="note">第三個最重要：<b>P29 出現前的走勢，和隨機挑一個時點沒有分別。</b>
+  代表 M7 是乾淨的分類器——它把母體切開，但沒有偷偷塞進方向偏誤。
+  對照組是昨天被推翻的 §3 三向細分，那個的排列差距是 18.9–32pp。</p>
+</div>
+
+<div class="card">
+  <h2>五、母體 — 2026-08-26 重掃</h2>
+  <div class="grid2">
+    <div>
+      <h3>跨時段裁示讓母體 +17.4%</h3>
+      <table>
+        <tr><th>版本</th><th class="n">個數</th></tr>
+        <tr><td>只准同時段（舊）</td><td class="n">172</td></tr>
+        <tr><td><b>允許跨時段（現行）</b></td><td class="n"><b>202</b></td></tr>
+      </table>
+      <p class="note">舊碼把 K 棒結構的「同時段」限制誤套到圖形型態上。
+      多出的 30 個<b>全部只跨 1 個邊界</b>，起始集中在 <code>04</code>（20 個）、
+      <code>03</code>、<code>12</code>、<code>13</code>——正是時段末端。
+      起始小時涵蓋 <b>17 → 19</b> 個。</p>
+    </div>
+    <div>
+      <h3>開口大小 — 62 倍差距</h3>
+      <table>
+        <tr><th></th><th class="n">最小</th><th class="n">中位</th><th class="n">最大</th></tr>
+        <tr><td>點數</td><td class="n">9</td><td class="n">60</td><td class="n">559</td></tr>
+        <tr><td>佔價</td><td class="n">0.048%</td><td class="n">0.302%</td><td class="n">3.127%</td></tr>
+      </table>
+      <p class="note">37.1% 的開口不到 50 點。<b>定義不含尺度門檻</b>，
+      9 點與 559 點被當成同一件事。<span class="warn">建議比照 S1：記成屬性，不設門檻。</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>六、繼承自 P29 的七段 — 一行都不改</h2>
+  <table>
+    <tr><th>段</th><th>內容</th><th>P49／P50</th></tr>
+    <tr><td>§1 樞紐</td><td>純分形，i-1/i/i+1 同時段</td><td class="ok">相同</td></tr>
+    <tr><td>§2 成立</td><td>對稱 3+3 ＋ 交替 ＋ 低點在高點下方</td><td class="ok">相同</td></tr>
+    <tr><td>§3 方向</td><td>M2 通道漂移 ＋ 排列六格</td><td class="ok">相同</td></tr>
+    <tr><td>§4 地圖</td><td>事前價位地圖</td><td class="ok">相同</td></tr>
+    <tr><td>§5 突破</td><td>E1 外推 ＋ 收盤單根</td><td class="ok">相同</td></tr>
+    <tr><td>§6 有效期</td><td>＝ 形成所花的根數</td><td class="ok">相同</td></tr>
+    <tr><td>§7 S1</td><td>0-6 穩健度分數，不設門檻</td><td class="ok">相同</td></tr>
+    <tr><td><b>M7</b></td><td><b>前 12 根走勢</b></td><td class="warn">新增</td></tr>
+  </table>
+  <p class="note"><span class="tag">自由參數</span>P29 七段合計 0，M7 帶入一個釘死的常數 12。
+  <b>M7 專供 P49／P50，不可用於 §3</b>——用了就與 P49／P50 重複計數。</p>
+</div>
+
+<div class="card">
+  <h2>七、還沒做的事</h2>
+  <table>
+    <tr><th>項目</th><th>狀態</th></tr>
+    <tr><td>M7 用端點差還是最小平方斜率</td><td class="warn">待裁示</td></tr>
+    <tr><td>開口大小要不要記成屬性</td><td class="warn">待裁示</td></tr>
+    <tr><td>寫進 .pla</td><td class="warn">一行都沒寫</td></tr>
+    <tr><td>報酬檢定</td><td class="warn">從未進行，且不應在用戶同意前進行</td></tr>
+    <tr><td>P51–P54（§2 要重寫）</td><td class="warn">未規劃</td></tr>
+    <tr><td>P29-W2 粗尺度變體</td><td class="warn">未規劃</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="eyebrow">資料來源</div>
+  <p class="note">TXF1 1 分鐘.txt（106,676,935 bytes，md5 db35ecb7…）→ 5 分 K <b>421,513 根</b>，
+  2019-01-02 08:50 ~ 2026-08-22 05:00。日盤 110,867 ／ 夜盤 310,646 ／ 不屬任一時段 0。
+  逐年 2019:54,858 到 2026:34,921，涵蓋 21 個小時。
+  普查腳本無損益欄。本頁由 <code>s16s_p49_make_diagram.py</code> 產生。</p>
+</div>
+
+</div>

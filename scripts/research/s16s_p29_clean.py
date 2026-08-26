@@ -69,8 +69,14 @@ def main():
             continue                                  # must alternate
         idx = [x[0] for x in w]
         a, b = idx[0], idx[-1]
-        if any(S[t] == 1 for t in range(a + 1, b + 1)):
-            continue                                  # one session only
+        # 2026-08-26 RULING: chart patterns MAY span a session gap. Only the
+        # PIVOT test is adjacency-dependent (i-1/i/i+1 must share a session,
+        # enforced above); assembling six pivots into a shape is swing
+        # geometry and a 75-minute gap does not break it. The old
+        # one-session-only line applied the K-bar rule to a chart pattern and
+        # discarded 30 of 202 -- 20 of them starting in the 04:00 hour, which
+        # is why that hour was empty in the coverage table.
+        n_gaps = sum(1 for t in range(a + 1, b + 1) if S[t] == 1)
         hs = [x[0] for x in w if x[1] == 'H']
         ls = [x[0] for x in w if x[1] == 'L']
         if not (H[hs[0]] < H[hs[1]] < H[hs[2]]):
@@ -87,7 +93,7 @@ def main():
         su = (H[hs[2]] - H[hs[0]]) / float(hs[2] - hs[0])
         sl = (L[ls[2]] - L[ls[0]]) / float(ls[2] - ls[0])
         m2 = (su + sl) / 2.0                          # adopted direction measure
-        hits.append(dict(k=kind, a=a, b=b, span=b - a, drift=drift, s1=s1, m2=m2,
+        hits.append(dict(k=kind, a=a, b=b, span=b - a, drift=drift, s1=s1, m2=m2, gaps=n_gaps,
                          hs=hs, ls=ls, last=w[-1][1],
                          ymd=Y[a], sess='day' if 845 <= int(rows[a]['hhmm']) <= 1345 else 'night'))
 
@@ -166,7 +172,7 @@ def main():
               % (k, n, 100.0 * n / tot, bar))
     print('  平均 %.2f / 6' % (sum(x['s1'] for x in hits) / float(tot)))
 
-    json.dump([dict(k=x['k'], a=x['a'], b=x['b'], span=x['span'], drift=x['drift'],
+    json.dump([dict(k=x['k'], a=x['a'], b=x['b'], span=x['span'], drift=x['drift'], gaps=x['gaps'],
                     s1=x['s1'], m2=x['m2'], hs=x['hs'], ls=x['ls'], ymd=x['ymd'])
                for x in hits],
               open(os.path.join(HERE, 's16s_p29_clean.json'), 'w', encoding='utf-8'))
