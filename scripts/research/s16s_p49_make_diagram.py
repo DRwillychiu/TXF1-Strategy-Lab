@@ -435,7 +435,39 @@ def main():
 </div>
 
 <div class="card">
-  <h2>十、還沒做的事</h2>
+  <h2>十、MC12 第一次跑 — 逐筆對照結果</h2>
+  <p class="note">2026-08-26。指標編譯成功並掛上 TXF1 5 分 K。
+  輸出視窗可見區間 <code>20250714 2145</code> 起，與 Python 同窗對照：</p>
+  <table>
+    <tr><th>項目</th><th class="n">數量</th><th></th></tr>
+    <tr><td>MC12 指標偵測</td><td class="n">46</td><td></td></tr>
+    <tr><td>Python 同窗</td><td class="n">48</td><td></td></tr>
+    <tr><td><b>日期時間完全相符</b></td><td class="n"><b>46</b></td><td class="ok">零誤報</td></tr>
+    <tr><td>只有 MC12 有</td><td class="n ok">0</td><td class="ok">沒有多抓</td></tr>
+    <tr><td><b>只有 Python 有</b></td><td class="n warn"><b>2</b></td><td class="warn">漏抓，成因已定位</td></tr>
+  </table>
+  <h3 style="margin-top:18px">兩個 bug，都由這次對照抓出</h3>
+  <table>
+    <tr><th>#</th><th>症狀</th><th>成因</th></tr>
+    <tr><td>1</td><td><code>s1=0</code> 出現在<b>每一筆</b>（Python 平均 4.14/6）</td>
+        <td>樞紐在 <code>bar[1]</code>，卻測 <code>bar[2]</code>。
+            而 <code>High[2] &gt; High[1]</code> 與樞紐條件
+            <code>High[1] &gt; High[2]</code> 直接矛盾 ——
+            <b>結構上恆為 0</b>。根本原因是視窗 2 樞紐要 <code>i+2</code> 才判得出，
+            在 <code>i+1</code> 寫太早。已改為延後一根回填。</td></tr>
+    <tr><td>2</td><td>漏掉 <code>20250804 0945</code> 與 <code>20251023 0250</code></td>
+        <td><b>兩筆都落在外包棒</b>（同一根既是樞紐高又是樞紐低）。
+            Python 對每一個六樞紐視窗都測；指標每根只測一次，
+            推入 H 再推入 L 之後才測，<b>中間那個以 H 收尾的組合從未被測到</b>。
+            已把測試搬進推入迴圈，每推一次測一次。</td></tr>
+  </table>
+  <p class="note"><b>46/46 相符、0 誤報</b>，代表樞紐、交替、單調外擴、低於高、
+  M7 分類、跨時段這幾段的移植是對的。兩個 bug 都在邊界情況，都已定位並修正，
+  <span class="warn">但修正後尚未重跑 MC12</span>。</p>
+</div>
+
+<div class="card">
+  <h2>十一、還沒做的事</h2>
   <table>
     <tr><th>項目</th><th>狀態</th></tr>
     <tr><td>M7 量法（裁示 12）</td><td class="ok">已定：12 根最小平方斜率</td></tr>

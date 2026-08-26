@@ -56,7 +56,8 @@ inputs:
     Sess_Night_Start        ( 1500  ),
     Sess_Night_End          ( 500   ),
     Show_Lines              ( 1     ),     { plot the two extended trendlines }
-    Print_Events            ( 1     );     { emit one line per event for diff }
+    Print_Events            ( 1     ),     { emit one line per event for diff }
+    Show_State              ( 0     );     { 0 = off.  Plot5 shares the price axis. }
 
 variables:
     v_In_Day                ( False ),
@@ -94,6 +95,10 @@ variables:
     v_Sig                   ( 0     ),     { bearish signals emitted so far }
     v_i                     ( 0     ),
     v_j                     ( 0     ),
+    v_PendA                 ( -1    ),     { slot awaiting its window-2 verdict }
+    v_PendB                 ( -1    ),     { second slot, outside bars only }
+    v_k                     ( 0     ),
+    v_Push                  ( False ),
     v_RunUp                 ( False ),     { Run_Bars consecutive up closes }
     v_RunDn                 ( False ),
     v_Ymd                   ( 0     );
@@ -166,6 +171,44 @@ end;
       A bar can be both a pivot high and a pivot low -- an outside bar.
       The high is pushed first, matching the Python sort order.           }
 
+    { ---- resolve last bar's pending window-2 verdict, BEFORE any push ----
+      A window-2 pivot at bar i needs bars i-2..i+2.  The window-1 pivot is
+      confirmed at i+1, one bar too early, so the verdict is deferred by one
+      bar and written back into the slot the pivot already occupies.
+      Resolving before the push keeps the slot index valid: the chain only
+      shifts or resets while pushing.
+      The first version tested High[2] on the confirming bar, which asks
+      whether the bar BEFORE the pivot was a window-2 pivot -- and since
+      High[1] > High[2] is the pivot condition itself, High[2] > High[1] is
+      false by construction.  S1 came out 0 on every pattern.               }
+
+if v_PendA >= 0 and v_BIS >= 5 then begin
+    if v_PvTyp[v_PendA] = 1 then begin
+        if High[2] > High[3] and High[2] > High[4]
+           and High[2] > High[1] and High[2] > High then
+            v_PvW2[v_PendA] = 1;
+    end
+    else begin
+        if Low[2] < Low[3] and Low[2] < Low[4]
+           and Low[2] < Low[1] and Low[2] < Low then
+            v_PvW2[v_PendA] = 1;
+    end;
+end;
+if v_PendB >= 0 and v_BIS >= 5 then begin
+    if v_PvTyp[v_PendB] = 1 then begin
+        if High[2] > High[3] and High[2] > High[4]
+           and High[2] > High[1] and High[2] > High then
+            v_PvW2[v_PendB] = 1;
+    end
+    else begin
+        if Low[2] < Low[3] and Low[2] < Low[4]
+           and Low[2] < Low[1] and Low[2] < Low then
+            v_PvW2[v_PendB] = 1;
+    end;
+end;
+v_PendA = -1;
+v_PendB = -1;
+
 v_IsPvH = False;
 v_IsPvL = False;
 if v_BIS >= 3 then begin
@@ -173,144 +216,143 @@ if v_BIS >= 3 then begin
     if Low[1]  < Low[2]  and Low[1]  < Low  then v_IsPvL = True;
 end;
 
-    { ---------- SECTION 4 - THE ALTERNATING CHAIN ---------------------
+    { ---------- SECTIONS 4-6 - PUSH, TEST, ADOPT ----------------------
+      One pass per pivot, NOT one pass per bar.
+
+      An outside bar is both a pivot high and a pivot low.  The first
+      version pushed both and then ran the pattern test once, so the
+      intermediate chain -- the one ending on the HIGH -- was never tested.
+      Python tests every six-window, so it saw those and the indicator did
+      not.  The diff caught exactly two misses out of 48, 20250804 0945 and
+      20251023 0250, and both sit on an outside bar.
+
+      Wrapping push and test in a two-iteration loop makes the indicator
+      test after every push, which is what the reference does.
+
       A run of same-type pivots cannot sit inside a valid window, so a
-      repeat restarts the chain at length one.  This mirrors the Python
-      scan, which rejects any six-window containing two adjacent same
-      types -- the surviving windows are exactly the alternating runs.   }
+      repeat restarts the chain at one -- the surviving windows are exactly
+      the alternating runs.                                              }
 
-if v_IsPvH then begin
-    if v_Chain > 0 and v_PvTyp[v_Chain-1] = 1 then v_Chain = 0;
-    if v_Chain >= 6 then begin
-        for v_j = 0 to 4 begin
-            v_PvPx[v_j]  = v_PvPx[v_j + 1];
-            v_PvBar[v_j] = v_PvBar[v_j + 1];
-            v_PvTyp[v_j] = v_PvTyp[v_j + 1];
-            v_PvM7[v_j]  = v_PvM7[v_j + 1];
-            v_PvW2[v_j]  = v_PvW2[v_j + 1];
+for v_k = 1 to 2 begin
+
+    v_Push = False;
+    if v_k = 1 and v_IsPvH then v_Push = True;
+    if v_k = 2 and v_IsPvL then v_Push = True;
+
+    if v_Push then begin
+
+        if v_Chain > 0 and v_PvTyp[v_Chain - 1] = v_k then
+            v_Chain = 0;
+
+        if v_Chain >= 6 then begin
+            for v_j = 0 to 4 begin
+                v_PvPx[v_j]  = v_PvPx[v_j + 1];
+                v_PvBar[v_j] = v_PvBar[v_j + 1];
+                v_PvTyp[v_j] = v_PvTyp[v_j + 1];
+                v_PvM7[v_j]  = v_PvM7[v_j + 1];
+                v_PvW2[v_j]  = v_PvW2[v_j + 1];
+            end;
+            v_Chain = 5;
         end;
-        v_Chain = 5;
-    end;
-    v_PvPx[v_Chain]  = High[1];
-    v_PvBar[v_Chain] = CurrentBar - 1;
-    v_PvTyp[v_Chain] = 1;
-    v_PvM7[v_Chain]  = v_M7[1];
-    v_PvW2[v_Chain]  = 0;
-    if v_BIS >= 5 and CurrentBar > 4 then begin
-        if High[2] > High[3] and High[2] > High[4]
-           and High[2] > High[1] and High[2] > High then v_PvW2[v_Chain] = 1;
-    end;
-    v_Chain = v_Chain + 1;
-end;
 
-if v_IsPvL then begin
-    if v_Chain > 0 and v_PvTyp[v_Chain-1] = 2 then v_Chain = 0;
-    if v_Chain >= 6 then begin
-        for v_j = 0 to 4 begin
-            v_PvPx[v_j]  = v_PvPx[v_j + 1];
-            v_PvBar[v_j] = v_PvBar[v_j + 1];
-            v_PvTyp[v_j] = v_PvTyp[v_j + 1];
-            v_PvM7[v_j]  = v_PvM7[v_j + 1];
-            v_PvW2[v_j]  = v_PvW2[v_j + 1];
+        if v_k = 1 then
+            v_PvPx[v_Chain] = High[1]
+        else
+            v_PvPx[v_Chain] = Low[1];
+        v_PvBar[v_Chain] = CurrentBar - 1;
+        v_PvTyp[v_Chain] = v_k;
+        v_PvM7[v_Chain]  = v_M7[1];
+        v_PvW2[v_Chain]  = 0;
+        if v_PendA < 0 then
+            v_PendA = v_Chain
+        else
+            v_PendB = v_Chain;
+        v_Chain = v_Chain + 1;
+
+        { ---- pattern test, right after this push ---- }
+
+        v_Ok = False;
+        if v_Chain >= 6 then begin
+
+            if v_PvTyp[0] = 1 then begin
+                v_H1  = v_PvPx[0];
+                v_L1  = v_PvPx[1];
+                v_H2  = v_PvPx[2];
+                v_L2  = v_PvPx[3];
+                v_H3  = v_PvPx[4];
+                v_L3  = v_PvPx[5];
+                v_H1b = v_PvBar[0];
+                v_L1b = v_PvBar[1];
+                v_H2b = v_PvBar[2];
+                v_L2b = v_PvBar[3];
+                v_H3b = v_PvBar[4];
+                v_L3b = v_PvBar[5];
+                v_Order = 1;
+            end
+            else begin
+                v_L1  = v_PvPx[0];
+                v_H1  = v_PvPx[1];
+                v_L2  = v_PvPx[2];
+                v_H2  = v_PvPx[3];
+                v_L3  = v_PvPx[4];
+                v_H3  = v_PvPx[5];
+                v_L1b = v_PvBar[0];
+                v_H1b = v_PvBar[1];
+                v_L2b = v_PvBar[2];
+                v_H2b = v_PvBar[3];
+                v_L3b = v_PvBar[4];
+                v_H3b = v_PvBar[5];
+                v_Order = 2;
+            end;
+
+            if v_H1 < v_H2 and v_H2 < v_H3
+               and v_L1 > v_L2 and v_L2 > v_L3
+               and v_L1 < v_H1 and v_L3 < v_H3 then
+                v_Ok = True;
         end;
-        v_Chain = 5;
-    end;
-    v_PvPx[v_Chain]  = Low[1];
-    v_PvBar[v_Chain] = CurrentBar - 1;
-    v_PvTyp[v_Chain] = 2;
-    v_PvM7[v_Chain]  = v_M7[1];
-    v_PvW2[v_Chain]  = 0;
-    if v_BIS >= 5 and CurrentBar > 4 then begin
-        if Low[2] < Low[3] and Low[2] < Low[4]
-           and Low[2] < Low[1] and Low[2] < Low then v_PvW2[v_Chain] = 1;
-    end;
-    v_Chain = v_Chain + 1;
-end;
 
-    { ---------- SECTION 5 - PATTERN TEST ------------------------------
-      Runs only on a bar where a pivot just confirmed and the chain holds
-      six.  Highs must rise monotonically, lows must fall monotonically,
-      and the lows must sit under the highs at both ends.                }
+        { ---- adopt ---- }
 
-v_Ok = False;
-if ( v_IsPvH or v_IsPvL ) and v_Chain >= 6 then begin
+        if v_Ok then begin
+            v_StartBar = v_PvBar[0];
+            v_LastBar  = v_PvBar[5];
+            v_Life     = v_LastBar - v_StartBar;
 
-    if v_PvTyp[0] = 1 then begin
-        v_H1  = v_PvPx[0];
-        v_L1  = v_PvPx[1];
-        v_H2  = v_PvPx[2];
-        v_L2  = v_PvPx[3];
-        v_H3  = v_PvPx[4];
-        v_L3  = v_PvPx[5];
-        v_H1b = v_PvBar[0];
-        v_L1b = v_PvBar[1];
-        v_H2b = v_PvBar[2];
-        v_L2b = v_PvBar[3];
-        v_H3b = v_PvBar[4];
-        v_L3b = v_PvBar[5];
-        v_Order = 1;
-    end
-    else begin
-        v_L1  = v_PvPx[0];
-        v_H1  = v_PvPx[1];
-        v_L2  = v_PvPx[2];
-        v_H2  = v_PvPx[3];
-        v_L3  = v_PvPx[4];
-        v_H3  = v_PvPx[5];
-        v_L1b = v_PvBar[0];
-        v_H1b = v_PvBar[1];
-        v_L2b = v_PvBar[2];
-        v_H2b = v_PvBar[3];
-        v_L3b = v_PvBar[4];
-        v_H3b = v_PvBar[5];
-        v_Order = 2;
-    end;
+            { ruling 12: M7 is read at the pattern's FIRST pivot }
+            v_Kind = 50;
+            if v_PvM7[0] > 0 then
+                v_Kind = 49;
 
-    if v_H1 < v_H2 and v_H2 < v_H3
-       and v_L1 > v_L2 and v_L2 > v_L3
-       and v_L1 < v_H1 and v_L3 < v_H3 then
-        v_Ok = True;
-end;
+            { E1: each line runs through the LAST TWO pivots of its kind }
+            v_SlopeUp = 0;
+            if v_H3b <> v_H2b then
+                v_SlopeUp = ( v_H3 - v_H2 ) / ( v_H3b - v_H2b );
+            v_SlopeDn = 0;
+            if v_L3b <> v_L2b then
+                v_SlopeDn = ( v_L3 - v_L2 ) / ( v_L3b - v_L2b );
 
-    { ---------- SECTION 6 - ADOPT ------------------------------------- }
+            v_M2   = ( ( v_H3 - v_H1 ) / MaxList( v_H3b - v_H1b, 1 )
+                     + ( v_L3 - v_L1 ) / MaxList( v_L3b - v_L1b, 1 ) ) / 2;
+            v_Open = v_H3 - v_L3;
+            v_S1   = v_PvW2[0] + v_PvW2[1] + v_PvW2[2]
+                   + v_PvW2[3] + v_PvW2[4] + v_PvW2[5];
 
-if v_Ok then begin
-    v_StartBar = v_PvBar[0];
-    v_LastBar  = v_PvBar[5];
-    v_Life     = v_LastBar - v_StartBar;
+            v_State   = 1;
+            v_TestDir = 0;
+            v_Sig     = 0;
 
-    { ruling 12: M7 is read at the pattern's FIRST pivot, latched there }
-    v_Kind = 50;
-    if v_PvM7[0] > 0 then
-        v_Kind = 49;
-
-    { E1: each line runs through the LAST TWO pivots of its own kind }
-    v_SlopeUp = 0;
-    if v_H3b <> v_H2b then
-        v_SlopeUp = ( v_H3 - v_H2 ) / ( v_H3b - v_H2b );
-    v_SlopeDn = 0;
-    if v_L3b <> v_L2b then
-        v_SlopeDn = ( v_L3 - v_L2 ) / ( v_L3b - v_L2b );
-
-    v_M2   = ( ( v_H3 - v_H1 ) / MaxList( v_H3b - v_H1b, 1 )
-             + ( v_L3 - v_L1 ) / MaxList( v_L3b - v_L1b, 1 ) ) / 2;
-    v_Open = v_H3 - v_L3;
-    v_S1   = v_PvW2[0] + v_PvW2[1] + v_PvW2[2]
-           + v_PvW2[3] + v_PvW2[4] + v_PvW2[5];
-
-    v_State   = 1;
-    v_TestDir = 0;
-    v_Sig     = 0;
-
-    if Print_Events <> 0 then begin
-        v_Ymd = Date + 19000000;
-        Print( "P29 FORM ", v_Ymd:8:0, " ", Time:4:0,
-               "  kind=", v_Kind:2:0, "  order=", v_Order:1:0,
-               "  span=", v_Life:3:0, "  s1=", v_S1:1:0,
-               "  open=", v_Open:5:0, "  m7=", v_PvM7[0]:8:4,
-               "  m2=", v_M2:8:4 );
+            if Print_Events <> 0 then begin
+                v_Ymd = Date + 19000000;
+                Print( "P29 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                       "  kind=", v_Kind:2:0, "  order=", v_Order:1:0,
+                       "  span=", v_Life:3:0, "  s1=", v_S1:1:0,
+                       "  open=", v_Open:5:0, "  m7=", v_PvM7[0]:8:4,
+                       "  m2=", v_M2:8:4 );
+            end;
+        end;
     end;
 end;
+
 
     { ---------- SECTION 7 - LIFECYCLE ---------------------------------
       Precedence, most terminal first:
@@ -419,6 +461,9 @@ end;
 if v_IsPvH then Plot3( High[1], "PivotHigh" ) else NoPlot( 3 );
 if v_IsPvL then Plot4( Low[1],  "PivotLow"  ) else NoPlot( 4 );
 
-Plot5( v_State, "State" );
+{ State is 0-3 and would drag the price axis down to zero if it shared the
+  scale.  Set this plot to its own subgraph in Format Indicator, or leave
+  Show_State at 0 -- it is a diagnostic, not part of the picture. }
+if Show_State <> 0 then Plot5( v_State, "State" ) else NoPlot( 5 );
 
 if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
