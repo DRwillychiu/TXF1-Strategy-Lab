@@ -287,35 +287,54 @@ pre{font-family:var(--mono);font-size:13px;background:var(--line2);
 </div>
 
 <div class="card">
-  <h2>十、MC12 第一次跑 — 逐筆對照結果</h2>
-  <p class="note">2026-08-26。指標編譯成功並掛上 TXF1 5 分 K。
-  輸出視窗可見區間 <code>20250714 2145</code> 起，與 Python 同窗對照：</p>
+  <h2>十、MC12 逐筆對照 — 202 / 202 全數相符</h2>
+  <p class="note">2026-08-26 第二次跑，涵蓋 2019-01 至 2026-08 全期。
+  指標的 <code>P29 FORM</code> 事件與 Python 參考實作<b>逐年、逐筆比對</b>：</p>
   <table>
-    <tr><th>項目</th><th class="n">數量</th><th></th></tr>
-    <tr><td>MC12 指標偵測</td><td class="n">46</td><td></td></tr>
-    <tr><td>Python 同窗</td><td class="n">48</td><td></td></tr>
-    <tr><td><b>日期時間完全相符</b></td><td class="n"><b>46</b></td><td class="ok">零誤報</td></tr>
-    <tr><td>只有 MC12 有</td><td class="n ok">0</td><td class="ok">沒有多抓</td></tr>
-    <tr><td><b>只有 Python 有</b></td><td class="n warn"><b>2</b></td><td class="warn">漏抓，成因已定位</td></tr>
+    <tr><th>年</th><th class="n">MC12</th><th class="n">Python</th><th></th></tr>
+    <tr><td>2019</td><td class="n">8</td><td class="n">8</td><td class="ok">相符</td></tr>
+    <tr><td>2020</td><td class="n">15</td><td class="n">15</td><td class="ok">相符</td></tr>
+    <tr><td>2021</td><td class="n">18</td><td class="n">18</td><td class="ok">相符</td></tr>
+    <tr><td>2022</td><td class="n">31</td><td class="n">31</td><td class="ok">相符</td></tr>
+    <tr><td>2023</td><td class="n">24</td><td class="n">24</td><td class="ok">相符</td></tr>
+    <tr><td>2024</td><td class="n">31</td><td class="n">31</td><td class="ok">相符</td></tr>
+    <tr><td>2025</td><td class="n">42</td><td class="n">42</td><td class="ok">相符</td></tr>
+    <tr><td>2026</td><td class="n">33</td><td class="n">33</td><td class="ok">相符</td></tr>
+    <tr><td><b>合計</b></td><td class="n"><b>202</b></td><td class="n"><b>202</b></td>
+        <td class="ok"><b>零漏抓、零誤報</b></td></tr>
   </table>
-  <h3 style="margin-top:18px">兩個 bug，都由這次對照抓出</h3>
+  <p class="note">抽 10 筆逐欄位比對（<code>kind</code> / <code>span</code> /
+  <code>s1</code> / <code>open</code>）：<b>10 / 10 完全相符</b>。
+  <code>kind</code> 分布 P49 112 ／ P50 90，與 Python 一致。</p>
+
+  <h3 style="margin-top:20px">前一輪的兩個 bug 都確認修好</h3>
   <table>
-    <tr><th>#</th><th>症狀</th><th>成因</th></tr>
-    <tr><td>1</td><td><code>s1=0</code> 出現在<b>每一筆</b>（Python 平均 4.14/6）</td>
-        <td>樞紐在 <code>bar[1]</code>，卻測 <code>bar[2]</code>。
-            而 <code>High[2] &gt; High[1]</code> 與樞紐條件
-            <code>High[1] &gt; High[2]</code> 直接矛盾 ——
-            <b>結構上恆為 0</b>。根本原因是視窗 2 樞紐要 <code>i+2</code> 才判得出，
-            在 <code>i+1</code> 寫太早。已改為延後一根回填。</td></tr>
-    <tr><td>2</td><td>漏掉 <code>20250804 0945</code> 與 <code>20251023 0250</code></td>
-        <td><b>兩筆都落在外包棒</b>（同一根既是樞紐高又是樞紐低）。
-            Python 對每一個六樞紐視窗都測；指標每根只測一次，
-            推入 H 再推入 L 之後才測，<b>中間那個以 H 收尾的組合從未被測到</b>。
-            已把測試搬進推入迴圈，每推一次測一次。</td></tr>
+    <tr><th>#</th><th>症狀</th><th>結果</th></tr>
+    <tr><td>1</td><td><code>s1</code> 恆為 0</td>
+        <td class="ok">已修，現在 0-5 有分布</td></tr>
+    <tr><td>2</td><td>外包棒漏抓 <code>20250804 0945</code>、<code>20251023 0250</code></td>
+        <td class="ok">兩筆都出現了</td></tr>
   </table>
-  <p class="note"><b>46/46 相符、0 誤報</b>，代表樞紐、交替、單調外擴、低於高、
-  M7 分類、跨時段這幾段的移植是對的。兩個 bug 都在邊界情況，都已定位並修正，
-  <span class="warn">但修正後尚未重跑 MC12</span>。</p>
+
+  <h3 style="margin-top:20px">★ 這次對照抓到的第三個問題 — 錯的是參考實作</h3>
+  <p class="note">修好前兩個之後，<code>s1</code> 仍系統性比 Python 少 1
+  —— 但只在某些筆。查出成因：</p>
+  <pre>第六個樞紐在第 b 根，型態在 b+1 根確認
+它的視窗 2 判定需要 b+2 根  ->  確認當下那一根還不存在</pre>
+  <p class="note">Python 離線掃全序列，順手用了 <code>b+2</code>；指標只能用當下有的。
+  <b>前瞻在參考實作那一側，不在指標。</b></p>
+  <table>
+    <tr><th>最後樞紐是視窗 2 樞紐</th><th>兩者差距</th><th class="n">筆數</th></tr>
+    <tr><td>是</td><td>Python 多 1</td><td class="n">7</td></tr>
+    <tr><td>否</td><td>相同</td><td class="n">4</td></tr>
+    <tr><td colspan="2"><b>假說命中</b></td><td class="n ok"><b>11 / 11</b></td></tr>
+  </table>
+  <p class="note"><b>已修 Python 端。</b><code>s1</code> 範圍從 0-6 改為 <b>0-5</b>，
+  平均從 4.14/6（含前瞻）改為 <b>3.32/5</b>。修正後 10/10 逐欄位相符。</p>
+  <p class="note"><span class="tag">教訓</span>
+  <b>指標不只是移植的對象，它也是參考實作的檢查器。</b>
+  離線掃描能看到整條序列，逐根執行的程式碼不能 ——
+  兩者對不上時，先問「是不是參考用了未來」。</p>
 </div>
 
 <div class="card">

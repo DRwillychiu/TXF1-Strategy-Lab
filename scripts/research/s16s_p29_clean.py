@@ -89,7 +89,16 @@ def main():
         mid_old = (H[hs[0]] + L[ls[0]]) / 2.0
         mid_new = (H[hs[2]] + L[ls[2]]) / 2.0
         drift = mid_new - mid_old
-        s1 = sum(1 for t in idx if t in W2)          # 0-6 robustness score
+        # S1 -- knowable-at-form-time only.  A window-2 pivot at bar i needs
+        # bars i-2..i+2, and the LAST of the six pivots sits at b while the
+        # pattern is confirmed at b+1, so its verdict needs a bar that does
+        # not exist yet.  Counting it here would use information the live
+        # indicator cannot have: look-ahead, on the reference side.
+        # Confirmed against IND_S16S_P29 on 2026-08-26, 11 of 11 samples:
+        # the two disagreed by exactly 1 whenever the last pivot qualified,
+        # and agreed whenever it did not.  Range is therefore 0-5, not 0-6.
+        s1_last = max(idx)
+        s1 = sum(1 for t in idx if t in W2 and t != s1_last)
         su = (H[hs[2]] - H[hs[0]]) / float(hs[2] - hs[0])
         sl = (L[ls[2]] - L[ls[0]]) / float(ls[2] - ls[0])
         m2 = (su + sl) / 2.0                          # adopted direction measure
