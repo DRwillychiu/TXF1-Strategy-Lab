@@ -57,7 +57,11 @@ inputs:
     Sess_Night_End          ( 500   ),
     Line_Mode               ( 1     ),     { 0 off, 1 trendline objects, 2 legacy Plot }
     Print_Events            ( 1     ),     { emit one line per event for diff }
-    Log_Lines               ( 1     ),     { 1 = log every TL_New and TL_SetEnd }
+    Log_Lines               ( 0     ),     { 1 = log every TL_New and TL_SetEnd.
+                                             Default off since 2026-08-26: the
+                                             four-cyan-lines question it was
+                                             built for turned out to be the
+                                             chart's scale setting, not the code }
     Show_State              ( 0     ),     { 0 = off.  Plot5 shares the price axis. }
     Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
     Col_Upper               ( Red   ),
