@@ -212,12 +212,16 @@ def main():
 
     c49 = chart(p49, 'P49 擴散頂',
                 ['喇叭形之前的一小時', '收盤 %.0f → %.0f' % (p49['bars'][0]['c'], p49['bars'][LB]['c']),
-                 '%+.0f 點，往上' % d49, '', '2026-07-02 夜盤',
+                 '%+.0f 點，往上' % d49, '',
+                 '母體 112 個 · 55.4%', '年均 14.0 · 夜盤 96',
+                 '', '案例 2026-07-02 夜盤',
                  'S1 穩健度 %d/6' % p49['meta']['s1']],
                 '→ 前段上漲 = 擴散頂')
     c50 = chart(p50, 'P50 擴散底',
                 ['喇叭形之前的一小時', '收盤 %.0f → %.0f' % (p50['bars'][0]['c'], p50['bars'][LB]['c']),
-                 '%+.0f 點，往下' % d50, '', '2021-10-01 日盤',
+                 '%+.0f 點，往下' % d50, '',
+                 '母體 90 個 · 44.6%', '年均 11.2 · 夜盤 77',
+                 '', '案例 2021-10-01 日盤',
                  'S1 穩健度 %d/6' % p50['meta']['s1']],
                 '→ 前段下跌 = 擴散底')
 
@@ -257,13 +261,14 @@ def main():
       往下  →  P50 擴散底（多）</pre>
   <div class="grid2" style="margin-top:16px">
     <div>
-      <h3>兩種量法</h3>
+      <h3>裁示 12：採用最小平方斜率</h3>
       <table>
         <tr><th>量法</th><th class="n">P49</th><th class="n">P50</th><th class="n">持平</th></tr>
-        <tr><td>端點差</td><td class="n">105</td><td class="n">93</td><td class="n">4</td></tr>
-        <tr><td>12 根最小平方斜率</td><td class="n">112</td><td class="n">90</td><td class="n">0</td></tr>
+        <tr><td>端點差</td><td class="n">105</td><td class="n">93</td><td class="n warn">4</td></tr>
+        <tr><td><b>12 根最小平方斜率</b></td><td class="n"><b>112</b></td>
+            <td class="n"><b>90</b></td><td class="n ok">0</td></tr>
       </table>
-      <p class="note">兩法方向一致 <b>89.6%%</b>。量法未定，等 P29 程式碼化之後再議。</p>
+      <p class="note">兩法方向一致 <b>89.6%%</b>，差的 21 個全部落在絕對值最小的一群。</p>
     </div>
     <div>
       <h3>為什麼是 12 根</h3>
@@ -277,7 +282,36 @@ def main():
 </div>
 
 <div class="card">
-  <h2>四、三個檢查 — 都過了</h2>
+  <h2>四、裁示 12 的依據 — 穩定性，不是論述</h2>
+  <p class="note">M7 是分類器。同一個型態因為窗口挪一根就換邊，代表它分不乾淨。
+  下表每格是 202 個型態中方向翻轉的個數。</p>
+  <table>
+    <tr><th>擾動</th><th class="n">端點差</th><th class="n">最小平方斜率</th><th class="n">差異</th></tr>
+    <tr><td>窗長 12 → 10</td><td class="n">31</td><td class="n">22</td><td class="n ok">−9</td></tr>
+    <tr><td>窗長 12 → 11</td><td class="n">20</td><td class="n">9</td><td class="n ok">−11</td></tr>
+    <tr><td>窗長 12 → 13</td><td class="n">17</td><td class="n">8</td><td class="n ok">−9</td></tr>
+    <tr><td>窗長 12 → 14</td><td class="n">26</td><td class="n">18</td><td class="n ok">−8</td></tr>
+    <tr><td><b>窗長小計</b></td><td class="n"><b>11.6%%</b></td>
+        <td class="n"><b>7.1%%</b></td><td class="n ok"><b>−39%%</b></td></tr>
+    <tr><td>起點 −1 根</td><td class="n">19</td><td class="n">13</td><td class="n ok">−6</td></tr>
+    <tr><td>起點 +1 根</td><td class="n">22</td><td class="n">13</td><td class="n ok">−9</td></tr>
+    <tr><td><b>起點小計</b></td><td class="n"><b>10.1%%</b></td>
+        <td class="n"><b>6.4%%</b></td><td class="n ok"><b>−37%%</b></td></tr>
+    <tr><td><b>恰為 0 的型態數</b></td><td class="n warn"><b>4</b></td>
+        <td class="n ok"><b>0</b></td><td class="n">−4</td></tr>
+    <tr><td>最小非零值</td><td class="n">1.0000 點</td>
+        <td class="n">0.0055 點／根</td><td class="n">解析度高 182 倍</td></tr>
+  </table>
+  <p class="note"><b>三個決定性理由。</b>
+  一、「起點挪一根」在實作上真的會發生——樞紐在第 <code>i</code> 根成立、<code>i+1</code> 才確認，
+  端點差在這個擾動下翻掉 10.1%%。
+  二、端點差有 4 個恰為 0，需要一條沒有推導支撐的平手規則；斜率 0 個平手。
+  三、解析度差 182 倍。
+  <span class="warn">更正：先前推薦斜率的理由是「用滿 12 根比較抗雜訊」，那是論述不是證據。上表才是。</span></p>
+</div>
+
+<div class="card">
+  <h2>五、三個檢查 — 都過了</h2>
   <table>
     <tr><th>檢查</th><th>結果</th><th>判讀</th></tr>
     <tr><td>被「排列」污染？</td><td class="n">57.7%% vs 53.1%%，差 4.6pp</td>
@@ -293,7 +327,7 @@ def main():
 </div>
 
 <div class="card">
-  <h2>五、母體 — 2026-08-26 重掃</h2>
+  <h2>六、母體 — 2026-08-26 重掃</h2>
   <div class="grid2">
     <div>
       <h3>跨時段裁示讓母體 +17.4%%</h3>
@@ -315,13 +349,16 @@ def main():
         <tr><td>佔價</td><td class="n">0.048%%</td><td class="n">0.302%%</td><td class="n">3.127%%</td></tr>
       </table>
       <p class="note">37.1%% 的開口不到 50 點。<b>定義不含尺度門檻</b>，
-      9 點與 559 點被當成同一件事。<span class="warn">建議比照 S1：記成屬性，不設門檻。</span></p>
+      9 點與 559 點被當成同一件事——這是裁示 1（樞紐不加 ATR 門檻）的後果，不是缺陷。</p>
+      <p class="note"><b>裁示 13：記成屬性，不設門檻</b>（與 S1 同一套哲學）。
+      <code>v_P29_Open</code> 與 <code>v_P29_OpenPct</code>，自由參數 0。
+      任何門檻現在都只能從這 202 個裡挑，那就是對結果變數選擇。</p>
     </div>
   </div>
 </div>
 
 <div class="card">
-  <h2>六、繼承自 P29 的七段 — 一行都不改</h2>
+  <h2>七、繼承自 P29 的七段 — 一行都不改</h2>
   <table>
     <tr><th>段</th><th>內容</th><th>P49／P50</th></tr>
     <tr><td>§1 樞紐</td><td>純分形，i-1/i/i+1 同時段</td><td class="ok">相同</td></tr>
@@ -338,11 +375,13 @@ def main():
 </div>
 
 <div class="card">
-  <h2>七、還沒做的事</h2>
+  <h2>八、還沒做的事</h2>
   <table>
     <tr><th>項目</th><th>狀態</th></tr>
-    <tr><td>M7 用端點差還是最小平方斜率</td><td class="warn">待裁示</td></tr>
-    <tr><td>開口大小要不要記成屬性</td><td class="warn">待裁示</td></tr>
+    <tr><td>M7 量法（裁示 12）</td><td class="ok">已定：12 根最小平方斜率</td></tr>
+    <tr><td>開口大小（裁示 13）</td><td class="ok">已定：記成屬性，不設門檻</td></tr>
+    <tr><td>S1 雙尺度在 202 母體上重跑</td><td class="warn">舊數字跑在 172 上，尚未重測</td></tr>
+    <tr><td>指標 IND_S16S_P29.pla ＋ 逐筆對照 202 筆</td><td class="warn">未寫</td></tr>
     <tr><td>寫進 .pla</td><td class="warn">一行都沒寫</td></tr>
     <tr><td>報酬檢定</td><td class="warn">從未進行，且不應在用戶同意前進行</td></tr>
     <tr><td>P51–P54（§2 要重寫）</td><td class="warn">未規劃</td></tr>
