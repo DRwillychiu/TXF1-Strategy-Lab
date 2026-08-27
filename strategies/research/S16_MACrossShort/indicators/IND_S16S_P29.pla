@@ -48,7 +48,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260840 ),
+    Build_ID                ( 260841 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -64,12 +64,18 @@ inputs:
                                              chart's scale setting, not the code }
     Show_State              ( 0     ),     { 0 = off.  Plot5 shares the price axis. }
     Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
-    Col_Upper               ( Red   ),
-    Col_Lower               ( Green ),   { was Cyan.  moved so it does not
-                                           collide with Col_Shape_Bot below }
+    Col_Upper               ( Red       ),
+    Col_Lower               ( LightGray ), { Cyan until 260840, Green in 260840.
+                                             Green moved to Col_BreakUp, and Cyan
+                                             is the P50 body, so the line takes
+                                             the one neutral shade left }
     Line_Width              ( 3     ),
     Paint_Mode              ( 1     ),     { 0 off, 1 recolour the pattern's own bars }
-    Col_Active              ( Cyan    ),   { state 1, alive and waiting }
+    Col_Active              ( Blue    ),   { state 1, alive and waiting.  was Cyan,
+                                             which 260840 also gave the P50 body --
+                                             a whole P50 then rendered one colour.
+                                             This is the least important state, so
+                                             it takes the dimmest shade }
     Col_Testing             ( Magenta ),   { state 2, price is testing an edge }
     Col_Shape_Top           ( Yellow  ),   { P49 broadening TOP, prior trend up }
     Col_Shape_Bot           ( Cyan    ),   { P50 broadening BOTTOM, prior down.
@@ -87,8 +93,10 @@ inputs:
       while price is still above the formation's own lowest low. ---- }
     Break_Mode              ( 1       ),   { 0 off, 1 track and paint breaks }
     Col_Break               ( White   ),   { the bar that closes below the floor }
-    Col_BreakUp             ( Magenta ),   { closes above the ceiling.  NOT a dark
-                                             shade: the chart background is black }
+    Col_BreakUp             ( Green   ),   { closes above the ceiling.  NOT a dark
+                                             shade: the chart background is black.
+                                             Magenta in 260840 collided with
+                                             Col_Testing }
     Show_Labels             ( 1       ),   { 0 off.  one label per formation, one
                                              per break, sharing a sequence number }
     Label_Size              ( 8       ),
@@ -165,7 +173,18 @@ variables:
     v_MySeq                 ( 0     ),
     v_LblPx                 ( 0     ),
     v_LblOff                ( 0     ),
-    v_Txt                   ( -1    );
+    v_Txt                   ( -1    ),
+
+    { ---- 260841.  This pattern's OWN anchors, latched at formation.
+      v_H3 / v_L3 / v_H3b / v_L3b are rewritten by every later pivot push once
+      the chain reaches six, but v_SlopeUp / v_SlopeDn are only recomputed when
+      the pattern test passes.  Extending from the shared variables therefore
+      mixes a later pivot's anchor with this pattern's slope.  Measured: it hits
+      203 of 203 patterns, first at a median of 3 bars in. ---- }
+    v_AncH                  ( 0     ),
+    v_AncL                  ( 0     ),
+    v_AncHb                 ( 0     ),
+    v_AncLb                 ( 0     );
 
 arrays:
     v_PvPx[7]               ( 0     ),
@@ -409,6 +428,12 @@ for v_k = 1 to 2 begin
             if v_L3b <> v_L2b then
                 v_SlopeDn = ( v_L3 - v_L2 ) / ( v_L3b - v_L2b );
 
+            { latch before anything downstream can see a later pivot's values }
+            v_AncH  = v_H3;
+            v_AncL  = v_L3;
+            v_AncHb = v_H3b;
+            v_AncLb = v_L3b;
+
             v_M2   = ( ( v_H3 - v_H1 ) / MaxList( v_H3b - v_H1b, 1 )
                      + ( v_L3 - v_L1 ) / MaxList( v_L3b - v_L1b, 1 ) ) / 2;
             v_Open = v_H3 - v_L3;
@@ -494,15 +519,15 @@ for v_k = 1 to 2 begin
             if Line_Mode = 1 then begin
                 if v_Order = 1 then begin
                     v_TLup = TL_New( v_PvDt[2], v_PvTm[2], v_PvPx[2],
-                                     Date, Time, v_H3 + v_SlopeUp * ( CurrentBar - v_H3b ) );
+                                     Date, Time, v_AncH + v_SlopeUp * ( CurrentBar - v_AncHb ) );
                     v_TLdn = TL_New( v_PvDt[3], v_PvTm[3], v_PvPx[3],
-                                     Date, Time, v_L3 + v_SlopeDn * ( CurrentBar - v_L3b ) );
+                                     Date, Time, v_AncL + v_SlopeDn * ( CurrentBar - v_AncLb ) );
                 end
                 else begin
                     v_TLup = TL_New( v_PvDt[3], v_PvTm[3], v_PvPx[3],
-                                     Date, Time, v_H3 + v_SlopeUp * ( CurrentBar - v_H3b ) );
+                                     Date, Time, v_AncH + v_SlopeUp * ( CurrentBar - v_AncHb ) );
                     v_TLdn = TL_New( v_PvDt[2], v_PvTm[2], v_PvPx[2],
-                                     Date, Time, v_L3 + v_SlopeDn * ( CurrentBar - v_L3b ) );
+                                     Date, Time, v_AncL + v_SlopeDn * ( CurrentBar - v_AncLb ) );
                 end;
                 if v_TLup >= 0 then begin
                     TL_SetColor( v_TLup, Col_Upper );
@@ -519,13 +544,13 @@ for v_k = 1 to 2 begin
                            "  from ", ( v_PvDt[2] + 19000000 ):8:0, " ", v_PvTm[2]:4:0,
                            " @", v_PvPx[2]:6:0,
                            "   to ", ( Date + 19000000 ):8:0, " ", Time:4:0,
-                           " @", ( v_H3 + v_SlopeUp * ( CurrentBar - v_H3b ) ):6:0,
+                           " @", ( v_AncH + v_SlopeUp * ( CurrentBar - v_AncHb ) ):6:0,
                            "   order=", v_Order:1:0 );
                     Print( "P29 TL_NEW dn  id=", v_TLdn:5:0,
                            "  from ", ( v_PvDt[3] + 19000000 ):8:0, " ", v_PvTm[3]:4:0,
                            " @", v_PvPx[3]:6:0,
                            "   to ", ( Date + 19000000 ):8:0, " ", Time:4:0,
-                           " @", ( v_L3 + v_SlopeDn * ( CurrentBar - v_L3b ) ):6:0,
+                           " @", ( v_AncL + v_SlopeDn * ( CurrentBar - v_AncLb ) ):6:0,
                            "   order=", v_Order:1:0 );
                 end;
             end;
@@ -556,8 +581,9 @@ v_DnLine = 0;
 
 if v_State = 1 or v_State = 2 then begin
 
-    v_UpLine = v_H3 + v_SlopeUp * ( CurrentBar - v_H3b );
-    v_DnLine = v_L3 + v_SlopeDn * ( CurrentBar - v_L3b );
+    { 260841: extend from the LATCHED anchors, not the shared ones }
+    v_UpLine = v_AncH + v_SlopeUp * ( CurrentBar - v_AncHb );
+    v_DnLine = v_AncL + v_SlopeDn * ( CurrentBar - v_AncLb );
 
     { extend while alive.  Once the pattern dies the object stops growing
       and stays on the chart, so history can be scrolled back and read. }
