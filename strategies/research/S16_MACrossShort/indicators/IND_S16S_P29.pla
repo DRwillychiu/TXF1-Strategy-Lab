@@ -1,17 +1,34 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260830.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260841.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
+
+  BUILD HISTORY
+    260830  detection plus back-paint of the formation body
+    260840  ruling C break tracking in three slots, white break bar,
+            counting labels ("P49 #12" and its matching "#12 DN")
+    260841  latch the pattern's own anchors.  v_H3 / v_L3 / v_H3b / v_L3b are
+            rewritten by every later pivot push once the chain reaches six,
+            while the slopes are only recomputed when the pattern test passes,
+            so SECTION 7 was extending each line from a stranger's anchor.
+            It hit 203 of 203 patterns, first at a median of 3 bars in.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
     trade.  Keeping them in separate files makes the first question -- is the
     implementation correct -- answerable on its own.  Print emits one line per
-    event; diff those lines against the 202 patterns that
+    event; diff those lines against the 203 patterns that
     scripts/research/s16s_p29_clean.py finds.  Any difference is an
     implementation bug, not a strategy question.
+
+    The count is 203, not 202.  The copy of s16s_p29_clean.json committed to
+    git was stale, so the earlier "202/202 verified" was measured against the
+    wrong reference.  The missing one is 2019-02-19 02:55 to 04:50.
+
+  ACCEPTANCE, printed on the last bar as P29 TALLY
+    formations 203   break_down 76   break_up 88   expired 39   overflow 0
 
   WHAT IT DETECTS
     P29  six alternating fractal pivots, three highs rising and three lows
