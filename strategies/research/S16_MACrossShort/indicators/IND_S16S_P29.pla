@@ -65,7 +65,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260841 ),
+    Build_ID                ( 260842 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -201,7 +201,16 @@ variables:
     v_AncH                  ( 0     ),
     v_AncL                  ( 0     ),
     v_AncHb                 ( 0     ),
-    v_AncLb                 ( 0     );
+    v_AncLb                 ( 0     ),
+
+    { ---- 260842 diagnostics.  199 against a reference of 203, with the
+      tracker internally consistent, means four formations were never seen.
+      These four numbers say whether the INPUT differs or the CODE does. ---- }
+    v_NBars                 ( 0     ),
+    v_NPvH                  ( 0     ),
+    v_NPvL                  ( 0     ),
+    v_FirstYmd              ( 0     ),
+    v_FirstTm               ( 0     );
 
 arrays:
     v_PvPx[7]               ( 0     ),
@@ -328,6 +337,18 @@ if v_BIS >= 3 then begin
     if Low[1]  < Low[2]  and Low[1]  < Low  then v_IsPvL = True;
 end;
 
+{ 260842: count what the chart actually contains, so a shortfall can be
+  attributed to the data rather than guessed at. }
+v_NBars = v_NBars + 1;
+if v_NBars = 1 then begin
+    v_FirstYmd = Date + 19000000;
+    v_FirstTm  = Time;
+end;
+if v_IsPvH then
+    v_NPvH = v_NPvH + 1;
+if v_IsPvL then
+    v_NPvL = v_NPvL + 1;
+
     { ---------- SECTIONS 4-6 - PUSH, TEST, ADOPT ----------------------
       One pass per pivot, NOT one pass per bar.
 
@@ -357,12 +378,18 @@ for v_k = 1 to 2 begin
             v_Chain = 0;
 
         if v_Chain >= 6 then begin
+            { 260842: v_PvDt and v_PvTm were missing from this shift, so after
+              any shift slot j held a correct PRICE with a stale DATE -- and
+              TL_New anchors the line on exactly those two.  The line started
+              at the right price on the wrong bar. }
             for v_j = 0 to 4 begin
                 v_PvPx[v_j]  = v_PvPx[v_j + 1];
                 v_PvBar[v_j] = v_PvBar[v_j + 1];
                 v_PvTyp[v_j] = v_PvTyp[v_j + 1];
                 v_PvM7[v_j]  = v_PvM7[v_j + 1];
                 v_PvW2[v_j]  = v_PvW2[v_j + 1];
+                v_PvDt[v_j]  = v_PvDt[v_j + 1];
+                v_PvTm[v_j]  = v_PvTm[v_j + 1];
             end;
             v_Chain = 5;
         end;
@@ -920,6 +947,14 @@ if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
   2019-01-02 to 2026-08-22 series these must read 203 / 76 / 88 / 39 / 0.
   Anything else means the port is wrong, not "close enough". ---- }
 if LastBarOnChart then begin
+    { the reference, measured from scripts/research/s16s_5min.csv:
+      bars 421,513   first 20190102 0850   last 20260822 0500
+      pivot_high 75,127   pivot_low 76,020 }
+    Print( "P29 DIAG   bars=", v_NBars:8:0,
+           "  first=", v_FirstYmd:8:0, " ", v_FirstTm:4:0,
+           "  last=", ( Date + 19000000 ):8:0, " ", Time:4:0 );
+    Print( "P29 DIAG   pivot_high=", v_NPvH:7:0,
+           "  pivot_low=", v_NPvL:7:0 );
     Print( "P29 TALLY  formations=", v_CntForm:5:0,
            "  P49=", v_Seq49:5:0, "  P50=", v_Seq50:5:0 );
     Print( "P29 TALLY  break_down=", v_CntDn:5:0,
