@@ -370,20 +370,101 @@ feas = ''.join(
     % (c, format(n, ','), md, mx, ov, cov, ' class="z"' if k >= 7 else '', k)
     for c, n, md, mx, ov, cov, k in FEAS)
 
+BUILDS = [
+ ('260840', '破位追蹤三槽、白色跌破 K 棒、計數標籤', '完成'),
+ ('260841', '★ 錨點鎖存。v_H3/v_L3 被後續樞紐覆寫，203/203 全中，'
+            '線與 SECTION 7 的判破都在讀壞值', '完成'),
+ ('260842', 'v_PvDt/v_PvTm 補進六槽平移；新增 DIAG 輸出', '完成'),
+ ('260843', '逐年型態直方圖，用來定位少掉的 4 個', '待驗收'),
+]
+
+TALLY = [('formations', '203', '199', False), ('P49', '113', '111', False),
+         ('P50', '90', '88', False), ('break_down', '76', '75', False),
+         ('break_up', '88', '85', False), ('expired', '39', '39', True),
+         ('slot_overflow', '0', '0', True)]
+
+RULED = [
+ ('暖機吃掉開頭', '最早的參考型態在第 6,140 根才確認，遠超 MaxBarsBack 100'),
+ ('外包棒推入順序', '.pla 的 for v_k = 1 to 2 先推 H 後推 L，與 Python 同索引排序一致'),
+ ('時段閘門', 'v_BIS &gt;= 3 在樞紐的下一根檢查，等價於 S[i]&gt;=2 且 S[i+1]&gt;=3'),
+ ('M7 方向判別', 'P49 與 P50 各少 2 個，平均分布；最小 |M7| = 0.005，'
+                '無任何型態逼近正負分界'),
+]
+
+REF = [('bars', '421,513'), ('first', '20190102 0850'), ('last', '20260822 0500'),
+       ('pivot_high', '75,127'), ('pivot_low', '76,020'),
+       ('by_year 2019..2026', '9 · 15 · 18 · 31 · 24 · 31 · 42 · 33')]
+
+bl = ''.join(
+    '<tr><td>%s</td><td>%s</td><td%s>%s</td></tr>'
+    % (b, w, ' class="z"' if st != '完成' else '', st)
+    for b, w, st in BUILDS)
+tl = ''.join(
+    '<tr><td>%s</td><td>%s</td><td%s>%s</td><td>%s</td></tr>'
+    % (k, e, '' if ok else ' class="z"', g, 'OK' if ok else '差 ' + str(int(e.replace(',', '')) - int(g.replace(',', ''))))
+    for k, e, g, ok in TALLY)
+rl = ''.join('<tr><td>%s</td><td style="text-align:left">%s</td></tr>' % r for r in RULED)
+rf = ''.join('<tr><td>%s</td><td>%s</td></tr>' % r for r in REF)
+
 P6 = ('<section class="panel"><div class="ph2">'
-      '<h2>六、能不能程式碼化</h2>'
-      '<span class="tag">MaxBarsBack 100 ＝ 回看不得超過 99 根</span></div>'
-      '<table><thead><tr><th>型態</th><th>母體</th><th>中位跨度</th><th>最大跨度</th>'
-      '<th>形成＋有效期 &gt; 99</th><th>覆蓋 K 棒</th><th>最多同時重疊</th>'
-      '</tr></thead><tbody>' + feas + '</tbody></table>'
-      '<p class="cap"><b>MaxBarsBack 沒有問題</b> —— 最大跨度 43 根，'
-      '形成＋有效期超過 99 根的比例是 <b>0.0%</b>。'
-      '擋路的是<b>並發度</b>：現行指標一次只追蹤一個型態，'
-      'P51 最多 7 個、P52 最多 9 個同時重疊，'
-      '要全部畫出來得改成<b>陣列式多實例追蹤</b> —— 那是架構改動。</p>'
-      '<p class="warn"><b>而裁示 A1 已經讓這個問題消失：</b>'
-      'P51／P52 是<b>屬性</b>，屬性只需要一個布林「現在是否在型態內」，'
-      '不需要逐個實例追蹤。<b>便宜很多，而且是對的做法。</b></p>'
+      '<h2>六、指標實作狀態</h2>'
+      '<span class="tag">IND_S16S_P29.pla&#8195;2026-08-27</span></div>'
+      '<p class="cap">第六節原本問「能不能程式碼化」。答案是能，'
+      '而且已經做完了 —— 跨度最大 43 根，形成＋有效期超過 99 根的比例是 0.0%，'
+      'MaxBarsBack 100 不是限制。真正的限制是並發度，'
+      '<b>P29 最多 3 個同時重疊</b>，所以破位追蹤用三槽陣列（實測 25/203 需要它）。</p>'
+      '<table><thead><tr><th>Build</th><th style="text-align:left">內容</th>'
+      '<th>狀態</th></tr></thead><tbody>' + bl + '</tbody></table>'
+      '<p class="warn"><b>260841 是今天最重要的修正。</b>'
+      '<code>v_H3</code> / <code>v_L3</code> 在樞紐鏈滿六個後<b>每來一個新樞紐就被覆寫</b>，'
+      '但斜率只在型態成立時重算 —— 於是延伸式用「後來某個樞紐的錨點」配「這個型態的斜率」。'
+      '<b>203/203 全中，中位數在成立後第 3 根就壞掉。</b>'
+      '圖上每條線過了三根都是亂的，而且 SECTION 7 的判破也一直在讀它。</p>'
+      '<p class="cap">P51／P52 <b>刻意不編碼進指標</b>：覆蓋 7.7% 與 7.5% 的 K 棒、'
+      '最多 9 個同時重疊，畫上去會蓋掉 P29；3,386 個型態 × 3 個繪圖物件 ＝ 10,158，'
+      '會拖垮圖表。裁示 A1 的「屬性」角色只需要一個布林，不需要逐實例追蹤。'
+      'P53／P54 八年 15 個，畫了也幾乎看不到。</p>'
+      '</section>')
+
+P7 = ('<section class="panel"><div class="ph2">'
+      '<h2>七、★ 唯一未結的事：199 vs 203</h2>'
+      '<span class="tag">明天的第一件事</span></div>'
+      '<table><thead><tr><th>項目</th><th>基準</th><th>MC12</th><th></th>'
+      '</tr></thead><tbody>' + tl + '</tbody></table>'
+      '<p class="cap"><b>追蹤器本身是對的</b> —— 75 + 85 + 39 = 199 等於它看到的型態數，'
+      'P49 111 + P50 88 = 199 也吻合，<code>slot_overflow = 0</code>。'
+      '沒有型態卡在槽裡，三槽的容量判斷正確。<b>純粹是偵測端少看到 4 個。</b></p>'
+      '<p class="cap" style="margin-top:2px"><b>已排除的四個假設</b></p>'
+      '<table><thead><tr><th>假設</th><th style="text-align:left">排除依據</th>'
+      '</tr></thead><tbody>' + rl + '</tbody></table>'
+      '<p class="warn"><b>剩下的嫌疑是資料本身。</b>'
+      '參考用的 CSV 是從 1 分鐘匯出檔聚合成 5 分鐘的，'
+      '<b>MC 自己的 5 分鐘 K 棒不保證聚合方式一致</b> —— '
+      '時段邊界、無成交的 K 棒、跳空處都可能差。'
+      'Build 260843 的逐年直方圖就是為了判定這件事：'
+      '4 個集中在某一年 ＝ 資料區間問題；散在各年 ＝ 結構性問題。</p>'
+      '<p class="cap" style="margin-top:2px">'
+      '<b>明天要做的：把 260843 真正載進 MC，回傳六行輸出</b></p>'
+      '<div class="rule">'
+      '<div class="ro"><span class="tag">1</span><p>'
+      '重新 Import 或在 PowerLanguage Editor <b>重新編譯</b> .pla —— '
+      'MC 編譯進自己的資料庫，<b>不讀磁碟</b>，更新檔案不會自動生效</p></div>'
+      '<div class="ro"><span class="tag">2</span><p>'
+      '把圖上的指標<b>移除再重新掛上</b> —— MC 保留舊 study 實例的 input 值，'
+      '不重掛的話新配色與新預設都不會出現</p></div>'
+      '<div class="ro"><span class="tag">3</span><p>'
+      '確認第一根印出 <code>IND_S16S_P29 build 260843</code>。'
+      '<b>看到 260843 才算數。</b>建議把 <code>Print_Events</code> 設 0，'
+      '輸出視窗就只剩六行</p></div>'
+      '<div class="ro"><span class="tag">4</span><p>'
+      '掛上後第一件事：<b>座標 → 座標範圍 → 和商品一致</b>。'
+      '不設的話 PlotPaintBar 會跨 NoPlot 缺口連線，畫出橫跨整張圖的假線</p></div>'
+      '</div>'
+      '<p class="cap" style="margin-top:2px"><b>對照基準</b></p>'
+      '<table><thead><tr><th>DIAG 欄位</th><th>應為</th></tr></thead>'
+      '<tbody>' + rf + '</tbody></table>'
+      '<p class="cap">bars 或日期對不上 → 圖表載入範圍問題；'
+      'bars 對但樞紐數不同 → 資料內容有差；全對才輪到程式邏輯。</p>'
       '</section>')
 
 tol = ''.join(
@@ -397,7 +478,7 @@ yr = ''.join(
        ''.join('<td%s>%d</td>' % (' class="z"' if v == 0 else '', v) for v in vs))
     for k, vs in YR.items())
 
-P7 = ('<section class="panel"><div class="ph2"><h2>七、母體與逐年分布</h2>'
+P8 = ('<section class="panel"><div class="ph2"><h2>八、母體與逐年分布</h2>'
       '<span class="tag">紅色 0 ＝ 整年掛零</span></div>'
       '<table><thead><tr><th>型態</th>'
       + ''.join('<th>%s</th>' % y for y in YEARS) +
@@ -422,5 +503,5 @@ FOOT = ('<footer class="foot">'
         '</footer></div>')
 
 open(OUT, 'w', encoding='utf-8').write(
-    HEAD + TOP + P0 + P1 + P2 + P3 + P4 + P5 + P6 + P7 + FOOT)
+    HEAD + TOP + P0 + P1 + P2 + P3 + P4 + P5 + P6 + P7 + P8 + FOOT)
 print('wrote %s' % OUT)
