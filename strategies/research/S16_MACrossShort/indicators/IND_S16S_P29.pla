@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260841.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260842.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -14,6 +14,11 @@
             while the slopes are only recomputed when the pattern test passes,
             so SECTION 7 was extending each line from a stranger's anchor.
             It hit 203 of 203 patterns, first at a median of 3 bars in.
+    260842  v_PvDt / v_PvTm were missing from the six-slot shift, so a line
+            started at the right price on the wrong bar.  Adds the P29 DIAG
+            print -- bars, first, last, pivot counts -- because the MC12 run
+            returned 199 formations against a reference of 203 and the four
+            numbers separate a data difference from a code difference.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to

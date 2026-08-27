@@ -2,7 +2,7 @@
   S16_S - MOVING AVERAGE CROSS SHORT STRATEGY
   Signal Name : S16_S_MACrossShort
   MC Load Name: STRATEGY_GEN_S16_S_MACrossShort
-  Version     : v1.26.0   Build_ID 260826
+  Version     : v1.26.0   Build_ID 260825
 
   ANCHOR -- every input at the default in this file
       160 trades / 2,796,800 / PF 2.3295303290 / -337,200
