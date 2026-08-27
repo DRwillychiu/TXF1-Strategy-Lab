@@ -48,7 +48,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260830 ),
+    Build_ID                ( 260840 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -65,15 +65,36 @@ inputs:
     Show_State              ( 0     ),     { 0 = off.  Plot5 shares the price axis. }
     Show_Pivots             ( 0     ),     { 0 = off.  See the note at SECTION 8. }
     Col_Upper               ( Red   ),
-    Col_Lower               ( Cyan  ),
+    Col_Lower               ( Green ),   { was Cyan.  moved so it does not
+                                           collide with Col_Shape_Bot below }
     Line_Width              ( 3     ),
     Paint_Mode              ( 1     ),     { 0 off, 1 recolour the pattern's own bars }
     Col_Active              ( Cyan    ),   { state 1, alive and waiting }
     Col_Testing             ( Magenta ),   { state 2, price is testing an edge }
     Col_Shape_Top           ( Yellow  ),   { P49 broadening TOP, prior trend up }
-    Col_Shape_Bot           ( White   ),   { P50 broadening BOTTOM, prior down }
-    Paint_MaxBack           ( 60      );   { cap on the back-paint.  Longest span
+    Col_Shape_Bot           ( Cyan    ),   { P50 broadening BOTTOM, prior down.
+                                             was White until build 260840, when
+                                             White was reserved for the break }
+    Paint_MaxBack           ( 60      ),   { cap on the back-paint.  Longest span
                                              measured is 43; CLAUDE.md allows 99 }
+
+    { ---- ruling C, 2026-08-27.  BREAK = close through the formation's OWN
+      horizontal extreme.  Window opens the bar after the last pivot confirms
+      and runs for the bars the formation itself took.  No point buffer and no
+      N-bar confirmation: either would be the first swept threshold in this
+      project.  The sloped-trendline alternative was rejected on evidence --
+      it reports P51 breaking down 78% of the time and 96.5% of those fire
+      while price is still above the formation's own lowest low. ---- }
+    Break_Mode              ( 1       ),   { 0 off, 1 track and paint breaks }
+    Col_Break               ( White   ),   { the bar that closes below the floor }
+    Col_BreakUp             ( Magenta ),   { closes above the ceiling.  NOT a dark
+                                             shade: the chart background is black }
+    Show_Labels             ( 1       ),   { 0 off.  one label per formation, one
+                                             per break, sharing a sequence number }
+    Label_Size              ( 8       ),
+    Label_Offset_Pct        ( 6       );   { display nudge only, as a percentage of
+                                             the formation's own height -- self
+                                             referential, so not a magic distance }
 
 variables:
     v_In_Day                ( False ),
@@ -122,7 +143,29 @@ variables:
     v_TLdn                  ( -1    ),
     v_RunUp                 ( False ),     { Run_Bars consecutive up closes }
     v_RunDn                 ( False ),
-    v_Ymd                   ( 0     );
+    v_Ymd                   ( 0     ),
+
+    { ---- ruling C break tracking.  Independent of SECTION 7: that lifecycle
+      carries rulings 14 and 18 and breaks against the SLOPED line.  Both are
+      kept, so neither ruling is silently overwritten by the other. ---- }
+    v_s                     ( 0     ),
+    v_Free                  ( -1    ),
+    v_Floor                 ( 0     ),     { min of the three pivot lows }
+    v_Ceil                  ( 0     ),     { max of the three pivot highs }
+    v_BkHit                 ( 0     ),     { this bar: 0 none, 1 down, 2 up }
+    v_BkHitSq               ( 0     ),     { sequence no. of the formation that broke }
+    v_Seq49                 ( 0     ),
+    v_Seq50                 ( 0     ),
+    v_CntForm               ( 0     ),
+    v_CntDn                 ( 0     ),
+    v_CntUp                 ( 0     ),
+    v_CntExp                ( 0     ),
+    v_Overflow              ( 0     ),     { must stay 0.  if it does not, the
+                                             three-slot measurement was wrong }
+    v_MySeq                 ( 0     ),
+    v_LblPx                 ( 0     ),
+    v_LblOff                ( 0     ),
+    v_Txt                   ( -1    );
 
 arrays:
     v_PvPx[7]               ( 0     ),
@@ -131,7 +174,17 @@ arrays:
     v_PvM7[7]               ( 0     ),
     v_PvW2[7]               ( 0     ),     { 1 if also a window-2 pivot }
     v_PvDt[7]               ( 0     ),     { latched so TL_New needs no lookback }
-    v_PvTm[7]               ( 0     );
+    v_PvTm[7]               ( 0     ),
+
+    { three slots.  measured: 25 of 203 formations start while the previous
+      break window is still open (12.3%), and 3 is the maximum concurrency
+      over 421,513 bars.  a single slot would drop 8 of the 76 break-downs. }
+    v_BkOn[3]               ( 0     ),     { 1 = slot in use }
+    v_BkDn[3]               ( 0     ),     { floor price }
+    v_BkUp[3]               ( 0     ),     { ceiling price }
+    v_BkSt[3]               ( 0     ),     { first bar the window is live }
+    v_BkEnd[3]              ( 0     ),     { last bar the window is live }
+    v_BkSeq[3]              ( 0     );     { sequence no. for the label pair }
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
@@ -366,6 +419,68 @@ for v_k = 1 to 2 begin
             v_TestDir = 0;
             v_Sig     = 0;
 
+            { ---- ruling C: claim a break slot, and number this formation ----
+              The horizontal extremes come from the six pivots that define the
+              formation, so they need no lookback -- the prices are already
+              latched.  The window opens NEXT bar, which is p_last + 2: the
+              last pivot only confirms on the bar we are standing on, so acting
+              here would be look-ahead. }
+            v_CntForm = v_CntForm + 1;
+            if v_Kind = 49 then begin
+                v_Seq49 = v_Seq49 + 1;
+                v_MySeq = v_Seq49;
+            end
+            else begin
+                v_Seq50 = v_Seq50 + 1;
+                v_MySeq = v_Seq50;
+            end;
+
+            v_Floor = MinList( v_L1, v_L2, v_L3 );
+            v_Ceil  = MaxList( v_H1, v_H2, v_H3 );
+
+            if Break_Mode <> 0 then begin
+                v_Free = -1;
+                for v_s = 0 to 2 begin
+                    if v_Free < 0 and v_BkOn[v_s] = 0 then
+                        v_Free = v_s;
+                end;
+                { measured maximum concurrency is 3, so this should never fire.
+                  if it does, the measurement was wrong and the counter says so
+                  rather than the tracker quietly dropping a formation. }
+                if v_Free < 0 then begin
+                    v_Overflow = v_Overflow + 1;
+                    v_Free = 0;
+                end;
+                v_BkOn[v_Free]  = 1;
+                v_BkDn[v_Free]  = v_Floor;
+                v_BkUp[v_Free]  = v_Ceil;
+                v_BkSt[v_Free]  = CurrentBar + 1;
+                v_BkEnd[v_Free] = CurrentBar + 1 + v_Life;
+                v_BkSeq[v_Free] = v_MySeq;
+            end;
+
+            { ---- the label.  Kind plus its own running number, so the last
+              label of a kind on the chart says how many of that kind the
+              loaded data holds.  Reset on every recalculation, so it counts
+              within this chart's range, not since 2019. }
+            if Show_Labels <> 0 then begin
+                v_LblOff = ( v_Ceil - v_Floor ) * Label_Offset_Pct / 100;
+                if v_Kind = 49 then
+                    v_LblPx = v_Ceil + v_LblOff
+                else
+                    v_LblPx = v_Floor - v_LblOff;
+                v_Txt = Text_New( Date, Time, v_LblPx,
+                                  "P" + NumToStr( v_Kind, 0 )
+                                  + " #" + NumToStr( v_MySeq, 0 ) );
+                if v_Txt >= 0 then begin
+                    if v_Kind = 49 then
+                        Text_SetColor( v_Txt, Col_Shape_Top )
+                    else
+                        Text_SetColor( v_Txt, Col_Shape_Bot );
+                    Text_SetSize( v_Txt, Label_Size );
+                end;
+            end;
+
             { ---- draw the two E1 lines as OBJECTS, not as plots ----
               Plot1/Plot2 looked right in isolation and wrong on a chart:
               MC12 joins across a NoPlot gap, so the last bar of one
@@ -534,6 +649,94 @@ if v_State = 1 or v_State = 2 then begin
     end;
 end;
 
+    { ---------- SECTION 7b - RULING C BREAK ---------------------------
+      Deliberately separate from SECTION 7.  That lifecycle breaks against the
+      SLOPED extended trendline and carries rulings 14 and 18; this one breaks
+      against the formation's OWN horizontal extreme, per ruling C of
+      2026-08-27.  Keeping both means neither ruling is silently overwritten,
+      and the two answer different questions: SECTION 7 decides when the
+      pattern stops being live, this decides which side it left through.
+
+      Three slots, scanned every bar.  Down is checked before up and wins a
+      tie, matching s16s_break_outcome.py so the counts are comparable. }
+
+v_BkHit   = 0;
+v_BkHitSq = 0;
+
+if Break_Mode <> 0 then begin
+    for v_s = 0 to 2 begin
+        if v_BkOn[v_s] = 1 then begin
+
+            if CurrentBar > v_BkEnd[v_s] then begin
+                v_BkOn[v_s] = 0;
+                v_CntExp    = v_CntExp + 1;
+                if Print_Events <> 0 then begin
+                    v_Ymd = Date + 19000000;
+                    Print( "P29 BK_NONE ", v_Ymd:8:0, " ", Time:4:0,
+                           "  seq=", v_BkSeq[v_s]:4:0 );
+                end;
+            end
+            else if CurrentBar >= v_BkSt[v_s] then begin
+
+                if Close < v_BkDn[v_s] then begin
+                    v_BkOn[v_s] = 0;
+                    v_CntDn     = v_CntDn + 1;
+                    if v_BkHit <> 1 then begin
+                        v_BkHit   = 1;
+                        v_BkHitSq = v_BkSeq[v_s];
+                    end;
+                    if Print_Events <> 0 then begin
+                        v_Ymd = Date + 19000000;
+                        Print( "P29 BK_DOWN ", v_Ymd:8:0, " ", Time:4:0,
+                               "  seq=", v_BkSeq[v_s]:4:0,
+                               "  floor=", v_BkDn[v_s]:6:0,
+                               "  close=", Close:6:0 );
+                    end;
+                end
+                else if Close > v_BkUp[v_s] then begin
+                    v_BkOn[v_s] = 0;
+                    v_CntUp     = v_CntUp + 1;
+                    if v_BkHit = 0 then begin
+                        v_BkHit   = 2;
+                        v_BkHitSq = v_BkSeq[v_s];
+                    end;
+                    if Print_Events <> 0 then begin
+                        v_Ymd = Date + 19000000;
+                        Print( "P29 BK_UP   ", v_Ymd:8:0, " ", Time:4:0,
+                               "  seq=", v_BkSeq[v_s]:4:0,
+                               "  ceil=", v_BkUp[v_s]:6:0,
+                               "  close=", Close:6:0 );
+                    end;
+                end;
+
+            end;
+        end;
+    end;
+
+    { ---- the break label, sharing the formation's number so the two can be
+      matched by eye.  ASCII only, per CLAUDE.md rule 15 -- no arrows. ---- }
+    if Show_Labels <> 0 and v_BkHit <> 0 then begin
+        v_LblOff = ( High - Low ) * Label_Offset_Pct / 100;
+        if v_BkHit = 1 then
+            v_LblPx = Low - v_LblOff
+        else
+            v_LblPx = High + v_LblOff;
+        if v_BkHit = 1 then
+            v_Txt = Text_New( Date, Time, v_LblPx,
+                              "#" + NumToStr( v_BkHitSq, 0 ) + " DN" )
+        else
+            v_Txt = Text_New( Date, Time, v_LblPx,
+                              "#" + NumToStr( v_BkHitSq, 0 ) + " UP" );
+        if v_Txt >= 0 then begin
+            if v_BkHit = 1 then
+                Text_SetColor( v_Txt, Col_Break )
+            else
+                Text_SetColor( v_Txt, Col_BreakUp );
+            Text_SetSize( v_Txt, Label_Size );
+        end;
+    end;
+end;
+
     { ---------- SECTION 8 - PLOTS -------------------------------------
       Only the two extended trendlines, and only while the pattern can
       still act.  A dead pattern plots nothing, so what is on screen is
@@ -611,7 +814,19 @@ if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 then begin
 end;
 
 { ---- forward: while the pattern is still able to act ---- }
-if Paint_Mode <> 0 and ( v_State = 1 or v_State = 2 ) then begin
+{ The break bar outranks the formation body, and reuses the SAME PlotPaintBar
+  name.  A second PlotPaintBar would claim four more plot numbers and collide
+  with the trendlines at 5/6, the pivots at 7/8 and the state at 9 -- every one
+  of them would have to be renumbered.  One plot group, colour chosen per bar,
+  changes nothing else on the chart. }
+if Paint_Mode <> 0 and v_BkHit <> 0 then begin
+    if v_BkHit = 1 then
+        v_PaintCol = Col_Break
+    else
+        v_PaintCol = Col_BreakUp;
+    PlotPaintBar( High, Low, Open, Close, "P29", v_PaintCol );
+end
+else if Paint_Mode <> 0 and ( v_State = 1 or v_State = 2 ) then begin
     if v_State = 2 then
         v_PaintCol = Col_Testing
     else
@@ -657,3 +872,15 @@ else
     NoPlot( 9 );
 
 if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
+
+{ ---- the acceptance test, printed rather than eyeballed.  Against the full
+  2019-01-02 to 2026-08-22 series these must read 203 / 76 / 88 / 39 / 0.
+  Anything else means the port is wrong, not "close enough". ---- }
+if LastBarOnChart then begin
+    Print( "P29 TALLY  formations=", v_CntForm:5:0,
+           "  P49=", v_Seq49:5:0, "  P50=", v_Seq50:5:0 );
+    Print( "P29 TALLY  break_down=", v_CntDn:5:0,
+           "  break_up=", v_CntUp:5:0,
+           "  expired=", v_CntExp:5:0,
+           "  slot_overflow=", v_Overflow:5:0 );
+end;
