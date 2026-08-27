@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260842.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260843.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -19,6 +19,10 @@
             print -- bars, first, last, pivot counts -- because the MC12 run
             returned 199 formations against a reference of 203 and the four
             numbers separate a data difference from a code difference.
+    260843  per-year formation histogram.  P49 was short by 2 and P50 by 2,
+            so the M7 split is not the cause and four formations are simply
+            never seen.  Eight numbers say whether the shortfall sits in one
+            year -- a data window -- or is scattered.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
@@ -70,7 +74,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260842 ),
+    Build_ID                ( 260843 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -215,7 +219,8 @@ variables:
     v_NPvH                  ( 0     ),
     v_NPvL                  ( 0     ),
     v_FirstYmd              ( 0     ),
-    v_FirstTm               ( 0     );
+    v_FirstTm               ( 0     ),
+    v_Yr                    ( 0     );
 
 arrays:
     v_PvPx[7]               ( 0     ),
@@ -234,7 +239,12 @@ arrays:
     v_BkUp[3]               ( 0     ),     { ceiling price }
     v_BkSt[3]               ( 0     ),     { first bar the window is live }
     v_BkEnd[3]              ( 0     ),     { last bar the window is live }
-    v_BkSeq[3]              ( 0     );     { sequence no. for the label pair }
+    v_BkSeq[3]              ( 0     ),     { sequence no. for the label pair }
+
+    { 260843.  Formations per calendar year, 2019 at index 0.  Reference,
+      from scripts/research/s16s_p29_clean.json:
+        2019=9  2020=15  2021=18  2022=31  2023=24  2024=31  2025=42  2026=33 }
+    v_YrCnt[9]              ( 0     );
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
@@ -500,6 +510,9 @@ for v_k = 1 to 2 begin
               last pivot only confirms on the bar we are standing on, so acting
               here would be look-ahead. }
             v_CntForm = v_CntForm + 1;
+            v_Yr = IntPortion( Date / 10000 ) + 1900 - 2019;
+            if v_Yr >= 0 and v_Yr <= 8 then
+                v_YrCnt[v_Yr] = v_YrCnt[v_Yr] + 1;
             if v_Kind = 49 then begin
                 v_Seq49 = v_Seq49 + 1;
                 v_MySeq = v_Seq49;
@@ -960,6 +973,10 @@ if LastBarOnChart then begin
            "  last=", ( Date + 19000000 ):8:0, " ", Time:4:0 );
     Print( "P29 DIAG   pivot_high=", v_NPvH:7:0,
            "  pivot_low=", v_NPvL:7:0 );
+    Print( "P29 DIAG   by_year 2019..2026 = ",
+           v_YrCnt[0]:4:0, v_YrCnt[1]:4:0, v_YrCnt[2]:4:0, v_YrCnt[3]:4:0,
+           v_YrCnt[4]:4:0, v_YrCnt[5]:4:0, v_YrCnt[6]:4:0, v_YrCnt[7]:4:0 );
+    Print( "P29 DIAG   reference       =    9  15  18  31  24  31  42  33" );
     Print( "P29 TALLY  formations=", v_CntForm:5:0,
            "  P49=", v_Seq49:5:0, "  P50=", v_Seq50:5:0 );
     Print( "P29 TALLY  break_down=", v_CntDn:5:0,
