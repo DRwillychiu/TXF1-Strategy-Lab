@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260853.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260854.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -50,6 +50,16 @@
             three slots cannot hold P51 or P52, which is a reason those
             two ship OFF rather than something to hide.
     260853  records the MC12 verification above.  Comments only.
+    260854  P52 DIAG.  MC12 printed 1,716 P52 on a 421,455-bar chart; the
+            reference on that same window is 1,715, and the one frame the
+            full csv has extra sits at 2019-01-02 10:30-11:25, inside the
+            morning MC12 does not load.  So MC12 finds one the reference
+            does not, somewhere in the common data.  Ruled out already:
+            the enumeration (a rolling-chain replay of this file's own
+            algorithm gives 1,715 too), the branch conditions, and the
+            v_Ok reset, which sits inside the k loop.  A per-year row
+            localises it the way the P29 row did.  P29, P51, P53 and P54
+            all matched exactly, so this is contained to the P52 branch.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
@@ -154,7 +164,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260853 ),
+    Build_ID                ( 260854 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -359,6 +369,8 @@ arrays:
     v_BkSt[3]               ( 0     ),     { first bar the window is live }
     v_BkEnd[3]              ( 0     ),     { last bar the window is live }
     v_BkSeq[3]              ( 0     ),     { sequence no. for the label pair }
+    v_Yr52[8]               ( 0     ),     { 260854: P52 per year, to localise
+                                             the one-formation disagreement }
     v_BkVar[3]              ( 0     ),     { 260852: which variant owns the slot,
                                              so the tally stays P29-only }
 
@@ -643,8 +655,12 @@ for v_k = 1 to 2 begin
                 v_Kind = v_Var;
                 if v_Var = 51 then
                     v_Cnt51 = v_Cnt51 + 1;
-                if v_Var = 52 then
+                if v_Var = 52 then begin
                     v_Cnt52 = v_Cnt52 + 1;
+                    v_Yr = IntPortion( Date / 10000 ) + 1900 - 2019;
+                    if v_Yr >= 0 and v_Yr <= 7 then
+                        v_Yr52[v_Yr] = v_Yr52[v_Yr] + 1;
+                end;
                 if v_Var = 53 then
                     v_Cnt53 = v_Cnt53 + 1;
                 if v_Var = 54 then
@@ -1200,8 +1216,12 @@ if LastBarOnChart then begin
     Print( "P29 VARIANT  P29=", v_Cnt29:6:0,
            "  P51=", v_Cnt51:6:0, "  P52=", v_Cnt52:6:0,
            "  P53=", v_Cnt53:5:0, "  P54=", v_Cnt54:5:0 );
+    Print( "P52 DIAG   by_year 2019..2026 = ",
+           v_Yr52[0]:5:0, v_Yr52[1]:5:0, v_Yr52[2]:5:0, v_Yr52[3]:5:0,
+           v_Yr52[4]:5:0, v_Yr52[5]:5:0, v_Yr52[6]:5:0, v_Yr52[7]:5:0 );
+    Print( "P52 DIAG   reference          =    94  172  229  267  169  258  302  224" );
     Print( "P29 VARIANT  reference  202    1670    1716      7      8",
-           "   (each with its own switch on)" );
+           "   (P52 is 1715 if the chart starts 20190102 1340)" );
     Print( "P29 TALLY  break_down=", v_CntDn:5:0,
            "  break_up=", v_CntUp:5:0,
            "  expired=", v_CntExp:5:0,
