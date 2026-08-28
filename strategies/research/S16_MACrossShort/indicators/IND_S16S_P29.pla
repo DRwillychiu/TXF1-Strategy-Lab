@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260843.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260851.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -13,31 +13,60 @@
             rewritten by every later pivot push once the chain reaches six,
             while the slopes are only recomputed when the pattern test passes,
             so SECTION 7 was extending each line from a stranger's anchor.
-            It hit 203 of 203 patterns, first at a median of 3 bars in.
+            It hit 202 of 202 patterns, first at a median of 3 bars in.
     260842  v_PvDt / v_PvTm were missing from the six-slot shift, so a line
             started at the right price on the wrong bar.  Adds the P29 DIAG
             print -- bars, first, last, pivot counts -- because the MC12 run
-            returned 199 formations against a reference of 203 and the four
+            returned 199 formations against the reference and the four
             numbers separate a data difference from a code difference.
+    260850  the whole broadening family, not just P29.  P51 / P52 / P53 /
+            P54 join it behind their own switches, definitions transcribed
+            from s16s_p51_p54_scan.py.  P51 and P52 default OFF: 1,670 and
+            1,716 against P29's 202, so painting them buries the thing they
+            sit beside.  Ruling A1 had already called both attributes rather
+            than filters, and the switch default now matches the ruling.
     260843  per-year formation histogram.  P49 was short by 2 and P50 by 2,
             so the M7 split is not the cause and four formations are simply
             never seen.  Eight numbers say whether the shortfall sits in one
             year -- a data window -- or is scattered.
+    260851  every reference number in this file was wrong.  See REFERENCE
+            below: the count is 202, not 203, and the 203 was never
+            reproducible.  Corrected here: formations, the break split,
+            the per-year row, the pivot counts, the P51 / P52 totals and
+            the P49 / P50 split.  No detection logic changed.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
     trade.  Keeping them in separate files makes the first question -- is the
     implementation correct -- answerable on its own.  Print emits one line per
-    event; diff those lines against the 203 patterns that
+    event; diff those lines against the 202 patterns that
     scripts/research/s16s_p29_clean.py finds.  Any difference is an
     implementation bug, not a strategy question.
 
-    The count is 203, not 202.  The copy of s16s_p29_clean.json committed to
-    git was stale, so the earlier "202/202 verified" was measured against the
-    wrong reference.  The missing one is 2019-02-19 02:55 to 04:50.
+  REFERENCE, and why it says 202
+    Commit aa836a0 claimed the reference was 203 and that the committed json
+    was one pattern stale.  That claim does not survive a re-run.
+    s16s_p29_clean.py has no diff since that commit, s16s_5min.csv has not
+    been touched since 2026-08-25 10:36 -- which PREDATES it -- and the same
+    code on the same data now yields 202.  s16s_p51_p54_scan.py, which
+    rebuilds the frame independently, also yields 202.
+    The 203rd was 2019-02-19 02:55 to 04:50.  That window is missing four
+    bars in the csv (03:20, 03:50, 04:00, 04:40) and MC12 is missing the
+    same four, so both sides agree the pattern is not there.  Those four
+    timestamps occur ~1,850 times each across the series, so their absence
+    is a property of that night, not of the pipeline.
+    The reference is 202.  Every number below was re-measured on it.
 
   ACCEPTANCE, printed on the last bar as P29 TALLY
-    formations 203   break_down 76   break_up 88   expired 39   overflow 0
+    P29 only, the defaults:
+      formations 202   break_down 75   break_up 88   expired 39   overflow 0
+      P49 112   P50 90
+      break split from s16s_break_outcome.py, C1 close x D2 horizontal --
+      the pairing this file draws.  75 + 88 + 39 = 202.
+    per variant, each measured on its own switch:
+      P29 202    P51 1,670    P52 1,716    P53 7    P54 8
+    P53 and P54 are near-never: eight years, four of them empty for each.
+    Their absence is the finding, so they stay switched on.
 
   WHAT IT DETECTS
     P29  six alternating fractal pivots, three highs rising and three lows
@@ -74,7 +103,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260843 ),
+    Build_ID                ( 260851 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -117,6 +146,31 @@ inputs:
       project.  The sloped-trendline alternative was rejected on evidence --
       it reports P51 breaking down 78% of the time and 96.5% of those fire
       while price is still above the formation's own lowest low. ---- }
+    { ---- broadening family, 2026-08-28.  Seven variants share one frame:
+      six alternating pivots, symmetric 3+3, lows under highs.  Only the two
+      EDGES differ.  Definitions transcribed from s16s_p51_p54_scan.py, which
+      is the reference the counts below were measured on.
+
+      P51 and P52 default OFF and that is the point.  They fire 1,670 and
+      1,716 times against P29's 202 -- 219 and 225 per year, one every 1.5
+      trading days.  Painting them is the 35.9-percent pivot zigzag of
+      2026-08-26 all over again: the 27-a-year formations vanish inside them.
+      Ruling A1 already classed both as ATTRIBUTES rather than filters for
+      exactly this reason, so the switch default matches the ruling.
+
+      P53 and P54 default ON.  Seven and eight in eight years, four of those
+      years empty -- ruling B1 marks them "coded, near-never fires".  They
+      cost nothing on screen and their absence is itself worth seeing. ---- }
+    Enable_P29              ( 1       ),   { 202.  highs rise, lows fall }
+    Enable_P51              ( 0       ),   { 1,670.  both rise, highs faster }
+    Enable_P52              ( 0       ),   { 1,716.  both fall, lows faster }
+    Enable_P53              ( 1       ),   { 7.  flat top, lows fall }
+    Enable_P54              ( 1       ),   { 8.  highs rise, flat bottom }
+    Col_Shape_P51           ( DarkGreen ),
+    Col_Shape_P52           ( DarkRed   ),
+    Col_Shape_P53           ( DarkCyan  ),
+    Col_Shape_P54           ( DarkBrown ),
+
     Break_Mode              ( 1       ),   { 0 off, 1 track and paint breaks }
     Col_Break               ( White   ),   { the bar that closes below the floor }
     Col_BreakUp             ( Green   ),   { closes above the ceiling.  NOT a dark
@@ -153,7 +207,20 @@ variables:
     v_PaintCol              ( 0     ),
     v_PaintBack             ( 0     ),
     v_pk                    ( 0     ),     { 0 none 1 active 2 testing 3 dead }
-    v_Kind                  ( 0     ),     { 49 top, 50 bottom }
+    v_Kind                  ( 0     ),     { 49 top, 50 bottom, else = v_Var }
+    v_Var                   ( 0     ),     { 29 / 51 / 52 / 53 / 54 }
+    v_RiseH                 ( False ),
+    v_FallH                 ( False ),
+    v_FlatH                 ( False ),
+    v_RiseL                 ( False ),
+    v_FallL                 ( False ),
+    v_FlatL                 ( False ),
+    v_LowUnder              ( False ),
+    v_Cnt29                 ( 0     ),
+    v_Cnt51                 ( 0     ),
+    v_Cnt52                 ( 0     ),
+    v_Cnt53                 ( 0     ),
+    v_Cnt54                 ( 0     ),
     v_TestDir               ( 0     ),     { 1 up, 2 down }
     v_StartBar              ( 0     ),
     v_LastBar               ( 0     ),
@@ -206,14 +273,14 @@ variables:
       the chain reaches six, but v_SlopeUp / v_SlopeDn are only recomputed when
       the pattern test passes.  Extending from the shared variables therefore
       mixes a later pivot's anchor with this pattern's slope.  Measured: it hits
-      203 of 203 patterns, first at a median of 3 bars in. ---- }
+      202 of 202 patterns, first at a median of 3 bars in. ---- }
     v_AncH                  ( 0     ),
     v_AncL                  ( 0     ),
     v_AncHb                 ( 0     ),
     v_AncLb                 ( 0     ),
 
-    { ---- 260842 diagnostics.  199 against a reference of 203, with the
-      tracker internally consistent, means four formations were never seen.
+    { ---- 260842 diagnostics.  199 against a reference of 202, with the
+      tracker internally consistent, means three formations were never seen.
       These four numbers say whether the INPUT differs or the CODE does. ---- }
     v_NBars                 ( 0     ),
     v_NPvH                  ( 0     ),
@@ -231,9 +298,10 @@ arrays:
     v_PvDt[7]               ( 0     ),     { latched so TL_New needs no lookback }
     v_PvTm[7]               ( 0     ),
 
-    { three slots.  measured: 25 of 203 formations start while the previous
-      break window is still open (12.3%), and 3 is the maximum concurrency
-      over 421,513 bars.  a single slot would drop 8 of the 76 break-downs. }
+    { three slots.  re-measured on the 202 reference: 26 formations start
+      while a previous break window is still open (12.9%), and 3 is the
+      maximum concurrency over 421,513 bars.  window = confirmation bar to
+      confirmation + life, per section 6.  three slots is still correct. }
     v_BkOn[3]               ( 0     ),     { 1 = slot in use }
     v_BkDn[3]               ( 0     ),     { floor price }
     v_BkUp[3]               ( 0     ),     { ceiling price }
@@ -461,10 +529,43 @@ for v_k = 1 to 2 begin
                 v_Order = 2;
             end;
 
-            if v_H1 < v_H2 and v_H2 < v_H3
-               and v_L1 > v_L2 and v_L2 > v_L3
-               and v_L1 < v_H1 and v_L3 < v_H3 then
-                v_Ok = True;
+            { ---- classify into the seven variants ----
+              rise / fall / flat are strict and exact.  "Equal" means EXACTLY
+              equal, the same zero-parameter convention P29 already uses for
+              the tweezers and matching-high candlestick patterns.  A tolerance
+              here would be the first swept threshold in the family, and the
+              scan measured what it would cost: one tick of slack takes P53
+              from 7 to 40-plus, so the constant would be doing the work the
+              shape is supposed to do. }
+            v_RiseH = ( v_H1 < v_H2 ) and ( v_H2 < v_H3 );
+            v_FallH = ( v_H1 > v_H2 ) and ( v_H2 > v_H3 );
+            v_FlatH = ( v_H1 = v_H2 ) and ( v_H2 = v_H3 );
+            v_RiseL = ( v_L1 < v_L2 ) and ( v_L2 < v_L3 );
+            v_FallL = ( v_L1 > v_L2 ) and ( v_L2 > v_L3 );
+            v_FlatL = ( v_L1 = v_L2 ) and ( v_L2 = v_L3 );
+            v_LowUnder = ( v_L1 < v_H1 ) and ( v_L3 < v_H3 );
+
+            v_Var = 0;
+            if v_LowUnder then begin
+                if v_RiseH and v_FallL then
+                    v_Var = 29
+                else if v_RiseH and v_RiseL
+                        and ( v_H3 - v_H1 ) > ( v_L3 - v_L1 ) then
+                    v_Var = 51
+                else if v_FallH and v_FallL
+                        and AbsValue( v_L3 - v_L1 ) > AbsValue( v_H3 - v_H1 ) then
+                    v_Var = 52
+                else if v_FlatH and v_FallL then
+                    v_Var = 53
+                else if v_RiseH and v_FlatL then
+                    v_Var = 54;
+            end;
+
+            if v_Var = 29 and Enable_P29 <> 0 then v_Ok = True;
+            if v_Var = 51 and Enable_P51 <> 0 then v_Ok = True;
+            if v_Var = 52 and Enable_P52 <> 0 then v_Ok = True;
+            if v_Var = 53 and Enable_P53 <> 0 then v_Ok = True;
+            if v_Var = 54 and Enable_P54 <> 0 then v_Ok = True;
         end;
 
         { ---- adopt ---- }
@@ -475,9 +576,27 @@ for v_k = 1 to 2 begin
             v_Life     = v_LastBar - v_StartBar;
 
             { ruling 12: M7 is read at the pattern's FIRST pivot }
-            v_Kind = 50;
-            if v_PvM7[0] > 0 then
-                v_Kind = 49;
+            { Only P29 splits by M7.  The other four are told apart by their
+              own edges, so v_Kind carries the variant number unchanged and
+              every label, colour and count downstream keeps working off one
+              field instead of two. }
+            if v_Var = 29 then begin
+                v_Kind = 50;
+                if v_PvM7[0] > 0 then
+                    v_Kind = 49;
+                v_Cnt29 = v_Cnt29 + 1;
+            end
+            else begin
+                v_Kind = v_Var;
+                if v_Var = 51 then
+                    v_Cnt51 = v_Cnt51 + 1;
+                if v_Var = 52 then
+                    v_Cnt52 = v_Cnt52 + 1;
+                if v_Var = 53 then
+                    v_Cnt53 = v_Cnt53 + 1;
+                if v_Var = 54 then
+                    v_Cnt54 = v_Cnt54 + 1;
+            end;
 
             { E1: each line runs through the LAST TWO pivots of its kind }
             v_SlopeUp = 0;
@@ -552,7 +671,10 @@ for v_k = 1 to 2 begin
               within this chart's range, not since 2019. }
             if Show_Labels <> 0 then begin
                 v_LblOff = ( v_Ceil - v_Floor ) * Label_Offset_Pct / 100;
-                if v_Kind = 49 then
+                { top-shaped variants label above the ceiling, bottom-shaped
+                  below the floor.  P49 broadening top and P53 flat-top sit
+                  above; P50, P51, P52 and P54 sit below. }
+                if v_Kind = 49 or v_Kind = 53 then
                     v_LblPx = v_Ceil + v_LblOff
                 else
                     v_LblPx = v_Floor - v_LblOff;
@@ -562,8 +684,16 @@ for v_k = 1 to 2 begin
                 if v_Txt >= 0 then begin
                     if v_Kind = 49 then
                         Text_SetColor( v_Txt, Col_Shape_Top )
+                    else if v_Kind = 50 then
+                        Text_SetColor( v_Txt, Col_Shape_Bot )
+                    else if v_Kind = 51 then
+                        Text_SetColor( v_Txt, Col_Shape_P51 )
+                    else if v_Kind = 52 then
+                        Text_SetColor( v_Txt, Col_Shape_P52 )
+                    else if v_Kind = 53 then
+                        Text_SetColor( v_Txt, Col_Shape_P53 )
                     else
-                        Text_SetColor( v_Txt, Col_Shape_Bot );
+                        Text_SetColor( v_Txt, Col_Shape_P54 );
                     Text_SetSize( v_Txt, Label_Size );
                 end;
             end;
@@ -893,8 +1023,16 @@ if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 then begin
       information was being computed and thrown away at the screen. }
     if v_Kind = 49 then
         v_PaintCol = Col_Shape_Top
+    else if v_Kind = 50 then
+        v_PaintCol = Col_Shape_Bot
+    else if v_Kind = 51 then
+        v_PaintCol = Col_Shape_P51
+    else if v_Kind = 52 then
+        v_PaintCol = Col_Shape_P52
+    else if v_Kind = 53 then
+        v_PaintCol = Col_Shape_P53
     else
-        v_PaintCol = Col_Shape_Bot;
+        v_PaintCol = Col_Shape_P54;
     for v_pk = 1 to v_PaintBack begin
         PlotPaintBar[v_pk]( High[v_pk], Low[v_pk], Open[v_pk], Close[v_pk],
                             "P29", v_PaintCol );
@@ -962,12 +1100,12 @@ else
 if CurrentBar = 1 then Print( "IND_S16S_P29 build ", Build_ID:6:0 );
 
 { ---- the acceptance test, printed rather than eyeballed.  Against the full
-  2019-01-02 to 2026-08-22 series these must read 203 / 76 / 88 / 39 / 0.
+  2019-01-02 to 2026-08-22 series these must read 202 / 75 / 88 / 39 / 0.
   Anything else means the port is wrong, not "close enough". ---- }
 if LastBarOnChart then begin
     { the reference, measured from scripts/research/s16s_5min.csv:
       bars 421,513   first 20190102 0850   last 20260822 0500
-      pivot_high 75,127   pivot_low 76,020 }
+      pivot_high 75,145   pivot_low 76,032 }
     Print( "P29 DIAG   bars=", v_NBars:8:0,
            "  first=", v_FirstYmd:8:0, " ", v_FirstTm:4:0,
            "  last=", ( Date + 19000000 ):8:0, " ", Time:4:0 );
@@ -976,9 +1114,15 @@ if LastBarOnChart then begin
     Print( "P29 DIAG   by_year 2019..2026 = ",
            v_YrCnt[0]:4:0, v_YrCnt[1]:4:0, v_YrCnt[2]:4:0, v_YrCnt[3]:4:0,
            v_YrCnt[4]:4:0, v_YrCnt[5]:4:0, v_YrCnt[6]:4:0, v_YrCnt[7]:4:0 );
-    Print( "P29 DIAG   reference       =    9  15  18  31  24  31  42  33" );
+    Print( "P29 DIAG   reference       =    8  15  18  31  24  31  42  33" );
     Print( "P29 TALLY  formations=", v_CntForm:5:0,
            "  P49=", v_Seq49:5:0, "  P50=", v_Seq50:5:0 );
+    Print( "P29 TALLY  reference     202          112        90" );
+    Print( "P29 VARIANT  P29=", v_Cnt29:6:0,
+           "  P51=", v_Cnt51:6:0, "  P52=", v_Cnt52:6:0,
+           "  P53=", v_Cnt53:5:0, "  P54=", v_Cnt54:5:0 );
+    Print( "P29 VARIANT  reference  202    1670    1716      7      8",
+           "   (each with its own switch on)" );
     Print( "P29 TALLY  break_down=", v_CntDn:5:0,
            "  break_up=", v_CntUp:5:0,
            "  expired=", v_CntExp:5:0,
