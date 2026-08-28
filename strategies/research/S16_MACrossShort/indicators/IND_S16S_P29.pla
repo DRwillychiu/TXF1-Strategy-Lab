@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260854.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260855.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -60,6 +60,11 @@
             v_Ok reset, which sits inside the k loop.  A per-year row
             localises it the way the P29 row did.  P29, P51, P53 and P54
             all matched exactly, so this is contained to the P52 branch.
+    260855  all five variants ON by default, per the 2026-08-28 ruling: a
+            shape that occurs gets drawn and labelled, full stop.  Break
+            slots 3 -> 8; with every variant detecting, 3,602 formations
+            share the window and measured peak concurrency is 6, so three
+            slots would have overflowed and stolen slot 0 from a live P29.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
@@ -110,12 +115,20 @@
     never recorded, so a shorter chart is the remaining explanation and it
     cannot be confirmed after the fact.
 
-    P51 and P52 are still UNMEASURED in MC12.  The verified run had both
-    switches at their default 0, so the two zeros it printed are what the
-    switches say, not what the detector found.  On the 421,455-bar window
-    their targets are P51 1,670 and P52 1,715 -- P52 is ONE below the
-    full-csv 1,716 because a P52 formation sits in that first morning.
-    P29, P51, P53 and P54 are unchanged by the cut.
+    P51 and P52 were measured on 2026-08-28 with their switches on:
+
+      P29 202   P51 1670   P52 1716   P53 7   P54 8
+
+    P51, P53 and P54 exact.  P52 is ONE above the 1,715 the reference gives
+    for a chart starting 20190102 1340, and the one frame the full csv has
+    extra sits at 2019-01-02 10:30-11:25, inside the morning MC12 does not
+    load -- so the extra one is in the common data.  OPEN, and deliberately
+    parked.  Ruled out by measurement: the enumeration (a rolling-chain
+    replay of this file's own algorithm also gives 1,715), the branch
+    conditions, the v_Ok reset, and the floating-point tie (86 frames have
+    AbsValue(dL) exactly equal to AbsValue(dH); treating those as passing
+    would be +86, not +1).  v_Yr52 is in place to localise it by year when
+    it is worth the round.  Scope: one label in 3,602.
 
   ACCEPTANCE, printed on the last bar as P29 TALLY
     P29 only, the defaults:
@@ -124,10 +137,11 @@
       P49 112   P50 90
       break split from s16s_break_outcome.py, C1 close x D2 horizontal --
       the pairing this file draws.  75 + 88 + 39 = 202.
-    per variant, each measured on its own switch:
+    per variant, all five now counted in ONE run because all five detect:
       P29 202    P51 1,670    P52 1,716    P53 7    P54 8
+      3,602 formations in total, roughly 11,000 drawing objects.
     P53 and P54 are near-never: eight years, four of them empty for each.
-    Their absence is the finding, so they stay switched on.
+    Their absence is the finding, which is why nothing is switched off.
 
   WHAT IT DETECTS
     P29  six alternating fractal pivots, three highs rising and three lows
@@ -164,7 +178,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260854 ),
+    Build_ID                ( 260855 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -212,19 +226,23 @@ inputs:
       EDGES differ.  Definitions transcribed from s16s_p51_p54_scan.py, which
       is the reference the counts below were measured on.
 
-      P51 and P52 default OFF and that is the point.  They fire 1,670 and
-      1,716 times against P29's 202 -- 219 and 225 per year, one every 1.5
-      trading days.  Painting them is the 35.9-percent pivot zigzag of
-      2026-08-26 all over again: the 27-a-year formations vanish inside them.
-      Ruling A1 already classed both as ATTRIBUTES rather than filters for
-      exactly this reason, so the switch default matches the ruling.
+      ALL FIVE DEFAULT ON.  Ruling of 2026-08-28: "if a shape occurs in the
+      tape, draw it and label it -- that simple."
 
-      P53 and P54 default ON.  Seven and eight in eight years, four of those
-      years empty -- ruling B1 marks them "coded, near-never fires".  They
-      cost nothing on screen and their absence is itself worth seeing. ---- }
+      260850 shipped P51 and P52 OFF because they fire 1,670 and 1,716 times
+      against P29's 202 and would bury it on screen.  That was an aesthetic
+      call standing in for a spec, and it broke the 2026-08-21 ruling that the
+      census be complete: Enable_Pxx does not merely hide a variant, it stops
+      v_Ok, so the shape is never registered, never counted, never classified.
+      "I would rather not look at it" had become "it is not measured".
+
+      The clutter is real -- 3,602 formations, roughly 11,000 drawing objects.
+      If MC12 cannot carry that, the answer is to bound the DRAWN RANGE, the
+      way Paint_MaxBack already bounds the back-paint.  It is not to stop
+      detecting a shape that happened. ---- }
     Enable_P29              ( 1       ),   { 202.  highs rise, lows fall }
-    Enable_P51              ( 0       ),   { 1,670.  both rise, highs faster }
-    Enable_P52              ( 0       ),   { 1,716.  both fall, lows faster }
+    Enable_P51              ( 1       ),   { 1,670.  both rise, highs faster }
+    Enable_P52              ( 1       ),   { 1,716.  both fall, lows faster }
     Enable_P53              ( 1       ),   { 7.  flat top, lows fall }
     Enable_P54              ( 1       ),   { 8.  highs rise, flat bottom }
     Col_Shape_P51           ( DarkGreen ),
@@ -359,19 +377,21 @@ arrays:
     v_PvDt[7]               ( 0     ),     { latched so TL_New needs no lookback }
     v_PvTm[7]               ( 0     ),
 
-    { three slots.  re-measured on the 202 reference: 26 formations start
-      while a previous break window is still open (12.9%), and 3 is the
-      maximum concurrency over 421,513 bars.  window = confirmation bar to
-      confirmation + life, per section 6.  three slots is still correct. }
-    v_BkOn[3]               ( 0     ),     { 1 = slot in use }
-    v_BkDn[3]               ( 0     ),     { floor price }
-    v_BkUp[3]               ( 0     ),     { ceiling price }
-    v_BkSt[3]               ( 0     ),     { first bar the window is live }
-    v_BkEnd[3]              ( 0     ),     { last bar the window is live }
-    v_BkSeq[3]              ( 0     ),     { sequence no. for the label pair }
+    { EIGHT slots.  three was sized for P29 alone.  With all five variants
+      detecting, 3,602 formations share the window and the measured maximum
+      concurrency is 6, so three would have overflowed and silently stolen
+      slot 0 from a live P29.  Eight leaves two spare.  window = confirmation
+      bar to confirmation + life, per section 6.  slot_overflow must read 0;
+      if it ever does not, this array is undersized again. }
+    v_BkOn[8]               ( 0     ),     { 1 = slot in use }
+    v_BkDn[8]               ( 0     ),     { floor price }
+    v_BkUp[8]               ( 0     ),     { ceiling price }
+    v_BkSt[8]               ( 0     ),     { first bar the window is live }
+    v_BkEnd[8]              ( 0     ),     { last bar the window is live }
+    v_BkSeq[8]              ( 0     ),     { sequence no. for the label pair }
     v_Yr52[8]               ( 0     ),     { 260854: P52 per year, to localise
                                              the one-formation disagreement }
-    v_BkVar[3]              ( 0     ),     { 260852: which variant owns the slot,
+    v_BkVar[8]              ( 0     ),     { 260852: which variant owns the slot,
                                              so the tally stays P29-only }
 
     { 260843.  Formations per calendar year, 2019 at index 0.  Reference,
@@ -737,7 +757,7 @@ for v_k = 1 to 2 begin
 
             if Break_Mode <> 0 then begin
                 v_Free = -1;
-                for v_s = 0 to 2 begin
+                for v_s = 0 to 7 begin
                     if v_Free < 0 and v_BkOn[v_s] = 0 then
                         v_Free = v_s;
                 end;
@@ -974,7 +994,7 @@ v_BkHit   = 0;
 v_BkHitSq = 0;
 
 if Break_Mode <> 0 then begin
-    for v_s = 0 to 2 begin
+    for v_s = 0 to 7 begin
         if v_BkOn[v_s] = 1 then begin
 
             if CurrentBar > v_BkEnd[v_s] then begin
