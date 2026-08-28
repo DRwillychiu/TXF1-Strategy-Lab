@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260852.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260853.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -49,6 +49,7 @@
             slot_overflow stays GLOBAL -- it is a capacity diagnostic and
             three slots cannot hold P51 or P52, which is a reason those
             two ship OFF rather than something to hide.
+    260853  records the MC12 verification above.  Comments only.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
@@ -71,6 +72,37 @@
     timestamps occur ~1,850 times each across the series, so their absence
     is a property of that night, not of the pipeline.
     The reference is 202.  Every number below was re-measured on it.
+
+  VERIFIED IN MC12, 2026-08-28, build 260852
+    Every instrument matched exactly, on a chart whose first bar was
+    2019-01-02 13:40 rather than the csv's 08:50:
+
+      bars 421,455   pivot_high 75,136   pivot_low 76,017
+      formations 202   P49 112   P50 90
+      by_year 8 15 18 31 24 31 42 33
+      break_down 75   break_up 88   expired 39   slot_overflow 0
+
+    The bar and pivot figures sit below the csv reference because MC12 loaded
+    58 fewer bars -- the whole 08:50 to 13:35 of the first session.  Cutting
+    the csv to the same first bar reproduces 421,455 / 75,136 / 76,017 exactly,
+    and the 202 is unchanged, so nothing was lost but that first morning.
+    Read the pivot reference below as the FULL-csv figure; a chart that starts
+    later will legitimately print fewer, and only the P29 count is invariant.
+
+    The 199 that build 260842 reported is not explained by code.  The P29
+    condition in 260843 was
+
+        v_H1 < v_H2 and v_H2 < v_H3 and v_L1 > v_L2 and v_L2 > v_L3
+        and v_L1 < v_H1 and v_L3 < v_H3
+
+    which is exactly what v_RiseH and v_FallL and v_LowUnder evaluate to now.
+    Detection did not change between the two builds.  That run's bars= was
+    never recorded, so a shorter chart is the remaining explanation and it
+    cannot be confirmed after the fact.
+
+    P51 and P52 are still UNMEASURED in MC12.  The verified run had both
+    switches at their default 0, so the two zeros it printed are what the
+    switches say, not what the detector found.
 
   ACCEPTANCE, printed on the last bar as P29 TALLY
     P29 only, the defaults:
@@ -119,7 +151,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260852 ),
+    Build_ID                ( 260853 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
