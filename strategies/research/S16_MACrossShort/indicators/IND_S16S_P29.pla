@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260851.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260852.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -34,6 +34,21 @@
             reproducible.  Corrected here: formations, the break split,
             the per-year row, the pivot counts, the P51 / P52 totals and
             the P49 / P50 split.  No detection logic changed.
+    260852  the P29 acceptance instruments were counting every enabled
+            variant.  With the shipped defaults (P29 + P53 + P54) the
+            formation count would have read 217, the per-year row would
+            not have matched its reference, and P53 / P54 fell into the
+            else branch and drew their labels off the P50 sequence -- so
+            "P53 #91" would have carried a P50 number.  v_CntForm,
+            v_YrCnt, v_Seq49 and v_Seq50 are now gated on v_Var = 29, and
+            P51-P54 number themselves off their own counters.  The
+            acceptance count now holds under ANY switch combination.
+            The break tally is gated the same way, through a new v_BkVar
+            slot field, so formations / break_down / break_up / expired
+            still sum to 202 with P53 and P54 drawing beside them.
+            slot_overflow stays GLOBAL -- it is a capacity diagnostic and
+            three slots cannot hold P51 or P52, which is a reason those
+            two ship OFF rather than something to hide.
 
   WHY AN INDICATOR FIRST
     The pattern layer publishes STATE.  The signal layer decides whether to
@@ -60,6 +75,7 @@
   ACCEPTANCE, printed on the last bar as P29 TALLY
     P29 only, the defaults:
       formations 202   break_down 75   break_up 88   expired 39   overflow 0
+      these six are P29-only and hold under any switch combination
       P49 112   P50 90
       break split from s16s_break_outcome.py, C1 close x D2 horizontal --
       the pairing this file draws.  75 + 88 + 39 = 202.
@@ -103,7 +119,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260851 ),
+    Build_ID                ( 260852 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -308,6 +324,8 @@ arrays:
     v_BkSt[3]               ( 0     ),     { first bar the window is live }
     v_BkEnd[3]              ( 0     ),     { last bar the window is live }
     v_BkSeq[3]              ( 0     ),     { sequence no. for the label pair }
+    v_BkVar[3]              ( 0     ),     { 260852: which variant owns the slot,
+                                             so the tally stays P29-only }
 
     { 260843.  Formations per calendar year, 2019 at index 0.  Reference,
       from scripts/research/s16s_p29_clean.json:
@@ -628,17 +646,39 @@ for v_k = 1 to 2 begin
               latched.  The window opens NEXT bar, which is p_last + 2: the
               last pivot only confirms on the bar we are standing on, so acting
               here would be look-ahead. }
-            v_CntForm = v_CntForm + 1;
-            v_Yr = IntPortion( Date / 10000 ) + 1900 - 2019;
-            if v_Yr >= 0 and v_Yr <= 8 then
-                v_YrCnt[v_Yr] = v_YrCnt[v_Yr] + 1;
-            if v_Kind = 49 then begin
-                v_Seq49 = v_Seq49 + 1;
-                v_MySeq = v_Seq49;
+            { 260852: these four are the P29 ACCEPTANCE instruments and must
+              stay P29-only.  Left ungated they counted every enabled variant,
+              so the shipped defaults would have printed 217 formations
+              against a reference of 202 and put P53 / P54 on the P50
+              sequence.  Gating here keeps the acceptance test meaningful no
+              matter which switches are on. }
+            if v_Var = 29 then begin
+                v_CntForm = v_CntForm + 1;
+                v_Yr = IntPortion( Date / 10000 ) + 1900 - 2019;
+                if v_Yr >= 0 and v_Yr <= 8 then
+                    v_YrCnt[v_Yr] = v_YrCnt[v_Yr] + 1;
+                if v_Kind = 49 then begin
+                    v_Seq49 = v_Seq49 + 1;
+                    v_MySeq = v_Seq49;
+                end
+                else begin
+                    v_Seq50 = v_Seq50 + 1;
+                    v_MySeq = v_Seq50;
+                end;
             end
             else begin
-                v_Seq50 = v_Seq50 + 1;
-                v_MySeq = v_Seq50;
+                { each variant numbers itself off the counter the
+                  classification cascade already incremented, so a label
+                  reads "P53 #1", "P53 #2" and not a borrowed P50 number. }
+                v_MySeq = 0;
+                if v_Var = 51 then
+                    v_MySeq = v_Cnt51;
+                if v_Var = 52 then
+                    v_MySeq = v_Cnt52;
+                if v_Var = 53 then
+                    v_MySeq = v_Cnt53;
+                if v_Var = 54 then
+                    v_MySeq = v_Cnt54;
             end;
 
             v_Floor = MinList( v_L1, v_L2, v_L3 );
@@ -663,6 +703,7 @@ for v_k = 1 to 2 begin
                 v_BkSt[v_Free]  = CurrentBar + 1;
                 v_BkEnd[v_Free] = CurrentBar + 1 + v_Life;
                 v_BkSeq[v_Free] = v_MySeq;
+                v_BkVar[v_Free] = v_Var;
             end;
 
             { ---- the label.  Kind plus its own running number, so the last
@@ -887,7 +928,8 @@ if Break_Mode <> 0 then begin
 
             if CurrentBar > v_BkEnd[v_s] then begin
                 v_BkOn[v_s] = 0;
-                v_CntExp    = v_CntExp + 1;
+                if v_BkVar[v_s] = 29 then
+                    v_CntExp = v_CntExp + 1;
                 if Print_Events <> 0 then begin
                     v_Ymd = Date + 19000000;
                     Print( "P29 BK_NONE ", v_Ymd:8:0, " ", Time:4:0,
@@ -898,7 +940,8 @@ if Break_Mode <> 0 then begin
 
                 if Close < v_BkDn[v_s] then begin
                     v_BkOn[v_s] = 0;
-                    v_CntDn     = v_CntDn + 1;
+                    if v_BkVar[v_s] = 29 then
+                        v_CntDn = v_CntDn + 1;
                     if v_BkHit <> 1 then begin
                         v_BkHit   = 1;
                         v_BkHitSq = v_BkSeq[v_s];
@@ -913,7 +956,8 @@ if Break_Mode <> 0 then begin
                 end
                 else if Close > v_BkUp[v_s] then begin
                     v_BkOn[v_s] = 0;
-                    v_CntUp     = v_CntUp + 1;
+                    if v_BkVar[v_s] = 29 then
+                        v_CntUp = v_CntUp + 1;
                     if v_BkHit = 0 then begin
                         v_BkHit   = 2;
                         v_BkHitSq = v_BkSeq[v_s];
