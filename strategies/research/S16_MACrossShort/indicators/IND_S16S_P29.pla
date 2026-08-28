@@ -102,7 +102,10 @@
 
     P51 and P52 are still UNMEASURED in MC12.  The verified run had both
     switches at their default 0, so the two zeros it printed are what the
-    switches say, not what the detector found.
+    switches say, not what the detector found.  On the 421,455-bar window
+    their targets are P51 1,670 and P52 1,715 -- P52 is ONE below the
+    full-csv 1,716 because a P52 formation sits in that first morning.
+    P29, P51, P53 and P54 are unchanged by the cut.
 
   ACCEPTANCE, printed on the last bar as P29 TALLY
     P29 only, the defaults:
