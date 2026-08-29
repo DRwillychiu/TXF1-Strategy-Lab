@@ -8,6 +8,7 @@
 | **缺口型態組 P31／P62／P67** | https://claude.ai/code/artifact/572a7a51-447c-4762-a0da-2d62f930b0db | `docs/research/S16S_gap_group_diagram.html` | `scripts/research/s16s_gap_make_diagram.py` ＋ `_diagram.css` |
 | **鑽石型態 P30／P61** | https://claude.ai/code/artifact/b6deabc7-3607-4647-a0c8-5766d5f74a18 | `docs/research/S16S_diamond_diagram.html` | `scripts/research/s16s_diamond_make_diagram.py` ＋ `_diagram.css` |
 | **★ 型態層總覽**（狀態表） | https://claude.ai/code/artifact/95285d4d-a64a-47d7-a81e-15cd2db8c2a9 | `docs/research/S16S_pattern_layer_status.html` | `scripts/research/s16s_status_make_page.py` |
+| **樞紐型 A 組七型態** | https://claude.ai/code/artifact/adf56543-4a72-4048-9d68-cdb65f9bed57 | `docs/research/S16S_groupA_diagram.html` | `scripts/research/s16s_groupA_make_page.py` |
 | **型態全圖鑑**（143 種） | https://claude.ai/code/artifact/22fa588b-51f5-43ce-8e11-bc301d4c35ef | `docs/research/S16S_pattern_atlas_full.html` | `scripts/research/s16s_make_full_atlas.py` ＋ `_atlas.css` |
 | **P51-P54 擴散楔形家族** | https://claude.ai/code/artifact/62ab6ce8-09e2-4deb-a7f3-784357258278 | `docs/research/S16S_P51_P54_diagram.html` | `scripts/research/s16s_p51_p54_make_diagram.py` ＋ `_diagram.css` |
 | **P49 / P50 擴散頂底示意圖** | https://claude.ai/code/artifact/30ee09ef-fae0-4742-9323-12c7a3cb7e67 | `docs/research/S16S_P49_P50_diagram.html` | `scripts/research/s16s_p49_make_diagram.py` |

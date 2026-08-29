@@ -1,0 +1,176 @@
+<title>樞紐型 A 組七型態</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
+  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}}
+:root[data-theme="dark"]{
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}
+:root[data-theme="light"]{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px;
+  display:flex;flex-direction:column;gap:34px}
+.top{display:flex;flex-direction:column;gap:9px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink3)}
+h1{font-family:var(--serif);font-weight:700;margin:0;
+  font-size:clamp(26px,4vw,38px);letter-spacing:-.01em;text-wrap:balance}
+.sub{margin:0;color:var(--ink2);font-size:15px;max-width:72ch}
+.sub b{color:var(--ink);font-weight:700}
+.kpi{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.kpi span{display:flex;flex-direction:column;gap:1px;padding:8px 14px;
+  border:1px solid var(--line);border-radius:4px;background:var(--card);
+  font-size:11.5px;color:var(--ink3)}
+.kpi b{font-family:var(--mono);font-size:17px;color:var(--ink);font-weight:500;
+  font-variant-numeric:tabular-nums}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:20px 22px;display:flex;flex-direction:column;gap:13px}
+.ph2{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin:0}
+.ph2 h2{font-family:var(--serif);font-size:18px;font-weight:700;margin:0}
+.ph2 .tag{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.plot{width:100%;overflow-x:auto}
+.plot svg{width:100%;min-width:680px;height:auto;display:block}
+.cap{margin:0;font-size:12.5px;color:var(--ink3);
+  border-top:1px solid var(--line2);padding-top:9px}
+.cap b{color:var(--ink2)}
+.px{fill:none;stroke:var(--ink2);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tlu,.tld{stroke-width:1.5;stroke-dasharray:5 3.5;fill:none;opacity:.9}
+.tlu{stroke:var(--ph)}.tld{stroke:var(--pl)}
+.tlu.solid,.tld.solid{stroke-dasharray:none;stroke-width:2.2;opacity:1}
+.mid{stroke:var(--midc);stroke-width:1.4;stroke-dasharray:1.5 3;stroke-linecap:round}
+.midpt{fill:var(--midc)}
+.map{stroke:var(--map);stroke-width:1.3;stroke-dasharray:4 3;opacity:.85}
+.zone{fill:var(--zone);stroke:var(--map);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.zt{font-family:var(--mono);font-size:11px;fill:var(--map);text-anchor:middle}
+.pv{stroke:var(--card);stroke-width:2}
+.pv.ph{fill:var(--ph)}.pv.pl{fill:var(--pl)}
+.pv.lastpv{stroke-width:2.6}
+.pvl{font-family:var(--mono);font-size:11px;text-anchor:middle;font-weight:500}
+.pvl.ph{fill:var(--ph)}.pvl.pl{fill:var(--pl)}
+.ord{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.brk{fill:var(--brk)}
+.brkr{fill:none;stroke:var(--brk);stroke-width:1.6;opacity:.5}
+.lbl{font-family:var(--sans);font-size:11.5px;fill:var(--ink3)}
+.map-l{fill:var(--map);font-family:var(--mono);font-size:11px}
+.mid-l{fill:var(--midc)}
+.brk-l{fill:var(--brk);font-weight:600}
+.span{stroke:var(--ink3);stroke-width:1.2}
+.ah{fill:var(--ink3)}
+.span-l{text-anchor:middle;fill:var(--ink3)}
+.ax{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.bg{fill:var(--ink);opacity:.9}
+.bgt{fill:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  text-anchor:middle}
+.wk{stroke-width:1.3}.wk.up{stroke:var(--up)}.wk.dn{stroke:var(--dn)}
+.bd.up{fill:var(--card);stroke:var(--up);stroke-width:1.3}
+.bd.dn{fill:var(--dn);stroke:var(--dn);stroke-width:1.3}
+.legend{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden;grid-template-columns:repeat(auto-fit,minmax(440px,1fr))}
+.li{background:var(--card);padding:14px 16px;display:flex;gap:12px}
+.li .n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--ink);
+  color:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.li .bd2{display:flex;flex-direction:column;gap:2px}
+.li h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:700}
+.li .vis{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.li p{margin:3px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.li b{color:var(--ink);font-weight:700}
+.vars{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.vf{margin:0;background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:11px;display:flex;flex-direction:column;gap:5px}
+.vf svg{width:100%;height:auto}
+.vf figcaption{display:flex;align-items:baseline;gap:8px}
+.vf b{font-family:var(--serif);font-size:13.5px}
+.vf span{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.vsub{font-size:11px;color:var(--ink3);line-height:1.45}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line2);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line)}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+td:first-child{font-family:var(--sans);color:var(--ink)}
+tr.hit td{background:rgba(209,56,47,.08);color:var(--brk)}
+tr.hit td:first-child{color:var(--brk);font-weight:600}
+tr.good td{background:rgba(15,157,118,.09);color:var(--ph)}
+tr.good td:first-child{color:var(--ph);font-weight:600}
+.warn{border-left:3px solid var(--brk);padding:2px 0 2px 13px;margin:0;
+  font-size:13px;color:var(--ink2)}
+.warn b{color:var(--ink)}
+.ok{border-left-color:var(--ph)}
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+.sc{display:flex;flex-direction:column;gap:8px}
+.sct{font-family:var(--serif);font-size:14.5px;font-weight:700;margin:0;
+  display:flex;align-items:baseline;gap:9px}
+.sct em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+code{font-family:var(--mono);font-size:.9em;color:var(--ink2)}
+.foot{border-top:1px solid var(--line);padding-top:16px;color:var(--ink3);
+  font-size:12px;max-width:90ch}
+
+.quad{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.qf{margin:0;background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:12px 13px;display:flex;flex-direction:column;gap:6px}
+.qf svg{width:100%;height:auto;display:block}
+.qh{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.qh b{font-family:var(--serif);font-size:14.5px}
+.qh .cid{font-family:var(--mono);font-size:11px;color:var(--bg);background:var(--ink3);
+  border-radius:2px;padding:1px 5px}
+.qh .en{font-size:10px;color:var(--ink3);font-style:italic}
+.qd{font-size:12px;color:var(--ink2);line-height:1.5}
+.qr{font-family:var(--mono);font-size:11px;color:var(--ink3);
+  font-variant-numeric:tabular-nums;border-top:1px solid var(--line2);padding-top:6px}
+.qr b{color:var(--ink)}
+.tg{font-size:10px;padding:1px 6px;border-radius:2px;border:1px solid;white-space:nowrap}
+.tg.b{color:var(--dn);border-color:var(--dn)}
+.tg.u{color:var(--up);border-color:var(--up)}
+.z{color:var(--brk);font-weight:600}
+.g{color:var(--ph);font-weight:600}
+.steps{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden}
+.st{background:var(--card);padding:13px 15px;display:flex;gap:12px;align-items:flex-start}
+.st .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--ink3);color:var(--bg);
+  font-family:var(--mono);font-size:12px;font-weight:600;display:flex;
+  align-items:center;justify-content:center;margin-top:1px}
+.st.ok .n{background:var(--ph)}
+.st .bd2{display:flex;flex-direction:column;gap:3px}
+.st h3{margin:0;font-family:var(--serif);font-size:14px;font-weight:700;
+  display:flex;gap:10px;align-items:baseline}
+.st h3 em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--brk)}
+.st.ok h3 em{color:var(--ph)}
+.st p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.st b{color:var(--ink)}
+.big{border-left:3px solid var(--ph);background:var(--card);padding:16px 20px;
+  border-radius:0 5px 5px 0;margin:5px 0 2px}
+.big p{margin:0;font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink)}
+.big small{display:block;margin-top:9px;font-family:var(--sans);font-size:12px;
+  color:var(--ink3);line-height:1.6}
+</style>
+<div class="wrap"><header class="top"><div class="eyebrow">S16_S 圖形型態 · 樞紐型 A 組 · 2026-08-28</div><h1>樞紐型 A 組　七個型態</h1><p class="sub">型態層剩餘 27 種裡<b>最便宜的一組</b> —— 樞紐鏈、交替、滑動取窗、M7 拆分全部已經寫好，只換形狀條件。所有數字量自 421,513 根 5 分 K，<b>無任何損益欄</b>。</p><div class="kpi"><span><b>7</b>型態</span><span><b>3</b>通過嚴格對照</span><span><b>3</b>次才修對對照</span><span><b>0</b>具方向性</span></div><p class="warn">⚠️ <b>依 2026-08-27 規矩，先出圖再深度討論。</b>量測已先跑（檢查表紀律 1）。第三節是本頁的方法核心 —— <b>對照修了三次才站得住</b>。</p></header><section class="panel"><div class="ph2"><h2>一、七個型態的形狀</h2><span class="tag">綠點＝樞紐高　橘點＝樞紐低</span></div><div class="quad"><figure class="qf"><div class="qh"><b class="cid">P15</b><b>頭肩頂</b><i class="tg b">空</i><span class="en">Head and Shoulders</span></div><svg viewBox="0 0 440 230" role="img"><line class="tlu solid" x1="52.8" y1="92.0" x2="387.2" y2="96.0"/><line class="tld solid" x1="136.4" y1="148.0" x2="303.6" y2="152.0"/><polyline class="px" points="30.0,80.0 52.8,92.0 136.4,148.0 220.0,40.0 303.6,152.0 387.2,96.0 410.0,84.0"/><circle class="pv ph" cx="52.8" cy="92.0" r="4.2"/><circle class="pv pl" cx="136.4" cy="148.0" r="4.2"/><circle class="pv ph" cx="220.0" cy="40.0" r="4.2"/><circle class="pv pl" cx="303.6" cy="152.0" r="4.2"/><circle class="pv ph" cx="387.2" cy="96.0" r="4.2"/></svg><div class="qd">頭高過兩肩。<b>肩不設對稱要求</b>（要求就得有容差＝參數）。</div><div class="qr"><b>5,239</b> 個　年均 <b>685.7</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P16</b><b>頭肩底</b><i class="tg u">多</i><span class="en">Inverse H&amp;S</span></div><svg viewBox="0 0 440 230" role="img"><line class="tld solid" x1="52.8" y1="136.0" x2="387.2" y2="132.0"/><line class="tlu solid" x1="136.4" y1="80.0" x2="303.6" y2="76.0"/><polyline class="px" points="30.0,148.0 52.8,136.0 136.4,80.0 220.0,188.0 303.6,76.0 387.2,132.0 410.0,144.0"/><circle class="pv pl" cx="52.8" cy="136.0" r="4.2"/><circle class="pv ph" cx="136.4" cy="80.0" r="4.2"/><circle class="pv pl" cx="220.0" cy="188.0" r="4.2"/><circle class="pv ph" cx="303.6" cy="76.0" r="4.2"/><circle class="pv pl" cx="387.2" cy="132.0" r="4.2"/></svg><div class="qd">鏡像。<b>它不是 P15 的虛無對照</b> —— 兩者是頂／底這一對，等同 P49／P50。</div><div class="qr"><b>5,288</b> 個　年均 <b>692.1</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P18</b><b>三重頂</b><i class="tg b">空</i><span class="en">Triple Top</span></div><svg viewBox="0 0 440 230" role="img"><line class="tlu solid" x1="52.8" y1="56.0" x2="387.2" y2="56.0"/><polyline class="px" points="30.0,44.0 52.8,56.0 136.4,144.0 220.0,56.0 303.6,156.0 387.2,56.0 410.0,44.0"/><circle class="pv ph" cx="52.8" cy="56.0" r="4.2"/><circle class="pv pl" cx="136.4" cy="144.0" r="4.2"/><circle class="pv ph" cx="220.0" cy="56.0" r="4.2"/><circle class="pv pl" cx="303.6" cy="156.0" r="4.2"/><circle class="pv ph" cx="387.2" cy="56.0" r="4.2"/></svg><div class="qd">三個高點<b>完全相等</b>。逐年 12→8→5→6→6→5→1→0，<b>持續衰減</b>。</div><div class="qr"><b>43</b> 個　年均 <b>5.6</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P23</b><b>三重底</b><i class="tg u">多</i><span class="en">Triple Bottom</span></div><svg viewBox="0 0 440 230" role="img"><line class="tld solid" x1="52.8" y1="168.0" x2="387.2" y2="168.0"/><polyline class="px" points="30.0,180.0 52.8,168.0 136.4,84.0 220.0,168.0 303.6,72.0 387.2,168.0 410.0,180.0"/><circle class="pv pl" cx="52.8" cy="168.0" r="4.2"/><circle class="pv ph" cx="136.4" cy="84.0" r="4.2"/><circle class="pv pl" cx="220.0" cy="168.0" r="4.2"/><circle class="pv ph" cx="303.6" cy="72.0" r="4.2"/><circle class="pv pl" cx="387.2" cy="168.0" r="4.2"/></svg><div class="qd">鏡像，同樣衰減。</div><div class="qr"><b>33</b> 個　年均 <b>4.3</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P21</b><b>上升通道</b><i class="tg u">多</i><span class="en">Ascending Channel</span></div><svg viewBox="0 0 440 230" role="img"><line class="tlu solid" x1="52.8" y1="104.0" x2="320.3" y2="32.0"/><line class="tld solid" x1="119.7" y1="164.0" x2="387.2" y2="92.0"/><polyline class="px" points="30.0,92.0 52.8,104.0 119.7,164.0 186.6,68.0 253.4,128.0 320.3,32.0 387.2,92.0 410.0,104.0"/><circle class="pv ph" cx="52.8" cy="104.0" r="4.2"/><circle class="pv pl" cx="119.7" cy="164.0" r="4.2"/><circle class="pv ph" cx="186.6" cy="68.0" r="4.2"/><circle class="pv pl" cx="253.4" cy="128.0" r="4.2"/><circle class="pv ph" cx="320.3" cy="32.0" r="4.2"/><circle class="pv pl" cx="387.2" cy="92.0" r="4.2"/></svg><div class="qd">高遞增 ＋ 低遞增 ＋ <b>兩條線完全平行</b>（升幅相等）。逐年無掛零。</div><div class="qr"><b>140</b> 個　年均 <b>18.3</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P57</b><b>測量移動（下）</b><i class="tg b">空</i><span class="en">Measured Move Down</span></div><svg viewBox="0 0 440 230" role="img"><line class="tld solid" x1="52.8" y1="35.7" x2="136.4" y2="106.1"/><line class="tld solid" x1="220.0" y1="70.9" x2="303.6" y2="141.3"/><polyline class="px" points="30.0,24.0 52.8,35.7 136.4,106.1 220.0,70.9 303.6,141.3 387.2,106.1 410.0,94.4"/><circle class="pv ph" cx="52.8" cy="35.7" r="4.2"/><circle class="pv pl" cx="136.4" cy="106.1" r="4.2"/><circle class="pv ph" cx="220.0" cy="70.9" r="4.2"/><circle class="pv pl" cx="303.6" cy="141.3" r="4.2"/><circle class="pv ph" cx="387.2" cy="106.1" r="4.2"/></svg><div class="qd">兩段跌幅<b>完全相等</b>，中間一段反彈。</div><div class="qr"><b>255</b> 個　年均 <b>33.4</b></div></figure><figure class="qf"><div class="qh"><b class="cid">P68</b><b>雙頂</b><i class="tg b">空</i><span class="en">Double Top</span></div><svg viewBox="0 0 440 230" role="img"><line class="tlu solid" x1="52.8" y1="52.0" x2="387.2" y2="52.0"/><polyline class="px" points="30.0,40.0 52.8,52.0 220.0,156.0 387.2,52.0 410.0,40.0"/><circle class="pv ph" cx="52.8" cy="52.0" r="4.2"/><circle class="pv pl" cx="220.0" cy="156.0" r="4.2"/><circle class="pv ph" cx="387.2" cy="52.0" r="4.2"/></svg><div class="qd">兩個高點<b>完全相等</b>。四變體（Adam／Eve）靠尖 vs 圓區分 —— 曲率門檻，本質是參數，<b>未編碼</b>。</div><div class="qr"><b>1,365</b> 個　年均 <b>178.7</b></div></figure></div></section><section class="panel"><div class="ph2"><h2>二、★ 對照修了三次</h2><span class="tag">前兩次的數字都是假的</span></div><div class="steps"><div class="st"><div class="n">1</div><div class="bd2"><h3>整條序列打散<em>P68 = 391x</em></h3><p>拿 2019 的高點跟 2026 的比。台指從萬點漲到兩萬八，<b>精確相等在打散後幾乎不可能</b>，期望值假到 3.5。</p></div></div><div class="st"><div class="n">2</div><div class="bd2"><h3>同年內打散<em>P68 = 80x</em></h3><p>一月比十二月，年內波動幾千點。<b>仍然是假的</b>。</p></div></div><div class="st ok"><div class="n">3</div><div class="bd2"><h3>鄰近 200 個框架內打散<em>P68 = 6.78x</em></h3><p>保留局部價格水準與波動度，<b>只破壞配對</b>。兩個高點中位相隔 3 根 K 棒 —— 它們價格接近是因為時間接近，任何打破這個鄰近性的對照都會製造出巨大的倍率。<b>這一版才站得住。</b></p></div></div></div><p class="warn"><b>這一節比任何一個型態的結論都重要。</b>如果我在第一版就停手，會回報「雙頂 391 倍於隨機」—— 一個看起來石破天驚、實際上完全是對照造成的數字。<b>每一次修正都讓倍率降低，而最嚴格的那版才是可以拿去用的。</b></p></section><section class="panel"><div class="ph2"><h2>三、檢定結果（鄰近 200 框架打散，2,000 次）</h2><span class="tag">Bonferroni 門檻 0.001</span></div><table><thead><tr><th>型態</th><th>母體</th><th>觀測</th><th>打散期望</th><th>倍率</th><th>p</th><th>判定</th></tr></thead><tbody><tr><td>P18 三重頂</td><td>21,927</td><td>419</td><td>455.2</td><td class="z">0.92x</td><td>0.963</td><td class="z">與隨機無異</td></tr><tr><td>P23 三重底</td><td>22,254</td><td>392</td><td>416.9</td><td class="z">0.94x</td><td>0.893</td><td class="z">與隨機無異</td></tr><tr><td>P68 雙頂</td><td>40,439</td><td>1,365</td><td>201.3</td><td class="g">6.78x</td><td>0.0005</td><td class="g">★ 通過</td></tr><tr><td>　雙底（鏡像）</td><td>40,925</td><td>1,300</td><td>202.4</td><td class="g">6.42x</td><td>0.0005</td><td class="g">★ 通過</td></tr><tr><td>P57 測量移動下</td><td>6,399</td><td>255</td><td>109.6</td><td class="g">2.33x</td><td>0.0005</td><td class="g">★ 通過</td></tr><tr><td>　測量移動上（鏡像）</td><td>7,028</td><td>276</td><td>127.3</td><td class="g">2.17x</td><td>0.0005</td><td class="g">★ 通過</td></tr><tr><td>P21 上升通道</td><td>3,729</td><td>140</td><td>49.6</td><td class="g">2.82x</td><td>0.0005</td><td class="g">★ 通過</td></tr><tr><td>　下降通道（鏡像）</td><td>3,106</td><td>86</td><td>36.7</td><td class="g">2.34x</td><td>0.0005</td><td class="g">★ 通過</td></tr></tbody></table><div class="big"><p>三個通過 —— <b>但每一個的鏡像也同樣通過</b>。</p><small>雙頂 6.78x／雙底 6.42x，上升通道 2.82x／下降通道 2.34x，測量移動下 2.33x／上 2.17x。所以測到的是<b>「價位與幅度會被重訪」這個市場性質</b> —— 支撐壓力的老現象 —— <b>而不是型態的方向性</b>。三重頂與三重底 0.92x／0.94x，連這個性質都沒有。</small></div></section><section class="panel"><div class="ph2"><h2>四、修正後的規則</h2><span class="tag">我 08-28 早先那版只對了一半</span></div><table><thead><tr><th>對照</th><th>觀測 : 對照</th><th>倍率</th><th>判定</th></tr></thead><tbody><tr><td>P15 頭肩頂 vs 谷（形狀鏡像）</td><td>5,239 : 5,466</td><td class="z">0.958 : 1</td><td>不含資訊</td></tr><tr><td>鑽石 vs 沙漏（08-28 已測）</td><td>1,467 : 1,581</td><td class="z">0.80x : 0.80x</td><td>不含資訊</td></tr><tr><td>P29 擴散 vs 獨立期望</td><td>203 : 1,247</td><td class="g">0.16x</td><td>含資訊</td></tr><tr><td>P51 vs 獨立期望</td><td>3,729 : 1,791</td><td class="g">2.08x</td><td>含資訊</td></tr></tbody></table><p class="cap">我早先的規則是「<b>單調條件含資訊，峰谷條件不含</b>」。峰谷那半仍然成立（頭肩 0.958:1、鑽石 0.80x 對 0.80x），但<b>它漏掉了第三類</b>。</p><div class="big"><p>三類，不是兩類：</p><small><b>單調方向條件</b> —— 與高低點同向共動 10.3:1 的結構互動，含資訊且<b>有方向性</b>（P29 0.16x／P51 2.08x）。<br><b>峰谷形狀條件</b> —— 完全不碰那個結構，<b>不含資訊</b>。<br><b>精確相等條件</b> —— 含資訊（2.3x ~ 6.8x），但那是價位／幅度被重訪的性質，<b>鏡像同樣通過，沒有方向性</b>。</small></div></section><section class="panel"><div class="ph2"><h2>五、待裁示</h2><span class="tag">批次問</span></div><div class="steps"><div class="st"><div class="n">K</div><div class="bd2"><h3>P15／P16／P18／P23 結案<em>建議</em></h3><p>頭肩 0.958:1 不含資訊，收緊（右肩&lt;左肩）在對照組也是同樣比例；三重頂 0.92x 連重訪性質都沒有，且逐年 12→0 衰減。</p></div></div><div class="st"><div class="n">L</div><div class="bd2"><h3>P68／P57／P21 怎麼處理<em>要你決定</em></h3><p>三個都通過嚴格對照，但都<b>沒有方向性</b>。選項：<b>L1</b> 比照裁示 A1 當屬性（不是濾網）／<b>L2</b> 只編碼上圖如鑽石／<b>L3</b> 一併結案。</p></div></div><div class="st"><div class="n">M</div><div class="bd2"><h3>「重訪性質」要不要獨立立項<em>新問題</em></h3><p>2.3x ~ 6.8x 是這個專案目前<b>最強的統計效果</b>，但它不是型態、是價位行為。若要用，應以「<b>價位重訪</b>」立項，不要掛在圖形型態底下。</p></div></div></div></section><footer class="foot">掃描 <code>scripts/research/s16s_groupA_scan.py</code>、<code>s16s_hs_scan.py</code>　·　本頁 <code>s16s_groupA_make_page.py</code>　·　樣式共用 <code>_diagram.css</code>。<b>全部無損益欄。</b></footer></div>
