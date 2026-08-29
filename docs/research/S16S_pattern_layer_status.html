@@ -1,0 +1,173 @@
+<title>型態層總覽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
+  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}}
+:root[data-theme="dark"]{
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}
+:root[data-theme="light"]{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px;
+  display:flex;flex-direction:column;gap:34px}
+.top{display:flex;flex-direction:column;gap:9px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink3)}
+h1{font-family:var(--serif);font-weight:700;margin:0;
+  font-size:clamp(26px,4vw,38px);letter-spacing:-.01em;text-wrap:balance}
+.sub{margin:0;color:var(--ink2);font-size:15px;max-width:72ch}
+.sub b{color:var(--ink);font-weight:700}
+.kpi{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.kpi span{display:flex;flex-direction:column;gap:1px;padding:8px 14px;
+  border:1px solid var(--line);border-radius:4px;background:var(--card);
+  font-size:11.5px;color:var(--ink3)}
+.kpi b{font-family:var(--mono);font-size:17px;color:var(--ink);font-weight:500;
+  font-variant-numeric:tabular-nums}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:20px 22px;display:flex;flex-direction:column;gap:13px}
+.ph2{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin:0}
+.ph2 h2{font-family:var(--serif);font-size:18px;font-weight:700;margin:0}
+.ph2 .tag{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.plot{width:100%;overflow-x:auto}
+.plot svg{width:100%;min-width:680px;height:auto;display:block}
+.cap{margin:0;font-size:12.5px;color:var(--ink3);
+  border-top:1px solid var(--line2);padding-top:9px}
+.cap b{color:var(--ink2)}
+.px{fill:none;stroke:var(--ink2);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tlu,.tld{stroke-width:1.5;stroke-dasharray:5 3.5;fill:none;opacity:.9}
+.tlu{stroke:var(--ph)}.tld{stroke:var(--pl)}
+.tlu.solid,.tld.solid{stroke-dasharray:none;stroke-width:2.2;opacity:1}
+.mid{stroke:var(--midc);stroke-width:1.4;stroke-dasharray:1.5 3;stroke-linecap:round}
+.midpt{fill:var(--midc)}
+.map{stroke:var(--map);stroke-width:1.3;stroke-dasharray:4 3;opacity:.85}
+.zone{fill:var(--zone);stroke:var(--map);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.zt{font-family:var(--mono);font-size:11px;fill:var(--map);text-anchor:middle}
+.pv{stroke:var(--card);stroke-width:2}
+.pv.ph{fill:var(--ph)}.pv.pl{fill:var(--pl)}
+.pv.lastpv{stroke-width:2.6}
+.pvl{font-family:var(--mono);font-size:11px;text-anchor:middle;font-weight:500}
+.pvl.ph{fill:var(--ph)}.pvl.pl{fill:var(--pl)}
+.ord{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.brk{fill:var(--brk)}
+.brkr{fill:none;stroke:var(--brk);stroke-width:1.6;opacity:.5}
+.lbl{font-family:var(--sans);font-size:11.5px;fill:var(--ink3)}
+.map-l{fill:var(--map);font-family:var(--mono);font-size:11px}
+.mid-l{fill:var(--midc)}
+.brk-l{fill:var(--brk);font-weight:600}
+.span{stroke:var(--ink3);stroke-width:1.2}
+.ah{fill:var(--ink3)}
+.span-l{text-anchor:middle;fill:var(--ink3)}
+.ax{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.bg{fill:var(--ink);opacity:.9}
+.bgt{fill:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  text-anchor:middle}
+.wk{stroke-width:1.3}.wk.up{stroke:var(--up)}.wk.dn{stroke:var(--dn)}
+.bd.up{fill:var(--card);stroke:var(--up);stroke-width:1.3}
+.bd.dn{fill:var(--dn);stroke:var(--dn);stroke-width:1.3}
+.legend{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden;grid-template-columns:repeat(auto-fit,minmax(440px,1fr))}
+.li{background:var(--card);padding:14px 16px;display:flex;gap:12px}
+.li .n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--ink);
+  color:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.li .bd2{display:flex;flex-direction:column;gap:2px}
+.li h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:700}
+.li .vis{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.li p{margin:3px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.li b{color:var(--ink);font-weight:700}
+.vars{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.vf{margin:0;background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:11px;display:flex;flex-direction:column;gap:5px}
+.vf svg{width:100%;height:auto}
+.vf figcaption{display:flex;align-items:baseline;gap:8px}
+.vf b{font-family:var(--serif);font-size:13.5px}
+.vf span{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.vsub{font-size:11px;color:var(--ink3);line-height:1.45}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line2);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line)}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+td:first-child{font-family:var(--sans);color:var(--ink)}
+tr.hit td{background:rgba(209,56,47,.08);color:var(--brk)}
+tr.hit td:first-child{color:var(--brk);font-weight:600}
+tr.good td{background:rgba(15,157,118,.09);color:var(--ph)}
+tr.good td:first-child{color:var(--ph);font-weight:600}
+.warn{border-left:3px solid var(--brk);padding:2px 0 2px 13px;margin:0;
+  font-size:13px;color:var(--ink2)}
+.warn b{color:var(--ink)}
+.ok{border-left-color:var(--ph)}
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+.sc{display:flex;flex-direction:column;gap:8px}
+.sct{font-family:var(--serif);font-size:14.5px;font-weight:700;margin:0;
+  display:flex;align-items:baseline;gap:9px}
+.sct em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+code{font-family:var(--mono);font-size:.9em;color:var(--ink2)}
+.foot{border-top:1px solid var(--line);padding-top:16px;color:var(--ink3);
+  font-size:12px;max-width:90ch}
+
+.grp{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden}
+.gi{background:var(--card);padding:15px 17px;display:flex;gap:14px;align-items:flex-start}
+.gi .lt{flex:0 0 30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-family:var(--mono);font-size:14px;font-weight:600;
+  background:var(--ink);color:var(--card);margin-top:2px}
+.gi.ok .lt{background:var(--ph)}
+.gi.warn .lt{background:var(--pl)}
+.gi.bad .lt{background:var(--brk)}
+.gi .bd2{display:flex;flex-direction:column;gap:6px;min-width:0}
+.gi h3{margin:0;font-family:var(--serif);font-size:15px;font-weight:700;
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.gi h3 em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.gi p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.6}
+.gi b{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:3px;
+  border:1px solid var(--line);color:var(--ink2);background:var(--bg)}
+.chips span b{color:var(--ink);font-weight:600}
+.done{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden}
+.di{background:var(--card);padding:14px 16px;display:flex;gap:13px;align-items:flex-start}
+.di .n{flex:0 0 auto;font-family:var(--mono);font-size:19px;color:var(--ph);
+  font-weight:600;min-width:34px;text-align:right}
+.di .bd2{display:flex;flex-direction:column;gap:4px}
+.di h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:700}
+.di code{font-size:11px}
+.di p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.di b{color:var(--ink)}
+.big{border-left:3px solid var(--ph);background:var(--card);padding:16px 20px;
+  border-radius:0 5px 5px 0;margin:4px 0 2px}
+.big p{margin:0;font-family:var(--serif);font-size:17px;line-height:1.6;color:var(--ink)}
+.big small{display:block;margin-top:9px;font-family:var(--sans);font-size:12px;
+  color:var(--ink3);line-height:1.6}
+</style>
+<div class="wrap"><header class="top"><div class="eyebrow">S16_S 型態層 · 總覽 · 2026-08-28</div><h1>型態層總覽</h1><p class="sub">純圖形型態 <b>72 種</b>：已處理 <b>45</b>，尚未討論 <b>27</b>。狀態讀自圖鑑清單並與結案文件交叉查核 —— <b>12 個結案全部有文件佐證</b>。</p><div class="kpi"><span><b>33</b>已編碼並檢定</span><span><b>12</b>已結案（含文件）</span><span><b>27</b>尚未討論</span><span><b>22</b>砍掉 D 組後的實際待辦</span></div></header><section class="panel"><div class="ph2"><h2>一、已經處理完的 45 種</h2><span class="tag">每一項都有結案文件</span></div><div class="done"><div class="di"><div class="n">33</div><div class="bd2"><h3>已編碼並檢定</h3><code>P01-P48 的 33 種</code><p>兩波共 33 次檢定<b>全部為負</b>（Bonferroni 門檻 3.17）。定義由我自訂、我自跑，2026-08-25 已裁定<b>不作為否定圖形型態的證據</b>。</p></div></div><div class="di"><div class="n">7</div><div class="bd2"><h3>擴散家族結案</h3><code>P29 P49 P50 P51 P52 P53 P54</code><p>裁示 A1／B1／C。留下永久結論：<b>破位方向 ＝ 起算位置 ＋ 低點方向延續</b>，之後任何型態都不必再測「往哪邊破」。</p></div></div><div class="di"><div class="n">3</div><div class="bd2"><h3>缺口組結案</h3><code>P31 P62 P67</code><p>裁示：<b>5 分 K 完全不會出現跳空</b>。時段內缺口 90.4% 剛好 1 tick、零個達到 10 點成本、五根內 100% 回補。<b>同時關掉圖鑑裡 23 個 K 棒缺口型態</b>。</p></div></div><div class="di"><div class="n">2</div><div class="bd2"><h3>鑽石結案</h3><code>P30 P61</code><p>裁示 I1：不再研究，但<b>已編碼上圖</b>（Build 260861，MC12 驗收 P30=0 P61=1 全中）。完整鑽石需 10 樞紐，八年只出現一次。</p></div></div></div></section><section class="panel"><div class="ph2"><h2>二、尚未討論的 27 種 —— 依「共用什麼機制」分組</h2><span class="tag">綠＝便宜　橘＝先量母體　紅＝建議結案</span></div><div class="grp"><div class="gi ok"><div class="lt">A</div><div class="bd2"><h3>樞紐型 —— 可直接沿用既有框架<em>7 種</em></h3><div class="chips"><span><b>P15</b> 頭肩頂</span><span><b>P16</b> 頭肩底</span><span><b>P18</b> 三重頂</span><span><b>P21</b> 上升通道</span><span><b>P23</b> 三重底</span><span><b>P57</b> 測量移動（下）</span><span><b>P68</b> 雙頂四變體</span></div><p>樞紐鏈、交替、滑動取窗、M7 前段趨勢<b>全部已經寫好了</b>。這組的邊際成本最低，<b>建議一次做完七個</b>，就像擴散家族與缺口組那樣。要先裁示的只有兩件事：頭肩的「肩要幾個點」、三重頂的「三高相等」。</p></div></div><div class="gi warn"><div class="lt">B</div><div class="bd2"><h3>曲率型 —— 圓弧、杯、V<em>8 種</em></h3><div class="chips"><span><b>P26</b> 圓弧頂</span><span><b>P27</b> 圓弧底</span><span><b>P28</b> 杯柄</span><span><b>P32</b> V 型反轉</span><span><b>P59</b> 穿越型態</span><span><b>P63</b> V 型底</span><span><b>P64</b> 倒置杯柄</span><span><b>P66</b> 平底鍋底</span></div><p>「圓」與「V」的差別是<b>曲率</b>，而曲率必須有門檻 —— 本質上就是自由參數。<b>建議只量母體，不投入定義討論</b>：先寫一個暫定的零參數版本掃一次，母體不足就結案。</p></div></div><div class="gi warn"><div class="lt">C</div><div class="bd2"><h3>幅度／速度型 —— 旗形、駝峰、塔形<em>6 種</em></h3><div class="chips"><span><b>P24</b> 多方旗形</span><span><b>P25</b> 多方三角旗</span><span><b>P55</b> 駝峰反轉</span><span><b>P56</b> 死貓反彈</span><span><b>P60</b> 高位緊密旗形</span><span><b>P65</b> 塔形頂</span></div><p>「急漲」「緊密」「大幅」都需要幅度或速度門檻。旗形的旗桿<b>可以用斜率閘門從已固定的東西推導</b>（圖鑑已有前例），所以這組不是全無希望，但要逐一判斷。</p></div></div><div class="gi bad"><div class="lt">D</div><div class="bd2"><h3>本質上是參數 —— 建議直接結案<em>5 種</em></h3><div class="chips"><span><b>P07</b> 布林帶寬擠壓</span><span><b>P58</b> 扇形原則</span><span><b>P69</b> 艾略特 5 波</span><span><b>P70</b> 費波那契回撤</span><span><b>P71</b> 江恩角度線</span></div><p>P07 是指標型態不是純圖形（週期＋標準差兩個參數）；P58 三條趨勢線每條都是選擇；P69 是方法論不是型態；P70 的比例是<b>外來常數</b>；P71 的角度<b>依賴座標軸縮放</b>，在 5 分 K 上無定義。<b>原本的 D 組是 4 種，P58 應併入 —— 砍掉這 5 種，剩餘 27 → 22。</b></p></div></div><div class="gi warn"><div class="lt">E</div><div class="bd2"><h3>其他<em>1 種</em></h3><div class="chips"><span><b>P72</b> 訂單塊 ／ 反轉塊</span></div><p>需要先定義「訂單塊」的零參數版本。可與 A 組一起量。</p></div></div></div></section><section class="panel"><div class="ph2"><h2>三、速度正在加快</h2><span class="tag">因為框架已經建好</span></div><table><thead><tr><th>批次</th><th>種數</th><th>耗時</th><th style="text-align:left">為什麼</th></tr></thead><tbody><tr><td>擴散家族</td><td>7 種</td><td>約 2 天</td><td style="text-align:left">同時建好整套基礎設施</td></tr><tr><td>缺口組</td><td>3 種</td><td>不到 1 天</td><td style="text-align:left">三者共用一套偵測</td></tr><tr><td>鑽石</td><td>2 種</td><td>不到 1 天</td><td style="text-align:left">直接沿用六樞紐框架</td></tr></tbody></table><div class="big"><p>最省時間的做法：<b>先把 27 種的母體一次量完</b>，再只對站得住的做深度討論。</p><small>目前為止的經驗是<b>量母體就殺掉大部分型態</b> —— 缺口組三個、鑽石兩個，都是量完就結案，沒有一個需要深度討論。一次量完的成本，遠低於逐一討論再逐一量。暫定定義若不夠好也無妨：母體是 0 或爆量的那些，<b>不管定義怎麼修都會是同一個結論</b>；只有中間帶需要你裁示。</small></div></section><section class="panel"><div class="ph2"><h2>四、待裁示（三題，都不擋路）</h2><span class="tag">不回我就照建議做</span></div><table><thead><tr><th>題目</th><th style="text-align:left">建議</th></tr></thead><tbody><tr><td>D 組結案</td><td style="text-align:left"><b>砍掉 5 種</b>（原 4 種 ＋ P58 扇形原則），27 → 22</td></tr><tr><td>三點規則</td><td style="text-align:left">升格為檢查表<b>第 17 條</b>：多段型態每一段每一條邊都要三個點才算確認。A 組第一個就用到</td></tr><tr><td>F1 / F2 趨勢線</td><td style="text-align:left">維持 F1。F2 會讓線收在畫面內，但<b>會改變 SECTION 7 的 state 轉換行為</b>，不是純美化</td></tr></tbody></table></section><footer class="foot">狀態產生器 <code>scripts/research/s16s_status_make_page.py</code>，讀取 <code>s16s_make_full_atlas.py</code> 的清單並與 <code>docs/research/*CLOSED*.md</code> 交叉查核。樣式共用 <code>_diagram.css</code>。<b>本頁無損益欄。</b></footer></div>
