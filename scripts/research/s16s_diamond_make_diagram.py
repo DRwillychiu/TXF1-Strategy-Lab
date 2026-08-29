@@ -200,6 +200,29 @@ def main():
         % (cid, zh, r[1], r[2], r[3], r[0], r[4], r[5])
         for cid, zh, r in (('P30', '鑽石頂', rt), ('P61', '鑽石底', rb)))
 
+    LAYERS = [
+        ('1 樞紐偵測', '找出所有轉折',
+         '純分形視窗 1：<code>H[i] &gt; H[i-1] and H[i] &gt; H[i+1]</code>，'
+         '<b>i+1 才確認</b>（無前瞻）。<b>不可跨時段</b> —— 分形是相鄰依賴。'),
+        ('2 交替', '樞紐必須高低相間',
+         'HLHLHL… 或 LHLHLH…。出現連續同型別就<b>重置整條鏈</b>。'),
+        ('3 取窗', '哪幾個樞紐算一組',
+         '時間序上<b>任何 N 個連續交替樞紐</b>，逐一滑動測試。'
+         '<b>不錨定單側</b> —— P29 舊版錨定樞紐高，漏掉 91 個以樞紐低收尾者。'),
+        ('4 形狀測試', '這組合不合格',
+         '對窗內的高點序列與低點序列做不等式判斷。<b>本節以下全部是這一層的事。</b>'),
+    ]
+    lay = ''.join('<tr><td>%s</td><td>%s</td><td style="text-align:left">%s</td></tr>' % r
+                  for r in LAYERS)
+
+    CMP = [('6 樞紐（3 高 3 低）', '2 點', '32,094', '1,467', '1,581', '0', False),
+           ('10 樞紐（5 高 5 低）', '3 點', '9,592', '1', '2', '7', True)]
+    cmp_ = ''.join(
+        '<tr><td>%s</td><td%s>%s</td><td>%s</td><td%s>%s</td><td>%s</td><td%s>%s</td></tr>'
+        % (a, ' class="z"' if hl else '', b, c, ' class="z"' if hl else '', d, e,
+           ' class="z"' if hl else '', f)
+        for a, b, c, d, e, f, hl in CMP)
+
     EXP = [('高峰 × 低谷', 'P30 / P61 鑽石', 1467, 1834.2, 0.80, True),
            ('高谷 × 低峰', '沙漏（鏡像對照）', 1581, 1987.1, 0.80, True),
            ('高增 × 低減', 'P29 擴散', 203, 1247.4, 0.16, False),
@@ -234,28 +257,59 @@ def main():
            '<div class="kpi">'
            '<span><b>1,467</b>鑽石（八年）</span>'
            '<span><b>1,581</b>沙漏鏡像對照</span>'
-           '<span><b>0.80x</b>兩者的獨立性倍率</span>'
-           '<span><b>192</b>年均，每 287 根一個</span>'
+           '<span><b>1</b>完整鑽石（10 樞紐，八年）</span>'
+           '<span><b>0.80x</b>6 樞紐版與鏡像同倍率</span>'
            '</div>'
            '<p class="warn">⚠️ <b>虛無對照給了否定的答案，第三節是關鍵。</b>'
            '依 2026-08-27 規矩，先出圖再深度討論；量測已先跑（檢查表紀律 1）。</p>'
            '</header>')
 
-    P1 = ('<section class="panel"><div class="ph2"><h2>一、形狀與它的鏡像</h2>'
+    P0 = ('<section class="panel"><div class="ph2">'
+          '<h2>一、高低點是怎麼抓的</h2>'
+          '<span class="tag">四層，每層都要分清楚</span></div>'
+          '<table><thead><tr><th>層</th><th>做什麼</th>'
+          '<th style="text-align:left">規則</th></tr></thead>'
+          '<tbody>' + lay + '</tbody></table>'
+          '<p class="warn"><b>關鍵在第 3 層：沒有「挑最顯著的高低點」這種步驟。</b>'
+          '每一個連續交替樞紐窗都被測，所以<b>同一段行情可能同時屬於多個型態</b>，'
+          '一個「鑽石」也可能只是更大結構的碎片。'
+          '四層合計<b>自由參數 0 個</b>。</p></section>')
+
+    PC = ('<section class="panel"><div class="ph2">'
+          '<h2>三、★ 什麼叫「完整」的鑽石</h2>'
+          '<span class="tag">這一節推翻了本頁的第一版</span></div>'
+          '<p class="cap">上面那個 6 樞紐版本，擴散半段只用到 H1、H2 與 L1、L2 —— '
+          '<b>每條邊只有兩個點</b>。而 P29 當初立規矩時寫的正好相反：</p>'
+          '<div class="big" style="border-left-color:var(--ph)">'
+          '<p>三個點，因為<b>兩點決定一條線，但三點才確認方向持續</b>。</p>'
+          '<small>照這個標準，完整的鑽石是：擴散半段 '
+          '<code>H1 &lt; H2 &lt; H3</code> 且 <code>L1 &gt; L2 &gt; L3</code>，'
+          '收斂半段 <code>H3 &gt; H4 &gt; H5</code> 且 <code>L3 &lt; L4 &lt; L5</code>，'
+          '共用中間的頂點 —— <b>5 高 + 5 低 = 10 個交替樞紐</b>。</small></div>'
+          '<table><thead><tr><th>定義</th><th>每條邊點數</th><th>框架母體</th>'
+          '<th>鑽石</th><th>鏡像沙漏</th><th>掛零年</th></tr></thead>'
+          '<tbody>' + cmp_ + '</tbody></table>'
+          '<div class="big"><p>常見的那版<b>不是確認過的鑽石</b>（每條邊只有兩點）；'
+          '確認過的那版<b>八年出現一次</b>。</p>'
+          '<small>兩個答案指向同一個結論，而且比虛無對照更直接：'
+          '1,467 個是「形狀還沒被確認」的數量，1 個是「形狀被確認」的數量。'
+          '中間沒有可用的地帶。</small></div></section>')
+
+    P1 = ('<section class="panel"><div class="ph2"><h2>二、形狀與它的鏡像</h2>'
           '<span class="tag">綠點＝樞紐高　橘點＝樞紐低</span></div>'
           '<div class="quad">' + sc + '</div>'
           '<p class="cap">P30 與 P61 的差別<b>只有前段趨勢</b>（M7 &gt; 0 為頂），'
           '完全沿用 P49／P50 的裁示 12 —— 這是<b>分割</b>，不是額外條件。'
           'P30 鑽石頂 <b>774</b> 個，P61 鑽石底 <b>693</b> 個。</p></section>')
 
-    P2 = ('<section class="panel"><div class="ph2"><h2>二、真實案例</h2>'
+    P2 = ('<section class="panel"><div class="ph2"><h2>四、真實案例（6 樞紐版）</h2>'
           '<span class="tag">取中位振幅，非最大 —— P51 犯過那個錯</span></div>'
           '<div class="quad">' + rc + '</div>'
           '<p class="cap">選取依據<b>只有形狀</b>（跨度、樞紐不擠在一起、振幅取中位數），'
           '無損益欄、不依報酬排序。</p></section>')
 
     P3 = ('<section class="panel"><div class="ph2">'
-          '<h2>三、★ 虛無對照：「中間最寬」不含資訊</h2>'
+          '<h2>五、虛無對照：「中間最寬」不含資訊</h2>'
           '<span class="tag">這節決定鑽石的命運</span></div>'
           '<table><thead><tr><th>組合</th><th></th><th>觀測</th>'
           '<th>獨立期望</th><th>倍率</th></tr></thead><tbody>' + exp + '</tbody></table>'
@@ -271,7 +325,7 @@ def main():
           '<b>峰與谷本來就各占約四分之一</b>，兩者相乘就是鑽石的期望值。</p>'
           '</section>')
 
-    P4 = ('<section class="panel"><div class="ph2"><h2>四、母體與逐年</h2>'
+    P4 = ('<section class="panel"><div class="ph2"><h2>六、母體與逐年（6 樞紐版）</h2>'
           '<span class="tag">沒有掛零年，但密度是 P29 的 7 倍</span></div>'
           '<table><thead><tr><th>型態</th>'
           + ''.join('<th>%s</th>' % y for y in YRS) +
@@ -286,13 +340,15 @@ def main():
           '</section>')
 
     P5 = ('<section class="panel"><div class="ph2">'
-          '<h2>五、待裁示</h2><span class="tag">批次問</span></div>'
+          '<h2>七、待裁示</h2><span class="tag">批次問</span></div>'
           '<div class="rule">'
           '<div class="ro"><span class="tag rec">I1　建議</span><p>'
           '<b>P30／P61 結案，不投入後續研究。</b>'
-          '虛無對照顯示「中間最寬」與「中間最窄」的倍率完全相同（皆 0.80x），'
-          '<b>定義特徵本身不含資訊</b>；密度又是每 1.3 個交易日一個。'
-          '定義可以零參數寫死，但寫死一個不含資訊的形狀沒有意義。</p></div>'
+          '兩條獨立證據指向同一個結論：<b>(1)</b> 照本專案自己的三點規矩，'
+          '完整鑽石<b>八年只出現一次</b>、七年掛零；'
+          '<b>(2)</b> 放寬成兩點的版本雖有 1,467 個，'
+          '但與鏡像沙漏的獨立性倍率完全相同（皆 0.80x），'
+          '<b>「中間最寬」本身不含資訊</b>。</p></div>'
           '<div class="ro"><span class="tag">I2</span><p>'
           '<b>比照裁示 A1，當屬性保留</b> —— 與 P51／P52 同密度級距，'
           '當「中間最寬的擺盪結構」狀態標籤用。'
@@ -313,7 +369,7 @@ def main():
             '</footer></div>')
 
     open(OUT, 'w', encoding='utf-8').write(
-        HEAD + TOP + P1 + P2 + P3 + P4 + P5 + FOOT)
+        HEAD + TOP + P0 + P1 + PC + P2 + P3 + P4 + P5 + FOOT)
     print('wrote %s' % OUT)
     print('  鑽石 %d（頂 %d / 底 %d）' % (len(dia), len(tops), len(bots)))
     return 0
