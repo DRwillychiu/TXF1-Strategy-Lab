@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260856.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260860.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -202,7 +202,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260856 ),
+    Build_ID                ( 260860 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -274,6 +274,18 @@ inputs:
     Col_Shape_P53           ( DarkCyan  ),
     Col_Shape_P54           ( DarkBrown ),
 
+    { ---- P30 / P61 diamond, ruling I1 of 2026-08-28.  Coded and drawn,
+      not researched further.  ONE exists in 421,513 bars, so these are
+      here for the day a second one forms, not for a population. ---- }
+    Enable_P30              ( 1       ),   { diamond TOP,    prior trend up }
+    Enable_P61              ( 1       ),   { diamond BOTTOM, prior trend down }
+    Col_Shape_P30           ( DarkMagenta ),
+    Col_Shape_P61           ( DarkBlue    ),
+    Col_Dia_Line            ( Magenta     ),  { the four edges.  Bright is safe
+                                                here: with one instance in eight
+                                                years it cannot crowd anything }
+    Dia_Line_Width          ( 2       ),
+
     Break_Mode              ( 1       ),   { 0 off, 1 track and paint breaks }
     Col_Break               ( White   ),   { the bar that closes below the floor }
     Col_BreakUp             ( Green   ),   { closes above the ceiling.  NOT a dark
@@ -320,6 +332,26 @@ variables:
     v_FlatL                 ( False ),
     v_LowUnder              ( False ),
     v_Cnt29                 ( 0     ),
+
+    { ---- diamond, its own everything.  Nothing below is read by the
+      six-pivot chain and nothing above is written by this block. ---- }
+    v_DChain                ( 0     ),
+    v_DOk                   ( False ),
+    v_DKind                 ( 0     ),     { 30 top, 61 bottom }
+    v_DOrder                ( 0     ),     { 1 high first, 2 low first }
+    v_DH1( 0 ), v_DH2( 0 ), v_DH3( 0 ), v_DH4( 0 ), v_DH5( 0 ),
+    v_DL1( 0 ), v_DL2( 0 ), v_DL3( 0 ), v_DL4( 0 ), v_DL5( 0 ),
+    v_DH1d( 0 ), v_DH3d( 0 ), v_DH5d( 0 ),
+    v_DL1d( 0 ), v_DL3d( 0 ), v_DL5d( 0 ),
+    v_DH1t( 0 ), v_DH3t( 0 ), v_DH5t( 0 ),
+    v_DL1t( 0 ), v_DL3t( 0 ), v_DL5t( 0 ),
+    v_Seq30                 ( 0     ),
+    v_Seq61                 ( 0     ),
+    v_dj                    ( 0     ),
+    v_DBack                 ( 0     ),
+    v_DPaint                ( 0     ),
+    v_DHit                  ( False ),     { this bar completed a diamond }
+    v_DTL                   ( -1    ),
     v_Cnt51                 ( 0     ),
     v_Cnt52                 ( 0     ),
     v_Cnt53                 ( 0     ),
@@ -421,7 +453,16 @@ arrays:
     { 260843.  Formations per calendar year, 2019 at index 0.  Reference,
       from scripts/research/s16s_p29_clean.json:
         2019=9  2020=15  2021=18  2022=31  2023=24  2024=31  2025=42  2026=33 }
-    v_YrCnt[9]              ( 0     );
+    v_YrCnt[9]              ( 0     ),
+
+    { ---- the diamond's own ten-pivot chain.  [11] gives indices 0..11;
+      only 0..9 are used, matching the six-chain's [7]-for-6 convention. ---- }
+    v_DPx[11]               ( 0     ),
+    v_DBar[11]              ( 0     ),
+    v_DTyp[11]              ( 0     ),     { 1 = high, 2 = low }
+    v_DM7a[11]              ( 0     ),
+    v_DDt[11]               ( 0     ),
+    v_DTm[11]               ( 0     );
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
@@ -522,6 +563,7 @@ end;
 v_PendA = -1;
 v_PendB = -1;
 
+v_DHit = False;
 v_IsPvH = False;
 v_IsPvL = False;
 if v_BIS >= 3 then begin
@@ -601,6 +643,34 @@ for v_k = 1 to 2 begin
         else
             v_PendB = v_Chain;
         v_Chain = v_Chain + 1;
+
+        { ---- 260860: the same pivot also feeds the diamond's ten-slot chain.
+          Identical rules -- a repeated type resets, a full chain shifts by one
+          -- so the two chains always agree about which pivots exist and differ
+          only in how many they hold. ---- }
+        if v_DChain > 0 and v_DTyp[v_DChain - 1] = v_k then
+            v_DChain = 0;
+        if v_DChain >= 10 then begin
+            for v_dj = 0 to 8 begin
+                v_DPx[v_dj]  = v_DPx[v_dj + 1];
+                v_DBar[v_dj] = v_DBar[v_dj + 1];
+                v_DTyp[v_dj] = v_DTyp[v_dj + 1];
+                v_DM7a[v_dj] = v_DM7a[v_dj + 1];
+                v_DDt[v_dj]  = v_DDt[v_dj + 1];
+                v_DTm[v_dj]  = v_DTm[v_dj + 1];
+            end;
+            v_DChain = 9;
+        end;
+        if v_k = 1 then
+            v_DPx[v_DChain] = High[1]
+        else
+            v_DPx[v_DChain] = Low[1];
+        v_DBar[v_DChain] = CurrentBar - 1;
+        v_DTyp[v_DChain] = v_k;
+        v_DM7a[v_DChain] = v_M7[1];
+        v_DDt[v_DChain]  = Date[1];
+        v_DTm[v_DChain]  = Time[1];
+        v_DChain = v_DChain + 1;
 
         { ---- pattern test, right after this push ---- }
 
@@ -896,6 +966,167 @@ for v_k = 1 to 2 begin
 end;
 
 
+    { ---------- SECTION 6b - P30 / P61 DIAMOND ------------------------
+      Ruling I1, 2026-08-28.  Coded and drawn, NOT researched further.
+
+      A diamond is a broadening half followed by a converging half sharing an
+      apex.  P29's founding rule -- two points define a line, three confirm the
+      direction is sustained -- makes that five highs and five lows:
+
+          broadening   H1 < H2 < H3     L1 > L2 > L3
+          converging   H3 > H4 > H5     L3 < L4 < L5
+
+      "Widest in the middle" needs no separate condition: H2 > H1 with L2 < L1
+      forces H2-L2 > H1-L1, and the same on the right.  Zero free parameters.
+
+      Measured over 421,513 bars: ONE exists, 2025-09-08 09:55 to 11:50, a
+      bottom, span 23 bars.  The mirror (narrowest in the middle) has two.  The
+      six-pivot relaxation has 1,467 against a mirror of 1,581 -- identical
+      independence ratios, 0.80x each -- which is why only the ten-pivot form
+      is coded: the loose one is not a confirmed diamond, it is what
+      non-monotone pivots do by chance.
+
+      Note that every complete diamond CONTAINS a P29: its broadening half is
+      P29's condition word for word.  So the six-pivot chain will have flagged
+      the P29 first and this block adds the completed shape on top.           }
+
+if v_DChain >= 10 then begin
+
+    v_DOk = False;
+    if v_DTyp[0] = 1 then begin
+        v_DH1 = v_DPx[0];
+        v_DL1 = v_DPx[1];
+        v_DH2 = v_DPx[2];
+        v_DL2 = v_DPx[3];
+        v_DH3 = v_DPx[4];
+        v_DL3 = v_DPx[5];
+        v_DH4 = v_DPx[6];
+        v_DL4 = v_DPx[7];
+        v_DH5 = v_DPx[8];
+        v_DL5 = v_DPx[9];
+        v_DH1d = v_DDt[0];
+        v_DH3d = v_DDt[4];
+        v_DH5d = v_DDt[8];
+        v_DL1d = v_DDt[1];
+        v_DL3d = v_DDt[5];
+        v_DL5d = v_DDt[9];
+        v_DH1t = v_DTm[0];
+        v_DH3t = v_DTm[4];
+        v_DH5t = v_DTm[8];
+        v_DL1t = v_DTm[1];
+        v_DL3t = v_DTm[5];
+        v_DL5t = v_DTm[9];
+        v_DOrder = 1;
+    end
+    else begin
+        v_DL1 = v_DPx[0];
+        v_DH1 = v_DPx[1];
+        v_DL2 = v_DPx[2];
+        v_DH2 = v_DPx[3];
+        v_DL3 = v_DPx[4];
+        v_DH3 = v_DPx[5];
+        v_DL4 = v_DPx[6];
+        v_DH4 = v_DPx[7];
+        v_DL5 = v_DPx[8];
+        v_DH5 = v_DPx[9];
+        v_DL1d = v_DDt[0];
+        v_DL3d = v_DDt[4];
+        v_DL5d = v_DDt[8];
+        v_DH1d = v_DDt[1];
+        v_DH3d = v_DDt[5];
+        v_DH5d = v_DDt[9];
+        v_DL1t = v_DTm[0];
+        v_DL3t = v_DTm[4];
+        v_DL5t = v_DTm[8];
+        v_DH1t = v_DTm[1];
+        v_DH3t = v_DTm[5];
+        v_DH5t = v_DTm[9];
+        v_DOrder = 2;
+    end;
+
+    if v_DH1 < v_DH2 and v_DH2 < v_DH3
+       and v_DH3 > v_DH4 and v_DH4 > v_DH5
+       and v_DL1 > v_DL2 and v_DL2 > v_DL3
+       and v_DL3 < v_DL4 and v_DL4 < v_DL5
+       and v_DL1 < v_DH1 and v_DL5 < v_DH5 then
+        v_DOk = True;
+
+    { ruling 12 again: M7 is read at the pattern's FIRST pivot, so the
+      top/bottom split costs no new parameter. }
+    if v_DOk then begin
+        v_DKind = 61;
+        if v_DM7a[0] > 0 then
+            v_DKind = 30;
+        if ( v_DKind = 30 and Enable_P30 = 0 )
+           or ( v_DKind = 61 and Enable_P61 = 0 ) then
+            v_DOk = False;
+    end;
+
+    if v_DOk then begin
+        v_DHit = True;
+        if v_DKind = 30 then begin
+            v_Seq30 = v_Seq30 + 1;
+            v_MySeq = v_Seq30;
+        end
+        else begin
+            v_Seq61 = v_Seq61 + 1;
+            v_MySeq = v_Seq61;
+        end;
+
+        { ---- the four edges, as objects.  A diamond that is only recoloured
+          bars does not read as a diamond; the edges are the shape.  One
+          instance in eight years means four more drawing objects is free. ---- }
+        if Line_Mode = 1 then begin
+            v_DTL = TL_New( v_DH1d, v_DH1t, v_DH1, v_DH3d, v_DH3t, v_DH3 );
+            if v_DTL >= 0 then begin
+                TL_SetColor( v_DTL, Col_Dia_Line );
+                TL_SetSize( v_DTL, Dia_Line_Width );
+            end;
+            v_DTL = TL_New( v_DH3d, v_DH3t, v_DH3, v_DH5d, v_DH5t, v_DH5 );
+            if v_DTL >= 0 then begin
+                TL_SetColor( v_DTL, Col_Dia_Line );
+                TL_SetSize( v_DTL, Dia_Line_Width );
+            end;
+            v_DTL = TL_New( v_DL1d, v_DL1t, v_DL1, v_DL3d, v_DL3t, v_DL3 );
+            if v_DTL >= 0 then begin
+                TL_SetColor( v_DTL, Col_Dia_Line );
+                TL_SetSize( v_DTL, Dia_Line_Width );
+            end;
+            v_DTL = TL_New( v_DL3d, v_DL3t, v_DL3, v_DL5d, v_DL5t, v_DL5 );
+            if v_DTL >= 0 then begin
+                TL_SetColor( v_DTL, Col_Dia_Line );
+                TL_SetSize( v_DTL, Dia_Line_Width );
+            end;
+        end;
+
+        if Show_Labels <> 0 then begin
+            v_LblOff = ( v_DH3 - v_DL3 ) * Label_Offset_Pct / 100;
+            if v_DKind = 30 then
+                v_LblPx = v_DH3 + v_LblOff
+            else
+                v_LblPx = v_DL3 - v_LblOff;
+            v_Txt = Text_New( Date, Time, v_LblPx,
+                              "P" + NumToStr( v_DKind, 0 )
+                              + " #" + NumToStr( v_MySeq, 0 ) );
+            if v_Txt >= 0 then begin
+                if v_DKind = 30 then
+                    Text_SetColor( v_Txt, Col_Shape_P30 )
+                else
+                    Text_SetColor( v_Txt, Col_Shape_P61 );
+                Text_SetSize( v_Txt, Label_Size );
+            end;
+        end;
+
+        if Print_Events <> 0 then begin
+            v_Ymd = Date + 19000000;
+            Print( "DIA FORM ", v_Ymd:8:0, " ", Time:4:0,
+                   "  kind=", v_DKind:2:0, "  order=", v_DOrder:1:0,
+                   "  span=", ( v_DBar[9] - v_DBar[0] ):3:0,
+                   "  apexH=", v_DH3:7:0, "  apexL=", v_DL3:7:0 );
+        end;
+    end;
+end;
+
     { ---------- SECTION 7 - LIFECYCLE ---------------------------------
       Precedence, most terminal first:
         expiry           lifetime equals the bars the pattern took to form
@@ -1151,7 +1382,25 @@ end;
   zoom, with the six pivots INSIDE the coloured region rather than to the
   left of it.                                                             }
 
-if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 then begin
+{ 260860: the diamond paints first, and it paints over the P29 inside it.
+  Every complete diamond CONTAINS a P29 -- the broadening half is P29's
+  condition word for word -- so without this the rarer shape would be hidden
+  under the commoner one it is made of. }
+if Paint_Mode <> 0 and v_DHit then begin
+    v_DBack = CurrentBar - v_DBar[0];
+    if v_DBack > Paint_MaxBack then
+        v_DBack = Paint_MaxBack;
+    if v_DKind = 30 then
+        v_DPaint = Col_Shape_P30
+    else
+        v_DPaint = Col_Shape_P61;
+    for v_dj = 1 to v_DBack begin
+        PlotPaintBar[v_dj]( High[v_dj], Low[v_dj], Open[v_dj], Close[v_dj],
+                            "P29", v_DPaint );
+    end;
+end;
+
+if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 and v_DHit = False then begin
     v_PaintBack = CurrentBar - v_PvBar[0];
     if v_PaintBack > Paint_MaxBack then
         v_PaintBack = Paint_MaxBack;
@@ -1266,6 +1515,9 @@ if LastBarOnChart then begin
     Print( "P52 DIAG   reference          =    94  172  229  267  169  258  302  224" );
     Print( "P29 VARIANT  reference  202    1670    1716      7      8",
            "   (P52 is 1715 if the chart starts 20190102 1340)" );
+    Print( "DIA TALLY  P30=", v_Seq30:4:0, "  P61=", v_Seq61:4:0 );
+    Print( "DIA TALLY  reference  P30=   0  P61=   1",
+           "   (20250908 0955-1150, span 23)" );
     Print( "P29 TALLY  break_down=", v_CntDn:5:0,
            "  break_up=", v_CntUp:5:0,
            "  expired=", v_CntExp:5:0,
