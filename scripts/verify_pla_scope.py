@@ -20,6 +20,13 @@ sits at the scope its meaning requires.
              pushes twice, a high then a low, and both need testing -- which is
              why a "did a pivot arrive this bar" guard is not equivalent.
 
+             The block that means this is `if v_Push`, NOT the `for v_k` loop
+             around it: the loop body runs twice per bar with or without a
+             pivot.  260871 sat between the two and counted twice per bar --
+             P18 37,662 against a true 6,352 -- and an earlier version of this
+             checker PASSED it, because it asked the loop question instead of
+             the push question.
+
   per bar    break and expiry are facts about price against a formed pattern,
              so they are judged every bar and belong outside the loop.
 
@@ -37,7 +44,11 @@ TARGET = os.path.join('strategies', 'research', 'S16_MACrossShort',
 if len(sys.argv) > 1:          # a path lets the fixed build be checked against
     TARGET = sys.argv[1]       # the broken one -- a checker that cannot fail
                                # proves nothing.
-LOOP = 'for v_k = 1 to 2 begin'
+PUSH = 'if v_Push then begin'   # NOT `for v_k = 1 to 2 begin`: that loop runs
+                                # twice on EVERY bar whether a pivot exists or
+                                # not, so "inside the loop" is a WEAKER claim
+                                # than "only on a push".  Checking the weaker
+                                # one passed Build 260871, which was wrong.
 
 PER_PUSH = ['v_Cnt29', 'v_Cnt51', 'v_Cnt52', 'v_Cnt53', 'v_Cnt54', 'v_CntForm',
             'v_Seq49', 'v_Seq50', 'v_Seq30', 'v_Seq61',
@@ -72,8 +83,8 @@ def strip_noise(lines):
 
 
 def loop_span(clean):
-    """First and last line of the push loop, matching begin against end."""
-    start = next(i for i, x in enumerate(clean) if x.strip().startswith(LOOP))
+    """First and last line of the push block, matching begin against end."""
+    start = next(i for i, x in enumerate(clean) if x.strip() == PUSH)
     depth = 0
     for i in range(start, len(clean)):
         for w in re.findall(r'\b(begin|end)\b', clean[i]):
@@ -89,7 +100,7 @@ def main():
     lo, hi = loop_span(clean)
     print('=' * 78)
     print('  %s' % TARGET)
-    print('  push loop  %d .. %d' % (lo + 1, hi + 1))
+    print('  if v_Push  %d .. %d' % (lo + 1, hi + 1))
     print('-' * 78)
 
     bad = 0
@@ -108,7 +119,7 @@ def main():
                     bad += 1
                 print('  %s  %-10s  line %-5d  %s  (要求 %s)'
                       % ('ok   ' if ok else 'FAIL ', n, i + 1,
-                         '迴圈內' if inside else '迴圈外', want))
+                         '推入區塊內' if inside else '區塊外', want))
 
     print('-' * 78)
     if bad:

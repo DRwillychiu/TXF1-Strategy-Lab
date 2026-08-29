@@ -325,7 +325,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
             '<div class="yr">逐年　%s</div>'
             '<div class="vd">%s</div></div></div>'
             % (sch(seq, lines), cid, zh, 'b' if d == '空' else 'u', d, en,
-               ('<i class="tg cd">已編碼 260871</i>' if cid in CODED else ''),
+               ('<i class="tg cd">已編碼 260872</i>' if cid in CODED else ''),
                seqtxt, ''.join('<span>%s</span>' % x for x in defs),
                n, yr, sp, t, yrtxt, verdict))
 
@@ -491,7 +491,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '停損距離全部改掉。</small></div></section>')
 
     PC2 = ('<section class="panel"><div class="ph2">'
-           '<h2>八、已編碼　Build 260871</h2>'
+           '<h2>八、已編碼　Build 260872</h2>'
            '<span class="tag">只有空方三個進指標</span></div>'
            '<table><thead><tr><th>項目</th><th style="text-align:left">內容</th>'
            '</tr></thead><tbody>'
@@ -515,7 +515,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            'PowerLanguage 十六色已用掉十四個，剩下的在黑底看不見；'
            '而 P18 每年 831 個，塗色會把 P29 家族整個埋掉。'
            '</p>'
-           '<div class="big"><p><b>★ 260870 是錯的，260871 才是修正版。</b>'
+           '<div class="big"><p><b>★ 260870 錯，260871 也錯，260872 才是修正版。</b>'
            '用戶實跑 260870，得到 <b>P18 16,565 ／ P57 743 ／ P68 3,946</b>，'
            '是參考值的 2.6～2.9 倍 —— 而他的圖表<b>少了 11,909 根 K 棒</b>，'
            '數字只可能偏低，不可能偏高。</p>'
@@ -531,18 +531,31 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            '模擬驗的是<b>邏輯</b>，從來沒驗過<b>放置位置</b>；'
            '照著意圖寫出來的模擬，本來就看不見「程式碼跟意圖不一致」。'
            '鑽石報 1 是<b>碰巧</b>（那個組態只活了一根 K 棒），不是因為它是對的。</p>'
-           '<p style="margin:10px 0 0">補上 <code>scripts/verify_pla_scope.py</code>：'
-           '直接數 begin／end 找出推入迴圈的行號範圍，'
+           '<p class="warn" style="margin:10px 0 0">'
+           '<b>★ 260871 的修法也是錯的，而且錯得更嚴重。</b>'
+           '我把兩個區塊搬進 <code>for v_k = 1 to 2</code>，'
+           '卻留在裡面那個 <code>if v_Push</code> 的<b>外面</b>。'
+           '這個 for 迴圈<b>每根 K 棒都跑兩次</b>，有沒有樞紐都一樣，'
+           '所以從「每根 1 次」變成「每根 2 次」：'
+           '<b>P18 37,662</b>、鑽石從 1 變成 <b>3</b>。</p>'
+           '<p style="margin:10px 0 0"><b>而第一版檢查器放行了它。</b>'
+           '它問的是「在迴圈裡嗎」，但要求是「<b>真的推入樞紐時才跑嗎</b>」—— '
+           '這是兩個不同的問題，而且前者比較弱。'
+           '<b>問一個比要求更弱的問題，等於幫 bug 背書。</b>'
+           '檢查器的錨點已改成 <code>if v_Push</code>。</p>'
+           '<p style="margin:10px 0 0"><code>scripts/verify_pla_scope.py</code>：'
+           '數 begin／end 求出 <code>if v_Push</code> 的行號範圍，'
            '再檢查 16 個計數器各自落在哪一層 —— '
-           '<b>型態計數必須在迴圈內</b>（型態是樞紐鏈的性質，樞紐一進來就定案；'
-           '且外包線一根會推入<b>兩次</b>，高點與低點都要判，'
+           '<b>型態計數必須在推入區塊內</b>（型態是樞紐鏈的性質，樞紐一進來就定案；'
+           '且外包線一根會進入該區塊<b>兩次</b>，先高點後低點，鏈不同、兩次都要判，'
            '所以「這根有沒有樞紐」的旗標並不等價），'
-           '<b>破位與到期必須在迴圈外</b>（那是價格對已成形型態的性質，逐根判定）。'
-           '拿 260870 當負向對照跑，<b>5 個 FAIL 全數抓出</b>。</p></div>'
+           '<b>破位與到期必須在區塊外</b>（那是價格對已成形型態的性質，逐根判定）。'
+           '<b>260870 與 260871 當負向對照，各抓出 5 個 FAIL。</b>'
+           '另加 begin／end 平衡檢查，確認搬移沒有破壞巢狀。</p></div>'
            '<p class="cap"><b>驗收</b>：'
            '<code>REV TALLY  P18= 6352  P57= 255  P68= 1365</code>'
            '（Pivot_Window = 1、完整資料）。'
-           '你的圖表少 11,909 根，預期會略低於此；'
+           '你的圖表少 11,909 根，預期會略低於此（P18 約 6,170）；'
            '<b>P29 的 75／85／39／0 與鑽石的 0／1 必須維持不變</b>。</p>'
            '</section>')
 

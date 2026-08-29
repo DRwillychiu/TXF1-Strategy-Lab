@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260871.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260872.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -202,7 +202,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260871 ),
+    Build_ID                ( 260872 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { ---- 260870, ruling X3 of 2026-08-28.  How many bars a pivot must beat
@@ -1035,17 +1035,32 @@ for v_k = 1 to 2 begin
                        "  m2=", v_M2:8:4 );
             end;
         end;
-    end;
 
-        { ---- 260871: SECTIONS 6b AND 6c LIVE HERE, INSIDE THE PUSH LOOP.
-          They used to sit after it, which ran them once per BAR instead of
-          once per PUSH.  A pivot arrives every 2.8 bars and the chain does
-          not change in between, so each formation was recounted until the
-          next pivot: P18 read 17,049 against a true 6,352.
+        { ---- 260872: SECTIONS 6b AND 6c BELONG HERE, INSIDE `if v_Push`,
+          beside the P29 detection that has always been correct.
 
-          An outside bar pushes TWICE, a high then a low, and each push must
-          be tested -- which is why this is placed here rather than guarded
-          by a "did a pivot arrive this bar" flag. ---- }
+          260870 had them after the whole for loop: once per BAR, so a
+          formation was recounted until the next pivot arrived 2.8 bars
+          later.  P18 read 16,565 against a true 6,352.
+
+          260871 moved them inside the for loop but still after this
+          `if v_Push` block -- and the loop runs twice on EVERY bar
+          whether or not a pivot exists, so it went to twice per bar and
+          got WORSE: P18 37,662, and the diamond 1 -> 3.
+
+          The requirement was never "inside the loop".  It is "only when a
+          pivot is actually pushed", which is this block and nothing
+          wider.  An outside bar enters it TWICE, once for the high and
+          once for the low, and the chain differs after each, so both
+          pushes are tested -- which a per-bar flag could not do. ---- }
+      They used to sit after it, which ran them once per BAR instead of
+      once per PUSH.  A pivot arrives every 2.8 bars and the chain does
+      not change in between, so each formation was recounted until the
+      next pivot: P18 read 17,049 against a true 6,352.
+
+      An outside bar pushes TWICE, a high then a low, and each push must
+      be tested -- which is why this is placed here rather than guarded
+      by a "did a pivot arrive this bar" flag. ---- }
             { ---------- SECTION 6b - P30 / P61 DIAMOND ------------------------
               Ruling I1, 2026-08-28.  Coded and drawn, NOT researched further.
 
@@ -1326,8 +1341,10 @@ for v_k = 1 to 2 begin
             end;
         end;
 
-end;
+    end;
 
+
+    end;
 
     { ---------- SECTION 7 - LIFECYCLE ---------------------------------
       Precedence, most terminal first:
