@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260860.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260861.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -202,7 +202,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260860 ),
+    Build_ID                ( 260861 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
@@ -1109,10 +1109,13 @@ if v_DChain >= 10 then begin
                               "P" + NumToStr( v_DKind, 0 )
                               + " #" + NumToStr( v_MySeq, 0 ) );
             if v_Txt >= 0 then begin
-                if v_DKind = 30 then
-                    Text_SetColor( v_Txt, Col_Shape_P30 )
-                else
-                    Text_SetColor( v_Txt, Col_Shape_P61 );
+                { 260861: the label takes the EDGE colour, not the body colour.
+                  Col_Shape_P30/P61 are dark by design -- they tint bars that
+                  already have shape -- but as text on a black chart they are
+                  unreadable, and the 2025-09-08 screenshot showed "P61 #1"
+                  smudged against a neighbouring P50 label.  The edges are
+                  already bright, so this spends no new colour. }
+                Text_SetColor( v_Txt, Col_Dia_Line );
                 Text_SetSize( v_Txt, Label_Size );
             end;
         end;
