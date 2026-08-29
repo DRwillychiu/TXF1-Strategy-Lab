@@ -325,7 +325,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
             '<div class="yr">逐年　%s</div>'
             '<div class="vd">%s</div></div></div>'
             % (sch(seq, lines), cid, zh, 'b' if d == '空' else 'u', d, en,
-               ('<i class="tg cd">已編碼 260870</i>' if cid in CODED else ''),
+               ('<i class="tg cd">已編碼 260871</i>' if cid in CODED else ''),
                seqtxt, ''.join('<span>%s</span>' % x for x in defs),
                n, yr, sp, t, yrtxt, verdict))
 
@@ -491,7 +491,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '停損距離全部改掉。</small></div></section>')
 
     PC2 = ('<section class="panel"><div class="ph2">'
-           '<h2>八、已編碼　Build 260870</h2>'
+           '<h2>八、已編碼　Build 260871</h2>'
            '<span class="tag">只有空方三個進指標</span></div>'
            '<table><thead><tr><th>項目</th><th style="text-align:left">內容</th>'
            '</tr></thead><tbody>'
@@ -514,9 +514,36 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            '<p class="warn"><b>三個型態不塗 K 棒，只下標籤。</b>'
            'PowerLanguage 十六色已用掉十四個，剩下的在黑底看不見；'
            '而 P18 每年 831 個，塗色會把 P29 家族整個埋掉。'
-           '<br><b>驗收</b>：<code>REV TALLY  P18= 6352  P57= 255  P68= 1365</code>'
-           '（Pivot_Window = 1、完整資料）。離線已確認：整條鏈移植回 Python 逐根模擬，'
-           '<b>6,352 / 255 / 1,365 / 203 全中</b>，且 P29 與鑽石的數字未受影響。</p>'
+           '</p>'
+           '<div class="big"><p><b>★ 260870 是錯的，260871 才是修正版。</b>'
+           '用戶實跑 260870，得到 <b>P18 16,565 ／ P57 743 ／ P68 3,946</b>，'
+           '是參考值的 2.6～2.9 倍 —— 而他的圖表<b>少了 11,909 根 K 棒</b>，'
+           '數字只可能偏低，不可能偏高。</p>'
+           '<p>倍率就是答案：<b>每 2.8 根 K 棒出現一個樞紐</b>。'
+           '判定區塊寫在推入迴圈的<b>外面</b>，變成<b>每根 K 棒</b>跑一次而不是'
+           '<b>每次推入樞紐</b>跑一次；兩次推入之間鏈完全沒變，'
+           '同一個型態就被反覆計到下一個樞紐進來為止。'
+           '把測試移到迴圈外重跑模擬得 <b>17,049 ／ 756 ／ 4,017</b>，'
+           '與實測差的正是那 11,909 根。</p>'
+           '<p class="warn" style="margin:10px 0 0"><b>驗證方式本身也錯了。</b>'
+           '我把演算法移植回 Python，跑出 6,352 / 255 / 1,365，數字全中 —— '
+           '但<b>移植版把判定放在迴圈裡，.pla 放在迴圈外</b>。'
+           '模擬驗的是<b>邏輯</b>，從來沒驗過<b>放置位置</b>；'
+           '照著意圖寫出來的模擬，本來就看不見「程式碼跟意圖不一致」。'
+           '鑽石報 1 是<b>碰巧</b>（那個組態只活了一根 K 棒），不是因為它是對的。</p>'
+           '<p style="margin:10px 0 0">補上 <code>scripts/verify_pla_scope.py</code>：'
+           '直接數 begin／end 找出推入迴圈的行號範圍，'
+           '再檢查 16 個計數器各自落在哪一層 —— '
+           '<b>型態計數必須在迴圈內</b>（型態是樞紐鏈的性質，樞紐一進來就定案；'
+           '且外包線一根會推入<b>兩次</b>，高點與低點都要判，'
+           '所以「這根有沒有樞紐」的旗標並不等價），'
+           '<b>破位與到期必須在迴圈外</b>（那是價格對已成形型態的性質，逐根判定）。'
+           '拿 260870 當負向對照跑，<b>5 個 FAIL 全數抓出</b>。</p></div>'
+           '<p class="cap"><b>驗收</b>：'
+           '<code>REV TALLY  P18= 6352  P57= 255  P68= 1365</code>'
+           '（Pivot_Window = 1、完整資料）。'
+           '你的圖表少 11,909 根，預期會略低於此；'
+           '<b>P29 的 75／85／39／0 與鑽石的 0／1 必須維持不變</b>。</p>'
            '</section>')
 
     P5 = ('<section class="panel"><div class="ph2">'

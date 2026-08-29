@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260870.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260871.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -202,7 +202,7 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260870 ),
+    Build_ID                ( 260871 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { ---- 260870, ruling X3 of 2026-08-28.  How many bars a pivot must beat
@@ -1036,245 +1036,222 @@ for v_k = 1 to 2 begin
             end;
         end;
     end;
-end;
 
+        { ---- 260871: SECTIONS 6b AND 6c LIVE HERE, INSIDE THE PUSH LOOP.
+          They used to sit after it, which ran them once per BAR instead of
+          once per PUSH.  A pivot arrives every 2.8 bars and the chain does
+          not change in between, so each formation was recounted until the
+          next pivot: P18 read 17,049 against a true 6,352.
 
-    { ---------- SECTION 6b - P30 / P61 DIAMOND ------------------------
-      Ruling I1, 2026-08-28.  Coded and drawn, NOT researched further.
+          An outside bar pushes TWICE, a high then a low, and each push must
+          be tested -- which is why this is placed here rather than guarded
+          by a "did a pivot arrive this bar" flag. ---- }
+            { ---------- SECTION 6b - P30 / P61 DIAMOND ------------------------
+              Ruling I1, 2026-08-28.  Coded and drawn, NOT researched further.
 
-      A diamond is a broadening half followed by a converging half sharing an
-      apex.  P29's founding rule -- two points define a line, three confirm the
-      direction is sustained -- makes that five highs and five lows:
+              A diamond is a broadening half followed by a converging half sharing an
+              apex.  P29's founding rule -- two points define a line, three confirm the
+              direction is sustained -- makes that five highs and five lows:
 
-          broadening   H1 < H2 < H3     L1 > L2 > L3
-          converging   H3 > H4 > H5     L3 < L4 < L5
+                  broadening   H1 < H2 < H3     L1 > L2 > L3
+                  converging   H3 > H4 > H5     L3 < L4 < L5
 
-      "Widest in the middle" needs no separate condition: H2 > H1 with L2 < L1
-      forces H2-L2 > H1-L1, and the same on the right.  Zero free parameters.
+              "Widest in the middle" needs no separate condition: H2 > H1 with L2 < L1
+              forces H2-L2 > H1-L1, and the same on the right.  Zero free parameters.
 
-      Measured over 421,513 bars: ONE exists, 2025-09-08 09:55 to 11:50, a
-      bottom, span 23 bars.  The mirror (narrowest in the middle) has two.  The
-      six-pivot relaxation has 1,467 against a mirror of 1,581 -- identical
-      independence ratios, 0.80x each -- which is why only the ten-pivot form
-      is coded: the loose one is not a confirmed diamond, it is what
-      non-monotone pivots do by chance.
+              Measured over 421,513 bars: ONE exists, 2025-09-08 09:55 to 11:50, a
+              bottom, span 23 bars.  The mirror (narrowest in the middle) has two.  The
+              six-pivot relaxation has 1,467 against a mirror of 1,581 -- identical
+              independence ratios, 0.80x each -- which is why only the ten-pivot form
+              is coded: the loose one is not a confirmed diamond, it is what
+              non-monotone pivots do by chance.
 
-      Note that every complete diamond CONTAINS a P29: its broadening half is
-      P29's condition word for word.  So the six-pivot chain will have flagged
-      the P29 first and this block adds the completed shape on top.           }
+              Note that every complete diamond CONTAINS a P29: its broadening half is
+              P29's condition word for word.  So the six-pivot chain will have flagged
+              the P29 first and this block adds the completed shape on top.           }
 
-if v_DChain >= 10 then begin
+        if v_DChain >= 10 then begin
 
-    v_DOk = False;
-    if v_DTyp[0] = 1 then begin
-        v_DH1 = v_DPx[0];
-        v_DL1 = v_DPx[1];
-        v_DH2 = v_DPx[2];
-        v_DL2 = v_DPx[3];
-        v_DH3 = v_DPx[4];
-        v_DL3 = v_DPx[5];
-        v_DH4 = v_DPx[6];
-        v_DL4 = v_DPx[7];
-        v_DH5 = v_DPx[8];
-        v_DL5 = v_DPx[9];
-        v_DH1d = v_DDt[0];
-        v_DH3d = v_DDt[4];
-        v_DH5d = v_DDt[8];
-        v_DL1d = v_DDt[1];
-        v_DL3d = v_DDt[5];
-        v_DL5d = v_DDt[9];
-        v_DH1t = v_DTm[0];
-        v_DH3t = v_DTm[4];
-        v_DH5t = v_DTm[8];
-        v_DL1t = v_DTm[1];
-        v_DL3t = v_DTm[5];
-        v_DL5t = v_DTm[9];
-        v_DOrder = 1;
-    end
-    else begin
-        v_DL1 = v_DPx[0];
-        v_DH1 = v_DPx[1];
-        v_DL2 = v_DPx[2];
-        v_DH2 = v_DPx[3];
-        v_DL3 = v_DPx[4];
-        v_DH3 = v_DPx[5];
-        v_DL4 = v_DPx[6];
-        v_DH4 = v_DPx[7];
-        v_DL5 = v_DPx[8];
-        v_DH5 = v_DPx[9];
-        v_DL1d = v_DDt[0];
-        v_DL3d = v_DDt[4];
-        v_DL5d = v_DDt[8];
-        v_DH1d = v_DDt[1];
-        v_DH3d = v_DDt[5];
-        v_DH5d = v_DDt[9];
-        v_DL1t = v_DTm[0];
-        v_DL3t = v_DTm[4];
-        v_DL5t = v_DTm[8];
-        v_DH1t = v_DTm[1];
-        v_DH3t = v_DTm[5];
-        v_DH5t = v_DTm[9];
-        v_DOrder = 2;
-    end;
-
-    if v_DH1 < v_DH2 and v_DH2 < v_DH3
-       and v_DH3 > v_DH4 and v_DH4 > v_DH5
-       and v_DL1 > v_DL2 and v_DL2 > v_DL3
-       and v_DL3 < v_DL4 and v_DL4 < v_DL5
-       and v_DL1 < v_DH1 and v_DL5 < v_DH5 then
-        v_DOk = True;
-
-    { ruling 12 again: M7 is read at the pattern's FIRST pivot, so the
-      top/bottom split costs no new parameter. }
-    if v_DOk then begin
-        v_DKind = 61;
-        if v_DM7a[0] > 0 then
-            v_DKind = 30;
-        if ( v_DKind = 30 and Enable_P30 = 0 )
-           or ( v_DKind = 61 and Enable_P61 = 0 ) then
             v_DOk = False;
-    end;
-
-    if v_DOk then begin
-        v_DHit = True;
-        if v_DKind = 30 then begin
-            v_Seq30 = v_Seq30 + 1;
-            v_MySeq = v_Seq30;
-        end
-        else begin
-            v_Seq61 = v_Seq61 + 1;
-            v_MySeq = v_Seq61;
-        end;
-
-        { ---- the four edges, as objects.  A diamond that is only recoloured
-          bars does not read as a diamond; the edges are the shape.  One
-          instance in eight years means four more drawing objects is free. ---- }
-        if Line_Mode = 1 then begin
-            v_DTL = TL_New( v_DH1d, v_DH1t, v_DH1, v_DH3d, v_DH3t, v_DH3 );
-            if v_DTL >= 0 then begin
-                TL_SetColor( v_DTL, Col_Dia_Line );
-                TL_SetSize( v_DTL, Dia_Line_Width );
+            if v_DTyp[0] = 1 then begin
+                v_DH1 = v_DPx[0];
+                v_DL1 = v_DPx[1];
+                v_DH2 = v_DPx[2];
+                v_DL2 = v_DPx[3];
+                v_DH3 = v_DPx[4];
+                v_DL3 = v_DPx[5];
+                v_DH4 = v_DPx[6];
+                v_DL4 = v_DPx[7];
+                v_DH5 = v_DPx[8];
+                v_DL5 = v_DPx[9];
+                v_DH1d = v_DDt[0];
+                v_DH3d = v_DDt[4];
+                v_DH5d = v_DDt[8];
+                v_DL1d = v_DDt[1];
+                v_DL3d = v_DDt[5];
+                v_DL5d = v_DDt[9];
+                v_DH1t = v_DTm[0];
+                v_DH3t = v_DTm[4];
+                v_DH5t = v_DTm[8];
+                v_DL1t = v_DTm[1];
+                v_DL3t = v_DTm[5];
+                v_DL5t = v_DTm[9];
+                v_DOrder = 1;
+            end
+            else begin
+                v_DL1 = v_DPx[0];
+                v_DH1 = v_DPx[1];
+                v_DL2 = v_DPx[2];
+                v_DH2 = v_DPx[3];
+                v_DL3 = v_DPx[4];
+                v_DH3 = v_DPx[5];
+                v_DL4 = v_DPx[6];
+                v_DH4 = v_DPx[7];
+                v_DL5 = v_DPx[8];
+                v_DH5 = v_DPx[9];
+                v_DL1d = v_DDt[0];
+                v_DL3d = v_DDt[4];
+                v_DL5d = v_DDt[8];
+                v_DH1d = v_DDt[1];
+                v_DH3d = v_DDt[5];
+                v_DH5d = v_DDt[9];
+                v_DL1t = v_DTm[0];
+                v_DL3t = v_DTm[4];
+                v_DL5t = v_DTm[8];
+                v_DH1t = v_DTm[1];
+                v_DH3t = v_DTm[5];
+                v_DH5t = v_DTm[9];
+                v_DOrder = 2;
             end;
-            v_DTL = TL_New( v_DH3d, v_DH3t, v_DH3, v_DH5d, v_DH5t, v_DH5 );
-            if v_DTL >= 0 then begin
-                TL_SetColor( v_DTL, Col_Dia_Line );
-                TL_SetSize( v_DTL, Dia_Line_Width );
+
+            if v_DH1 < v_DH2 and v_DH2 < v_DH3
+               and v_DH3 > v_DH4 and v_DH4 > v_DH5
+               and v_DL1 > v_DL2 and v_DL2 > v_DL3
+               and v_DL3 < v_DL4 and v_DL4 < v_DL5
+               and v_DL1 < v_DH1 and v_DL5 < v_DH5 then
+                v_DOk = True;
+
+            { ruling 12 again: M7 is read at the pattern's FIRST pivot, so the
+              top/bottom split costs no new parameter. }
+            if v_DOk then begin
+                v_DKind = 61;
+                if v_DM7a[0] > 0 then
+                    v_DKind = 30;
+                if ( v_DKind = 30 and Enable_P30 = 0 )
+                   or ( v_DKind = 61 and Enable_P61 = 0 ) then
+                    v_DOk = False;
             end;
-            v_DTL = TL_New( v_DL1d, v_DL1t, v_DL1, v_DL3d, v_DL3t, v_DL3 );
-            if v_DTL >= 0 then begin
-                TL_SetColor( v_DTL, Col_Dia_Line );
-                TL_SetSize( v_DTL, Dia_Line_Width );
-            end;
-            v_DTL = TL_New( v_DL3d, v_DL3t, v_DL3, v_DL5d, v_DL5t, v_DL5 );
-            if v_DTL >= 0 then begin
-                TL_SetColor( v_DTL, Col_Dia_Line );
-                TL_SetSize( v_DTL, Dia_Line_Width );
-            end;
-        end;
 
-        if Show_Labels <> 0 then begin
-            v_LblOff = ( v_DH3 - v_DL3 ) * Label_Offset_Pct / 100;
-            if v_DKind = 30 then
-                v_LblPx = v_DH3 + v_LblOff
-            else
-                v_LblPx = v_DL3 - v_LblOff;
-            v_Txt = Text_New( Date, Time, v_LblPx,
-                              "P" + NumToStr( v_DKind, 0 )
-                              + " #" + NumToStr( v_MySeq, 0 ) );
-            if v_Txt >= 0 then begin
-                { 260861: the label takes the EDGE colour, not the body colour.
-                  Col_Shape_P30/P61 are dark by design -- they tint bars that
-                  already have shape -- but as text on a black chart they are
-                  unreadable, and the 2025-09-08 screenshot showed "P61 #1"
-                  smudged against a neighbouring P50 label.  The edges are
-                  already bright, so this spends no new colour. }
-                Text_SetColor( v_Txt, Col_Dia_Line );
-                Text_SetSize( v_Txt, Label_Size );
-            end;
-        end;
+            if v_DOk then begin
+                v_DHit = True;
+                if v_DKind = 30 then begin
+                    v_Seq30 = v_Seq30 + 1;
+                    v_MySeq = v_Seq30;
+                end
+                else begin
+                    v_Seq61 = v_Seq61 + 1;
+                    v_MySeq = v_Seq61;
+                end;
 
-        if Print_Events <> 0 then begin
-            v_Ymd = Date + 19000000;
-            Print( "DIA FORM ", v_Ymd:8:0, " ", Time:4:0,
-                   "  kind=", v_DKind:2:0, "  order=", v_DOrder:1:0,
-                   "  span=", ( v_DBar[9] - v_DBar[0] ):3:0,
-                   "  apexH=", v_DH3:7:0, "  apexL=", v_DL3:7:0 );
-        end;
-    end;
-end;
+                { ---- the four edges, as objects.  A diamond that is only recoloured
+                  bars does not read as a diamond; the edges are the shape.  One
+                  instance in eight years means four more drawing objects is free. ---- }
+                if Line_Mode = 1 then begin
+                    v_DTL = TL_New( v_DH1d, v_DH1t, v_DH1, v_DH3d, v_DH3t, v_DH3 );
+                    if v_DTL >= 0 then begin
+                        TL_SetColor( v_DTL, Col_Dia_Line );
+                        TL_SetSize( v_DTL, Dia_Line_Width );
+                    end;
+                    v_DTL = TL_New( v_DH3d, v_DH3t, v_DH3, v_DH5d, v_DH5t, v_DH5 );
+                    if v_DTL >= 0 then begin
+                        TL_SetColor( v_DTL, Col_Dia_Line );
+                        TL_SetSize( v_DTL, Dia_Line_Width );
+                    end;
+                    v_DTL = TL_New( v_DL1d, v_DL1t, v_DL1, v_DL3d, v_DL3t, v_DL3 );
+                    if v_DTL >= 0 then begin
+                        TL_SetColor( v_DTL, Col_Dia_Line );
+                        TL_SetSize( v_DTL, Dia_Line_Width );
+                    end;
+                    v_DTL = TL_New( v_DL3d, v_DL3t, v_DL3, v_DL5d, v_DL5t, v_DL5 );
+                    if v_DTL >= 0 then begin
+                        TL_SetColor( v_DTL, Col_Dia_Line );
+                        TL_SetSize( v_DTL, Dia_Line_Width );
+                    end;
+                end;
 
-    { ---------- SECTION 6c - P18 / P57 / P68 -------------------------
-      The three BEARISH patterns of group A that survived their control, coded
-      per Willy's ruling of 2026-08-28.
-
-      No new chain.  The six-pivot chain holds the last six alternating pivots,
-      so the last three and the last five are slices of it:
-
-          P68  last 3   H L H
-          P18  last 5   H L H L H
-          P57  last 5   H L H L H   (uses the first four)
-
-      The chain enforces alternation, so testing the FIRST pivot's type settles
-      the whole slice.
-
-      P18 uses Willy's band device rather than exact equality: PH1 and PH2
-      define the zone and PH3 is tested against it.  The tolerance is
-      |PH1 - PH2|, taken from the pattern itself, so no parameter is spent, and
-      the order is causal -- the first two peaks form the zone, the third tests
-      it.  Exact equality gives 43 instances with 2026 empty; the band gives
-      6,352 with no empty year AND THE SAME RATIO, 10.20x against 10.19x,
-      because the zone widens with the market while a fixed zero does not.
-
-      P57 is tested on a five-pivot slice although it reads only four.  That
-      matches the reference scan exactly, and matching the reference is worth
-      more here than saving one pivot of delay.
-
-      NO BAR PAINTING.  Fourteen of PowerLanguage's sixteen colours are already
-      spoken for and the two left are invisible on a black chart; P18 alone
-      runs 831 a year and would bury the P29 family under it.  The labels carry
-      what matters and the counters carry the rest.                          }
-
-v_RevPx = 0;
-
-if Enable_P68 <> 0 and v_Chain >= 3 then begin
-    v_a = v_Chain - 3;
-    if v_PvTyp[v_a] = 1 and v_PvPx[v_a] = v_PvPx[v_a + 2] then begin
-        v_Cnt68 = v_Cnt68 + 1;
-        v_Seq68 = v_Seq68 + 1;
-        if Show_Labels <> 0 then begin
-            v_RevPx = High + ( High - Low ) * Label_Offset_Pct / 100;
-            v_Txt = Text_New( Date, Time, v_RevPx,
-                              "P68 #" + NumToStr( v_Seq68, 0 ) );
-            if v_Txt >= 0 then begin
-                Text_SetColor( v_Txt, Col_Revisit );
-                Text_SetSize( v_Txt, Label_Size );
-            end;
-        end;
-        if Print_Events <> 0 then begin
-            v_Ymd = Date + 19000000;
-            Print( "P68 FORM ", v_Ymd:8:0, " ", Time:4:0,
-                   "  px=", v_PvPx[v_a]:7:0,
-                   "  span=", ( v_PvBar[v_a + 2] - v_PvBar[v_a] ):3:0 );
-        end;
-    end;
-end;
-
-if v_Chain >= 5 then begin
-    v_a = v_Chain - 5;
-    if v_PvTyp[v_a] = 1 then begin
-
-        { ---- P18 triple top: PH1 and PH2 define the zone, PH3 is tested ---- }
-        if Enable_P18 <> 0 then begin
-            v_bandLo = MinList( v_PvPx[v_a], v_PvPx[v_a + 2] );
-            v_bandHi = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
-            if v_PvPx[v_a + 4] >= v_bandLo and v_PvPx[v_a + 4] <= v_bandHi then begin
-                v_Cnt18 = v_Cnt18 + 1;
-                v_Seq18 = v_Seq18 + 1;
                 if Show_Labels <> 0 then begin
-                    v_RevPx = v_bandHi + ( v_bandHi - v_bandLo + High - Low )
-                              * Label_Offset_Pct / 100;
+                    v_LblOff = ( v_DH3 - v_DL3 ) * Label_Offset_Pct / 100;
+                    if v_DKind = 30 then
+                        v_LblPx = v_DH3 + v_LblOff
+                    else
+                        v_LblPx = v_DL3 - v_LblOff;
+                    v_Txt = Text_New( Date, Time, v_LblPx,
+                                      "P" + NumToStr( v_DKind, 0 )
+                                      + " #" + NumToStr( v_MySeq, 0 ) );
+                    if v_Txt >= 0 then begin
+                        { 260861: the label takes the EDGE colour, not the body colour.
+                          Col_Shape_P30/P61 are dark by design -- they tint bars that
+                          already have shape -- but as text on a black chart they are
+                          unreadable, and the 2025-09-08 screenshot showed "P61 #1"
+                          smudged against a neighbouring P50 label.  The edges are
+                          already bright, so this spends no new colour. }
+                        Text_SetColor( v_Txt, Col_Dia_Line );
+                        Text_SetSize( v_Txt, Label_Size );
+                    end;
+                end;
+
+                if Print_Events <> 0 then begin
+                    v_Ymd = Date + 19000000;
+                    Print( "DIA FORM ", v_Ymd:8:0, " ", Time:4:0,
+                           "  kind=", v_DKind:2:0, "  order=", v_DOrder:1:0,
+                           "  span=", ( v_DBar[9] - v_DBar[0] ):3:0,
+                           "  apexH=", v_DH3:7:0, "  apexL=", v_DL3:7:0 );
+                end;
+            end;
+        end;
+
+            { ---------- SECTION 6c - P18 / P57 / P68 -------------------------
+              The three BEARISH patterns of group A that survived their control, coded
+              per Willy's ruling of 2026-08-28.
+
+              No new chain.  The six-pivot chain holds the last six alternating pivots,
+              so the last three and the last five are slices of it:
+
+                  P68  last 3   H L H
+                  P18  last 5   H L H L H
+                  P57  last 5   H L H L H   (uses the first four)
+
+              The chain enforces alternation, so testing the FIRST pivot's type settles
+              the whole slice.
+
+              P18 uses Willy's band device rather than exact equality: PH1 and PH2
+              define the zone and PH3 is tested against it.  The tolerance is
+              |PH1 - PH2|, taken from the pattern itself, so no parameter is spent, and
+              the order is causal -- the first two peaks form the zone, the third tests
+              it.  Exact equality gives 43 instances with 2026 empty; the band gives
+              6,352 with no empty year AND THE SAME RATIO, 10.20x against 10.19x,
+              because the zone widens with the market while a fixed zero does not.
+
+              P57 is tested on a five-pivot slice although it reads only four.  That
+              matches the reference scan exactly, and matching the reference is worth
+              more here than saving one pivot of delay.
+
+              NO BAR PAINTING.  Fourteen of PowerLanguage's sixteen colours are already
+              spoken for and the two left are invisible on a black chart; P18 alone
+              runs 831 a year and would bury the P29 family under it.  The labels carry
+              what matters and the counters carry the rest.                          }
+
+        v_RevPx = 0;
+
+        if Enable_P68 <> 0 and v_Chain >= 3 then begin
+            v_a = v_Chain - 3;
+            if v_PvTyp[v_a] = 1 and v_PvPx[v_a] = v_PvPx[v_a + 2] then begin
+                v_Cnt68 = v_Cnt68 + 1;
+                v_Seq68 = v_Seq68 + 1;
+                if Show_Labels <> 0 then begin
+                    v_RevPx = High + ( High - Low ) * Label_Offset_Pct / 100;
                     v_Txt = Text_New( Date, Time, v_RevPx,
-                                      "P18 #" + NumToStr( v_Seq18, 0 ) );
+                                      "P68 #" + NumToStr( v_Seq68, 0 ) );
                     if v_Txt >= 0 then begin
                         Text_SetColor( v_Txt, Col_Revisit );
                         Text_SetSize( v_Txt, Label_Size );
@@ -1282,42 +1259,75 @@ if v_Chain >= 5 then begin
                 end;
                 if Print_Events <> 0 then begin
                     v_Ymd = Date + 19000000;
-                    Print( "P18 FORM ", v_Ymd:8:0, " ", Time:4:0,
-                           "  band=", v_bandLo:7:0, "-", v_bandHi:7:0,
-                           "  PH3=", v_PvPx[v_a + 4]:7:0,
-                           "  span=", ( v_PvBar[v_a + 4] - v_PvBar[v_a] ):3:0 );
+                    Print( "P68 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                           "  px=", v_PvPx[v_a]:7:0,
+                           "  span=", ( v_PvBar[v_a + 2] - v_PvBar[v_a] ):3:0 );
                 end;
             end;
         end;
 
-        { ---- P57 measured move down: two legs of exactly equal size ---- }
-        if Enable_P57 <> 0 then begin
-            if v_PvPx[v_a + 2] < v_PvPx[v_a]
-               and v_PvPx[v_a + 3] < v_PvPx[v_a + 1]
-               and ( v_PvPx[v_a] - v_PvPx[v_a + 1] )
-                 = ( v_PvPx[v_a + 2] - v_PvPx[v_a + 3] ) then begin
-                v_Cnt57 = v_Cnt57 + 1;
-                v_Seq57 = v_Seq57 + 1;
-                if Show_Labels <> 0 then begin
-                    v_RevPx = Low - ( High - Low ) * Label_Offset_Pct / 100;
-                    v_Txt = Text_New( Date, Time, v_RevPx,
-                                      "P57 #" + NumToStr( v_Seq57, 0 ) );
-                    if v_Txt >= 0 then begin
-                        Text_SetColor( v_Txt, Col_Revisit );
-                        Text_SetSize( v_Txt, Label_Size );
+        if v_Chain >= 5 then begin
+            v_a = v_Chain - 5;
+            if v_PvTyp[v_a] = 1 then begin
+
+                { ---- P18 triple top: PH1 and PH2 define the zone, PH3 is tested ---- }
+                if Enable_P18 <> 0 then begin
+                    v_bandLo = MinList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+                    v_bandHi = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+                    if v_PvPx[v_a + 4] >= v_bandLo and v_PvPx[v_a + 4] <= v_bandHi then begin
+                        v_Cnt18 = v_Cnt18 + 1;
+                        v_Seq18 = v_Seq18 + 1;
+                        if Show_Labels <> 0 then begin
+                            v_RevPx = v_bandHi + ( v_bandHi - v_bandLo + High - Low )
+                                      * Label_Offset_Pct / 100;
+                            v_Txt = Text_New( Date, Time, v_RevPx,
+                                              "P18 #" + NumToStr( v_Seq18, 0 ) );
+                            if v_Txt >= 0 then begin
+                                Text_SetColor( v_Txt, Col_Revisit );
+                                Text_SetSize( v_Txt, Label_Size );
+                            end;
+                        end;
+                        if Print_Events <> 0 then begin
+                            v_Ymd = Date + 19000000;
+                            Print( "P18 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                                   "  band=", v_bandLo:7:0, "-", v_bandHi:7:0,
+                                   "  PH3=", v_PvPx[v_a + 4]:7:0,
+                                   "  span=", ( v_PvBar[v_a + 4] - v_PvBar[v_a] ):3:0 );
+                        end;
                     end;
                 end;
-                if Print_Events <> 0 then begin
-                    v_Ymd = Date + 19000000;
-                    Print( "P57 FORM ", v_Ymd:8:0, " ", Time:4:0,
-                           "  leg=", ( v_PvPx[v_a] - v_PvPx[v_a + 1] ):6:0,
-                           "  span=", ( v_PvBar[v_a + 3] - v_PvBar[v_a] ):3:0 );
+
+                { ---- P57 measured move down: two legs of exactly equal size ---- }
+                if Enable_P57 <> 0 then begin
+                    if v_PvPx[v_a + 2] < v_PvPx[v_a]
+                       and v_PvPx[v_a + 3] < v_PvPx[v_a + 1]
+                       and ( v_PvPx[v_a] - v_PvPx[v_a + 1] )
+                         = ( v_PvPx[v_a + 2] - v_PvPx[v_a + 3] ) then begin
+                        v_Cnt57 = v_Cnt57 + 1;
+                        v_Seq57 = v_Seq57 + 1;
+                        if Show_Labels <> 0 then begin
+                            v_RevPx = Low - ( High - Low ) * Label_Offset_Pct / 100;
+                            v_Txt = Text_New( Date, Time, v_RevPx,
+                                              "P57 #" + NumToStr( v_Seq57, 0 ) );
+                            if v_Txt >= 0 then begin
+                                Text_SetColor( v_Txt, Col_Revisit );
+                                Text_SetSize( v_Txt, Label_Size );
+                            end;
+                        end;
+                        if Print_Events <> 0 then begin
+                            v_Ymd = Date + 19000000;
+                            Print( "P57 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                                   "  leg=", ( v_PvPx[v_a] - v_PvPx[v_a + 1] ):6:0,
+                                   "  span=", ( v_PvBar[v_a + 3] - v_PvBar[v_a] ):3:0 );
+                        end;
+                    end;
                 end;
+
             end;
         end;
 
-    end;
 end;
+
 
     { ---------- SECTION 7 - LIFECYCLE ---------------------------------
       Precedence, most terminal first:
