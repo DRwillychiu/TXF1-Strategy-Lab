@@ -213,6 +213,19 @@ DECAY = [('2019', '3,376', 278, 82.35, 9, 741), ('2020', '4,899', 229, 46.74, 17
          ('2023', '4,745', 182, 38.36, 17, 652), ('2024', '5,793', 140, 24.17, 32, 773),
          ('2025', '6,183', 144, 23.29, 32, 745), ('2026', '4,448', 42, 9.44, 90, 850)]
 
+SCALE = [(1, '2.8', 12, 3, '0%', '現行'),
+         (2, '4.8', 19, 6, '1%', ''),
+         (3, '6.8', 30, 8, '4%', 'MaxBarsBack 上限'),
+         (5, '11.1', 44, 11, '39%', '撞牆'),
+         (8, '18.1', 70, 17, '93%', '不可行')]
+
+INV = [('P29 擴散', '0.16x', '0.18x', '0.20x'),
+       ('鑽石', '0.80x', '0.78x', '0.81x'),
+       ('沙漏（鏡像）', '0.80x', '0.79x', '0.77x'),
+       ('頭肩 峰:谷', '0.958 : 1', '0.981 : 1', '0.944 : 1')]
+
+CODED = {'P18', 'P57', 'P68'}
+
 CLS = [('單調方向', 'P29 0.16x　收斂 0.22x　P51 2.08x　P52 2.12x',
         '與高低點同向共動 10.3 : 1 的結構互動', '含資訊 <b>且有方向性</b>', True),
        ('峰谷形狀', '頭肩 0.958:1　鑽石 0.80x 對沙漏 0.80x',
@@ -281,6 +294,9 @@ def main():
 .st b{color:var(--ink)}
 .z{color:var(--brk);font-weight:600}
 .g{color:var(--ph);font-weight:600}
+.tg.cd{color:var(--ph);border-color:var(--ph);font-weight:600}
+tr.hit td{background:rgba(15,157,118,.09)}
+tr.hit td:first-child{color:var(--ph);font-weight:600}
 .big{border-left:3px solid var(--ph);background:var(--card);padding:16px 20px;
   border-radius:0 5px 5px 0;margin:5px 0 2px}
 .big p{margin:0;font-family:var(--serif);font-size:16.5px;line-height:1.6;color:var(--ink)}
@@ -301,7 +317,7 @@ def main():
         cards.append(
             '<div class="pc"><div>%s</div><div class="rt">'
             '<h3 class="ph3"><span class="cid">%s</span><b>%s</b>'
-            '<i class="tg %s">%s</i><span class="en">%s</span></h3>'
+            '<i class="tg %s">%s</i><span class="en">%s</span>%s</h3>'
             '<div class="def"><span class="hd">樞紐序列　%s</span>%s'
             '<span class="hd" style="margin-top:5px">自由參數　<b>0</b></span></div>'
             '<div class="nums"><span>母體 <b>%s</b></span>'
@@ -309,6 +325,7 @@ def main():
             '<div class="yr">逐年　%s</div>'
             '<div class="vd">%s</div></div></div>'
             % (sch(seq, lines), cid, zh, 'b' if d == '空' else 'u', d, en,
+               ('<i class="tg cd">已編碼 260870</i>' if cid in CODED else ''),
                seqtxt, ''.join('<span>%s</span>' % x for x in defs),
                n, yr, sp, t, yrtxt, verdict))
 
@@ -344,7 +361,7 @@ def main():
            '<div class="kpi">'
            '<span><b>7</b>型態</span>'
            '<span><b>5</b>通過嚴格對照</span>'
-           '<span><b>0</b>具方向性</span>'
+           '<span><b>3</b>已編碼（空方）</span>'
            '<span><b>4</b>次更正才站得住</span>'
            '</div>'
            '<p class="warn"><b>這不是回測。</b>全部是計數與排列檢定，'
@@ -441,8 +458,69 @@ def main():
           '<b>之後套用這個裝置時要逐案量，不能假設它一定划算。</b></p>'
           '</section>')
 
+    scale = "".join(
+        '<tr%s><td>%d</td><td>%s</td><td>%d</td><td class="%s">%d</td>'
+        '<td class="%s">%s</td><td>%s</td></tr>'
+        % (' class="hit"' if w == 3 else '', w, per, sp,
+           'z' if dt <= 3 else '', dt,
+           'z' if ov not in ('0%', '1%', '4%') else '', ov, note)
+        for w, per, sp, dt, ov, note in SCALE)
+
+    inv = "".join('<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % r
+                  for r in INV)
+
+    PS = ('<section class="panel"><div class="ph2">'
+          '<h2>七、★ 樞紐尺度</h2>'
+          '<span class="tag">用戶提問：型態本質是很多根 K 棒組合而成</span></div>'
+          '<p class="warn"><b>視窗 1 每 2.8 根就認一個樞紐，35.9% 的 K 棒都是樞紐。</b>'
+          '所以本頁的「雙頂」跨度中位只有 <b>3 根</b> —— '
+          '一根高、中間一根、再一根高。<b>那不是雙頂。</b></p>'
+          '<table><thead><tr><th>視窗</th><th>每 N 根一個</th><th>P29 跨度</th>'
+          '<th>雙頂跨度</th><th>形成+有效期&gt;99</th><th></th></tr></thead>'
+          '<tbody>' + scale + '</tbody></table>'
+          '<p class="cap">日盤 ＝ 60 根。<b>視窗 3 的 P29 跨 30 根 ≈ 半個日盤</b>，'
+          '才開始像圖形型態；視窗 5 以上有 39%／93% 的型態超出 MaxBarsBack 100。</p>'
+          '<table><thead><tr><th>判定</th><th>視窗 1</th><th>視窗 2</th>'
+          '<th>視窗 3</th></tr></thead><tbody>' + inv + '</tbody></table>'
+          '<div class="big"><p>三個判定在三種尺度下一致 —— '
+          '<b>本頁的結論不必因為改視窗而重做</b>，變的只有母體數字與跨度。</p>'
+          '<small><b>★ 視窗變粗 ≠ 換週期。</b>'
+          '視窗 3 的意思是「高點要高過左右各 3 根」，'
+          '<b>K 棒仍是 5 分 K，進場、出場、停損全部仍在 5 分 K 上</b>。'
+          '與改用 15 分 K 是完全不同的兩件事 —— 後者會連 OHLC、進場價、'
+          '停損距離全部改掉。</small></div></section>')
+
+    PC2 = ('<section class="panel"><div class="ph2">'
+           '<h2>八、已編碼　Build 260870</h2>'
+           '<span class="tag">只有空方三個進指標</span></div>'
+           '<table><thead><tr><th>項目</th><th style="text-align:left">內容</th>'
+           '</tr></thead><tbody>'
+           '<tr class="hit"><td>P18 三重頂</td><td style="text-align:left">'
+           '讀鏈上<b>最後 5 個</b>樞紐，區間裝置。參考 <b>6,352</b></td></tr>'
+           '<tr class="hit"><td>P68 雙頂</td><td style="text-align:left">'
+           '讀鏈上<b>最後 3 個</b>樞紐。參考 <b>1,365</b></td></tr>'
+           '<tr class="hit"><td>P57 測量移動（下）</td><td style="text-align:left">'
+           '讀鏈上<b>最後 5 個</b>樞紐（條件只用前 4 個）。參考 <b>255</b></td></tr>'
+           '<tr><td>Pivot_Window</td><td style="text-align:left">'
+           '新 input，預設 1。<b>w=1 與舊碼逐字等價</b>，'
+           '模擬確認 P29 仍為 203</td></tr>'
+           '<tr><td>P15／P16／P23／P21</td><td style="text-align:left">'
+           '<b>未編碼</b> —— P15／P16 不含資訊；'
+           'P23／P21 是<b>多方型態</b>，依裁示排除</td></tr>'
+           '</tbody></table>'
+           '<p class="cap"><b>不新增任何鏈。</b>既有六樞紐鏈已握著最後六個交替樞紐，'
+           '鏈本身保證交替，所以只需檢查第一個的型別。'
+           '鑽石的十樞紐鏈<b>一行沒動</b>。</p>'
+           '<p class="warn"><b>三個型態不塗 K 棒，只下標籤。</b>'
+           'PowerLanguage 十六色已用掉十四個，剩下的在黑底看不見；'
+           '而 P18 每年 831 個，塗色會把 P29 家族整個埋掉。'
+           '<br><b>驗收</b>：<code>REV TALLY  P18= 6352  P57= 255  P68= 1365</code>'
+           '（Pivot_Window = 1、完整資料）。離線已確認：整條鏈移植回 Python 逐根模擬，'
+           '<b>6,352 / 255 / 1,365 / 203 全中</b>，且 P29 與鑽石的數字未受影響。</p>'
+           '</section>')
+
     P5 = ('<section class="panel"><div class="ph2">'
-          '<h2>七、裁示與待決</h2><span class="tag">2026-08-28</span></div>'
+          '<h2>九、裁示與待決</h2><span class="tag">2026-08-28</span></div>'
           '<div class="steps">'
           '<div class="st ok"><div class="n">OK</div><div class="bd2">'
           '<h3>已裁示<em>P15/P16 完整　P18/P23 改區間　P21 改相似平行　'
@@ -485,7 +563,7 @@ def main():
             '</footer></div>')
 
     open(OUT, 'w', encoding='utf-8').write(
-        HEAD + TOP + P1 + PR_ + P2 + P3 + P4 + PB + P5 + FOOT)
+        HEAD + TOP + P1 + PR_ + P2 + P3 + P4 + PB + PS + PC2 + P5 + FOOT)
     print('wrote %s' % OUT)
     print('  型態卡 %d 張' % len(PAT))
     return 0
