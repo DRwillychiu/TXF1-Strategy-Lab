@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260861.  DETECTION ONLY.  This file places no orders and holds no
+  Build_ID 260870.  DETECTION ONLY.  This file places no orders and holds no
   position.  It exists so the detection can be checked by eye and by diff
   before a single line of it goes near the strategy.
 
@@ -202,8 +202,35 @@
   ========================================================================== }
 
 inputs:
-    Build_ID                ( 260861 ),
+    Build_ID                ( 260870 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
+
+    { ---- 260870, ruling X3 of 2026-08-28.  How many bars a pivot must beat
+      on each side.  1 reproduces every number verified so far, word for word.
+
+      Willy asked whether I had noticed that a chart pattern is made of MANY
+      bars.  At w=1, 35.9% of all bars are pivots -- one every 2.8 -- and the
+      double top spans a median of THREE bars, which is a high, a bar, and a
+      high.  Coarser windows give shapes that are what they claim to be:
+
+          w   one pivot per   P29 span   double-top span
+          1        2.8            12            3
+          3        6.8            30            8
+          5       11.1            44           11
+
+      MaxBarsBack 100 caps it at 3: a pattern needs its span twice over --
+      formation plus its own validity window -- plus w bars of confirmation
+      delay, and w=5 puts 39% of patterns past 99 bars, w=8 puts 93%.
+
+      ** A COARSER WINDOW IS NOT A COARSER TIMEFRAME.  The bars stay 5-minute,
+      the entries, exits and stops stay 5-minute.  This changes only which
+      bar counts as a pivot.
+
+      The conclusions do not move with it -- P29 runs 0.16x / 0.18x / 0.20x
+      at w = 1 / 2 / 3, the diamond stays level with its mirror, head and
+      shoulders stays at parity -- so switching costs no re-derivation, only
+      new counts. ---- }
+    Pivot_Window            ( 1     ),
     Run_Bars                ( 3     ),     { ruling 18.  PINNED.  Never sweep. }
     Sess_Day_Start          ( 845   ),
     Sess_Day_End            ( 1345  ),
@@ -295,7 +322,23 @@ inputs:
     Show_Labels             ( 1       ),   { 0 off.  one label per formation, one
                                              per break, sharing a sequence number }
     Label_Size              ( 8       ),
-    Label_Offset_Pct        ( 6       );   { display nudge only, as a percentage of
+    Label_Offset_Pct        ( 6       ),
+
+    { ---- 260870.  The three BEARISH patterns that survived a block-local
+      permutation control.  S16_S is short only, so the bullish half of
+      group A is not a candidate at all -- P21's ascending channel is among
+      the statistically cleanest and is excluded for being bullish.
+
+      All three rest on an equality, and all three have MIRRORS THAT ALSO
+      PASS, so what they establish is that price levels and move sizes get
+      revisited exactly -- not a direction.  Direction has to come from
+      elsewhere, which for S16_S is its own ZLEMA death cross.
+
+      Reference at Pivot_Window = 1:  P18 6,352   P57 255   P68 1,365 ---- }
+    Enable_P18              ( 1       ),   { triple top, band device, 10.19x }
+    Enable_P57              ( 1       ),   { measured move down, 2.33x }
+    Enable_P68              ( 1       ),   { double top, 6.75x }
+    Col_Revisit             ( LightGray );  { labels only -- see below }   { display nudge only, as a percentage of
                                              the formation's own height -- self
                                              referential, so not a magic distance }
 
@@ -402,6 +445,21 @@ variables:
     v_LblPx                 ( 0     ),
     v_LblOff                ( 0     ),
     v_Txt                   ( -1    ),
+
+    { ---- 260870.  Pivot_Window scratch, and the three revisit patterns. ---- }
+    v_wj                    ( 0     ),     { own loop var: v_k and v_pk are taken }
+    v_OkH                   ( False ),
+    v_OkL                   ( False ),
+    v_a                     ( 0     ),     { first index of the slice under test }
+    v_bandLo                ( 0     ),
+    v_bandHi                ( 0     ),
+    v_Cnt18                 ( 0     ),
+    v_Cnt57                 ( 0     ),
+    v_Cnt68                 ( 0     ),
+    v_Seq18                 ( 0     ),
+    v_Seq57                 ( 0     ),
+    v_Seq68                 ( 0     ),
+    v_RevPx                 ( 0     ),
 
     { ---- 260841.  This pattern's OWN anchors, latched at formation.
       v_H3 / v_L3 / v_H3b / v_L3b are rewritten by every later pivot push once
@@ -564,11 +622,26 @@ v_PendA = -1;
 v_PendB = -1;
 
 v_DHit = False;
+{ 260870: the window-1 fractal generalised.  At Pivot_Window = 1 this is the
+  old test character for character -- High[1] > High[2] and High[1] > High[0] --
+  which is what protects the counts already verified on MC12. }
 v_IsPvH = False;
 v_IsPvL = False;
-if v_BIS >= 3 then begin
-    if High[1] > High[2] and High[1] > High then v_IsPvH = True;
-    if Low[1]  < Low[2]  and Low[1]  < Low  then v_IsPvL = True;
+if v_BIS >= 2 * Pivot_Window + 1 then begin
+    v_OkH = True;
+    v_OkL = True;
+    for v_wj = 1 to Pivot_Window begin
+        if High[Pivot_Window] <= High[Pivot_Window + v_wj] then
+            v_OkH = False;
+        if High[Pivot_Window] <= High[Pivot_Window - v_wj] then
+            v_OkH = False;
+        if Low[Pivot_Window] >= Low[Pivot_Window + v_wj] then
+            v_OkL = False;
+        if Low[Pivot_Window] >= Low[Pivot_Window - v_wj] then
+            v_OkL = False;
+    end;
+    v_IsPvH = v_OkH;
+    v_IsPvL = v_OkL;
 end;
 
 { 260842: count what the chart actually contains, so a shortfall can be
@@ -629,15 +702,15 @@ for v_k = 1 to 2 begin
         end;
 
         if v_k = 1 then
-            v_PvPx[v_Chain] = High[1]
+            v_PvPx[v_Chain] = High[Pivot_Window]
         else
-            v_PvPx[v_Chain] = Low[1];
-        v_PvBar[v_Chain] = CurrentBar - 1;
+            v_PvPx[v_Chain] = Low[Pivot_Window];
+        v_PvBar[v_Chain] = CurrentBar - Pivot_Window;
         v_PvTyp[v_Chain] = v_k;
-        v_PvM7[v_Chain]  = v_M7[1];
+        v_PvM7[v_Chain]  = v_M7[Pivot_Window];
         v_PvW2[v_Chain]  = 0;
-        v_PvDt[v_Chain]  = Date[1];
-        v_PvTm[v_Chain]  = Time[1];
+        v_PvDt[v_Chain]  = Date[Pivot_Window];
+        v_PvTm[v_Chain]  = Time[Pivot_Window];
         if v_PendA < 0 then
             v_PendA = v_Chain
         else
@@ -662,14 +735,14 @@ for v_k = 1 to 2 begin
             v_DChain = 9;
         end;
         if v_k = 1 then
-            v_DPx[v_DChain] = High[1]
+            v_DPx[v_DChain] = High[Pivot_Window]
         else
-            v_DPx[v_DChain] = Low[1];
-        v_DBar[v_DChain] = CurrentBar - 1;
+            v_DPx[v_DChain] = Low[Pivot_Window];
+        v_DBar[v_DChain] = CurrentBar - Pivot_Window;
         v_DTyp[v_DChain] = v_k;
-        v_DM7a[v_DChain] = v_M7[1];
-        v_DDt[v_DChain]  = Date[1];
-        v_DTm[v_DChain]  = Time[1];
+        v_DM7a[v_DChain] = v_M7[Pivot_Window];
+        v_DDt[v_DChain]  = Date[Pivot_Window];
+        v_DTm[v_DChain]  = Time[Pivot_Window];
         v_DChain = v_DChain + 1;
 
         { ---- pattern test, right after this push ---- }
@@ -1130,6 +1203,122 @@ if v_DChain >= 10 then begin
     end;
 end;
 
+    { ---------- SECTION 6c - P18 / P57 / P68 -------------------------
+      The three BEARISH patterns of group A that survived their control, coded
+      per Willy's ruling of 2026-08-28.
+
+      No new chain.  The six-pivot chain holds the last six alternating pivots,
+      so the last three and the last five are slices of it:
+
+          P68  last 3   H L H
+          P18  last 5   H L H L H
+          P57  last 5   H L H L H   (uses the first four)
+
+      The chain enforces alternation, so testing the FIRST pivot's type settles
+      the whole slice.
+
+      P18 uses Willy's band device rather than exact equality: PH1 and PH2
+      define the zone and PH3 is tested against it.  The tolerance is
+      |PH1 - PH2|, taken from the pattern itself, so no parameter is spent, and
+      the order is causal -- the first two peaks form the zone, the third tests
+      it.  Exact equality gives 43 instances with 2026 empty; the band gives
+      6,352 with no empty year AND THE SAME RATIO, 10.20x against 10.19x,
+      because the zone widens with the market while a fixed zero does not.
+
+      P57 is tested on a five-pivot slice although it reads only four.  That
+      matches the reference scan exactly, and matching the reference is worth
+      more here than saving one pivot of delay.
+
+      NO BAR PAINTING.  Fourteen of PowerLanguage's sixteen colours are already
+      spoken for and the two left are invisible on a black chart; P18 alone
+      runs 831 a year and would bury the P29 family under it.  The labels carry
+      what matters and the counters carry the rest.                          }
+
+v_RevPx = 0;
+
+if Enable_P68 <> 0 and v_Chain >= 3 then begin
+    v_a = v_Chain - 3;
+    if v_PvTyp[v_a] = 1 and v_PvPx[v_a] = v_PvPx[v_a + 2] then begin
+        v_Cnt68 = v_Cnt68 + 1;
+        v_Seq68 = v_Seq68 + 1;
+        if Show_Labels <> 0 then begin
+            v_RevPx = High + ( High - Low ) * Label_Offset_Pct / 100;
+            v_Txt = Text_New( Date, Time, v_RevPx,
+                              "P68 #" + NumToStr( v_Seq68, 0 ) );
+            if v_Txt >= 0 then begin
+                Text_SetColor( v_Txt, Col_Revisit );
+                Text_SetSize( v_Txt, Label_Size );
+            end;
+        end;
+        if Print_Events <> 0 then begin
+            v_Ymd = Date + 19000000;
+            Print( "P68 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                   "  px=", v_PvPx[v_a]:7:0,
+                   "  span=", ( v_PvBar[v_a + 2] - v_PvBar[v_a] ):3:0 );
+        end;
+    end;
+end;
+
+if v_Chain >= 5 then begin
+    v_a = v_Chain - 5;
+    if v_PvTyp[v_a] = 1 then begin
+
+        { ---- P18 triple top: PH1 and PH2 define the zone, PH3 is tested ---- }
+        if Enable_P18 <> 0 then begin
+            v_bandLo = MinList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+            v_bandHi = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+            if v_PvPx[v_a + 4] >= v_bandLo and v_PvPx[v_a + 4] <= v_bandHi then begin
+                v_Cnt18 = v_Cnt18 + 1;
+                v_Seq18 = v_Seq18 + 1;
+                if Show_Labels <> 0 then begin
+                    v_RevPx = v_bandHi + ( v_bandHi - v_bandLo + High - Low )
+                              * Label_Offset_Pct / 100;
+                    v_Txt = Text_New( Date, Time, v_RevPx,
+                                      "P18 #" + NumToStr( v_Seq18, 0 ) );
+                    if v_Txt >= 0 then begin
+                        Text_SetColor( v_Txt, Col_Revisit );
+                        Text_SetSize( v_Txt, Label_Size );
+                    end;
+                end;
+                if Print_Events <> 0 then begin
+                    v_Ymd = Date + 19000000;
+                    Print( "P18 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                           "  band=", v_bandLo:7:0, "-", v_bandHi:7:0,
+                           "  PH3=", v_PvPx[v_a + 4]:7:0,
+                           "  span=", ( v_PvBar[v_a + 4] - v_PvBar[v_a] ):3:0 );
+                end;
+            end;
+        end;
+
+        { ---- P57 measured move down: two legs of exactly equal size ---- }
+        if Enable_P57 <> 0 then begin
+            if v_PvPx[v_a + 2] < v_PvPx[v_a]
+               and v_PvPx[v_a + 3] < v_PvPx[v_a + 1]
+               and ( v_PvPx[v_a] - v_PvPx[v_a + 1] )
+                 = ( v_PvPx[v_a + 2] - v_PvPx[v_a + 3] ) then begin
+                v_Cnt57 = v_Cnt57 + 1;
+                v_Seq57 = v_Seq57 + 1;
+                if Show_Labels <> 0 then begin
+                    v_RevPx = Low - ( High - Low ) * Label_Offset_Pct / 100;
+                    v_Txt = Text_New( Date, Time, v_RevPx,
+                                      "P57 #" + NumToStr( v_Seq57, 0 ) );
+                    if v_Txt >= 0 then begin
+                        Text_SetColor( v_Txt, Col_Revisit );
+                        Text_SetSize( v_Txt, Label_Size );
+                    end;
+                end;
+                if Print_Events <> 0 then begin
+                    v_Ymd = Date + 19000000;
+                    Print( "P57 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                           "  leg=", ( v_PvPx[v_a] - v_PvPx[v_a + 1] ):6:0,
+                           "  span=", ( v_PvBar[v_a + 3] - v_PvBar[v_a] ):3:0 );
+                end;
+            end;
+        end;
+
+    end;
+end;
+
     { ---------- SECTION 7 - LIFECYCLE ---------------------------------
       Precedence, most terminal first:
         expiry           lifetime equals the bars the pattern took to form
@@ -1518,6 +1707,12 @@ if LastBarOnChart then begin
     Print( "P52 DIAG   reference          =    94  172  229  267  169  258  302  224" );
     Print( "P29 VARIANT  reference  202    1670    1716      7      8",
            "   (P52 is 1715 if the chart starts 20190102 1340)" );
+    Print( "REV TALLY  P18=", v_Cnt18:6:0,
+           "  P57=", v_Cnt57:5:0, "  P68=", v_Cnt68:6:0 );
+    Print( "REV TALLY  reference  6352          255    1365",
+           "   (Pivot_Window = 1)" );
+    Print( "PIVOT      window=", Pivot_Window:2:0,
+           "  pivot_high=", v_NPvH:7:0, "  pivot_low=", v_NPvL:7:0 );
     Print( "DIA TALLY  P30=", v_Seq30:4:0, "  P61=", v_Seq61:4:0 );
     Print( "DIA TALLY  reference  P30=   0  P61=   1",
            "   (20250908 0955-1150, span 23)" );
