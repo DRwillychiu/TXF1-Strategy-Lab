@@ -20,7 +20,7 @@ presenting the final figures as if they had arrived first:
 
 Reuses _diagram.css, shared with every other pattern page.
 """
-import io, os, sys
+import io, os, sys, json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -66,6 +66,38 @@ def sch(seq, lines=()):
         o.append('<circle class="pv %s" cx="%.1f" cy="%.1f" r="4.4"/>' % (c, X(xs[i]), Y(v)))
         o.append('<text class="pvl %s" x="%.1f" y="%.1f">%s</text>'
                  % (c, X(xs[i]), Y(v) + (-11 if c == 'ph' else 18), lab))
+    return '<svg viewBox="0 0 %.0f %.0f" role="img">%s</svg>' % (W, HH, ''.join(o))
+
+
+EX = json.load(open(os.path.join(HERE, 's16s_groupA_example.json'), encoding='utf-8'))
+
+
+def real(d):
+    """One real instance: candles, with the pattern's own pivots ringed."""
+    bars, pv = d['bars'], d['piv']
+    n = len(bars)
+    X, Y = mk(list(range(n)), [b['h'] for b in bars] + [b['l'] for b in bars])
+    bw = max((W - PL_ - PR) / float(n) * 0.56, 2.2)
+    o = []
+    idx = [p[0] for p in pv]
+    o.append('<rect class="zone" x="%.1f" y="%.1f" width="%.1f" height="%.1f"/>'
+             % (X(min(idx)) - bw, PT - 6, X(max(idx)) - X(min(idx)) + 2 * bw,
+                HH - PT - PB + 14))
+    for i, b in enumerate(bars):
+        c = 'up' if b['c'] >= b['o'] else 'dn'
+        x = X(i)
+        o.append('<line class="wk %s" x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f"/>'
+                 % (c, x, Y(b['h']), x, Y(b['l'])))
+        t, bt = Y(max(b['o'], b['c'])), Y(min(b['o'], b['c']))
+        if bt - t < 1.2:
+            m = (t + bt) / 2.0
+            t, bt = m - .6, m + .6
+        o.append('<rect class="bd %s" x="%.1f" y="%.1f" width="%.1f" height="%.1f"/>'
+                 % (c, x - bw / 2, t, bw, bt - t))
+    for i, k in pv:
+        v = bars[i]['h'] if k == 'H' else bars[i]['l']
+        o.append('<circle class="pv %s" cx="%.1f" cy="%.1f" r="3.8"/>'
+                 % ('ph' if k == 'H' else 'pl', X(i), Y(v)))
     return '<svg viewBox="0 0 %.0f %.0f" role="img">%s</svg>' % (W, HH, ''.join(o))
 
 
@@ -191,6 +223,18 @@ CLS = [('單調方向', 'P29 0.16x　收斂 0.22x　P51 2.08x　P52 2.12x',
 
 def main():
     EXTRA = """
+.quad{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.qf{margin:0;background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:12px 13px;display:flex;flex-direction:column;gap:6px}
+.qf svg{width:100%;height:auto;display:block}
+.qh{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.qh b{font-family:var(--serif);font-size:14px}
+.qh .cid{font-family:var(--mono);font-size:10.5px;color:var(--bg);
+  background:var(--ink3);border-radius:2px;padding:1px 5px}
+.qh .en{font-size:10px;color:var(--ink3);font-style:italic}
+.qr{font-family:var(--mono);font-size:11px;color:var(--ink3);
+  font-variant-numeric:tabular-nums;border-top:1px solid var(--line2);padding-top:6px}
+.qr b{color:var(--ink)}
 .pat{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
   border-radius:6px;overflow:hidden}
 .pc{background:var(--card);padding:16px 18px;display:grid;gap:14px;
@@ -316,8 +360,30 @@ def main():
           '<b>不可跨時段</b>。取窗為時間序上任何 N 個連續交替樞紐，滑動測試，'
           '<b>不錨定單側</b>。<b>七個型態合計自由參數 0 個。</b></p></section>')
 
+    rc = ''.join(
+        '<figure class="qf"><div class="qh"><b class="cid">%s</b><b>%s</b>'
+        '<span class="en">%s %s ~ %s</span></div>%s'
+        '<div class="qr">跨度 <b>%d</b> 根　振幅 <b>%.0f</b> 點　'
+        '候選 <b>%s</b> 個中取中位振幅</div></figure>'
+        % (cid, zh, EX[cid]['d0'], EX[cid]['t0'], EX[cid]['t1'], real(EX[cid]),
+           EX[cid]['span'], EX[cid]['amp'], format(EX[cid]['n'], ','))
+        for cid, zh in (('P15', '頭肩頂'), ('P16', '頭肩底'), ('P18', '三重頂'),
+                        ('P23', '三重底'), ('P21', '上升通道'),
+                        ('P57', '測量移動（下）'), ('P68', '雙頂')))
+
+    PR_ = ('<section class="panel"><div class="ph2"><h2>二、真實案例</h2>'
+           '<span class="tag">紫框＝型態本體　綠點＝樞紐高　橘點＝樞紐低</span></div>'
+           '<div class="quad">' + rc + '</div>'
+           '<p class="warn">選取依據<b>只有形狀</b>（跨度在可讀範圍、樞紐不擠在一起、'
+           '<b>振幅取中位數</b>），無損益欄、不依報酬排序。'
+           '取最大振幅會讓圖好看很多，但那是八年裡最極端的一個 —— '
+           'P51 的示意圖犯過這個錯，已改正。</p>'
+           '<p class="cap">P18／P23 用的是<b>區間版</b>定義（裁示後），'
+           '所以三個高（低）點<b>不必完全相等</b>，只要第三個落在前兩個構成的區間內。'
+           'P21 同理，比的是三個通道寬度。</p></section>')
+
     P2 = ('<section class="panel"><div class="ph2">'
-          '<h2>二、★ 這些數字修正了四次</h2>'
+          '<h2>三、★ 這些數字修正了四次</h2>'
           '<span class="tag">前三次的倍率都是假的，第四次是定義寫錯</span></div>'
           '<div class="steps">' + steps + '</div>'
           '<p class="warn"><b>這一節比任何一個型態的結論都重要。</b>'
@@ -326,7 +392,7 @@ def main():
           '<b>兩個都會是錯的，而且方向相反。</b></p></section>')
 
     P3 = ('<section class="panel"><div class="ph2">'
-          '<h2>三、★ 三重頂為什麼不能用 —— 不是檢定，是算術</h2>'
+          '<h2>四、★ 三重頂為什麼不能用 —— 不是檢定，是算術</h2>'
           '<span class="tag">衰減定律</span></div>'
           '<p class="cap">P18 逐年 <b>12 → 8 → 5 → 6 → 6 → 5 → 1 → 0</b>，'
           '看起來像現象在消失。<b>不是。</b>'
@@ -344,7 +410,7 @@ def main():
           'P29 逐年 9 15 18 31 24 31 42 33，<b>是上升的</b>。</small></div>'
           '</section>')
 
-    P4 = ('<section class="panel"><div class="ph2"><h2>四、三類條件</h2>'
+    P4 = ('<section class="panel"><div class="ph2"><h2>五、三類條件</h2>'
           '<span class="tag">我早先那版只分兩類，漏了第三類</span></div>'
           '<table><thead><tr><th>條件類型</th><th>證據</th>'
           '<th style="text-align:left">為什麼</th>'
@@ -355,7 +421,7 @@ def main():
           '依此規則應該全部不含資訊。<b>錯了就是規則錯了。</b></p></section>')
 
     PB = ('<section class="panel"><div class="ph2">'
-          '<h2>五、★ 區間裝置 —— 用戶 2026-08-28 裁示留下的通則</h2>'
+          '<h2>六、★ 區間裝置 —— 用戶 2026-08-28 裁示留下的通則</h2>'
           '<span class="tag">會用在之後每一個「相等」型態</span></div>'
           '<p class="cap">「完全相等」在 5 分 K 上會被算術殺死（第三節）。'
           '用戶給的替代不是加容差，而是<b>讓型態自己定義容差</b>：</p>'
@@ -376,7 +442,7 @@ def main():
           '</section>')
 
     P5 = ('<section class="panel"><div class="ph2">'
-          '<h2>六、裁示與待決</h2><span class="tag">2026-08-28</span></div>'
+          '<h2>七、裁示與待決</h2><span class="tag">2026-08-28</span></div>'
           '<div class="steps">'
           '<div class="st ok"><div class="n">OK</div><div class="bd2">'
           '<h3>已裁示<em>P15/P16 完整　P18/P23 改區間　P21 改相似平行　'
@@ -419,7 +485,7 @@ def main():
             '</footer></div>')
 
     open(OUT, 'w', encoding='utf-8').write(
-        HEAD + TOP + P1 + P2 + P3 + P4 + PB + P5 + FOOT)
+        HEAD + TOP + P1 + PR_ + P2 + P3 + P4 + PB + P5 + FOOT)
     print('wrote %s' % OUT)
     print('  型態卡 %d 張' % len(PAT))
     return 0
