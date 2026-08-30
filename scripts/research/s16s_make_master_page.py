@@ -46,7 +46,7 @@ GROUPS = [
         ('S16S_P51_P54_diagram', 'P51-P54 擴散楔形',
          '四個變體共用一個框架；破位方向不含型態資訊'),
     ]),
-    ('已結案', [
+    ('缺口與鑽石', [
         ('S16S_gap_group_diagram', '缺口組 P31 P62 P67',
          '5 分 K 不存在跳空 —— 一次關掉 26 個型態'),
         ('S16S_diamond_diagram', '鑽石 P30 P61',
@@ -61,7 +61,29 @@ GROUPS = [
 ]
 
 KPI = [('72', '種純圖形型態'), ('52', '種已結案'), ('20', '種未研究'),
-       ('3', '種進了指標')]
+       ('12', '種畫在指標上')]
+
+# What closing a pattern means, and the reason named for each of the 52.
+# Willy asked, and the question was fair: the old tab label put a STATUS among
+# four FAMILY names, which made 已結案 look like a verdict rather than a state.
+CLOSED = [
+    ('前提不成立', '缺口組 P31 P62 P67', '3',
+     '5 分 K 不存在跳空。時段內缺口 1,923 個，<b>90.4% 剛好 1 點</b>，'
+     '零個達到 10 點來回成本，五根內 100% 回補。'
+     '<b>同時關掉圖鑑中因跳空排除的 23 個 K 棒型態</b>'),
+    ('母體不足', '鑽石 P30 P61', '2',
+     '完整鑽石需 10 個樞紐，八年<b>只出現 1 個</b>。'
+     '依裁示 I1 <b>仍編碼上圖</b> —— 不再研究，但未來出現時看得到'),
+    ('上層答案已覆蓋', '擴散家族 7 種', '7',
+     '<b>破位方向 ＝ 起算位置 ＋ 低點方向延續，不含型態資訊</b>。'
+     '這題答完之後，後續型態都不必再測「它往哪邊破」'),
+    ('逐一裁示', '樞紐型 7 種', '7',
+     '<b>3 個空方通過並編碼</b>（P18 P57 P68）；2 個無方向'
+     '（P15 P16，峰谷形狀類，鏡像同樣通過）；'
+     '2 個是多方（P23 P21），純空策略排除'),
+    ('已檢定', 'K 棒型態 33 種', '33',
+     '全部編碼、全部實測，<b>33 次檢定全負</b>（Bonferroni 門檻 3.17）'),
+]
 
 FINDINGS = [
     ('★ 區間裝置',
@@ -180,6 +202,26 @@ body{margin:0;background:var(--mxbg);color:var(--mxink);
 .mxfind b{color:var(--mxink)}
 .mxfind code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;
  background:var(--mxrail);padding:1px 5px;color:var(--mxink)}
+.mxclosed{margin:34px 0 0;border:1px solid var(--mxline);
+ background:var(--mxsurf);padding:22px 24px 24px}
+.mxclosed h2{font-family:"Noto Serif TC",serif;font-size:20px;margin:0 0 10px}
+.mxlede{margin:0 0 18px;font-size:14px;color:var(--mxdim);max-width:74ch;
+ line-height:1.7}
+.mxlede b{color:var(--mxink)}
+.mxclosed table{width:100%;border-collapse:collapse;font-size:13.5px}
+.mxclosed th{text-align:left;font-size:11px;letter-spacing:.1em;
+ color:var(--mxdim);font-weight:500;border-bottom:1px solid var(--mxink);
+ padding:0 12px 7px 0}
+.mxclosed td{padding:11px 12px 11px 0;border-bottom:1px solid var(--mxline);
+ vertical-align:top;color:var(--mxdim);line-height:1.65}
+.mxclosed td b{color:var(--mxink)}
+.mxwhy{color:var(--mxink);font-weight:600;white-space:nowrap}
+.mxwhat{color:var(--mxink);white-space:nowrap}
+.mxn{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+ text-align:right;color:var(--mxacc);font-weight:600;padding-right:18px}
+tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
+.mxnote{margin:16px 0 0;font-size:13px;color:var(--mxdim);line-height:1.7}
+.mxnote b{color:var(--mxink)}
 .mxnav{position:sticky;top:0;z-index:9;background:var(--mxbg);
  border-bottom:1px solid var(--mxline);margin:30px 0 0}
 .mxnavin{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;
@@ -257,6 +299,9 @@ def main():
                    % (gname, gname, ''.join(btns)))
 
     kpi = ''.join('<div><b>%s</b><span>%s</span></div>' % k for k in KPI)
+    closed = ''.join(
+        '<tr><td class="mxwhy">%s</td><td class="mxwhat">%s</td>'
+        '<td class="mxn">%s</td><td>%s</td></tr>' % c for c in CLOSED)
     find = ''.join('<section><h3>%s</h3><p>%s</p></section>' % f
                    for f in FINDINGS)
 
@@ -270,7 +315,20 @@ def main():
           '因為十一份頁面共用 class 名稱卻不共用規則，'
           '直接合併會把彼此改壞。</p>'
           '<div class="mxkpi">' + kpi + '</div></div>'
-          '<div class="mxfind">' + find + '</div></div>'
+          '<div class="mxfind">' + find + '</div>'
+          '<section class="mxclosed"><h2>「已結案」是什麼意思</h2>'
+          '<p class="mxlede">結案 ＝ <b>這個型態不會再回頭研究，而且能指名理由</b>。'
+          '它是<b>研究狀態</b>，不是<b>裁示結果</b> —— '
+          'P18／P57／P68 也是已結案，但它們通過了對照組，而且已經進指標。'
+          '反過來，未研究的 20 種不代表有希望，只代表還沒量。</p>'
+          '<table><thead><tr><th>結案理由</th><th>對象</th><th>種</th>'
+          '<th>依據</th></tr></thead><tbody>' + closed +
+          '<tr class="mxsum"><td>合計</td><td></td><td class="mxn">52</td>'
+          '<td>剩 20 種未研究</td></tr></tbody></table>'
+          '<p class="mxnote">指標上畫的 <b>12 種</b>是 P29／P49／P50、'
+          'P51-P54、P30／P61、P18／P57／P68 —— '
+          '其中<b>只有 P18／P57／P68 是通過對照組的空方型態</b>，'
+          '其餘是為了看得見而畫，不是訊號。</p></section></div>'
         + '<nav class="mxnav"><div class="mxnavin">' + ''.join(nav)
         + '</div></nav>'
         + ''.join(panels)
