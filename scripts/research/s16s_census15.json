@@ -62,10 +62,10 @@
    "zh": "杯柄",
    "en": "Cup and Handle",
    "dir": "多",
-   "n": 164,
-   "mirror": 176,
-   "ratio": 0.932,
-   "span": 39,
+   "n": 134,
+   "mirror": 149,
+   "ratio": 0.899,
+   "span": 44,
    "note": "碗底 ＋ 柄：柄的低點落在<b>左右兩個杯緣構成的區間內</b>"
   },
   {
@@ -73,10 +73,10 @@
    "zh": "倒置杯柄",
    "en": "Inverted Cup and Handle",
    "dir": "空",
-   "n": 176,
-   "mirror": 164,
-   "ratio": 1.073,
-   "span": 39,
+   "n": 149,
+   "mirror": 134,
+   "ratio": 1.112,
+   "span": 43,
    "note": "穹頂 ＋ 柄，杯柄的鏡像"
   },
   {

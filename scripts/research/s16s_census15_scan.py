@@ -139,19 +139,20 @@ def P66(s):                                   # frypan: bowl on a flat base
 
 
 def P28(s):                                   # cup and handle
-    l = [-s[i][1] for i in (0, 2, 4, 6, 8)]
+    # H L H L H L H L H L H L -- rim, five lows, rim, handle.
+    # The left rim must be the high BEFORE the decline; taking the first high
+    # INSIDE the cup put the band too low and tested something undrawable.
+    l = [-s[i][1] for i in (1, 3, 5, 7, 9)]
     if not dome(*l):
         return False
-    lrim, rrim = s[1][1], s[9][1]             # the highs either side
-    return inband(s[10][1], lrim, rrim)       # handle low between the rims
+    return inband(s[11][1], s[0][1], s[10][1])
 
 
 def P64(s):                                   # inverted cup and handle
-    h = [s[i][1] for i in (0, 2, 4, 6, 8)]
+    h = [s[i][1] for i in (1, 3, 5, 7, 9)]
     if not dome(*h):
         return False
-    lrim, rrim = s[1][1], s[9][1]
-    return inband(s[10][1], lrim, rrim)
+    return inband(s[11][1], s[0][1], s[10][1])
 
 
 def P59(s):                                   # descending scallop, one J
@@ -184,10 +185,13 @@ def P56(s):                                   # dead-cat bounce
 
 
 def P65(s):                                   # tower top: falls faster than it rose
+    # "the fall is at least the rise" was in here and is COMPLETELY redundant
+    # -- it reduces to l1 <= l0, which the retrace test already says.  Same
+    # 8,386 either way.  A condition that never changes the answer tells the
+    # reader something is being tested when nothing is.
     l0, h1, l1 = s[0][1], s[1][1], s[2][1]
-    up, dn = h1 - l0, h1 - l1
     ub, db = s[1][0] - s[0][0], s[2][0] - s[1][0]
-    return (up > 0 and l1 < l0 and dn >= up and db <= ub)
+    return (h1 > l0 and l1 < l0 and db <= ub)
 
 
 def P72(s):                                   # order block: last low before BOS
@@ -206,9 +210,9 @@ SPEC = [
      '五個低點的尖底：下降加速、上升減速'),
     ('P66', '平底鍋底', 'Frypan Bottom', '多', 9, 2, P66,
      '碗底但底部是平的：中間那個低點落在左右兩個低點的<b>區間內</b>'),
-    ('P28', '杯柄', 'Cup and Handle', '多', 11, 2, P28,
+    ('P28', '杯柄', 'Cup and Handle', '多', 12, 1, P28,
      '碗底 ＋ 柄：柄的低點落在<b>左右兩個杯緣構成的區間內</b>'),
-    ('P64', '倒置杯柄', 'Inverted Cup and Handle', '空', 11, 1, P64,
+    ('P64', '倒置杯柄', 'Inverted Cup and Handle', '空', 12, 2, P64,
      '穹頂 ＋ 柄，杯柄的鏡像'),
     ('P59', '穿越型態', 'Descending Scallop', '空', 7, 1, P59,
      'J 形：碗底之後的高點<b>超過碗左邊那個高點</b>'),
