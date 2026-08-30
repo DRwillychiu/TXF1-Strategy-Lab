@@ -252,7 +252,12 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 SCRIPT = '''<script>
 (function(){
  var tabs=[].slice.call(document.querySelectorAll('.mxtab'));
+ function fill(n){
+  var host=document.getElementById('pg'+n),tpl=document.getElementById('tpl'+n);
+  if(host&&tpl&&!host.firstChild){host.appendChild(tpl.content.cloneNode(true));}
+ }
  function show(n){
+  fill(n);
   tabs.forEach(function(t){
    var on=t.dataset.p===n;
    t.setAttribute('aria-selected',on?'true':'false');
@@ -284,13 +289,20 @@ def main():
             sel = '#pg%d' % pid
             css, body = split_page(os.path.join(SRC, stem + '.html'))
             styles.append('/* %s */\n%s' % (stem, scope_css(css, sel)))
-            panels.append(
-                '<div class="mxpanel" id="pane%d" role="tabpanel"%s>'
-                '<div class="mxcap"><p><b>%s</b> — %s　'
-                '<code>docs/research/%s.html</code></p></div>'
-                '<div id="pg%d">%s</div></div>'
-                % (pid, '' if pid == 1 else ' hidden', label, note, stem,
-                   pid, body))
+            # The first panel is live so the page paints at once; the
+            # rest sit in a <template>, which the browser parses but never
+            # styles or lays out, and are cloned in on first click.
+            cap = ('<div class="mxcap"><p><b>%s</b> — %s　'
+                   '<code>docs/research/%s.html</code></p></div>'
+                   % (label, note, stem))
+            if pid == 1:
+                inner = '<div id="pg%d">%s</div>' % (pid, body)
+            else:
+                inner = ('<div id="pg%d"></div>'
+                         '<template id="tpl%d">%s</template>' % (pid, pid, body))
+            panels.append('<div class="mxpanel" id="pane%d" role="tabpanel"%s>'
+                          '%s%s</div>'
+                          % (pid, '' if pid == 1 else ' hidden', cap, inner))
             btns.append('<button class="mxtab" role="tab" data-p="%d" '
                         'aria-selected="%s">%s</button>'
                         % (pid, 'true' if pid == 1 else 'false', label))
