@@ -52,7 +52,8 @@ PUSH = 'if v_Push then begin'   # NOT `for v_k = 1 to 2 begin`: that loop runs
 
 PER_PUSH = ['v_Cnt29', 'v_Cnt51', 'v_Cnt52', 'v_Cnt53', 'v_Cnt54', 'v_CntForm',
             'v_Seq49', 'v_Seq50', 'v_Seq30', 'v_Seq61',
-            'v_Cnt18', 'v_Cnt57', 'v_Cnt68']
+            'v_Cnt18', 'v_Cnt57', 'v_Cnt68',
+            'v_Cnt28', 'v_Cnt64', 'v_Cnt55']
 PER_BAR = ['v_CntExp', 'v_CntDn', 'v_CntUp']
 
 

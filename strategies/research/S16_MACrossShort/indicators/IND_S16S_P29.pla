@@ -1,14 +1,14 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260873.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260880.  DETECTION ONLY.  Places no orders, holds no position.
 
   Build history, the reasoning behind every rule, and the measurement
   each one rests on:  docs/research/S16S_P29_comment_record.md
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260873 ),
+    Build_ID                ( 260880 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -66,7 +66,16 @@ inputs:
     Enable_P18              ( 1       ),   { triple top, band device, 10.19x }
     Enable_P57              ( 1       ),   { measured move down, 2.33x }
     Enable_P68              ( 1       ),   { double top, 6.75x }
-    Col_Revisit             ( LightGray );  { labels only -- see below }   { display nudge only, as a percentage of
+    Col_Revisit             ( LightGray ),  { labels only -- see below }
+
+    { 260880.  Ruling A1: the cup is drawn to be SEEN, not traded -- 7 in eight
+      years, 4 for the mirror.  What is drawn is the RIM BAND, because a band
+      is a price and an outline is only a shape. -- record }
+    Enable_P28              ( 1       ),   { cup and handle, 7 }
+    Enable_P64              ( 1       ),   { inverted cup and handle, 4 }
+    Enable_P55              ( 1       ),   { bump-and-run, 628 }
+    Col_Cup                 ( Yellow  ),   { the two rims }
+    Col_Bump                ( Magenta );   { the lead-in line }   { display nudge only, as a percentage of
                                              the formation's own height -- self
                                              referential, so not a magic distance }
 
@@ -185,6 +194,31 @@ variables:
     v_Seq18                 ( 0     ),
     v_Seq57                 ( 0     ),
     v_Seq68                 ( 0     ),
+
+    { 260880 -- record }
+    v_d0                    ( 0     ),
+    v_c                     ( 0     ),
+    v_cupLo                 ( 0     ),
+    v_cupHi                 ( 0     ),
+    v_lead                  ( 0     ),
+    v_bump                  ( 0     ),
+    v_proj                  ( 0     ),
+    v_Cnt28                 ( 0     ),
+    v_Cnt64                 ( 0     ),
+    v_Cnt55                 ( 0     ),
+    v_Seq28                 ( 0     ),
+    v_Seq64                 ( 0     ),
+    v_Seq55                 ( 0     ),
+    v_Dn18                  ( 0     ),
+    v_Up18                  ( 0     ),
+    v_Ex18                  ( 0     ),
+    v_Dn57                  ( 0     ),
+    v_Up57                  ( 0     ),
+    v_Ex57                  ( 0     ),
+    v_Dn68                  ( 0     ),
+    v_Up68                  ( 0     ),
+    v_Ex68                  ( 0     ),
+    v_TL                    ( 0     ),
     v_RevPx                 ( 0     ),
 
     { 260841 -- record }
@@ -210,16 +244,18 @@ arrays:
     v_PvDt[7]               ( 0     ),     { latched so TL_New needs no lookback }
     v_PvTm[7]               ( 0     ),
 
-    { EIGHT slots -- record }
-    v_BkOn[8]               ( 0     ),     { 1 = slot in use }
-    v_BkDn[8]               ( 0     ),     { floor price }
-    v_BkUp[8]               ( 0     ),     { ceiling price }
-    v_BkSt[8]               ( 0     ),     { first bar the window is live }
-    v_BkEnd[8]              ( 0     ),     { last bar the window is live }
-    v_BkSeq[8]              ( 0     ),     { sequence no. for the label pair }
-    v_Yr52[8]               ( 0     ),     { 260854: P52 per year, to localise
+    { TWELVE slots since 260880.  P29 peaked at three; P18 adds 6,352
+      formations at a nine-bar median life.  v_Overflow is the only
+      guard, so the table is widened rather than the estimate trusted. }
+    v_BkOn[15]               ( 0     ),     { 1 = slot in use }
+    v_BkDn[15]               ( 0     ),     { floor price }
+    v_BkUp[15]               ( 0     ),     { ceiling price }
+    v_BkSt[15]               ( 0     ),     { first bar the window is live }
+    v_BkEnd[15]              ( 0     ),     { last bar the window is live }
+    v_BkSeq[15]              ( 0     ),     { sequence no. for the label pair }
+    v_Yr52[15]               ( 0     ),     { 260854: P52 per year, to localise
                                              the one-formation disagreement }
-    v_BkVar[8]              ( 0     ),     { 260852: which variant owns the slot,
+    v_BkVar[15]              ( 0     ),     { 260852: which variant owns the slot,
                                              so the tally stays P29-only }
 
     { 260843 -- record }
@@ -387,8 +423,8 @@ for v_k = 1 to 2 begin
         { 260860: the same pivot also feeds the diamond's ten-slot chain -- record }
         if v_DChain > 0 and v_DTyp[v_DChain - 1] = v_k then
             v_DChain = 0;
-        if v_DChain >= 10 then begin
-            for v_dj = 0 to 8 begin
+        if v_DChain >= 12 then begin
+            for v_dj = 0 to 10 begin
                 v_DPx[v_dj]  = v_DPx[v_dj + 1];
                 v_DBar[v_dj] = v_DBar[v_dj + 1];
                 v_DTyp[v_dj] = v_DTyp[v_dj + 1];
@@ -396,7 +432,7 @@ for v_k = 1 to 2 begin
                 v_DDt[v_dj]  = v_DDt[v_dj + 1];
                 v_DTm[v_dj]  = v_DTm[v_dj + 1];
             end;
-            v_DChain = 9;
+            v_DChain = 11;
         end;
         if v_k = 1 then
             v_DPx[v_DChain] = High[Pivot_Window]
@@ -566,7 +602,7 @@ for v_k = 1 to 2 begin
 
             if Break_Mode <> 0 then begin
                 v_Free = -1;
-                for v_s = 0 to 7 begin
+                for v_s = 0 to 11 begin
                     if v_Free < 0 and v_BkOn[v_s] = 0 then
                         v_Free = v_s;
                 end;
@@ -668,56 +704,59 @@ for v_k = 1 to 2 begin
             { SECTION 6b - P30 / P61 DIAMOND -- record }
 
         if v_DChain >= 10 then begin
+            { 260880: the chain now holds TWELVE, so the diamond
+              reads its LAST ten rather than slots 0..9. -- record }
+            v_d0 = v_DChain - 10;
 
             v_DOk = False;
-            if v_DTyp[0] = 1 then begin
-                v_DH1 = v_DPx[0];
-                v_DL1 = v_DPx[1];
-                v_DH2 = v_DPx[2];
-                v_DL2 = v_DPx[3];
-                v_DH3 = v_DPx[4];
-                v_DL3 = v_DPx[5];
-                v_DH4 = v_DPx[6];
-                v_DL4 = v_DPx[7];
-                v_DH5 = v_DPx[8];
-                v_DL5 = v_DPx[9];
-                v_DH1d = v_DDt[0];
-                v_DH3d = v_DDt[4];
-                v_DH5d = v_DDt[8];
-                v_DL1d = v_DDt[1];
-                v_DL3d = v_DDt[5];
-                v_DL5d = v_DDt[9];
-                v_DH1t = v_DTm[0];
-                v_DH3t = v_DTm[4];
-                v_DH5t = v_DTm[8];
-                v_DL1t = v_DTm[1];
-                v_DL3t = v_DTm[5];
-                v_DL5t = v_DTm[9];
+            if v_DTyp[v_d0 + 0] = 1 then begin
+                v_DH1 = v_DPx[v_d0 + 0];
+                v_DL1 = v_DPx[v_d0 + 1];
+                v_DH2 = v_DPx[v_d0 + 2];
+                v_DL2 = v_DPx[v_d0 + 3];
+                v_DH3 = v_DPx[v_d0 + 4];
+                v_DL3 = v_DPx[v_d0 + 5];
+                v_DH4 = v_DPx[v_d0 + 6];
+                v_DL4 = v_DPx[v_d0 + 7];
+                v_DH5 = v_DPx[v_d0 + 8];
+                v_DL5 = v_DPx[v_d0 + 9];
+                v_DH1d = v_DDt[v_d0 + 0];
+                v_DH3d = v_DDt[v_d0 + 4];
+                v_DH5d = v_DDt[v_d0 + 8];
+                v_DL1d = v_DDt[v_d0 + 1];
+                v_DL3d = v_DDt[v_d0 + 5];
+                v_DL5d = v_DDt[v_d0 + 9];
+                v_DH1t = v_DTm[v_d0 + 0];
+                v_DH3t = v_DTm[v_d0 + 4];
+                v_DH5t = v_DTm[v_d0 + 8];
+                v_DL1t = v_DTm[v_d0 + 1];
+                v_DL3t = v_DTm[v_d0 + 5];
+                v_DL5t = v_DTm[v_d0 + 9];
                 v_DOrder = 1;
             end
             else begin
-                v_DL1 = v_DPx[0];
-                v_DH1 = v_DPx[1];
-                v_DL2 = v_DPx[2];
-                v_DH2 = v_DPx[3];
-                v_DL3 = v_DPx[4];
-                v_DH3 = v_DPx[5];
-                v_DL4 = v_DPx[6];
-                v_DH4 = v_DPx[7];
-                v_DL5 = v_DPx[8];
-                v_DH5 = v_DPx[9];
-                v_DL1d = v_DDt[0];
-                v_DL3d = v_DDt[4];
-                v_DL5d = v_DDt[8];
-                v_DH1d = v_DDt[1];
-                v_DH3d = v_DDt[5];
-                v_DH5d = v_DDt[9];
-                v_DL1t = v_DTm[0];
-                v_DL3t = v_DTm[4];
-                v_DL5t = v_DTm[8];
-                v_DH1t = v_DTm[1];
-                v_DH3t = v_DTm[5];
-                v_DH5t = v_DTm[9];
+                v_DL1 = v_DPx[v_d0 + 0];
+                v_DH1 = v_DPx[v_d0 + 1];
+                v_DL2 = v_DPx[v_d0 + 2];
+                v_DH2 = v_DPx[v_d0 + 3];
+                v_DL3 = v_DPx[v_d0 + 4];
+                v_DH3 = v_DPx[v_d0 + 5];
+                v_DL4 = v_DPx[v_d0 + 6];
+                v_DH4 = v_DPx[v_d0 + 7];
+                v_DL5 = v_DPx[v_d0 + 8];
+                v_DH5 = v_DPx[v_d0 + 9];
+                v_DL1d = v_DDt[v_d0 + 0];
+                v_DL3d = v_DDt[v_d0 + 4];
+                v_DL5d = v_DDt[v_d0 + 8];
+                v_DH1d = v_DDt[v_d0 + 1];
+                v_DH3d = v_DDt[v_d0 + 5];
+                v_DH5d = v_DDt[v_d0 + 9];
+                v_DL1t = v_DTm[v_d0 + 0];
+                v_DL3t = v_DTm[v_d0 + 4];
+                v_DL5t = v_DTm[v_d0 + 8];
+                v_DH1t = v_DTm[v_d0 + 1];
+                v_DH3t = v_DTm[v_d0 + 5];
+                v_DH5t = v_DTm[v_d0 + 9];
                 v_DOrder = 2;
             end;
 
@@ -794,7 +833,7 @@ for v_k = 1 to 2 begin
                     v_Ymd = Date + 19000000;
                     Print( "DIA FORM ", v_Ymd:8:0, " ", Time:4:0,
                            "  kind=", v_DKind:2:0, "  order=", v_DOrder:1:0,
-                           "  span=", ( v_DBar[9] - v_DBar[0] ):3:0,
+                           "  span=", ( v_DBar[v_d0 + 9] - v_DBar[v_d0 + 0] ):3:0,
                            "  apexH=", v_DH3:7:0, "  apexL=", v_DL3:7:0 );
                 end;
             end;
@@ -809,6 +848,26 @@ for v_k = 1 to 2 begin
             if v_PvTyp[v_a] = 1 and v_PvPx[v_a] = v_PvPx[v_a + 2] then begin
                 v_Cnt68 = v_Cnt68 + 1;
                 v_Seq68 = v_Seq68 + 1;
+
+                { ruling C: the break levels are the formation's OWN -- record }
+                if Break_Mode <> 0 then begin
+                    v_Free = -1;
+                    for v_s = 0 to 11 begin
+                        if v_Free < 0 and v_BkOn[v_s] = 0 then
+                            v_Free = v_s;
+                    end;
+                    if v_Free < 0 then begin
+                        v_Overflow = v_Overflow + 1;
+                        v_Free = 0;
+                    end;
+                    v_BkOn[v_Free]  = 1;
+                    v_BkDn[v_Free]  = v_PvPx[v_a + 1];
+                    v_BkUp[v_Free]  = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+                    v_BkSt[v_Free]  = CurrentBar + 1;
+                    v_BkEnd[v_Free] = CurrentBar + 1 + ( v_PvBar[v_a + 2] - v_PvBar[v_a] );
+                    v_BkSeq[v_Free] = v_Seq68;
+                    v_BkVar[v_Free] = 68;
+                end;
                 if Show_Labels <> 0 then begin
                     v_RevPx = High + ( High - Low ) * Label_Offset_Pct / 100;
                     v_Txt = Text_New( Date, Time, v_RevPx,
@@ -838,6 +897,25 @@ for v_k = 1 to 2 begin
                     if v_PvPx[v_a + 4] >= v_bandLo and v_PvPx[v_a + 4] <= v_bandHi then begin
                         v_Cnt18 = v_Cnt18 + 1;
                         v_Seq18 = v_Seq18 + 1;
+
+                        if Break_Mode <> 0 then begin
+                            v_Free = -1;
+                            for v_s = 0 to 11 begin
+                                if v_Free < 0 and v_BkOn[v_s] = 0 then
+                                    v_Free = v_s;
+                            end;
+                            if v_Free < 0 then begin
+                                v_Overflow = v_Overflow + 1;
+                                v_Free = 0;
+                            end;
+                            v_BkOn[v_Free]  = 1;
+                            v_BkDn[v_Free]  = MinList( v_PvPx[v_a + 1], v_PvPx[v_a + 3] );
+                            v_BkUp[v_Free]  = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2], v_PvPx[v_a + 4] );
+                            v_BkSt[v_Free]  = CurrentBar + 1;
+                            v_BkEnd[v_Free] = CurrentBar + 1 + ( v_PvBar[v_a + 4] - v_PvBar[v_a] );
+                            v_BkSeq[v_Free] = v_Seq18;
+                            v_BkVar[v_Free] = 18;
+                        end;
                         if Show_Labels <> 0 then begin
                             v_RevPx = v_bandHi + ( v_bandHi - v_bandLo + High - Low )
                                       * Label_Offset_Pct / 100;
@@ -866,6 +944,25 @@ for v_k = 1 to 2 begin
                          = ( v_PvPx[v_a + 2] - v_PvPx[v_a + 3] ) then begin
                         v_Cnt57 = v_Cnt57 + 1;
                         v_Seq57 = v_Seq57 + 1;
+
+                        if Break_Mode <> 0 then begin
+                            v_Free = -1;
+                            for v_s = 0 to 11 begin
+                                if v_Free < 0 and v_BkOn[v_s] = 0 then
+                                    v_Free = v_s;
+                            end;
+                            if v_Free < 0 then begin
+                                v_Overflow = v_Overflow + 1;
+                                v_Free = 0;
+                            end;
+                            v_BkOn[v_Free]  = 1;
+                            v_BkDn[v_Free]  = MinList( v_PvPx[v_a + 1], v_PvPx[v_a + 3] );
+                            v_BkUp[v_Free]  = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
+                            v_BkSt[v_Free]  = CurrentBar + 1;
+                            v_BkEnd[v_Free] = CurrentBar + 1 + ( v_PvBar[v_a + 3] - v_PvBar[v_a] );
+                            v_BkSeq[v_Free] = v_Seq57;
+                            v_BkVar[v_Free] = 57;
+                        end;
                         if Show_Labels <> 0 then begin
                             v_RevPx = Low - ( High - Low ) * Label_Offset_Pct / 100;
                             v_Txt = Text_New( Date, Time, v_RevPx,
@@ -886,6 +983,156 @@ for v_k = 1 to 2 begin
 
             end;
         end;
+
+            { SECTION 6d - P28 / P64 CUP, P55 BUMP-AND-RUN
+              260880, rulings of 2026-08-30.
+
+              All three read the TWELVE-slot chain the diamond feeds, which is
+              why that chain was widened rather than a third one added: the
+              diamond needs its last ten, the cup all twelve, bump-and-run its
+              last seven.
+
+              The cup is drawn as its RIM BAND -- two horizontal lines at the
+              rim prices.  That band is the whole reason it is kept: 7
+              instances in eight years cannot carry a strategy, but a band is
+              a price and a price can be acted on.
+
+              Bump-and-run draws its LEAD-IN LINE, because that line is the
+              pattern: two lows fix it, the next leg must be steeper than it,
+              and it completes when price falls back below it.  No angle and
+              no threshold -- a comparison and a projection, which is what
+              SECTION 7 already does to track breaks.                   }
+
+            if Enable_P28 <> 0 and v_DChain >= 12 then begin
+                v_c = v_DChain - 12;
+                if v_DTyp[v_c] = 1
+                   and v_DPx[v_c + 1] > v_DPx[v_c + 3]
+                   and v_DPx[v_c + 3] > v_DPx[v_c + 5]
+                   and v_DPx[v_c + 5] < v_DPx[v_c + 7]
+                   and v_DPx[v_c + 7] < v_DPx[v_c + 9]
+                   and ( v_DPx[v_c + 1] - v_DPx[v_c + 3] )
+                     > ( v_DPx[v_c + 3] - v_DPx[v_c + 5] )
+                   and ( v_DPx[v_c + 7] - v_DPx[v_c + 5] )
+                     < ( v_DPx[v_c + 9] - v_DPx[v_c + 7] ) then begin
+                    v_cupLo = MinList( v_DPx[v_c], v_DPx[v_c + 10] );
+                    v_cupHi = MaxList( v_DPx[v_c], v_DPx[v_c + 10] );
+                    if v_DPx[v_c + 11] >= v_cupLo
+                       and v_DPx[v_c + 11] <= v_cupHi then begin
+                        v_Cnt28 = v_Cnt28 + 1;
+                        v_Seq28 = v_Seq28 + 1;
+                        if Line_Mode = 1 then begin
+                            v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_cupLo,
+                                           Date, Time, v_cupLo );
+                            if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
+                            v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_cupHi,
+                                           Date, Time, v_cupHi );
+                            if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
+                        end;
+                        if Show_Labels <> 0 then begin
+                            v_Txt = Text_New( Date, Time, v_cupHi,
+                                              "P28 #" + NumToStr( v_Seq28, 0 ) );
+                            if v_Txt >= 0 then begin
+                                Text_SetColor( v_Txt, Col_Cup );
+                                Text_SetSize( v_Txt, Label_Size );
+                            end;
+                        end;
+                        if Print_Events <> 0 then begin
+                            v_Ymd = Date + 19000000;
+                            Print( "P28 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                                   "  band=", v_cupLo:7:0, "-", v_cupHi:7:0,
+                                   "  handle=", v_DPx[v_c + 11]:7:0,
+                                   "  span=",
+                                   ( v_DBar[v_c + 11] - v_DBar[v_c] ):4:0 );
+                        end;
+                    end;
+                end;
+            end;
+
+            if Enable_P64 <> 0 and v_DChain >= 12 then begin
+                v_c = v_DChain - 12;
+                if v_DTyp[v_c] = 2
+                   and v_DPx[v_c + 1] < v_DPx[v_c + 3]
+                   and v_DPx[v_c + 3] < v_DPx[v_c + 5]
+                   and v_DPx[v_c + 5] > v_DPx[v_c + 7]
+                   and v_DPx[v_c + 7] > v_DPx[v_c + 9]
+                   and ( v_DPx[v_c + 3] - v_DPx[v_c + 1] )
+                     > ( v_DPx[v_c + 5] - v_DPx[v_c + 3] )
+                   and ( v_DPx[v_c + 5] - v_DPx[v_c + 7] )
+                     < ( v_DPx[v_c + 7] - v_DPx[v_c + 9] ) then begin
+                    v_cupLo = MinList( v_DPx[v_c], v_DPx[v_c + 10] );
+                    v_cupHi = MaxList( v_DPx[v_c], v_DPx[v_c + 10] );
+                    if v_DPx[v_c + 11] >= v_cupLo
+                       and v_DPx[v_c + 11] <= v_cupHi then begin
+                        v_Cnt64 = v_Cnt64 + 1;
+                        v_Seq64 = v_Seq64 + 1;
+                        if Line_Mode = 1 then begin
+                            v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_cupLo,
+                                           Date, Time, v_cupLo );
+                            if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
+                            v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_cupHi,
+                                           Date, Time, v_cupHi );
+                            if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
+                        end;
+                        if Show_Labels <> 0 then begin
+                            v_Txt = Text_New( Date, Time, v_cupLo,
+                                              "P64 #" + NumToStr( v_Seq64, 0 ) );
+                            if v_Txt >= 0 then begin
+                                Text_SetColor( v_Txt, Col_Cup );
+                                Text_SetSize( v_Txt, Label_Size );
+                            end;
+                        end;
+                        if Print_Events <> 0 then begin
+                            v_Ymd = Date + 19000000;
+                            Print( "P64 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                                   "  band=", v_cupLo:7:0, "-", v_cupHi:7:0,
+                                   "  handle=", v_DPx[v_c + 11]:7:0,
+                                   "  span=",
+                                   ( v_DBar[v_c + 11] - v_DBar[v_c] ):4:0 );
+                        end;
+                    end;
+                end;
+            end;
+
+            if Enable_P55 <> 0 and v_DChain >= 7 then begin
+                v_c = v_DChain - 7;
+                if v_DTyp[v_c] = 2
+                   and v_DBar[v_c + 2] > v_DBar[v_c]
+                   and v_DBar[v_c + 4] > v_DBar[v_c + 2]
+                   and v_DBar[v_c + 6] > v_DBar[v_c + 4] then begin
+                    v_lead = ( v_DPx[v_c + 2] - v_DPx[v_c] )
+                             / ( v_DBar[v_c + 2] - v_DBar[v_c] );
+                    v_bump = ( v_DPx[v_c + 4] - v_DPx[v_c + 2] )
+                             / ( v_DBar[v_c + 4] - v_DBar[v_c + 2] );
+                    v_proj = v_DPx[v_c] + v_lead
+                             * ( v_DBar[v_c + 6] - v_DBar[v_c] );
+                    if v_lead > 0 and v_bump > v_lead
+                       and v_DPx[v_c + 6] < v_proj then begin
+                        v_Cnt55 = v_Cnt55 + 1;
+                        v_Seq55 = v_Seq55 + 1;
+                        if Line_Mode = 1 then begin
+                            v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_DPx[v_c],
+                                           Date, Time, v_proj );
+                            if v_TL >= 0 then TL_SetColor( v_TL, Col_Bump );
+                        end;
+                        if Show_Labels <> 0 then begin
+                            v_Txt = Text_New( Date, Time, v_DPx[v_c + 6],
+                                              "P55 #" + NumToStr( v_Seq55, 0 ) );
+                            if v_Txt >= 0 then begin
+                                Text_SetColor( v_Txt, Col_Bump );
+                                Text_SetSize( v_Txt, Label_Size );
+                            end;
+                        end;
+                        if Print_Events <> 0 then begin
+                            v_Ymd = Date + 19000000;
+                            Print( "P55 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                                   "  lead=", v_lead:7:3, "  bump=", v_bump:7:3,
+                                   "  span=",
+                                   ( v_DBar[v_c + 6] - v_DBar[v_c] ):4:0 );
+                        end;
+                    end;
+                end;
+            end;
+
 
     end;
 
@@ -997,13 +1244,16 @@ v_BkHit   = 0;
 v_BkHitSq = 0;
 
 if Break_Mode <> 0 then begin
-    for v_s = 0 to 7 begin
+    for v_s = 0 to 11 begin
         if v_BkOn[v_s] = 1 then begin
 
             if CurrentBar > v_BkEnd[v_s] then begin
                 v_BkOn[v_s] = 0;
                 if v_BkVar[v_s] = 29 then
                     v_CntExp = v_CntExp + 1;
+                if v_BkVar[v_s] = 18 then v_Ex18 = v_Ex18 + 1;
+                if v_BkVar[v_s] = 57 then v_Ex57 = v_Ex57 + 1;
+                if v_BkVar[v_s] = 68 then v_Ex68 = v_Ex68 + 1;
                 if Print_Events <> 0 then begin
                     v_Ymd = Date + 19000000;
                     Print( "P29 BK_NONE ", v_Ymd:8:0, " ", Time:4:0,
@@ -1016,6 +1266,9 @@ if Break_Mode <> 0 then begin
                     v_BkOn[v_s] = 0;
                     if v_BkVar[v_s] = 29 then
                         v_CntDn = v_CntDn + 1;
+                    if v_BkVar[v_s] = 18 then v_Dn18 = v_Dn18 + 1;
+                    if v_BkVar[v_s] = 57 then v_Dn57 = v_Dn57 + 1;
+                    if v_BkVar[v_s] = 68 then v_Dn68 = v_Dn68 + 1;
                     if v_BkHit <> 1 then begin
                         v_BkHit   = 1;
                         v_BkHitSq = v_BkSeq[v_s];
@@ -1032,6 +1285,9 @@ if Break_Mode <> 0 then begin
                     v_BkOn[v_s] = 0;
                     if v_BkVar[v_s] = 29 then
                         v_CntUp = v_CntUp + 1;
+                    if v_BkVar[v_s] = 18 then v_Up18 = v_Up18 + 1;
+                    if v_BkVar[v_s] = 57 then v_Up57 = v_Up57 + 1;
+                    if v_BkVar[v_s] = 68 then v_Up68 = v_Up68 + 1;
                     if v_BkHit = 0 then begin
                         v_BkHit   = 2;
                         v_BkHitSq = v_BkSeq[v_s];
@@ -1201,6 +1457,19 @@ if LastBarOnChart then begin
            "   (Pivot_Window = 1)" );
     Print( "PIVOT      window=", Pivot_Window:2:0,
            "  pivot_high=", v_NPvH:7:0, "  pivot_low=", v_NPvL:7:0 );
+    Print( "CUP TALLY  P28=", v_Cnt28:5:0, "  P64=", v_Cnt64:5:0,
+           "  P55=", v_Cnt55:6:0 );
+    Print( "CUP TALLY  reference  P28= 7  P64= 4  P55= 628" );
+    Print( "P18 LIFE   dn=", v_Dn18:6:0, "  up=", v_Up18:6:0,
+           "  exp=", v_Ex18:6:0, "  sum=", ( v_Dn18 + v_Up18 + v_Ex18 ):6:0,
+           "  formations=", v_Cnt18:6:0 );
+    Print( "P57 LIFE   dn=", v_Dn57:6:0, "  up=", v_Up57:6:0,
+           "  exp=", v_Ex57:6:0, "  sum=", ( v_Dn57 + v_Up57 + v_Ex57 ):6:0,
+           "  formations=", v_Cnt57:6:0 );
+    Print( "P68 LIFE   dn=", v_Dn68:6:0, "  up=", v_Up68:6:0,
+           "  exp=", v_Ex68:6:0, "  sum=", ( v_Dn68 + v_Up68 + v_Ex68 ):6:0,
+           "  formations=", v_Cnt68:6:0 );
+    Print( "P18 LIFE   sum must equal formations; dn vs up is the verdict" );
     Print( "DIA TALLY  P30=", v_Seq30:4:0, "  P61=", v_Seq61:4:0 );
     Print( "DIA TALLY  reference  P30=   0  P61=   1",
            "   (20250908 0955-1150, span 23)" );
