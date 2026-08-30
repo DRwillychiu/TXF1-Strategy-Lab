@@ -1,0 +1,173 @@
+<title>十五種母體普查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
+  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}}
+:root[data-theme="dark"]{
+  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+  --up:#e8564e;--dn:#3ec08d;
+  --ph:#3ecfa0;--pl:#f0a04b;--brk:#ff6b5e;--map:#a98ce8;--midc:#79828f;
+  --zone:rgba(169,140,232,.075);
+}
+:root[data-theme="light"]{
+  --ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+  --up:#c8302e;--dn:#17795e;
+  --ph:#0f9d76;--pl:#d97528;--brk:#d1382f;--map:#7a5cc4;--midc:#8a93a3;
+  --zone:rgba(122,92,196,.055);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px;
+  display:flex;flex-direction:column;gap:34px}
+.top{display:flex;flex-direction:column;gap:9px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink3)}
+h1{font-family:var(--serif);font-weight:700;margin:0;
+  font-size:clamp(26px,4vw,38px);letter-spacing:-.01em;text-wrap:balance}
+.sub{margin:0;color:var(--ink2);font-size:15px;max-width:72ch}
+.sub b{color:var(--ink);font-weight:700}
+.kpi{display:flex;flex-wrap:wrap;gap:9px;margin-top:4px}
+.kpi span{display:flex;flex-direction:column;gap:1px;padding:8px 14px;
+  border:1px solid var(--line);border-radius:4px;background:var(--card);
+  font-size:11.5px;color:var(--ink3)}
+.kpi b{font-family:var(--mono);font-size:17px;color:var(--ink);font-weight:500;
+  font-variant-numeric:tabular-nums}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:20px 22px;display:flex;flex-direction:column;gap:13px}
+.ph2{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin:0}
+.ph2 h2{font-family:var(--serif);font-size:18px;font-weight:700;margin:0}
+.ph2 .tag{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.plot{width:100%;overflow-x:auto}
+.plot svg{width:100%;min-width:680px;height:auto;display:block}
+.cap{margin:0;font-size:12.5px;color:var(--ink3);
+  border-top:1px solid var(--line2);padding-top:9px}
+.cap b{color:var(--ink2)}
+.px{fill:none;stroke:var(--ink2);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tlu,.tld{stroke-width:1.5;stroke-dasharray:5 3.5;fill:none;opacity:.9}
+.tlu{stroke:var(--ph)}.tld{stroke:var(--pl)}
+.tlu.solid,.tld.solid{stroke-dasharray:none;stroke-width:2.2;opacity:1}
+.mid{stroke:var(--midc);stroke-width:1.4;stroke-dasharray:1.5 3;stroke-linecap:round}
+.midpt{fill:var(--midc)}
+.map{stroke:var(--map);stroke-width:1.3;stroke-dasharray:4 3;opacity:.85}
+.zone{fill:var(--zone);stroke:var(--map);stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.zt{font-family:var(--mono);font-size:11px;fill:var(--map);text-anchor:middle}
+.pv{stroke:var(--card);stroke-width:2}
+.pv.ph{fill:var(--ph)}.pv.pl{fill:var(--pl)}
+.pv.lastpv{stroke-width:2.6}
+.pvl{font-family:var(--mono);font-size:11px;text-anchor:middle;font-weight:500}
+.pvl.ph{fill:var(--ph)}.pvl.pl{fill:var(--pl)}
+.ord{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.brk{fill:var(--brk)}
+.brkr{fill:none;stroke:var(--brk);stroke-width:1.6;opacity:.5}
+.lbl{font-family:var(--sans);font-size:11.5px;fill:var(--ink3)}
+.map-l{fill:var(--map);font-family:var(--mono);font-size:11px}
+.mid-l{fill:var(--midc)}
+.brk-l{fill:var(--brk);font-weight:600}
+.span{stroke:var(--ink3);stroke-width:1.2}
+.ah{fill:var(--ink3)}
+.span-l{text-anchor:middle;fill:var(--ink3)}
+.ax{font-family:var(--mono);font-size:10px;fill:var(--ink3);text-anchor:middle}
+.bg{fill:var(--ink);opacity:.9}
+.bgt{fill:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  text-anchor:middle}
+.wk{stroke-width:1.3}.wk.up{stroke:var(--up)}.wk.dn{stroke:var(--dn)}
+.bd.up{fill:var(--card);stroke:var(--up);stroke-width:1.3}
+.bd.dn{fill:var(--dn);stroke:var(--dn);stroke-width:1.3}
+.legend{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:5px;overflow:hidden;grid-template-columns:repeat(auto-fit,minmax(440px,1fr))}
+.li{background:var(--card);padding:14px 16px;display:flex;gap:12px}
+.li .n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--ink);
+  color:var(--card);font-family:var(--mono);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;margin-top:1px}
+.li .bd2{display:flex;flex-direction:column;gap:2px}
+.li h3{margin:0;font-family:var(--serif);font-size:14.5px;font-weight:700}
+.li .vis{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.li p{margin:3px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.li b{color:var(--ink);font-weight:700}
+.vars{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.vf{margin:0;background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:11px;display:flex;flex-direction:column;gap:5px}
+.vf svg{width:100%;height:auto}
+.vf figcaption{display:flex;align-items:baseline;gap:8px}
+.vf b{font-family:var(--serif);font-size:13.5px}
+.vf span{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink3);
+  font-variant-numeric:tabular-nums}
+.vsub{font-size:11px;color:var(--ink3);line-height:1.45}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line2);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line)}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink2)}
+td:first-child{font-family:var(--sans);color:var(--ink)}
+tr.hit td{background:rgba(209,56,47,.08);color:var(--brk)}
+tr.hit td:first-child{color:var(--brk);font-weight:600}
+tr.good td{background:rgba(15,157,118,.09);color:var(--ph)}
+tr.good td:first-child{color:var(--ph);font-weight:600}
+.warn{border-left:3px solid var(--brk);padding:2px 0 2px 13px;margin:0;
+  font-size:13px;color:var(--ink2)}
+.warn b{color:var(--ink)}
+.ok{border-left-color:var(--ph)}
+.two{display:grid;gap:16px;grid-template-columns:1fr}
+.sc{display:flex;flex-direction:column;gap:8px}
+.sct{font-family:var(--serif);font-size:14.5px;font-weight:700;margin:0;
+  display:flex;align-items:baseline;gap:9px}
+.sct em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+code{font-family:var(--mono);font-size:.9em;color:var(--ink2)}
+.foot{border-top:1px solid var(--line);padding-top:16px;color:var(--ink3);
+  font-size:12px;max-width:90ch}
+
+.cen{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 0}
+.cen th{text-align:right;font-size:11px;letter-spacing:.08em;color:var(--ink3);
+ font-weight:500;border-bottom:1px solid var(--ink);padding:0 10px 7px 0}
+.cen th:nth-child(1),.cen th:nth-child(2),.cen th:nth-child(3){text-align:left}
+.cen td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);
+ text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cen td:nth-child(1),.cen td:nth-child(2),.cen td:nth-child(3){
+ text-align:left;font-family:var(--sans)}
+.cen td:nth-child(1){font-family:var(--mono);color:var(--ink)}
+.cen td:nth-child(2){color:var(--ink);font-weight:500}
+.cen tr.sh td{color:var(--brk)}
+.cen .dir{font-size:11px;padding:1px 7px;border:1px solid var(--line2);
+ border-radius:2px;color:var(--ink3)}
+.cen .dir.b{color:var(--dn);border-color:var(--dn)}
+.cen .dir.u{color:var(--up);border-color:var(--up)}
+.grid15{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+ grid-template-columns:repeat(auto-fit,minmax(268px,1fr));margin:6px 0 0}
+.c15{background:var(--card);padding:15px 16px 17px}
+.c15 h4{margin:0 0 3px;font-size:14px;font-family:var(--serif)}
+.c15 h4 .id{font-family:var(--mono);color:var(--ph);margin-right:7px;
+ font-size:12px}
+.c15 .en{font-size:11px;color:var(--ink3);font-style:italic;margin:0 0 9px}
+.c15 svg{width:100%;height:106px;display:block;margin:2px 0 9px}
+.c15 .plot{fill:none;stroke:var(--ink2);stroke-width:1.6;
+ stroke-linejoin:round;stroke-linecap:round}
+.c15 .pv{fill:var(--ph);stroke:none}
+.c15 .ax{stroke:var(--line2);stroke-width:1}
+.c15 p{margin:0;font-size:12.5px;color:var(--ink3);line-height:1.62}
+.c15 .num{display:flex;gap:14px;margin:9px 0 0;font-family:var(--mono);
+ font-size:12px;font-variant-numeric:tabular-nums}
+.c15 .num b{color:var(--ink)}
+.c15 .num i{font-style:normal;color:var(--ink3)}
+.c15.no{background:var(--bg)}
+.c15.no p{color:var(--ink2)}
+</style>
+<div class="wrap"><header class="top"><div class="eyebrow">S16_S 型態層 · 母體普查 · 2026-08-30</div><h1>十五種母體普查</h1><p class="sub">型態層剩下的最後 15 種。裁示 C：<b>先把母體一次量完，再決定多方型態怎麼處理</b> —— 母體是 0 或爆量的那些，不管裁示怎麼走都是同一個結論。</p><div class="kpi"><span><b>13</b>可零參數定義</span><span><b>2</b>定不出來</span><span><b>0.89–1.08x</b>鏡像倍率全距</span><span><b>0</b>具方向性</span></div></header><section class="panel"><div class="ph2"><h2>一、一句話結論</h2><span class="tag">13 個全部落在同一格</span></div><div class="warn"><b>十三個型態的鏡像倍率全部落在 0.89x 到 1.08x 之間。</b>沒有任何一個偏好某個方向。</div><p class="cap">對照樞紐型 A 組：P18 三重頂 <b>10.19x</b>、P68 雙頂 <b>6.75x</b>、P57 測量移動 <b>2.33x</b>。這裡最高的是 P63 V 型底的 <b>1.08x</b> —— 差了一個數量級。</p><div class="big"><p>這正是<b>三類條件</b>裡的第二類：<b>峰谷形狀</b>。把價格上下顛倒之後，同一個判定<b>通過的次數幾乎一模一樣</b>，所以形狀本身不含方向資訊。這也正是 P15 頭肩頂與 P16 頭肩底被排除的同一個理由。</p><small><b>要講清楚這個測試沒有證明什麼。</b>鏡像倍率測的是<b>方向偏好</b>，不是<b>是否含資訊</b>。一個型態可以完全對稱、卻仍然比隨機常見（或罕見）—— P29 擴散三角的獨立性比就是 0.16x，遠低於隨機，但它照樣是有用的結構。<b>獨立性比與區塊局部置換對照組都還沒跑</b>，如果你要留下其中任何一個，那才是下一步。</small></div></section><section class="panel"><div class="ph2"><h2>二、母體普查</h2><span class="tag">只有次數，沒有損益</span></div><table class="cen"><thead><tr><th>代號</th><th>名稱</th><th>方向</th><th>母體</th><th>鏡像</th><th>倍率</th><th>跨度中位</th></tr></thead><tbody><tr><td>P26</td><td>圓弧頂</td><td><span class="dir b">空</span></td><td>608</td><td>582</td><td class="z">1.04x</td><td class="">30 根</td></tr><tr><td>P27</td><td>圓弧底</td><td><span class="dir u">多</span></td><td>582</td><td>608</td><td class="z">0.96x</td><td class="">30 根</td></tr><tr><td>P32</td><td>V 型反轉（頂）</td><td><span class="dir b">空</span></td><td>801</td><td>862</td><td class="z">0.93x</td><td class="">30 根</td></tr><tr><td>P63</td><td>V 型底</td><td><span class="dir u">多</span></td><td>862</td><td>801</td><td class="z">1.08x</td><td class="">30 根</td></tr><tr><td>P66</td><td>平底鍋底</td><td><span class="dir u">多</span></td><td>6,303</td><td>6,360</td><td class="z">0.99x</td><td class="">29 根</td></tr><tr><td>P28</td><td>杯柄</td><td><span class="dir u">多</span></td><td>164</td><td>176</td><td class="z">0.93x</td><td class="">39 根</td></tr><tr><td>P64</td><td>倒置杯柄</td><td><span class="dir b">空</span></td><td>176</td><td>164</td><td class="z">1.07x</td><td class="">39 根</td></tr><tr><td>P59</td><td>穿越型態</td><td><span class="dir b">空</span></td><td>1,465</td><td>1,483</td><td class="z">0.99x</td><td class="">23 根</td></tr><tr><td>P24</td><td>多方旗形</td><td><span class="dir u">多</span></td><td>1,758</td><td>1,986</td><td class="z">0.89x</td><td class="">18 根</td></tr><tr><td>P25</td><td>多方三角旗</td><td><span class="dir u">多</span></td><td>858</td><td>860</td><td class="z">1.00x</td><td class="">18 根</td></tr><tr class="sh"><td>P56</td><td>死貓反彈</td><td><span class="dir b">空</span></td><td>15,717</td><td>17,311</td><td class="z">0.91x</td><td class="z">10 根</td></tr><tr class="sh"><td>P65</td><td>塔形頂</td><td><span class="dir b">空</span></td><td>8,386</td><td>8,387</td><td class="z">1.00x</td><td class="z">5 根</td></tr><tr class="sh"><td>P72</td><td>訂單塊</td><td><span class="dir ">中</span></td><td>24,707</td><td>23,132</td><td class="z">1.07x</td><td class="z">7 根</td></tr></tbody></table><p class="cap"><b>倍率</b> ＝ 母體 ÷ 鏡像母體。1.00x 代表把價格上下顛倒後出現次數一樣，也就是形狀不含方向。<b>橘色那三列的跨度中位 ≤ 10 根</b> —— 視窗 1 每 2.8 根就認一個樞紐，10 根只夠三四個樞紐，那是 K 棒尺度不是圖形尺度。</p></section><section class="panel"><div class="ph2"><h2>三、十三個零參數定義</h2><span class="tag">先看定義，再看數字</span></div><div class="grid15"><div class="c15"><h4><span class="id">P26</span>圓弧頂</h4><p class="en">Rounding Top</p><svg viewBox="-6 0 100 104" role="img" aria-label="步幅遞減進場、遞增離場 —— 穹頂"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,78 14,40 28,20 42,12 56,22 70,44 84,80"/><circle class="pv" cx="0" cy="78" r="2.6"/><circle class="pv" cx="14" cy="40" r="2.6"/><circle class="pv" cx="28" cy="20" r="2.6"/><circle class="pv" cx="42" cy="12" r="2.6"/><circle class="pv" cx="56" cy="22" r="2.6"/><circle class="pv" cx="70" cy="44" r="2.6"/><circle class="pv" cx="84" cy="80" r="2.6"/></svg><p>五個高點成穹頂：上升時<b>步幅遞減</b>、下降時<b>步幅遞增</b></p><div class="num"><span><i>母體</i> <b>608</b></span><span><i>鏡像</i> 582</span><span><i>倍率</i> <b>1.04x</b></span><span><i>跨度</i> 30 根</span></div></div><div class="c15"><h4><span class="id">P27</span>圓弧底</h4><p class="en">Rounding Bottom</p><svg viewBox="-6 0 100 104" role="img" aria-label="碗底"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,20 14,58 28,78 42,86 56,76 70,54 84,18"/><circle class="pv" cx="0" cy="20" r="2.6"/><circle class="pv" cx="14" cy="58" r="2.6"/><circle class="pv" cx="28" cy="78" r="2.6"/><circle class="pv" cx="42" cy="86" r="2.6"/><circle class="pv" cx="56" cy="76" r="2.6"/><circle class="pv" cx="70" cy="54" r="2.6"/><circle class="pv" cx="84" cy="18" r="2.6"/></svg><p>五個低點成碗底：下降步幅遞減、上升步幅遞增</p><div class="num"><span><i>母體</i> <b>582</b></span><span><i>鏡像</i> 608</span><span><i>倍率</i> <b>0.96x</b></span><span><i>跨度</i> 30 根</span></div></div><div class="c15"><h4><span class="id">P32</span>V 型反轉（頂）</h4><p class="en">V Reversal</p><svg viewBox="-6 0 100 104" role="img" aria-label="步幅遞增進場、遞減離場 —— 尖峰"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,82 14,62 28,34 42,10 56,36 70,62 84,82"/><circle class="pv" cx="0" cy="82" r="2.6"/><circle class="pv" cx="14" cy="62" r="2.6"/><circle class="pv" cx="28" cy="34" r="2.6"/><circle class="pv" cx="42" cy="10" r="2.6"/><circle class="pv" cx="56" cy="36" r="2.6"/><circle class="pv" cx="70" cy="62" r="2.6"/><circle class="pv" cx="84" cy="82" r="2.6"/></svg><p>與圓弧頂同樣的五個高點，但<b>步幅方向相反</b> —— 上升加速、下降減速</p><div class="num"><span><i>母體</i> <b>801</b></span><span><i>鏡像</i> 862</span><span><i>倍率</i> <b>0.93x</b></span><span><i>跨度</i> 30 根</span></div></div><div class="c15"><h4><span class="id">P63</span>V 型底</h4><p class="en">V Bottom</p><svg viewBox="-6 0 100 104" role="img" aria-label="尖底"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,16 14,36 28,64 42,88 56,62 70,36 84,16"/><circle class="pv" cx="0" cy="16" r="2.6"/><circle class="pv" cx="14" cy="36" r="2.6"/><circle class="pv" cx="28" cy="64" r="2.6"/><circle class="pv" cx="42" cy="88" r="2.6"/><circle class="pv" cx="56" cy="62" r="2.6"/><circle class="pv" cx="70" cy="36" r="2.6"/><circle class="pv" cx="84" cy="16" r="2.6"/></svg><p>五個低點的尖底：下降加速、上升減速</p><div class="num"><span><i>母體</i> <b>862</b></span><span><i>鏡像</i> 801</span><span><i>倍率</i> <b>1.08x</b></span><span><i>跨度</i> 30 根</span></div></div><div class="c15"><h4><span class="id">P66</span>平底鍋底</h4><p class="en">Frypan Bottom</p><svg viewBox="-6 0 100 104" role="img" aria-label="底部三點落在彼此的區間內 —— 平底"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,22 14,62 28,80 42,80 56,80 70,60 84,20"/><circle class="pv" cx="0" cy="22" r="2.6"/><circle class="pv" cx="14" cy="62" r="2.6"/><circle class="pv" cx="28" cy="80" r="2.6"/><circle class="pv" cx="42" cy="80" r="2.6"/><circle class="pv" cx="56" cy="80" r="2.6"/><circle class="pv" cx="70" cy="60" r="2.6"/><circle class="pv" cx="84" cy="20" r="2.6"/></svg><p>碗底但底部是平的：中間那個低點落在左右兩個低點的<b>區間內</b></p><div class="num"><span><i>母體</i> <b>6,303</b></span><span><i>鏡像</i> 6,360</span><span><i>倍率</i> <b>0.99x</b></span><span><i>跨度</i> 29 根</span></div></div><div class="c15"><h4><span class="id">P28</span>杯柄</h4><p class="en">Cup and Handle</p><svg viewBox="-6 0 100 104" role="img" aria-label="碗 ＋ 柄，柄低點在兩杯緣之間"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,18 12,56 24,78 36,86 48,74 60,50 72,18 80,38 88,20"/><circle class="pv" cx="0" cy="18" r="2.6"/><circle class="pv" cx="12" cy="56" r="2.6"/><circle class="pv" cx="24" cy="78" r="2.6"/><circle class="pv" cx="36" cy="86" r="2.6"/><circle class="pv" cx="48" cy="74" r="2.6"/><circle class="pv" cx="60" cy="50" r="2.6"/><circle class="pv" cx="72" cy="18" r="2.6"/><circle class="pv" cx="80" cy="38" r="2.6"/><circle class="pv" cx="88" cy="20" r="2.6"/></svg><p>碗底 ＋ 柄：柄的低點落在<b>左右兩個杯緣構成的區間內</b></p><div class="num"><span><i>母體</i> <b>164</b></span><span><i>鏡像</i> 176</span><span><i>倍率</i> <b>0.93x</b></span><span><i>跨度</i> 39 根</span></div></div><div class="c15"><h4><span class="id">P64</span>倒置杯柄</h4><p class="en">Inverted Cup and Handle</p><svg viewBox="-6 0 100 104" role="img" aria-label="穹頂 ＋ 柄"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,82 12,44 24,22 36,14 48,26 60,50 72,82 80,62 88,80"/><circle class="pv" cx="0" cy="82" r="2.6"/><circle class="pv" cx="12" cy="44" r="2.6"/><circle class="pv" cx="24" cy="22" r="2.6"/><circle class="pv" cx="36" cy="14" r="2.6"/><circle class="pv" cx="48" cy="26" r="2.6"/><circle class="pv" cx="60" cy="50" r="2.6"/><circle class="pv" cx="72" cy="82" r="2.6"/><circle class="pv" cx="80" cy="62" r="2.6"/><circle class="pv" cx="88" cy="80" r="2.6"/></svg><p>穹頂 ＋ 柄，杯柄的鏡像</p><div class="num"><span><i>母體</i> <b>176</b></span><span><i>鏡像</i> 164</span><span><i>倍率</i> <b>1.07x</b></span><span><i>跨度</i> 39 根</span></div></div><div class="c15"><h4><span class="id">P59</span>穿越型態</h4><p class="en">Descending Scallop</p><svg viewBox="-6 0 100 104" role="img" aria-label="J 形：右側高點超過左側高點"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,34 16,66 32,84 48,60 64,26 80,14"/><circle class="pv" cx="0" cy="34" r="2.6"/><circle class="pv" cx="16" cy="66" r="2.6"/><circle class="pv" cx="32" cy="84" r="2.6"/><circle class="pv" cx="48" cy="60" r="2.6"/><circle class="pv" cx="64" cy="26" r="2.6"/><circle class="pv" cx="80" cy="14" r="2.6"/></svg><p>J 形：碗底之後的高點<b>超過碗左邊那個高點</b></p><div class="num"><span><i>母體</i> <b>1,465</b></span><span><i>鏡像</i> 1,483</span><span><i>倍率</i> <b>0.99x</b></span><span><i>跨度</i> 23 根</span></div></div><div class="c15"><h4><span class="id">P24</span>多方旗形</h4><p class="en">Bull Flag</p><svg viewBox="-6 0 100 104" role="img" aria-label="旗桿 ＋ 平行下傾旗面，整面留在旗桿區間內"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,86 20,14 36,34 52,22 68,44 84,32"/><circle class="pv" cx="0" cy="86" r="2.6"/><circle class="pv" cx="20" cy="14" r="2.6"/><circle class="pv" cx="36" cy="34" r="2.6"/><circle class="pv" cx="52" cy="22" r="2.6"/><circle class="pv" cx="68" cy="44" r="2.6"/><circle class="pv" cx="84" cy="32" r="2.6"/></svg><p>單腿旗桿 ＋ 平行下傾旗面；<b>旗面必須留在旗桿的區間內</b></p><div class="num"><span><i>母體</i> <b>1,758</b></span><span><i>鏡像</i> 1,986</span><span><i>倍率</i> <b>0.89x</b></span><span><i>跨度</i> 18 根</span></div></div><div class="c15"><h4><span class="id">P25</span>多方三角旗</h4><p class="en">Bull Pennant</p><svg viewBox="-6 0 100 104" role="img" aria-label="旗桿 ＋ 收斂旗面"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,86 20,14 36,36 52,24 68,32 84,28"/><circle class="pv" cx="0" cy="86" r="2.6"/><circle class="pv" cx="20" cy="14" r="2.6"/><circle class="pv" cx="36" cy="36" r="2.6"/><circle class="pv" cx="52" cy="24" r="2.6"/><circle class="pv" cx="68" cy="32" r="2.6"/><circle class="pv" cx="84" cy="28" r="2.6"/></svg><p>同旗桿，但旗面<b>收斂</b>（高更低、低更高）</p><div class="num"><span><i>母體</i> <b>858</b></span><span><i>鏡像</i> 860</span><span><i>倍率</i> <b>1.00x</b></span><span><i>跨度</i> 18 根</span></div></div><div class="c15"><h4><span class="id">P56</span>死貓反彈</h4><p class="en">Dead-Cat Bounce</p><svg viewBox="-6 0 100 104" role="img" aria-label="跌 ＋ 部分反彈（在跌幅區間內）＋ 續跌破前低"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,14 26,76 52,44 84,90"/><circle class="pv" cx="0" cy="14" r="2.6"/><circle class="pv" cx="26" cy="76" r="2.6"/><circle class="pv" cx="52" cy="44" r="2.6"/><circle class="pv" cx="84" cy="90" r="2.6"/></svg><p>下跌 ＋ 部分反彈（<b>落在跌幅區間內</b>）＋ 續跌破前低</p><div class="num"><span><i>母體</i> <b>15,717</b></span><span><i>鏡像</i> 17,311</span><span><i>倍率</i> <b>0.91x</b></span><span><i>跨度</i> 10 根</span></div></div><div class="c15"><h4><span class="id">P65</span>塔形頂</h4><p class="en">Tower Top</p><svg viewBox="-6 0 100 104" role="img" aria-label="跌得比漲得快，K 棒數不多於上漲腿"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,82 34,12 68,90"/><circle class="pv" cx="0" cy="82" r="2.6"/><circle class="pv" cx="34" cy="12" r="2.6"/><circle class="pv" cx="68" cy="90" r="2.6"/></svg><p><b>跌得比漲得快</b>：下跌腿的價格不小於上漲腿，且用的 K 棒不多於它</p><div class="num"><span><i>母體</i> <b>8,386</b></span><span><i>鏡像</i> 8,387</span><span><i>倍率</i> <b>1.00x</b></span><span><i>跨度</i> 5 根</span></div></div><div class="c15"><h4><span class="id">P72</span>訂單塊</h4><p class="en">Order Block</p><svg viewBox="-6 0 100 104" role="img" aria-label="結構轉折前的最後一個反向樞紐"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,60 30,84 60,22"/><circle class="pv" cx="0" cy="60" r="2.6"/><circle class="pv" cx="30" cy="84" r="2.6"/><circle class="pv" cx="60" cy="22" r="2.6"/></svg><p>結構轉折前的最後一個反向樞紐</p><div class="num"><span><i>母體</i> <b>24,707</b></span><span><i>鏡像</i> 23,132</span><span><i>倍率</i> <b>1.07x</b></span><span><i>跨度</i> 7 根</span></div></div></div></section><section class="panel"><div class="ph2"><h2>四、兩個定不出零參數版本的</h2><span class="tag">不硬編一個定義來湊數</span></div><div class="grid15"><div class="c15 no"><h4><span class="id">P55</span>駝峰反轉</h4><p class="en">Bump-and-Run</p><svg viewBox="-6 0 100 104" role="img" aria-label="三條趨勢線 ＋ 角度門檻"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,76 22,62 44,20 66,46 88,82"/><circle class="pv" cx="0" cy="76" r="2.6"/><circle class="pv" cx="22" cy="62" r="2.6"/><circle class="pv" cx="44" cy="20" r="2.6"/><circle class="pv" cx="66" cy="46" r="2.6"/><circle class="pv" cx="88" cy="82" r="2.6"/></svg><p>原始定義是<b>三條趨勢線加一個角度門檻</b>。那與 P58 扇形原則、P71 江恩角度線是同一類物件 —— 2026-08-30 已被裁示為<b>不屬於圖形型態探討的範疇</b>。<b>需要用戶裁示，我不自己定義。</b></p></div><div class="c15 no"><h4><span class="id">P60</span>高位緊密旗形</h4><p class="en">High and Tight Flag</p><svg viewBox="-6 0 100 104" role="img" aria-label="旗桿漲幅「接近翻倍」"><line class="ax" x1="-4" y1="98" x2="94" y2="98"/><polyline class="plot" points="0,92 22,10 44,26 66,18 88,24"/><circle class="pv" cx="0" cy="92" r="2.6"/><circle class="pv" cx="22" cy="10" r="2.6"/><circle class="pv" cx="44" cy="26" r="2.6"/><circle class="pv" cx="66" cy="18" r="2.6"/><circle class="pv" cx="88" cy="24" r="2.6"/></svg><p>定義是「旗桿漲幅接近翻倍」。<b>「翻倍」是外來常數</b>，型態本身沒有任何排名或幾何可以推導出它。它是 P24 多方旗形<b>加一個幅度門檻</b>，所以 <b>P24 的母體就是它的上限</b>。</p></div></div><p class="cap">硬湊一個定義出來，量到的數字只會反映我挑的門檻，不會反映市場 —— <b>P07 布林帶寬就是這樣：週期從 20 改成 30，只剩 18.4% 是同一批 K 棒</b>。所以這兩個留白等裁示。</p></section><section class="panel"><div class="ph2"><h2>五、定義用到的兩個裝置</h2><span class="tag">都不花參數</span></div><div class="two"><div class="vf"><h3>步幅單調</h3><p>「圓」和「V」的差別是<b>曲率</b>，曲率一般需要門檻。這裡不需要：<b>比較相鄰兩步的大小</b>就好。穹頂進場時步幅遞減、離場時遞增；尖峰完全相反。純序數，沒有任何東西可以調。</p><p class="cap">所以 P26 圓弧頂與 P32 V 型反轉<b>用同樣的五個高點</b>，只差在步幅的方向 —— 兩者互斥，不會重複計數。</p></div><div class="vf"><h3>區間裝置</h3><p>兩點定義區間、第三點受測：<code>min(A,B) ≤ C ≤ max(A,B)</code>。<b>容差由型態自身推導</b>，順序因果正確，而且免疫於衰減律。</p><p class="cap">杯柄的柄低點落在<b>左右兩個杯緣之間</b>；平底鍋底的中間低點落在<b>左右兩個低點之間</b>；旗形的旗面必須留在<b>旗桿的區間內</b>。全都不需要「回撤不超過幾成」這種數字。</p></div></div></section><section class="panel"><div class="ph2"><h2>六、待裁示</h2><span class="tag">三題</span></div><table><thead><tr><th>題目</th><th style="text-align:left">說明</th></tr></thead><tbody><tr><td>13 個怎麼處理</td><td style="text-align:left">全部鏡像倍率 0.89–1.08x，<b>與 P15／P16 同一個理由</b>。建議<b>整組結案</b>，型態層歸零。若要留任何一個，下一步是跑獨立性比與區塊局部置換對照組</td></tr><tr><td>P55 駝峰反轉</td><td style="text-align:left">三條趨勢線 ＋ 角度門檻，與 P58／P71 同類。你 08-30 的範疇裁示<b>看起來直接涵蓋它</b>，但我不替你決定</td></tr><tr><td>P60 高位緊密旗形</td><td style="text-align:left">「翻倍」是外來常數。它是 P24 加一個幅度門檻，<b>P24 的 1,758 就是它的上限</b>，而 P24 本身倍率 0.89x</td></tr></tbody></table><p class="cap">如果三題都照建議走，<b>型態層 72 種全部處理完畢</b>，接下來就是訊號層。</p></section><footer class="foot">普查 <code>scripts/research/s16s_census15_scan.py</code>，本頁 <code>scripts/research/s16s_census15_make_page.py</code>，資料 <code>s16s_census15.json</code>。母體 421,513 根 5 分 K，視窗 1 樞紐 106,283 個。<b>本頁無損益欄。</b></footer></div>
