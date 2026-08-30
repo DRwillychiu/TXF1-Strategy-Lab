@@ -1,0 +1,287 @@
+# -*- coding: utf-8 -*-
+"""Assemble the eleven pattern-research pages into one, grouped by family.
+
+Willy: "把他們製作成分業形式的總圖形型態研究."
+
+The pages cannot simply be concatenated.  They share class names but not
+rules -- 53 selectors mean different things on different pages, and only ONE
+rule is common to all eleven -- so a naive merge silently restyles half the
+document.  Each page's CSS is therefore scoped to its own panel id, which is
+also why every panel keeps looking exactly as it does today.
+
+Only @media appears among the at-rules, and no page has keyframes or
+@font-face, so scoping is a selector rewrite and nothing more.
+
+Run:  python scripts/research/s16s_make_master_page.py
+"""
+import io
+import os
+import re
+import sys
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+SRC = os.path.join('docs', 'research')
+OUT = os.path.join(SRC, 'S16S_pattern_master.html')
+
+# (file, tab label, one-line summary), grouped by what the group is FOR
+GROUPS = [
+    ('現況', [
+        ('S16S_pattern_layer_status', '型態層總覽',
+         '72 種純圖形走到哪裡，哪些結案、哪些還沒碰'),
+    ]),
+    ('圖鑑', [
+        ('S16S_pattern_atlas_full', '全圖鑑 143 種',
+         'K 棒與圖形型態的完整清單，每種一句話'),
+        ('S16S_kbar_atlas_33', 'K 棒圖鑑 33 種',
+         '已編碼並檢定過的 33 種 K 棒型態'),
+        ('S16S_kbar_patterns', 'K 棒規格',
+         '33 種的逐條定義'),
+    ]),
+    ('擴散家族', [
+        ('S16S_P29_diagram', 'P29 擴散三角',
+         '高更高、低更低。整套方法論的原型'),
+        ('S16S_P49_P50_diagram', 'P49 ／ P50',
+         '同一個形狀，用形成前的走勢分頂與底'),
+        ('S16S_P51_P54_diagram', 'P51-P54 擴散楔形',
+         '四個變體共用一個框架；破位方向不含型態資訊'),
+    ]),
+    ('已結案', [
+        ('S16S_gap_group_diagram', '缺口組 P31 P62 P67',
+         '5 分 K 不存在跳空 —— 一次關掉 26 個型態'),
+        ('S16S_diamond_diagram', '鑽石 P30 P61',
+         '完整鑽石八年只出現一次。編碼上圖，不再研究'),
+    ]),
+    ('樞紐型', [
+        ('S16S_groupA_diagram', 'A 組七型態',
+         'P15 P16 P18 P21 P23 P57 P68。區間裝置、衰減律、三類條件'),
+        ('S16S_pivot_scale', '樞紐尺度',
+         '視窗 1 每 2.8 根就認一個樞紐 —— 那些「雙頂」跨度只有 3 根'),
+    ]),
+]
+
+KPI = [('72', '種純圖形型態'), ('52', '種已結案'), ('20', '種未研究'),
+       ('3', '種進了指標')]
+
+FINDINGS = [
+    ('★ 區間裝置',
+     '兩點定義區間、第三點受測：<code>min(A,B) ≤ C ≤ max(A,B)</code>。'
+     '容差 ＝ |A−B|，<b>由型態自身推導，不花參數</b>；順序因果正確；'
+     '<b>免疫於衰減律</b>。P18 用它從 43 個樣本變成 6,352 個，倍率不變。'),
+    ('★ 衰減律',
+     '命中率 × 中位擺幅 ≈ 常數（八年間 608–850）。TXF1 的 tick 固定 1 點，'
+     '中位擺幅從 9 點（2019）漲到 90 點（2026），'
+     '<b>所以「完全相等」型態以 1／擺幅 衰減</b> —— 不是型態失效，是尺規沒跟著長。'),
+    ('★ 三類條件',
+     '<b>單調方向</b>（有資訊且有方向）／<b>峰谷形狀</b>（鏡像同樣通過 → 無方向）'
+     '／<b>精確相等</b>（有資訊但鏡像必通過 → 無方向）。'
+     '落在後兩類的型態<b>不必再測方向</b>。'),
+    ('★ 尺度',
+     '視窗 1 下 35.9% 的 K 棒都是樞紐，所以「雙頂」跨度中位只有 3 根 —— <b>那不是雙頂</b>。'
+     '視窗 3 跨 30 根 ≈ 半個日盤才像型態。'
+     '<b>視窗變粗 ≠ 換週期</b>：K 棒仍是 5 分 K，進出場停損全部不變。'),
+    ('破位方向',
+     '擴散家族證明：<b>破位方向 ＝ 起算位置 ＋ 低點方向延續，不含型態資訊</b>。'
+     '所以後續型態都不必再測「它往哪邊破」，只要問形狀能不能零參數定死、母體夠不夠。'),
+    ('對照組',
+     'P68 的對照組做了三次才對 —— 前兩次分別給出 391x 與 80x，都是 artifact。'
+     '兩個高點中位相隔 3 根，<b>它們價格接近是因為時間接近</b>。'
+     '只有<b>區塊局部置換</b>（僅在鄰近 200 個框架內洗牌）站得住。'),
+]
+
+
+def scope_css(css, sel):
+    """Confine a page's CSS to one panel, so eleven stylesheets coexist."""
+    def one(s):
+        s = s.strip()
+        if not s:
+            return s
+        if s == '*':
+            return '%s, %s *' % (sel, sel)
+        if s in ('body', 'html', ':root'):
+            return sel
+        m = re.match(r'^:root(\[[^\]]+\])(.*)$', s)
+        if m:
+            return '%s %s%s' % (m.group(1), sel, m.group(2))
+        m = re.match(r'^:root(:not\([^)]*\))(.*)$', s)
+        if m:
+            return ':root%s %s%s' % (m.group(1), sel, m.group(2))
+        if s.startswith('body') or s.startswith('html'):
+            return sel + s[4:]
+        return '%s %s' % (sel, s)
+
+    out, i, n = [], 0, len(css)
+    while i < n:
+        j = css.find('{', i)
+        if j < 0:
+            out.append(css[i:])
+            break
+        head = css[i:j]
+        if '@media' in head or '@supports' in head:
+            depth, k = 0, j
+            while k < n:
+                if css[k] == '{':
+                    depth += 1
+                elif css[k] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                k += 1
+            out.append(head + '{' + scope_css(css[j + 1:k], sel) + '}')
+            i = k + 1
+            continue
+        k = css.find('}', j)
+        sels = ', '.join(one(x) for x in head.split(','))
+        out.append(sels + '{' + css[j + 1:k] + '}')
+        i = k + 1
+    return ''.join(out)
+
+
+def split_page(path):
+    s = open(path, encoding='utf-8').read()
+    css = re.findall(r'<style>(.*?)</style>', s, re.S)[0]
+    body = s.split('</style>', 1)[1]
+    return css, body
+
+
+HEAD = '''<title>圖形型態研究全集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{--mxbg:#fbfaf7;--mxsurf:#fff;--mxink:#1a1a17;--mxdim:#6a6a62;
+ --mxline:#e0ddd4;--mxacc:#0f9d76;--mxrail:#f2efe8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --mxbg:#14140f;--mxsurf:#1c1c17;--mxink:#eceae2;--mxdim:#9a978c;
+ --mxline:#33322a;--mxacc:#3fbf9a;--mxrail:#1f1f19}}
+:root[data-theme="dark"]{--mxbg:#14140f;--mxsurf:#1c1c17;--mxink:#eceae2;
+ --mxdim:#9a978c;--mxline:#33322a;--mxacc:#3fbf9a;--mxrail:#1f1f19}
+:root[data-theme="light"]{--mxbg:#fbfaf7;--mxsurf:#fff;--mxink:#1a1a17;
+ --mxdim:#6a6a62;--mxline:#e0ddd4;--mxacc:#0f9d76;--mxrail:#f2efe8}
+body{margin:0;background:var(--mxbg);color:var(--mxink);
+ font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.62}
+.mxwrap{max-width:1180px;margin:0 auto;padding:0 20px 10px}
+.mxhero{padding:56px 0 26px;border-bottom:2px solid var(--mxink)}
+.mxeyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;
+ letter-spacing:.18em;text-transform:uppercase;color:var(--mxacc);margin:0 0 12px}
+.mxhero h1{font-family:"Noto Serif TC",serif;font-size:clamp(30px,4.6vw,50px);
+ line-height:1.12;margin:0 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.mxhero p{margin:0;max-width:62ch;color:var(--mxdim);font-size:16px}
+.mxkpi{display:flex;flex-wrap:wrap;gap:34px;margin:26px 0 0}
+.mxkpi div{display:flex;flex-direction:column}
+.mxkpi b{font-family:"IBM Plex Mono",monospace;font-size:29px;
+ font-variant-numeric:tabular-nums;line-height:1;color:var(--mxacc)}
+.mxkpi span{font-size:12px;color:var(--mxdim);margin-top:5px}
+.mxfind{display:grid;gap:1px;background:var(--mxline);border:1px solid var(--mxline);
+ grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin:30px 0 0}
+.mxfind section{background:var(--mxsurf);padding:17px 19px}
+.mxfind h3{margin:0 0 7px;font-size:14px;font-family:"Noto Serif TC",serif}
+.mxfind p{margin:0;font-size:13.5px;color:var(--mxdim);line-height:1.65}
+.mxfind b{color:var(--mxink)}
+.mxfind code{font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+ background:var(--mxrail);padding:1px 5px;color:var(--mxink)}
+.mxnav{position:sticky;top:0;z-index:9;background:var(--mxbg);
+ border-bottom:1px solid var(--mxline);margin:30px 0 0}
+.mxnavin{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;
+ gap:26px;overflow-x:auto}
+.mxgrp{padding:11px 0 10px;flex:0 0 auto}
+.mxgrp>span{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;
+ letter-spacing:.16em;color:var(--mxdim);margin:0 0 6px}
+.mxgrp>div{display:flex;gap:6px}
+.mxtab{font:inherit;font-size:13px;padding:5px 11px;cursor:pointer;
+ background:transparent;color:var(--mxdim);border:1px solid transparent;
+ white-space:nowrap;border-radius:2px}
+.mxtab:hover{color:var(--mxink);background:var(--mxrail)}
+.mxtab[aria-selected="true"]{background:var(--mxink);color:var(--mxbg);
+ border-color:var(--mxink);font-weight:600}
+.mxtab:focus-visible{outline:2px solid var(--mxacc);outline-offset:2px}
+.mxcap{max-width:1180px;margin:0 auto;padding:22px 20px 0}
+.mxcap p{margin:0;color:var(--mxdim);font-size:13.5px}
+.mxcap b{color:var(--mxink)}
+.mxcap code{font-family:"IBM Plex Mono",monospace;font-size:12px}
+.mxpanel[hidden]{display:none}
+.mxfoot{max-width:1180px;margin:0 auto;padding:34px 20px 60px;
+ border-top:1px solid var(--mxline);color:var(--mxdim);font-size:12.5px}
+.mxfoot code{font-family:"IBM Plex Mono",monospace}
+@media (max-width:640px){.mxnavin{gap:16px}.mxkpi{gap:22px}}
+</style>
+'''
+
+SCRIPT = '''<script>
+(function(){
+ var tabs=[].slice.call(document.querySelectorAll('.mxtab'));
+ function show(n){
+  tabs.forEach(function(t){
+   var on=t.dataset.p===n;
+   t.setAttribute('aria-selected',on?'true':'false');
+   document.getElementById('pane'+t.dataset.p).hidden=!on;
+  });
+  try{localStorage.setItem('s16s_master_tab',n);}catch(e){}
+ }
+ tabs.forEach(function(t){
+  t.addEventListener('click',function(){
+   show(t.dataset.p);
+   var nav=document.querySelector('.mxnav');
+   window.scrollTo({top:nav.offsetTop-1});
+  });
+ });
+ var saved=null;
+ try{saved=localStorage.getItem('s16s_master_tab');}catch(e){}
+ if(saved&&document.getElementById('pane'+saved))show(saved);
+})();
+</script>'''
+
+
+def main():
+    styles, panels, nav = [], [], []
+    pid = 0
+    for gname, items in GROUPS:
+        btns = []
+        for stem, label, note in items:
+            pid += 1
+            sel = '#pg%d' % pid
+            css, body = split_page(os.path.join(SRC, stem + '.html'))
+            styles.append('/* %s */\n%s' % (stem, scope_css(css, sel)))
+            panels.append(
+                '<div class="mxpanel" id="pane%d" role="tabpanel"%s>'
+                '<div class="mxcap"><p><b>%s</b> — %s　'
+                '<code>docs/research/%s.html</code></p></div>'
+                '<div id="pg%d">%s</div></div>'
+                % (pid, '' if pid == 1 else ' hidden', label, note, stem,
+                   pid, body))
+            btns.append('<button class="mxtab" role="tab" data-p="%d" '
+                        'aria-selected="%s">%s</button>'
+                        % (pid, 'true' if pid == 1 else 'false', label))
+        nav.append('<div class="mxgrp"><span>%s</span>'
+                   '<div role="tablist" aria-label="%s">%s</div></div>'
+                   % (gname, gname, ''.join(btns)))
+
+    kpi = ''.join('<div><b>%s</b><span>%s</span></div>' % k for k in KPI)
+    find = ''.join('<section><h3>%s</h3><p>%s</p></section>' % f
+                   for f in FINDINGS)
+
+    html = (
+        HEAD
+        + ''.join('<style>%s</style>\n' % s for s in styles)
+        + '<div class="mxwrap"><div class="mxhero">'
+          '<p class="mxeyebrow">S16_S MACrossShort</p>'
+          '<h1>圖形型態研究全集</h1>'
+          '<p>十一份研究併成一份。每一頁維持原樣 —— 樣式各自限定在自己的面板裡，'
+          '因為十一份頁面共用 class 名稱卻不共用規則，'
+          '直接合併會把彼此改壞。</p>'
+          '<div class="mxkpi">' + kpi + '</div></div>'
+          '<div class="mxfind">' + find + '</div></div>'
+        + '<nav class="mxnav"><div class="mxnavin">' + ''.join(nav)
+        + '</div></nav>'
+        + ''.join(panels)
+        + '<div class="mxfoot"><p>產生器 '
+          '<code>scripts/research/s16s_make_master_page.py</code>　'
+          '十一份來源頁面各自仍可單獨開啟，內容以來源為準。</p></div>'
+        + SCRIPT)
+    open(OUT, 'w', encoding='utf-8').write(html)
+    print('wrote %s' % os.path.abspath(OUT))
+    print('  %d 面板   %.0f KB' % (pid, len(html.encode('utf-8')) / 1024))
+
+
+if __name__ == '__main__':
+    main()
