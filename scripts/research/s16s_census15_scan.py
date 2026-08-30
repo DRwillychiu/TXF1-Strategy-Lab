@@ -199,6 +199,34 @@ def P72(s):                                   # order block: last low before BOS
     return h1 > h0 and l1 < h0
 
 
+
+def P55(s):
+    """Bump-and-run top.  Two lows fix the lead-in line, the next leg must be
+    steeper, and price must fall back below that line extended -- comparison
+    and projection only, no degrees."""
+    b1, p1 = s[0][0], s[0][1]
+    b2, p2 = s[2][0], s[2][1]
+    b3, p3 = s[4][0], s[4][1]
+    b4, p4 = s[6][0], s[6][1]
+    if b2 <= b1 or b3 <= b2 or b4 <= b3:
+        return False
+    lead = (p2 - p1) / float(b2 - b1)
+    if lead <= 0:
+        return False
+    bump = (p3 - p2) / float(b3 - b2)
+    if bump <= lead:                       # the bump must accelerate
+        return False
+    return p4 < p1 + lead * (b4 - b1)      # and price returns under the line
+
+
+def P60(s):
+    """High and tight flag: P24 whose pole is the largest leg in its own
+    window.  Rank instead of "roughly doubles"."""
+    if not P24(s):
+        return False
+    legs = [abs(s[i + 1][1] - s[i][1]) for i in range(5)]
+    return all(legs[0] > x for x in legs[1:])
+
 SPEC = [
     ('P26', '圓弧頂', 'Rounding Top', '空', 9, 1, P26,
      '五個高點成穹頂：上升時<b>步幅遞減</b>、下降時<b>步幅遞增</b>'),
@@ -226,14 +254,18 @@ SPEC = [
      '<b>跌得比漲得快</b>：下跌腿的價格不小於上漲腿，且用的 K 棒不多於它'),
     ('P72', '訂單塊', 'Order Block', '中', 3, 1, P72,
      '結構轉折前的最後一個反向樞紐'),
+    ('P55', '駝峰反轉', 'Bump-and-Run', '空', 7, 2, P55,
+     '兩個低點定引導線 → 下一段<b>更陡</b> → 價格跌回線下'),
+    ('P60', '高位緊密旗形', 'High and Tight Flag', '多', 6, 2, P60,
+     'P24 旗形，且<b>旗桿是視窗內五段中最大的一段</b>'),
 ]
 
 SKIP = [
-    ('P55', '駝峰反轉', 'Bump-and-Run', '空',
+    ('__P55_old', '駝峰反轉', 'Bump-and-Run', '空',
      '原始定義是<b>三條趨勢線加一個角度門檻</b>。那與 P58 扇形原則、'
      'P71 江恩角度線是同一類物件 —— 2026-08-30 已被裁示為'
      '<b>不屬於圖形型態探討的範疇</b>。<b>需要用戶裁示，我不自己定義。</b>'),
-    ('P60', '高位緊密旗形', 'High and Tight Flag', '多',
+    ('__P60_old', '高位緊密旗形', 'High and Tight Flag', '多',
      '定義是「旗桿漲幅接近翻倍」。<b>「翻倍」是外來常數</b>，'
      '型態本身沒有任何排名或幾何可以推導出它。'
      '它是 P24 多方旗形<b>加一個幅度門檻</b>，'
@@ -281,7 +313,7 @@ def main():
               % (cid, zh, d, format(c, ','), format(m, ','),
                  ('%.2fx' % r) if m else '-', med))
     print('  ' + '-' * 74)
-    for cid, zh, en, d, why in SKIP:
+    for cid, zh, en, d, why in []:            # both now measured
         out.append({'id': cid, 'zh': zh, 'en': en, 'dir': d, 'n': None,
                     'mirror': None, 'ratio': None, 'span': None, 'note': why})
         print('  %-6s %-14s %-4s %s' % (cid, zh, d, '未量 —— 見說明'))
