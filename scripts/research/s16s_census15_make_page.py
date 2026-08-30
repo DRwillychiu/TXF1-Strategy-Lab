@@ -291,8 +291,8 @@ TOP = ('<div class="wrap"><header class="top">'
        '母體是 0 或爆量的那些，不管裁示怎麼走都是同一個結論。</p>'
        '<div class="kpi">'
        '<span><b>13</b>可零參數定義</span>'
-       '<span><b>2</b>定不出來</span>'
-       '<span><b>0.89–1.11x</b>鏡像倍率全距</span>'
+       '<span><b>11</b>化約為既有原語</span>'
+       '<span><b>2</b>留下（杯柄，有價位）</span>'
        '<span><b>0</b>具方向性</span>'
        '</div></header>')
 
@@ -316,6 +316,74 @@ HEADLINE = (
  '要留下其中任何一個，那才是下一步。</small></div></section>')
 
 
+RULING = (
+ '<section class="panel"><div class="ph2">'
+ '<h2>二、用戶裁示三點，全部量過</h2>'
+ '<span class="tag">2026-08-30</span></div>'
+
+ '<div class="vf"><h3>① V 型：「把畫面縮小，任何東西都符合 V」</h3>'
+ '<p>成立。曲率標籤幾乎<b>就是擲銅板</b>：給定「先漲後跌」，'
+ '兩個步幅條件各自成立與否，落點與兩個獨立銅板的期望值幾乎一致。</p>'
+ '<table><thead><tr><th>分類</th><th>實測</th><th>擲銅板期望</th>'
+ '</tr></thead><tbody>'
+ '<tr><td>先漲後跌的視窗</td><td class="z">2,931</td><td>—</td></tr>'
+ '<tr><td>圓弧頂 dome</td><td>608　<b>20.7%</b></td><td>25%</td></tr>'
+ '<tr><td>V 型頂 spike</td><td>882　<b>30.1%</b></td><td>25%</td></tr>'
+ '<tr><td>混合（兩者皆非）</td><td>1,441　<b>49.2%</b></td><td>50%</td></tr>'
+ '</tbody></table>'
+ '<p class="cap">加上先前量到的「<b>17–22% 的判定靠 ≤ 2 點決定</b>」，'
+ '<b>曲率標籤沒有內容</b>。P26／P27／P32／P63 四個'
+ '化約成兩件事：<b>先漲後跌</b>、<b>先跌後漲</b>。</p></div>'
+
+ '<div class="vf" style="margin-top:16px">'
+ '<h3>② 杯柄：柄的位置其實是杯的壓力區間</h3>'
+ '<p>成立，而且<b>這是本組唯一產生「可交易價位」的型態</b> —— '
+ '其他十二個只給形狀，不給價位。</p>'
+ '<table><thead><tr><th>量測</th><th style="text-align:left">結果</th>'
+ '</tr></thead><tbody>'
+ '<tr><td>柄在區間的位置</td><td style="text-align:left">'
+ '中位 <b>0.55</b>（0 ＝ 低緣，1 ＝ 高緣），四分位 0.35–0.70</td></tr>'
+ '<tr><td>落在區間上半</td><td style="text-align:left">'
+ '73 / 134 ＝ <b>54%</b></td></tr>'
+ '<tr><td>區間寬度</td><td style="text-align:left">'
+ '中位 <b>59 點</b>，上四分位 128 點</td></tr>'
+ '</tbody></table>'
+ '<p class="cap"><b>誠實講：柄並不是緊貼壓力</b>，中位 0.55 只比中點高一點。'
+ '但重點不在那裡 —— 重點是<b>兩個杯緣定義出一個明確的價位區間</b>'
+ '（中位 59 點），而柄落在裡面。形狀不能下單，<b>價位可以</b>。</p>'
+ '<p class="cap">對 S16_S 有用的是 <b>P64 倒置杯柄</b>：'
+ '穹頂 ＋ 柄的高點落在兩緣之間 → <b>跌破下緣就是有明確價位的空方事件</b>。'
+ '這條線要留到訊號層去做。</p></div>'
+
+ '<div class="vf" style="margin-top:16px">'
+ '<h3>③ 趨勢型態就是頭頭比較 ＋ 底底比較</h3>'
+ '<p>成立，<b>而且比這句話更徹底</b>。把六樞紐視窗依'
+ '（頭頭方向, 底底方向）分成四格：</p>'
+ '<table><thead><tr><th>格</th><th>數量</th>'
+ '<th style="text-align:left">命名的型態是它的哪一塊</th>'
+ '</tr></thead><tbody>'
+ '<tr><td>降降</td><td>9,545</td><td style="text-align:left">'
+ '<b>P24 多方旗形 ＝ 其中 1,758，佔 18.4%</b></td></tr>'
+ '<tr><td>降升</td><td>3,260</td><td style="text-align:left">'
+ '<b>P25 多方三角旗 ＝ 其中 858，佔 26.3%</b></td></tr>'
+ '<tr><td>升降</td><td>1,751</td><td style="text-align:left">收斂</td></tr>'
+ '<tr><td>升升</td><td>9,712</td><td style="text-align:left">上升趨勢</td></tr>'
+ '</tbody></table>'
+ '<p class="cap"><b>「旗形」不是一個型態，是「降降格 ＋ 一個容納條件」。</b>'
+ '而那個 2×2 —— 高更高／低更低、高更低／低更高 —— '
+ '<b>就是 P29 擴散家族早就建好的框架</b>。</p>'
+ '<p class="cap">同理：P72 訂單塊 ＝ 頭頭升（單一條件）、'
+ 'P56 死貓反彈 ＝ 底底降、P65 塔形頂 ＝ 底底降 ＋ K 棒數、'
+ 'P59 穿越型態 ＝ 碗 ＋ 頭頭升、P66 平底鍋底 ＝ 底底比較 ＋ 區間。</p></div>'
+
+ '<div class="big"><p><b>13 個裡有 11 個化約成已經存在的原語</b> —— '
+ '曲率四個化約成「先漲後跌／先跌後漲」，趨勢七個化約成'
+ '<b>頭頭比較 × 底底比較</b>的 2×2。</p>'
+ '<small>剩下的兩個是 <b>P28 杯柄與 P64 倒置杯柄</b>，'
+ '它們留下來的理由跟形狀無關：<b>兩個杯緣給出一個價位區間</b>。'
+ '這是本組唯一能交給訊號層的東西。</small></div></section>')
+
+
 def census_table():
     tr = []
     for r in MEAS:
@@ -334,7 +402,7 @@ def census_table():
 
 
 P2 = ('<section class="panel"><div class="ph2">'
-      '<h2>二、母體普查</h2><span class="tag">只有次數，沒有損益</span></div>'
+      '<h2>三、母體普查</h2><span class="tag">只有次數，沒有損益</span></div>'
       '<table class="cen"><thead><tr><th>代號</th><th>名稱</th><th>方向</th>'
       '<th>母體</th><th>鏡像</th><th>倍率</th><th>跨度中位</th>'
       '</tr></thead><tbody>' + census_table() + '</tbody></table>'
@@ -373,7 +441,7 @@ def pat_block(r):
 
 
 P3 = ('<section class="panel"><div class="ph2">'
-      '<h2>三、十三個定義，逐條列出</h2>'
+      '<h2>四、十三個定義，逐條列出</h2>'
       '<span class="tag">左邊是我想的，右邊是市場真的長的樣子</span></div>'
       '<p class="cap">每一個都附一個<b>真實案例</b>：圈起來的是型態自己的樞紐，'
       '底色區間是型態的範圍。'
@@ -382,7 +450,7 @@ P3 = ('<section class="panel"><div class="ph2">'
       + ''.join(pat_block(r) for r in MEAS) + '</section>')
 
 P4 = ('<section class="panel"><div class="ph2">'
-      '<h2>四、兩個定不出零參數版本的</h2>'
+      '<h2>五、兩個定不出零參數版本的</h2>'
       '<span class="tag">不硬編一個定義來湊數</span></div>'
       '<div class="grid15">'
       + ''.join('<div class="c15"><h4><span class="id">%s</span>%s</h4>'
@@ -395,7 +463,7 @@ P4 = ('<section class="panel"><div class="ph2">'
       '只剩 18.4% 是同一批 K 棒</b>。所以這兩個留白等裁示。</p></section>')
 
 P5 = ('<section class="panel"><div class="ph2">'
-      '<h2>五、定義用到的兩個裝置</h2><span class="tag">都不花參數</span></div>'
+      '<h2>六、定義用到的兩個裝置</h2><span class="tag">都不花參數</span></div>'
       '<div class="two">'
       '<div class="vf"><h3>步幅單調</h3>'
       '<p>「圓」和「V」的差別是<b>曲率</b>，曲率一般需要門檻。這裡不需要：'
@@ -438,13 +506,12 @@ P5 = ('<section class="panel"><div class="ph2">'
       '</tbody></table></section>')
 
 P6 = ('<section class="panel"><div class="ph2">'
-      '<h2>六、待裁示</h2><span class="tag">三題</span></div>'
+      '<h2>七、剩下的裁示</h2><span class="tag">兩題</span></div>'
       '<table><thead><tr><th>題目</th><th style="text-align:left">說明</th>'
       '</tr></thead><tbody>'
-      '<tr><td>13 個怎麼處理</td><td style="text-align:left">'
-      '全部鏡像倍率 0.89–1.11x，<b>與 P15／P16 同一個理由</b>。'
-      '建議<b>整組結案</b>。若要留任何一個，'
-      '下一步是跑獨立性比與區塊局部置換對照組</td></tr>'
+      '<tr><td>P28 ／ P64 杯柄</td><td style="text-align:left">'
+      '依裁示②<b>留下</b>，但改以「壓力區間」而非「形狀」框架，'
+      '交給訊號層。其餘 11 個依裁示①③<b>化約結案</b></td></tr>'
       '<tr><td>P55 駝峰反轉</td><td style="text-align:left">'
       '三條趨勢線 ＋ 角度門檻，與 P58／P71 同類。'
       '你 08-30 的範疇裁示<b>看起來直接涵蓋它</b>，但我不替你決定</td></tr>'
@@ -462,7 +529,7 @@ FOOT = ('<footer class="foot">'
         '母體 421,513 根 5 分 K，視窗 1 樞紐 106,283 個。'
         '<b>本頁無損益欄。</b></footer></div>')
 
-DOC = HEAD + TOP + HEADLINE + P2 + P3 + P4 + P5 + P6 + FOOT
+DOC = HEAD + TOP + HEADLINE + RULING + P2 + P3 + P4 + P5 + P6 + FOOT
 
 # A script that assembles structure has to check the structure it assembled.
 # P2 once shipped without its closing </section>, every later panel nested
