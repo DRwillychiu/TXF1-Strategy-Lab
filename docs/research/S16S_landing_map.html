@@ -78,19 +78,18 @@ p.work b{font-weight:700}
 <p class="lede">這張表用的標準是<b>畫得到嗎</b>，不是<b>檢定過嗎</b>。兩者不同，而且用錯標準會把還沒做完的事情算成做完了。</p>
 <div class="quote">今天型態出現了，接下來才是進入規劃訊號以及策略層面的事情。因此應該是全部圖形討論清楚以及邏輯化後，並優化成指標，然後就能夠完整先在圖表上確認所有的圖形型態。這樣才是針對圖形型態的規畫之型態層的落地。<span>Willy，2026-08-31</span></div>
 <div class="kpi">
-<div class="d"><b>15</b><span>已畫在圖上</span></div>
-<div class="r"><b>7</b><span>邏輯已審查，等接線</span></div>
+<div class="d"><b>22</b><span>已畫在圖上</span></div>
 <div class="t"><b>24</b><span>邏輯從未審查</span></div>
 <div class="o"><b>26</b><span>不繪製</span></div>
 <div><b>72</b><span>純圖形型態母體</span></div>
 </div>
-<div class="bar"><i style="width:20.83%;background:var(--done)"></i><i style="width:9.72%;background:var(--ready)"></i><i style="width:33.33%;background:var(--todo)"></i><i style="width:36.11%;background:var(--out)"></i></div>
-<div class="barlbl"><span>已落地 15</span><span>等接線 7</span><span>要走完整流程 24</span><span>不繪製 26</span></div>
+<div class="bar"><i style="width:30.56%;background:var(--done)"></i><i style="width:33.33%;background:var(--todo)"></i><i style="width:36.11%;background:var(--out)"></i></div>
+<div class="barlbl"><span>已落地 22</span><span>要走完整流程 24</span><span>不繪製 26</span></div>
 <div class="note"><h3>2026-08-31 的兩條裁示</h3><b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，named pattern 疊成子標籤。化約成立不代表畫不出來，而且在真實 K 棒上看「圓弧頂」這個標籤，本身就是在檢查「曲率是擲銅板」那個量測。<br><br><b>②「只需要避開多方型態，但不需要繪製」</b> —— 18 種多方移出待辦。<br><br><b>尚未裁示：</b>已畫在圖上的 15 種裡有 5 個是多方 —— P50 擴散底、P52 下降擴散楔形、P54 右角擴散（下）、P28 杯柄、P61 鑽石底。前三個是 08-28「有出現就畫上去」裁示的直接產物，且 P50 是 P29 的 M7 拆分、拆不開；後兩個是裁示 A1／I1 要求編碼上圖的。<b>要不要拿掉，等你裁示，我不替你推翻你自己三天前的裁示。</b></div>
 <div class="note"><h3>那個 dn／up 的量測放在哪裡</h3>2026-08-31 量到 P18 破位往下 50.43%、P57 54.12%、P68 53.59%，都過不了本專案對 33 次檢定用的 2.96 門檻。<b>那是訊號層規劃時的輸入，不是型態層的成績單。</b>型態層的工作是把形狀講清楚、邏輯化、畫上圖；形狀能不能預測方向，是下一層才問的問題。先前把它當成型態層的判決，是把下一階段的問題提前套在這一階段上。</div>
-<h2>已畫在圖上<span class="tag done">15 種</span></h2>
-<p>Build 260881 的 15 種。開圖就看得到，標籤、趨勢線、本體上色都在。</p>
-<p class="work"><b>要做什麼：</b>無。型態層在這 15 種上已經落地。</p>
+<h2>已畫在圖上<span class="tag done">22 種</span></h2>
+<p>Build 260893 的 22 種。開圖就看得到，標籤、趨勢線、本體上色都在。後七個（P15 P26 P32 P56 P59 P65 P72）於 2026-08-31 接線，MC12 實測 5216 / 60 / 97 / 9133 / 307 / 3977 / 18433，與參考值全中，且 DIA 與 P29 兩道護欄未動。</p>
+<p class="work"><b>要做什麼：</b>無。標籤依「需要幾個樞紐」分七條固定車道，最擁擠的 300 根視窗有 58 個標籤（2026-06-09 20:25 起），中位數只有 26 個。</p>
 <div class="chips">
 <div class="chip"><code>P29</code><span class="zh">擴散三角／喇叭形</span><span class="en">Broadening Formation</span></div>
 <div class="chip"><code>P49</code><span class="zh">擴散頂／喇叭頂</span><span class="en">Broadening Top / Megaphone</span></div>
@@ -107,18 +106,13 @@ p.work b{font-weight:700}
 <div class="chip"><code>P28</code><span class="zh">杯柄</span><span class="en">Cup and Handle</span></div>
 <div class="chip"><code>P64</code><span class="zh">倒置杯柄</span><span class="en">Inverted Cup and Handle</span></div>
 <div class="chip"><code>P55</code><span class="zh">駝峰反轉</span><span class="en">Bump-and-Run Reversal</span></div>
-</div>
-<h2>邏輯已審查，等接線<span class="tag ready">7 種</span></h2>
-<p>P26／P32 是 08-30 普查裡曲率被判定為擲銅板的兩個；P56／P59／P65／P72 是化約進頭頭×底底 2×2 格的四個；P15 頭肩頂在 08-29 樞紐型 A 組結案，與已編碼的 P18 共用樞紐鏈。六個都有零參數定義、逐條邏輯與真實 K 棒案例，並經過你的裁示。</p>
-<p class="work"><b>要做什麼：</b><b>直接接線</b>。依 08-31「兩個都畫」裁示：底層骨架（2×2 格、「先漲後跌」）與 named pattern 都上圖，named pattern 疊成子標籤。</p>
-<div class="chips">
+<div class="chip"><code>P15</code><span class="zh">頭肩頂</span><span class="en">Head and Shoulders</span></div>
 <div class="chip"><code>P26</code><span class="zh">圓弧頂</span><span class="en">Rounding Top</span></div>
 <div class="chip"><code>P32</code><span class="zh">V 型反轉</span><span class="en">V Reversal</span></div>
 <div class="chip"><code>P56</code><span class="zh">死貓反彈</span><span class="en">Dead-Cat Bounce</span></div>
 <div class="chip"><code>P59</code><span class="zh">穿越型態</span><span class="en">Descending Scallop</span></div>
 <div class="chip"><code>P65</code><span class="zh">塔形頂</span><span class="en">Tower Top</span></div>
 <div class="chip"><code>P72</code><span class="zh">訂單塊 ／ 反轉塊</span><span class="en">Order Block / Breaker Block</span></div>
-<div class="chip"><code>P15</code><span class="zh">頭肩頂</span><span class="en">Head and Shoulders</span></div>
 </div>
 <h2>邏輯從未審查<span class="tag todo">24 種</span></h2>
 <p>2026-08-24 兩波檢定裡的空方與中性型態。<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，2026-08-25 已因違反標準流程被退回，33 個定義從未逐一審查。Python 裡有程式碼，不等於邏輯討論過。</p>

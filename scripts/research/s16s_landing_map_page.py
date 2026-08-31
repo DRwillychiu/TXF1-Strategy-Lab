@@ -11,7 +11,7 @@ Willy 2026-08-31 的界定：
 所以型態層的驗收標準是**畫得到**，不是**檢定過**。
 dn/up 那個量測屬於訊號層規劃時的輸入，不是型態層的成績單。
 
-按這個標準重新盤點，72 種裡只有 15 種畫得到 —— 型態層尚未落地。
+2026-08-31 收盤：72 種裡 22 種畫得到。仍未落地，但從 21% 到 31%。
 
 資料源：
   scripts/research/s16s_make_full_atlas.py   72 種的代號／中文名／英文名
@@ -43,9 +43,9 @@ OUT = os.path.join('docs', 'research', 'S16S_landing_map.html')
 # 而「已檢定未畫」那 24 種必須跟其餘分開，因為它們是 2026-08-25 被退回的那批：
 # 定義是 Claude 自行發明、自行檢定、事後回報的，從未逐一審查。
 # 定義存在不等於邏輯討論過。它們要走完整流程，不是轉譯工作。
-DRAWN = 'P29 P49 P50 P51 P52 P53 P54 P30 P61 P18 P57 P68 P28 P64 P55'.split()
-# 邏輯已審查、可直接接線
-READY = 'P26 P32 P56 P59 P65 P72 P15'.split()
+# 2026-08-31 晚：READY 的七個已接線並經 MC12 驗收，併入 DRAWN。
+DRAWN = ('P29 P49 P50 P51 P52 P53 P54 P30 P61 P18 P57 P68 P28 P64 P55 '
+         'P15 P26 P32 P56 P59 P65 P72').split()
 # 邏輯從未審查（2026-08-25 退回的 33 種裡的空方／中性者）
 UNREVIEWED = ('P01 P02 P03 P04 P05 P06 P08 P10 P11 P13 P14 P17 P20 P22 '
               'P33 P35 P37 P39 P41 P42 P43 P45 P47 P48').split()
@@ -57,15 +57,13 @@ EXCLUDED = 'P31 P62 P67 P07 P58 P69 P70 P71'.split()
 
 BUCKETS = [
     ('done', '已畫在圖上', DRAWN,
-     'Build 260881 的 15 種。開圖就看得到，標籤、趨勢線、本體上色都在。',
-     '無。型態層在這 15 種上已經落地。'),
-    ('ready', '邏輯已審查，等接線', READY,
-     'P26／P32 是 08-30 普查裡曲率被判定為擲銅板的兩個；'
-     'P56／P59／P65／P72 是化約進頭頭×底底 2×2 格的四個；'
-     'P15 頭肩頂在 08-29 樞紐型 A 組結案，與已編碼的 P18 共用樞紐鏈。'
-     '六個都有零參數定義、逐條邏輯與真實 K 棒案例，並經過你的裁示。',
-     '<b>直接接線</b>。依 08-31「兩個都畫」裁示：底層骨架（2×2 格、'
-     '「先漲後跌」）與 named pattern 都上圖，named pattern 疊成子標籤。'),
+     'Build 260893 的 22 種。開圖就看得到，標籤、趨勢線、本體上色都在。'
+     '後七個（P15 P26 P32 P56 P59 P65 P72）於 2026-08-31 接線，'
+     'MC12 實測 5216 / 60 / 97 / 9133 / 307 / 3977 / 18433，與參考值全中，'
+     '且 DIA 與 P29 兩道護欄未動。',
+     '無。標籤依「需要幾個樞紐」分七條固定車道，'
+     '最擁擠的 300 根視窗有 58 個標籤（2026-06-09 20:25 起），'
+     '中位數只有 26 個。'),
     ('todo', '邏輯從未審查', UNREVIEWED,
      '2026-08-24 兩波檢定裡的空方與中性型態。'
      '<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，'
@@ -107,7 +105,7 @@ def main():
     for c in sorted(seen):
         assert c in nm, '%s 在桶裡但圖鑑沒有它' % c
 
-    n_done, n_ready = len(DRAWN), len(READY)
+    n_done, n_ready = len(DRAWN), 0
     n_todo, n_out = len(UNREVIEWED), len(BULLISH) + len(EXCLUDED)
     assert n_done + n_ready + n_todo + n_out == 72
 
@@ -203,7 +201,6 @@ p.work b{font-weight:700}
 
     w('<div class="kpi">')
     w('<div class="d"><b>%d</b><span>已畫在圖上</span></div>' % n_done)
-    w('<div class="r"><b>%d</b><span>邏輯已審查，等接線</span></div>' % n_ready)
     w('<div class="t"><b>%d</b><span>邏輯從未審查</span></div>' % n_todo)
     w('<div class="o"><b>%d</b><span>不繪製</span></div>' % n_out)
     w('<div><b>72</b><span>純圖形型態母體</span></div>')
@@ -211,14 +208,12 @@ p.work b{font-weight:700}
 
     w('<div class="bar">'
       '<i style="width:%.2f%%;background:var(--done)"></i>'
-      '<i style="width:%.2f%%;background:var(--ready)"></i>'
       '<i style="width:%.2f%%;background:var(--todo)"></i>'
       '<i style="width:%.2f%%;background:var(--out)"></i></div>'
-      % (100.0 * n_done / 72, 100.0 * n_ready / 72,
-         100.0 * n_todo / 72, 100.0 * n_out / 72))
-    w('<div class="barlbl"><span>已落地 %d</span><span>等接線 %d</span>'
+      % (100.0 * n_done / 72, 100.0 * n_todo / 72, 100.0 * n_out / 72))
+    w('<div class="barlbl"><span>已落地 %d</span>'
       '<span>要走完整流程 %d</span><span>不繪製 %d</span></div>'
-      % (n_done, n_ready, n_todo, n_out))
+      % (n_done, n_todo, n_out))
 
     w('<div class="note"><h3>2026-08-31 的兩條裁示</h3>'
       '<b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，'

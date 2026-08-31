@@ -3,6 +3,21 @@
 
   Build_ID 260893.  DETECTION ONLY.  Places no orders, holds no position.
 
+  ACCEPTED IN MC12, 2026-08-31, build 260893 -- SECTION 6e, the seven:
+
+      P15 5216   P26 60   P32 97   P56 9133   P59 307   P65 3977   P72 18433
+
+    All seven exact against the reference, and the two guardrails held:
+    DIA 0/1 and P29 break 75/88/39 with slot_overflow 0.  The lanes changed
+    placement only, so the counts had to be unchanged, and they were.
+
+    The reference that FAILED first is the one worth remembering.  260891
+    printed P65 3,977 against a reference of 8,572 -- 54% short -- because
+    SECTION 6e short-circuits on v_s7Ok and the scan that produced the
+    reference let all seven match independently.  A population is not
+    defined by its predicate alone; it is also defined by what gets asked
+    first.  P65 sits second from last in the cascade and took the damage.
+
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
   table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
 
