@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260894.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260910.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260893 -- SECTION 6e, the seven:
 
@@ -68,7 +68,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260894 ),
+    Build_ID                ( 260910 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -99,12 +99,31 @@ inputs:
     Enable_P29              ( 1       ),   { 202.  highs rise, lows fall }
     Enable_P51              ( 1       ),   { 1,670.  both rise, highs faster }
     Enable_P52              ( 1       ),   { 1,716.  both fall, lows faster }
-    Enable_P53              ( 1       ),   { 7.  flat top, lows fall }
-    Enable_P54              ( 1       ),   { 8.  highs rise, flat bottom }
+    Enable_P53              ( 1       ),   { 1,678.  top contained, lows fall }
+    Enable_P54              ( 1       ),   { 1,464.  highs rise, bottom contained }
+    { ---- 260910, the rest of the 3x3 grid.  Ruling of 2026-08-31.
+      Six pivots split by (high direction, low direction), each side
+      rising / falling / contained.  P29 P51 P52 P53 P54 already filled
+      five cells; these four fill the rest.
+
+      P20 descending channel is deliberately NOT here.  The fall x fall
+      cell is 3,101 formations = P52 1,716 (drawn) + P12 falling wedge
+      1,299 (bullish, not drawn by ruling) + 86 ties.  A P20 label would
+      re-label what is already on the chart plus what was deliberately
+      left off it -- it fills no gap.  P11 rising wedge DOES fill one:
+      1,919 bearish formations with nothing drawn on them today. ---- }
+    Enable_P11              ( 1       ),   { 1,919.  both rise, highs slower }
+    Enable_P10              ( 1       ),   { 463.  highs fall, lows rise }
+    Enable_P08              ( 1       ),   { 2,065.  highs fall, bottom contained }
+    Enable_P22              ( 1       ),   { 3,063.  both edges contained }
     Col_Shape_P51           ( DarkGreen ),
     Col_Shape_P52           ( DarkRed   ),
     Col_Shape_P53           ( DarkCyan  ),
     Col_Shape_P54           ( DarkBrown ),
+    Col_Shape_P11           ( DarkGreen ),
+    Col_Shape_P10           ( DarkRed   ),
+    Col_Shape_P08           ( DarkGray  ),
+    Col_Shape_P22           ( LightGray ),
 
     { P30 / P61 diamond, ruling I1 of 2026-08-28 -- record }
     Enable_P30              ( 1       ),   { diamond TOP,    prior trend up }
@@ -365,6 +384,23 @@ variables:
     v_s7Seq                 ( 0     ),
     v_s7Lane                ( 0     ),     { 260893: fixed row per pattern }
     v_ShowK                 ( True  ),     { 260894: draw this kind? }
+    v_ConvH                 ( False ),     { 260910: top contained }
+    v_ConvL                 ( False ),
+    v_BandH                 ( False ),     { third high between the first two }
+    v_BandL                 ( False ),
+    v_SprH                  ( 0     ),     { spread = max - min of the three }
+    v_SprL                  ( 0     ),
+    v_TrvH                  ( 0     ),     { travel = |third - first| }
+    v_TrvL                  ( 0     ),
+    v_Exact                 ( False ),     { the subset that is exactly level }
+    v_Cnt11                 ( 0     ),
+    v_Cnt10                 ( 0     ),
+    v_Cnt08                 ( 0     ),
+    v_Cnt22                 ( 0     ),
+    v_Ex53                  ( 0     ),
+    v_Ex54                  ( 0     ),
+    v_Ex08                  ( 0     ),
+    v_Ex22                  ( 0     ),
     v_s7Unit                ( 0     ),
     v_C15                   ( 0     ),
     v_C26                   ( 0     ),
@@ -629,20 +665,84 @@ for v_k = 1 to 2 begin
             v_FlatL = ( v_L1 = v_L2 ) and ( v_L2 = v_L3 );
             v_LowUnder = ( v_L1 < v_H1 ) and ( v_L3 < v_H3 );
 
-            v_Var = 0;
+            { ---- 260910: WHAT "FLAT" MEANS, and why it changed --------
+              v_FlatH / v_FlatL are exact equality, and exact equality is
+              the one scale-DEPENDENT test in this whole file: it compares
+              price against the tick, which is fixed at 1 point while the
+              median bar range went from 4 points in 2019 to 49 in 2026.
+              Measured consequence: P53 and P54 fired 7 and 8 times in
+              eight years and ZERO times in 2026.  The shape did not stop
+              happening; the arithmetic stopped allowing it.
+
+              Replaced by CONTAINMENT, which is a comparison and therefore
+              scale-free: this edge's spread is smaller than the other
+              edge's travel.  Spread = max - min of the three pivots,
+              travel = |third - first|.  No constant, no percentage.
+
+              Honest limit, measured rather than assumed: the contained
+              edge still spans a median 29% of the formation's amplitude,
+              so it is NOT flat and must not be labelled as if it were.
+              Nothing zero-parameter can do better -- "flat" is a
+              magnitude statement and every parameter-free device can only
+              compare it to something else in the shape.  The exactly
+              level cases are kept as a marked subset (v_Exact) so the 7
+              and the 8 are still visible and still verifiable.
+
+              P22 the box cannot use containment AT ALL, and that is
+              provable rather than empirical: spread >= travel always, so
+              spreadH < travelL <= spreadL and spreadL < travelH <= spreadH
+              contradict.  Both edges cannot each move less than the other.
+              A box is a band by nature rather than a line, so it takes the
+              band device instead -- and the "a band is not a line"
+              objection does not apply to something that is meant to be a
+              band. ---- }
+            v_SprH = MaxList( v_H1, v_H2, v_H3 ) - MinList( v_H1, v_H2, v_H3 );
+            v_SprL = MaxList( v_L1, v_L2, v_L3 ) - MinList( v_L1, v_L2, v_L3 );
+            v_TrvH = AbsValue( v_H3 - v_H1 );
+            v_TrvL = AbsValue( v_L3 - v_L1 );
+            v_ConvH = ( v_RiseH = False ) and ( v_FallH = False )
+                      and v_SprH < v_TrvL;
+            v_ConvL = ( v_RiseL = False ) and ( v_FallL = False )
+                      and v_SprL < v_TrvH;
+            v_BandH = ( v_RiseH = False ) and ( v_FallH = False )
+                      and v_H3 >= MinList( v_H1, v_H2 )
+                      and v_H3 <= MaxList( v_H1, v_H2 );
+            v_BandL = ( v_RiseL = False ) and ( v_FallL = False )
+                      and v_L3 >= MinList( v_L1, v_L2 )
+                      and v_L3 <= MaxList( v_L1, v_L2 );
+
+            v_Var   = 0;
+            v_Exact = False;
             if v_LowUnder then begin
                 if v_RiseH and v_FallL then
                     v_Var = 29
                 else if v_RiseH and v_RiseL
                         and ( v_H3 - v_H1 ) > ( v_L3 - v_L1 ) then
                     v_Var = 51
+                else if v_RiseH and v_RiseL
+                        and ( v_H3 - v_H1 ) < ( v_L3 - v_L1 ) then
+                    v_Var = 11
                 else if v_FallH and v_FallL
                         and AbsValue( v_L3 - v_L1 ) > AbsValue( v_H3 - v_H1 ) then
                     v_Var = 52
-                else if v_FlatH and v_FallL then
-                    v_Var = 53
-                else if v_RiseH and v_FlatL then
+                else if v_FallH and v_RiseL then
+                    v_Var = 10
+                else if v_ConvH and v_FallL then begin
+                    v_Var = 53;
+                    v_Exact = v_FlatH;
+                end
+                else if v_RiseH and v_ConvL then begin
                     v_Var = 54;
+                    v_Exact = v_FlatL;
+                end
+                else if v_FallH and v_ConvL then begin
+                    v_Var = 8;
+                    v_Exact = v_FlatL;
+                end
+                else if v_BandH and v_BandL then begin
+                    v_Var = 22;
+                    v_Exact = v_FlatH and v_FlatL;
+                end;
             end;
 
             if v_Var = 29 and Enable_P29 <> 0 then v_Ok = True;
@@ -650,6 +750,10 @@ for v_k = 1 to 2 begin
             if v_Var = 52 and Enable_P52 <> 0 then v_Ok = True;
             if v_Var = 53 and Enable_P53 <> 0 then v_Ok = True;
             if v_Var = 54 and Enable_P54 <> 0 then v_Ok = True;
+            if v_Var = 11 and Enable_P11 <> 0 then v_Ok = True;
+            if v_Var = 10 and Enable_P10 <> 0 then v_Ok = True;
+            if v_Var =  8 and Enable_P08 <> 0 then v_Ok = True;
+            if v_Var = 22 and Enable_P22 <> 0 then v_Ok = True;
         end;
 
         { ---- adopt ---- }
@@ -681,6 +785,24 @@ for v_k = 1 to 2 begin
                     v_Cnt53 = v_Cnt53 + 1;
                 if v_Var = 54 then
                     v_Cnt54 = v_Cnt54 + 1;
+                if v_Var = 11 then
+                    v_Cnt11 = v_Cnt11 + 1;
+                if v_Var = 10 then
+                    v_Cnt10 = v_Cnt10 + 1;
+                if v_Var = 8 then
+                    v_Cnt08 = v_Cnt08 + 1;
+                if v_Var = 22 then
+                    v_Cnt22 = v_Cnt22 + 1;
+                { the exactly level subset, kept so the 7 and the 8 that
+                  MC12 accepted on 2026-08-31 remain checkable }
+                if v_Exact and v_Var = 53 then
+                    v_Ex53 = v_Ex53 + 1;
+                if v_Exact and v_Var = 54 then
+                    v_Ex54 = v_Ex54 + 1;
+                if v_Exact and v_Var = 8 then
+                    v_Ex08 = v_Ex08 + 1;
+                if v_Exact and v_Var = 22 then
+                    v_Ex22 = v_Ex22 + 1;
             end;
 
             { E1: each line runs through the LAST TWO pivots of its kind }
@@ -734,6 +856,14 @@ for v_k = 1 to 2 begin
                     v_MySeq = v_Cnt53;
                 if v_Var = 54 then
                     v_MySeq = v_Cnt54;
+                if v_Var = 11 then
+                    v_MySeq = v_Cnt11;
+                if v_Var = 10 then
+                    v_MySeq = v_Cnt10;
+                if v_Var = 8 then
+                    v_MySeq = v_Cnt08;
+                if v_Var = 22 then
+                    v_MySeq = v_Cnt22;
             end;
 
             v_Floor = MinList( v_L1, v_L2, v_L3 );
@@ -774,9 +904,17 @@ for v_k = 1 to 2 begin
                     v_LblPx = v_Ceil + v_LblOff
                 else
                     v_LblPx = v_Floor - v_LblOff;
-                v_Txt = Text_New( Date, Time, v_LblPx,
-                                  "P" + NumToStr( v_Kind, 0 )
-                                  + " #" + NumToStr( v_MySeq, 0 ) );
+                { 260910: the exactly level subset gets an = so the
+                  chart distinguishes "contained" from "level to the
+                  tick" without a second label. }
+                if v_Exact then
+                    v_Txt = Text_New( Date, Time, v_LblPx,
+                                      "P" + NumToStr( v_Kind, 0 )
+                                      + "= #" + NumToStr( v_MySeq, 0 ) )
+                else
+                    v_Txt = Text_New( Date, Time, v_LblPx,
+                                      "P" + NumToStr( v_Kind, 0 )
+                                      + " #" + NumToStr( v_MySeq, 0 ) );
                 if v_Txt >= 0 then begin
                     if v_Kind = 49 then
                         Text_SetColor( v_Txt, Col_Shape_Top )
@@ -788,8 +926,16 @@ for v_k = 1 to 2 begin
                         Text_SetColor( v_Txt, Col_Shape_P52 )
                     else if v_Kind = 53 then
                         Text_SetColor( v_Txt, Col_Shape_P53 )
+                    else if v_Kind = 54 then
+                        Text_SetColor( v_Txt, Col_Shape_P54 )
+                    else if v_Kind = 11 then
+                        Text_SetColor( v_Txt, Col_Shape_P11 )
+                    else if v_Kind = 10 then
+                        Text_SetColor( v_Txt, Col_Shape_P10 )
+                    else if v_Kind = 8 then
+                        Text_SetColor( v_Txt, Col_Shape_P08 )
                     else
-                        Text_SetColor( v_Txt, Col_Shape_P54 );
+                        Text_SetColor( v_Txt, Col_Shape_P22 );
                     Text_SetSize( v_Txt, Label_Size );
                 end;
             end;
@@ -1747,8 +1893,16 @@ if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 and v_DHit = False
         v_PaintCol = Col_Shape_P52
     else if v_Kind = 53 then
         v_PaintCol = Col_Shape_P53
+    else if v_Kind = 54 then
+        v_PaintCol = Col_Shape_P54
+    else if v_Kind = 11 then
+        v_PaintCol = Col_Shape_P11
+    else if v_Kind = 10 then
+        v_PaintCol = Col_Shape_P10
+    else if v_Kind = 8 then
+        v_PaintCol = Col_Shape_P08
     else
-        v_PaintCol = Col_Shape_P54;
+        v_PaintCol = Col_Shape_P22;
     for v_pk = 1 to v_PaintBack begin
         PlotPaintBar[v_pk]( High[v_pk], Low[v_pk], Open[v_pk], Close[v_pk],
                             "P29", v_PaintCol );
@@ -1831,8 +1985,14 @@ if LastBarOnChart then begin
            v_Yr52[0]:5:0, v_Yr52[1]:5:0, v_Yr52[2]:5:0, v_Yr52[3]:5:0,
            v_Yr52[4]:5:0, v_Yr52[5]:5:0, v_Yr52[6]:5:0, v_Yr52[7]:5:0 );
     Print( "P52 DIAG   reference          =    94  172  229  267  169  258  302  224" );
-    Print( "P29 VARIANT  reference  202    1670    1716      7      8",
-           "   (P52 is 1715 if the chart starts 20190102 1340)" );
+    Print( "GRID  P11=", v_Cnt11:6:0, "  P10=", v_Cnt10:5:0,
+           "  P08=", v_Cnt08:6:0, "  P22=", v_Cnt22:6:0 );
+    Print( "GRID  reference   1919     463    2065    3063" );
+    Print( "GRID  exact subset  P53=", v_Ex53:4:0, "  P54=", v_Ex54:4:0,
+           "  P08=", v_Ex08:4:0, "  P22=", v_Ex22:4:0 );
+    Print( "GRID  reference        7        8        7        2" );
+    Print( "P29 VARIANT  reference  202    1670    1716   1678   1464",
+           "   P53/P54 are now containment, not exact" );
     Print( "REV TALLY  P18=", v_Cnt18:6:0,
            "  P57=", v_Cnt57:5:0, "  P68=", v_Cnt68:6:0 );
     Print( "REV TALLY  reference  6352          255    1367",
