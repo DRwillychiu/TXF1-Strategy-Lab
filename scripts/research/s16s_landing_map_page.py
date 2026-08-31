@@ -11,7 +11,7 @@ Willy 2026-08-31 的界定：
 所以型態層的驗收標準是**畫得到**，不是**檢定過**。
 dn/up 那個量測屬於訊號層規劃時的輸入，不是型態層的成績單。
 
-2026-08-31 收盤：72 種裡 22 種畫得到。仍未落地，但從 21% 到 31%。
+2026-08-31 收盤：28 種已畫且驗收、4 種已編碼待驗收。從 21% 到 44%。
 
 資料源：
   scripts/research/s16s_make_full_atlas.py   72 種的代號／中文名／英文名
@@ -43,27 +43,38 @@ OUT = os.path.join('docs', 'research', 'S16S_landing_map.html')
 # 而「已檢定未畫」那 24 種必須跟其餘分開，因為它們是 2026-08-25 被退回的那批：
 # 定義是 Claude 自行發明、自行檢定、事後回報的，從未逐一審查。
 # 定義存在不等於邏輯討論過。它們要走完整流程，不是轉譯工作。
-# 2026-08-31 晚：READY 的七個已接線並經 MC12 驗收，併入 DRAWN。
+# 2026-08-31 收盤。三個狀態要分開，因為「寫進程式碼」不等於「MC12 驗收過」——
+# 今天有兩次數字對不上都是把前者當成後者。
 DRAWN = ('P29 P49 P50 P51 P52 P53 P54 P30 P61 P18 P57 P68 P28 P64 P55 '
-         'P15 P26 P32 P56 P59 P65 P72').split()
-# 邏輯從未審查（2026-08-25 退回的 33 種裡的空方／中性者）
-UNREVIEWED = ('P01 P02 P03 P04 P05 P06 P08 P10 P11 P13 P14 P17 P20 P22 '
-              'P33 P35 P37 P39 P41 P42 P43 P45 P47 P48').split()
-# 多方，2026-08-31 裁示不繪製
+         'P15 P26 P32 P56 P59 P65 P72 '          # IND_S16S_P29，260894 驗收
+         'P01 P02 P03 P04 P05 P06').split()      # IND_S16S_CONV6，260901 驗收
+# 已編碼、尚未 MC12 驗收（Build 260910 的 3x3 格新分支）
+PENDING = 'P08 P10 P11 P22'.split()
+# 邏輯從未審查（2026-08-25 退回的那批裡還沒處理的）
+UNREVIEWED = ('P13 P14 P17 P33 P35 P37 P39 P41 P42 P43 P45 P47 P48').split()
+# 多方，2026-08-31 裁示不繪製；P20 另有理由（見下）
 BULLISH = ('P09 P12 P16 P19 P21 P23 P24 P25 P27 P34 P36 P38 P40 P44 P46 '
-           'P60 P63 P66').split()
+           'P60 P63 P66 P20').split()
 # 結構性排除
 EXCLUDED = 'P31 P62 P67 P07 P58 P69 P70 P71'.split()
 
 BUCKETS = [
-    ('done', '已畫在圖上', DRAWN,
-     'Build 260893 的 22 種。開圖就看得到，標籤、趨勢線、本體上色都在。'
-     '後七個（P15 P26 P32 P56 P59 P65 P72）於 2026-08-31 接線，'
-     'MC12 實測 5216 / 60 / 97 / 9133 / 307 / 3977 / 18433，與參考值全中，'
-     '且 DIA 與 P29 兩道護欄未動。',
-     '無。標籤依「需要幾個樞紐」分七條固定車道，'
-     '最擁擠的 300 根視窗有 58 個標籤（2026-06-09 20:25 起），'
-     '中位數只有 26 個。'),
+    ('done', '已畫在圖上，且 MC12 驗收過', DRAWN,
+     '<b>IND_S16S_P29</b> Build 260894 的 22 種（價格圖，標籤／趨勢線／本體上色），'
+     '其中 P28 P50 P52 P54 P61 五個多方依 08-31 裁示只計數不繪製。<br>'
+     '<b>IND_S16S_CONV6</b> Build 260901 的 6 種（副圖六列色帶，'
+     'MC12 實測 135777/89163/12730/1784/57140/63021 全中）。',
+     '無。價格圖標籤依「需要幾個樞紐」分七條固定車道，'
+     '最擁擠的 300 根視窗 58 個、中位 26 個；'
+     '收斂六種在副圖，每個標記只有一根 K 棒寬。'),
+    ('ready', '已編碼，尚未 MC12 驗收', PENDING,
+     'Build 260910 把 3x3 格補滿：P11 上升楔形 1,919、P10 對稱三角 463、'
+     'P08 下降三角 2,065、P22 箱型 3,063。'
+     '同一版把 P53／P54 的「平」從<b>完全相等</b>改成<b>收斂</b>'
+     '（散布 &lt; 對邊移動距離）—— 完全相等是全檔唯一尺度相依的測試，'
+     '八年只有 7 個和 8 個且 2026 掛零。全等的那些保留成子標籤。',
+     '<b>跑 MC12 驗收</b>。三道護欄必須不動'
+     '（P29 202／P51 1670／P52 1716），全等子集必須仍是 7 與 8。'),
     ('todo', '邏輯從未審查', UNREVIEWED,
      '2026-08-24 兩波檢定裡的空方與中性型態。'
      '<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，'
@@ -71,9 +82,12 @@ BUCKETS = [
      'Python 裡有程式碼，不等於邏輯討論過。',
      '走完整流程：<b>討論 → 逐一邏輯規劃 → 對照圖 → .md → HTML → 才程式碼化</b>。'
      '每一個都要先確認零參數、確認定義是你認可的，才輪到接線。'),
-    ('out', '多方 —— 08-31 裁示不繪製', BULLISH,
-     '「我認為只需要避開多方型態，但不需要繪製。」',
-     '不做。避開即可，不花力氣畫。'),
+    ('out', '不繪製 —— 多方裁示，或多餘', BULLISH,
+     '「我認為只需要避開多方型態，但不需要繪製。」十八種多方依此排除。<br>'
+     '<b>P20 下降通道另有理由</b>：降降格 3,101 個 ＝ P52 1,716（已畫）'
+     '＋ P12 下降楔形 1,299（多方，不畫）＋ 86 個平手。'
+     'P20 只會把已經在圖上的重貼一次，<b>填不到任何洞</b>。',
+     '不做。'),
     ('out', '結構性排除', EXCLUDED,
      '缺口組 P31／P62／P67：5 分 K 上不存在跳空，時段內缺口 1,923 個、'
      '90.4% 剛好 1 點。D 組 P07／P58／P69／P70／P71：'
@@ -105,7 +119,7 @@ def main():
     for c in sorted(seen):
         assert c in nm, '%s 在桶裡但圖鑑沒有它' % c
 
-    n_done, n_ready = len(DRAWN), 0
+    n_done, n_ready = len(DRAWN), len(PENDING)
     n_todo, n_out = len(UNREVIEWED), len(BULLISH) + len(EXCLUDED)
     assert n_done + n_ready + n_todo + n_out == 72
 
@@ -200,7 +214,8 @@ p.work b{font-weight:700}
       '<span>Willy，2026-08-31</span></div>')
 
     w('<div class="kpi">')
-    w('<div class="d"><b>%d</b><span>已畫在圖上</span></div>' % n_done)
+    w('<div class="d"><b>%d</b><span>已畫且驗收</span></div>' % n_done)
+    w('<div class="r"><b>%d</b><span>已編碼待驗收</span></div>' % n_ready)
     w('<div class="t"><b>%d</b><span>邏輯從未審查</span></div>' % n_todo)
     w('<div class="o"><b>%d</b><span>不繪製</span></div>' % n_out)
     w('<div><b>72</b><span>純圖形型態母體</span></div>')
@@ -208,12 +223,14 @@ p.work b{font-weight:700}
 
     w('<div class="bar">'
       '<i style="width:%.2f%%;background:var(--done)"></i>'
+      '<i style="width:%.2f%%;background:var(--ready)"></i>'
       '<i style="width:%.2f%%;background:var(--todo)"></i>'
       '<i style="width:%.2f%%;background:var(--out)"></i></div>'
-      % (100.0 * n_done / 72, 100.0 * n_todo / 72, 100.0 * n_out / 72))
-    w('<div class="barlbl"><span>已落地 %d</span>'
+      % (100.0 * n_done / 72, 100.0 * n_ready / 72,
+         100.0 * n_todo / 72, 100.0 * n_out / 72))
+    w('<div class="barlbl"><span>已落地 %d</span><span>待驗收 %d</span>'
       '<span>要走完整流程 %d</span><span>不繪製 %d</span></div>'
-      % (n_done, n_todo, n_out))
+      % (n_done, n_ready, n_todo, n_out))
 
     w('<div class="note"><h3>2026-08-31 的兩條裁示</h3>'
       '<b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，'
