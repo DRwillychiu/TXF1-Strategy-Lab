@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260893.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260894.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260893 -- SECTION 6e, the seven:
 
@@ -57,7 +57,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260893 ),
+    Build_ID                ( 260894 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -158,6 +158,22 @@ inputs:
     Col_P59                 ( Blue      ),
     Col_P65                 ( LightGray ),
     Col_P72                 ( Cyan      ),
+    { ---- 260894, ruling of 2026-08-31: bullish shapes come off the
+      chart.  P28 cup, P50 broadening bottom, P52 descending broadening
+      wedge, P54 right-angled broadening (down), P61 diamond bottom.
+
+      DRAWING only.  They are still detected and still counted, so the
+      census stays complete and every verified number holds: formations
+      202, P49/P50 112/90, DIA 0/1, break 75/88/39.  Turning their
+      Enable_ inputs off instead would have stopped detection and taken
+      those with it -- and P50 has no Enable_ of its own anyway, being
+      P29's M7 split rather than a separate shape.
+
+      The other half of the ruling belongs to the layers above this one:
+      "if a bullish pattern turns up at the signal or strategy layer, it
+      must be avoided entirely."  Nothing here can enforce that; it is
+      written down so the layer that can does not have to rediscover it. }
+    Draw_Bullish            ( 0       ),   { 1 = put them back on the chart }
     Col_Bump                ( Magenta );   { the lead-in line }   { display nudge only, as a percentage of
                                              the formation's own height -- self
                                              referential, so not a magic distance }
@@ -337,6 +353,7 @@ variables:
     v_s7Px                  ( 0     ),
     v_s7Seq                 ( 0     ),
     v_s7Lane                ( 0     ),     { 260893: fixed row per pattern }
+    v_ShowK                 ( True  ),     { 260894: draw this kind? }
     v_s7Unit                ( 0     ),
     v_C15                   ( 0     ),
     v_C26                   ( 0     ),
@@ -731,8 +748,15 @@ for v_k = 1 to 2 begin
                 v_BkVar[v_Free] = v_Var;
             end;
 
+            { 260894: bullish kinds are detected and counted above, and
+              simply not drawn from here down. }
+            v_ShowK = True;
+            if Draw_Bullish = 0
+               and ( v_Kind = 50 or v_Kind = 52 or v_Kind = 54 ) then
+                v_ShowK = False;
+
             { the label -- record }
-            if Show_Labels <> 0 then begin
+            if Show_Labels <> 0 and v_ShowK then begin
                 v_LblOff = ( v_Ceil - v_Floor ) * Label_Offset_Pct / 100;
                 { top-shaped variants label above the ceiling, bottom-shaped -- record }
                 if v_Kind = 49 or v_Kind = 53 then
@@ -762,7 +786,7 @@ for v_k = 1 to 2 begin
             { draw the two E1 lines as OBJECTS, not as plots -- record }
             v_TLup = -1;
             v_TLdn = -1;
-            if Line_Mode = 1 then begin
+            if Line_Mode = 1 and v_ShowK then begin
                 if v_Order = 1 then begin
                     v_TLup = TL_New( v_PvDt[2], v_PvTm[2], v_PvPx[2],
                                      Date, Time, v_AncH + v_SlopeUp * ( CurrentBar - v_AncHb ) );
@@ -907,8 +931,12 @@ for v_k = 1 to 2 begin
                     v_MySeq = v_Seq61;
                 end;
 
+                v_ShowK = True;
+                if Draw_Bullish = 0 and v_DKind = 61 then
+                    v_ShowK = False;
+
                 { the four edges, as objects -- record }
-                if Line_Mode = 1 then begin
+                if Line_Mode = 1 and v_ShowK then begin
                     v_DTL = TL_New( v_DH1d, v_DH1t, v_DH1, v_DH3d, v_DH3t, v_DH3 );
                     if v_DTL >= 0 then begin
                         TL_SetColor( v_DTL, Col_Dia_Line );
@@ -931,7 +959,7 @@ for v_k = 1 to 2 begin
                     end;
                 end;
 
-                if Show_Labels <> 0 then begin
+                if Show_Labels <> 0 and v_ShowK then begin
                     v_LblOff = ( v_DH3 - v_DL3 ) * Label_Offset_Pct / 100;
                     if v_DKind = 30 then
                         v_LblPx = v_DH3 + v_LblOff
@@ -1138,7 +1166,8 @@ for v_k = 1 to 2 begin
                        and v_DPx[v_c + 11] <= v_cupHi then begin
                         v_Cnt28 = v_Cnt28 + 1;
                         v_Seq28 = v_Seq28 + 1;
-                        if Line_Mode = 1 then begin
+                        v_ShowK = ( Draw_Bullish <> 0 );
+                        if Line_Mode = 1 and v_ShowK then begin
                             v_TL = TL_New( v_DDt[v_c], v_DTm[v_c], v_cupLo,
                                            Date, Time, v_cupLo );
                             if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
@@ -1146,7 +1175,7 @@ for v_k = 1 to 2 begin
                                            Date, Time, v_cupHi );
                             if v_TL >= 0 then TL_SetColor( v_TL, Col_Cup );
                         end;
-                        if Show_Labels <> 0 then begin
+                        if Show_Labels <> 0 and v_ShowK then begin
                             v_Txt = Text_New( Date, Time, v_cupHi,
                                               "P28 #" + NumToStr( v_Seq28, 0 ) );
                             if v_Txt >= 0 then begin
@@ -1672,7 +1701,10 @@ end;
 { the pattern's OWN span, painted backwards on the forming bar -- record }
 
 { 260860: the diamond paints first, and it paints over the P29 -- record }
-if Paint_Mode <> 0 and v_DHit then begin
+{ 260894: the diamond BOTTOM is bullish, so its body is not painted
+  either -- the label gate alone would have left the bars coloured. }
+if Paint_Mode <> 0 and v_DHit
+   and ( Draw_Bullish <> 0 or v_DKind <> 61 ) then begin
     v_DBack = CurrentBar - v_DBar[0];
     if v_DBack > Paint_MaxBack then
         v_DBack = Paint_MaxBack;
@@ -1686,7 +1718,10 @@ if Paint_Mode <> 0 and v_DHit then begin
     end;
 end;
 
-if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 and v_DHit = False then begin
+{ 260894: same for the three bullish members of the P29 family. }
+if Paint_Mode <> 0 and v_State = 1 and v_State[1] <> 1 and v_DHit = False
+   and ( Draw_Bullish <> 0
+         or ( v_Kind <> 50 and v_Kind <> 52 and v_Kind <> 54 ) ) then begin
     v_PaintBack = CurrentBar - v_PvBar[0];
     if v_PaintBack > Paint_MaxBack then
         v_PaintBack = Paint_MaxBack;
