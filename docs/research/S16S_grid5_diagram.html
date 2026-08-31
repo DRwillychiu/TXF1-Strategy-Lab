@@ -1,0 +1,439 @@
+<title>2x2 家族五格 - 真實案例</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --up:#c8302e;--dn:#17795e;--ph:#d1382f;--pl:#0f9d76;--acc:#7a5cc4;
+ --serif:'Noto Serif TC',Georgia,serif;
+ --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+ --mono:'JetBrains Mono',ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --up:#e8564e;--dn:#3ec08d;--ph:#ff6b5e;--pl:#3ecfa0;--acc:#a98ce8}}
+:root[data-theme="dark"]{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --up:#e8564e;--dn:#3ec08d;--ph:#ff6b5e;--pl:#3ecfa0;--acc:#a98ce8}
+:root[data-theme="light"]{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --up:#c8302e;--dn:#17795e;--ph:#d1382f;--pl:#0f9d76;--acc:#7a5cc4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+ line-height:1.62}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+h1{font-family:var(--serif);font-size:33px;font-weight:700;margin:0 0 12px}
+.lede{font-size:16px;color:var(--ink2);max-width:64ch;margin:0 0 26px}
+.grid{border-collapse:collapse;margin:20px 0 28px;font-size:13.5px}
+.grid th,.grid td{border:1px solid var(--line);padding:9px 13px;
+ text-align:center}
+.grid th{background:var(--card);color:var(--ink3);font-size:12px;
+ font-weight:600}
+.grid td{background:var(--card)}
+.grid td.new{background:rgba(122,92,196,.10);font-weight:700;color:var(--ink)}
+.grid td.old{color:var(--ink3)}
+.grid td.hole{color:var(--ink3);font-style:italic}
+.pat{background:var(--card);border:1px solid var(--line);border-radius:11px;
+ padding:24px 26px;margin:22px 0}
+.hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+ border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+.hd code{font-family:var(--mono);font-size:15px;font-weight:600;
+ color:var(--acc)}
+.hd h2{font-family:var(--serif);font-size:22px;margin:0;font-weight:700}
+.hd .en{font-size:12.5px;color:var(--ink3)}
+.hd .cell{font-family:var(--mono);font-size:12px;color:var(--ink2);
+ border:1px solid var(--line);border-radius:4px;padding:1px 7px}
+.hd .n{margin-left:auto;font-family:var(--mono);font-size:13px;
+ color:var(--ink2);font-variant-numeric:tabular-nums}
+.fig{overflow-x:auto;margin:0 0 6px}
+svg{display:block;max-width:100%;height:auto}
+.wk{stroke-width:1.3}.wk.cu{stroke:var(--up)}.wk.cd{stroke:var(--dn)}
+.bd.cu{fill:var(--card);stroke:var(--up);stroke-width:1.2}
+.bd.cd{fill:var(--dn);stroke:var(--dn);stroke-width:1.2}
+.gd{fill:none;stroke-width:1.4;stroke-dasharray:5 3;opacity:.75}
+.gd.ph{stroke:var(--ph)}.gd.pl{stroke:var(--pl)}
+circle.ph{fill:var(--ph)}circle.pl{fill:var(--pl)}
+text.pv{font:600 11px 'JetBrains Mono',monospace;fill:var(--ink);
+ text-anchor:middle}
+text.ax{font:500 11px 'JetBrains Mono',monospace;fill:var(--ink3)}
+.cap{font-size:12.5px;color:var(--ink3);margin:0 0 16px}
+p{margin:0 0 12px;font-size:14.5px;color:var(--ink2)}
+p.lead{color:var(--ink);font-size:15px}
+table.cd{border-collapse:collapse;width:100%;font-size:13.5px;margin:6px 0 14px}
+table.cd th,table.cd td{text-align:left;padding:7px 10px;
+ border-bottom:1px solid var(--line2);vertical-align:top}
+table.cd th{font-size:11.5px;letter-spacing:.06em;color:var(--ink3);
+ font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--line)}
+table.cd td.f{font-family:var(--mono);font-size:12.5px;color:var(--ink);
+ white-space:nowrap}
+.zero{background:var(--bg);border-left:3px solid var(--acc);
+ border-radius:0 7px 7px 0;padding:12px 15px;font-size:13.5px;
+ color:var(--ink2);margin:0}
+.zero b{color:var(--ink)}
+.note{background:var(--card);border:1px solid var(--line);
+ border-left:3px solid var(--ink3);border-radius:10px;padding:18px 20px;
+ margin:26px 0;font-size:14px;color:var(--ink2)}
+.note b{color:var(--ink)}.note h3{margin:0 0 8px;font-size:15px;color:var(--ink)}
+</style>
+<div class="wrap">
+<div class="eyebrow">S16_S · 2026-08-31 · 邏輯層討論</div>
+<h1>2x2 家族的五個新格子</h1>
+<p class="lede">P08 下降三角／P10 對稱三角／P11 上升楔形／P20 下降通道／P22 箱型。這五個不是五個新骨架 —— 它們跟已經編碼的擴散家族填的是<b>同一張格子表</b>。</p>
+<table class="grid"><thead><tr><th></th><th>低升</th><th>低降</th><th>低平</th></tr></thead><tbody>
+<tr><th>高升</th><td class="old">P51 擴散楔形<br><small>高漲較快</small></td><td class="old">P29 擴散三角</td><td class="old">P54 右角擴散</td></tr>
+<tr><th></th><td class="new">P11 上升楔形<br><small>高漲較慢</small></td><td></td><td></td></tr>
+<tr><th>高降</th><td class="new">P10 對稱三角</td><td class="new">P20 下降通道<br><small>整格</small></td><td class="new">P08 下降三角</td></tr>
+<tr><th></th><td></td><td class="old">P52 擴散楔形<br><small>低跌較快，P20 的子集</small></td><td></td></tr>
+<tr><th>高平</th><td class="hole">空缺</td><td class="old">P53 右角擴散</td><td class="new">P22 箱型</td></tr>
+</tbody></table>
+<p class="cap">灰字 = 已編碼並驗收；紫底 = 本頁討論的五個。格子表的兩個交叉驗證自動命中：高升×低降格量到 <b>202</b>，正是 P29 已驗證的母體；P52 量到 <b>1,716</b>，正是已編碼的值。本頁的腳本跑的是指標自己那條鏈。</p>
+<div class="pat">
+<div class="hd"><code>P08</code><h2>下降三角</h2><span class="en">Descending Triangle</span><span class="cell">高降 x 低平</span><span class="cell">空</span><span class="n">八年 2,623 個</span></div>
+<div class="fig"><svg viewBox="0 0 700 260" role="img" aria-label="real bars">
+<line class="wk cu" x1="25.1" y1="132.7" x2="25.1" y2="193.9" opacity=".34"/>
+<rect class="bd cu" x="14.5" y="147.3" width="21.2" height="43.7" opacity=".34"/>
+<line class="wk cu" x1="59.3" y1="94.9" x2="59.3" y2="170.6" opacity=".34"/>
+<rect class="bd cu" x="48.7" y="135.7" width="21.2" height="11.7" opacity=".34"/>
+<line class="wk cu" x1="93.5" y1="74.5" x2="93.5" y2="159.0" opacity=".34"/>
+<rect class="bd cu" x="82.9" y="74.5" width="21.2" height="58.3" opacity=".34"/>
+<line class="wk cu" x1="127.7" y1="42.4" x2="127.7" y2="100.7" opacity=".34"/>
+<rect class="bd cu" x="117.1" y="80.3" width="21.2" height="2.9" opacity=".34"/>
+<line class="wk cd" x1="161.9" y1="83.2" x2="161.9" y2="147.3"/>
+<rect class="bd cd" x="151.3" y="83.2" width="21.2" height="17.5"/>
+<line class="wk cu" x1="196.1" y1="39.5" x2="196.1" y2="97.8"/>
+<rect class="bd cu" x="185.5" y="45.3" width="21.2" height="52.5"/>
+<line class="wk cd" x1="230.3" y1="22.0" x2="230.3" y2="59.9"/>
+<rect class="bd cd" x="219.7" y="45.3" width="21.2" height="2.9"/>
+<line class="wk cd" x1="264.5" y1="30.7" x2="264.5" y2="112.3"/>
+<rect class="bd cd" x="253.9" y="59.9" width="21.2" height="49.5"/>
+<line class="wk cd" x1="298.7" y1="80.3" x2="298.7" y2="161.9"/>
+<rect class="bd cd" x="288.1" y="106.5" width="21.2" height="37.9"/>
+<line class="wk cu" x1="332.9" y1="83.2" x2="332.9" y2="144.4"/>
+<rect class="bd cu" x="322.3" y="106.5" width="21.2" height="35.0"/>
+<line class="wk cu" x1="367.1" y1="59.9" x2="367.1" y2="138.6"/>
+<rect class="bd cu" x="356.5" y="59.9" width="21.2" height="46.6"/>
+<line class="wk cd" x1="401.3" y1="45.3" x2="401.3" y2="115.3"/>
+<rect class="bd cd" x="390.7" y="59.9" width="21.2" height="29.1"/>
+<line class="wk cd" x1="435.5" y1="77.4" x2="435.5" y2="124.0"/>
+<rect class="bd cd" x="424.9" y="89.0" width="21.2" height="11.7"/>
+<line class="wk cd" x1="469.7" y1="77.4" x2="469.7" y2="135.7"/>
+<rect class="bd cd" x="459.1" y="100.7" width="21.2" height="20.4"/>
+<line class="wk cu" x1="503.9" y1="103.6" x2="503.9" y2="156.1"/>
+<rect class="bd cu" x="493.3" y="112.3" width="21.2" height="5.8"/>
+<line class="wk cd" x1="538.1" y1="86.1" x2="538.1" y2="141.5"/>
+<rect class="bd cd" x="527.5" y="109.4" width="21.2" height="26.2"/>
+<line class="wk cu" x1="572.3" y1="121.1" x2="572.3" y2="159.0" opacity=".34"/>
+<rect class="bd cu" x="561.7" y="132.7" width="21.2" height="5.8" opacity=".34"/>
+<line class="wk cd" x1="606.5" y1="126.9" x2="606.5" y2="214.3" opacity=".34"/>
+<rect class="bd cd" x="595.9" y="126.9" width="21.2" height="72.9" opacity=".34"/>
+<line class="wk cd" x1="640.7" y1="170.6" x2="640.7" y2="214.3" opacity=".34"/>
+<rect class="bd cd" x="630.1" y="199.8" width="21.2" height="2.9" opacity=".34"/>
+<line class="wk cu" x1="674.9" y1="185.2" x2="674.9" y2="226.0" opacity=".34"/>
+<rect class="bd cu" x="664.3" y="193.9" width="21.2" height="5.8" opacity=".34"/>
+<polyline class="gd ph" points="230.3,22.0 401.3,45.3 538.1,86.1"/>
+<polyline class="gd pl" points="161.9,147.3 298.7,161.9 503.9,156.1"/>
+<circle class="ph" cx="230.3" cy="22.0" r="3.6"/>
+<text class="pv" x="230.3" y="14.0">h1</text>
+<circle class="ph" cx="401.3" cy="45.3" r="3.6"/>
+<text class="pv" x="401.3" y="37.3">h2</text>
+<circle class="ph" cx="538.1" cy="86.1" r="3.6"/>
+<text class="pv" x="538.1" y="78.1">h3</text>
+<circle class="pl" cx="161.9" cy="147.3" r="3.6"/>
+<text class="pv" x="161.9" y="161.3">l1</text>
+<circle class="pl" cx="298.7" cy="161.9" r="3.6"/>
+<text class="pv" x="298.7" y="175.9">l2</text>
+<circle class="pl" cx="503.9" cy="156.1" r="3.6"/>
+<text class="pv" x="503.9" y="170.1">l3</text>
+<text class="ax" x="8" y="248">20241018 2240</text>
+<text class="ax" x="692" y="248" text-anchor="end">20241018 2335   12 根 K 棒</text>
+</svg></div>
+<p class="cap">真實 K 棒，跨度中位數的案例（不是最漂亮的那個）。淡化的是型態前後的脈絡棒。紅點 = 樞紐高，綠點 = 樞紐低，虛線連出上下兩緣。</p>
+<p class="lead">三個高點單調下移，三個低點<b>停在同一條帶子裡</b> —— 賣壓一階一階往下壓，買盤守在同一個價位。</p>
+<table class="cd"><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>高單調下移</td><td class="f">h1 &gt; h2 &gt; h3</td><td>上緣三個點</td></tr>
+<tr><td>低點落在帶子內</td><td class="f">min(l1,l2) &le; l3 &le; max(l1,l2)</td><td>下緣：前兩個低定帶子，第三個受測</td></tr>
+<tr><td>低在高下</td><td class="f">l1 &lt; h1 且 l3 &lt; h3</td><td>整個型態的幾何一致性</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>第二條原本寫「低完全相等」，八年只有 <b>7 個</b>、四個年份掛零。改用區間裝置後 <b>2,623 個</b>、零掛零年，而容差是 |l1−l2| 由型態自己給 —— 仍然零參數。</p>
+</div>
+<div class="pat">
+<div class="hd"><code>P10</code><h2>對稱三角</h2><span class="en">Symmetrical Triangle</span><span class="cell">高降 x 低升</span><span class="cell">續勢</span><span class="n">八年 463 個</span></div>
+<div class="fig"><svg viewBox="0 0 700 260" role="img" aria-label="real bars">
+<line class="wk cu" x1="26.0" y1="56.0" x2="26.0" y2="112.7" opacity=".34"/>
+<rect class="bd cu" x="14.8" y="101.3" width="22.3" height="1.0" opacity=".34"/>
+<line class="wk cu" x1="62.0" y1="67.3" x2="62.0" y2="165.6" opacity=".34"/>
+<rect class="bd cu" x="50.8" y="71.1" width="22.3" height="30.2" opacity=".34"/>
+<line class="wk cd" x1="98.0" y1="71.1" x2="98.0" y2="142.9" opacity=".34"/>
+<rect class="bd cd" x="86.8" y="71.1" width="22.3" height="41.6" opacity=".34"/>
+<line class="wk cd" x1="134.0" y1="67.3" x2="134.0" y2="199.6" opacity=".34"/>
+<rect class="bd cd" x="122.8" y="112.7" width="22.3" height="75.6" opacity=".34"/>
+<line class="wk cu" x1="170.0" y1="127.8" x2="170.0" y2="203.3"/>
+<rect class="bd cu" x="158.8" y="139.1" width="22.3" height="45.3"/>
+<line class="wk cd" x1="206.0" y1="116.4" x2="206.0" y2="173.1"/>
+<rect class="bd cd" x="194.8" y="146.7" width="22.3" height="11.3"/>
+<line class="wk cu" x1="242.0" y1="22.0" x2="242.0" y2="142.9"/>
+<rect class="bd cu" x="230.8" y="78.7" width="22.3" height="64.2"/>
+<line class="wk cd" x1="278.0" y1="78.7" x2="278.0" y2="150.4"/>
+<rect class="bd cd" x="266.8" y="93.8" width="22.3" height="30.2"/>
+<line class="wk cu" x1="314.0" y1="90.0" x2="314.0" y2="165.6"/>
+<rect class="bd cu" x="302.8" y="93.8" width="22.3" height="30.2"/>
+<line class="wk cd" x1="350.0" y1="71.1" x2="350.0" y2="108.9"/>
+<rect class="bd cd" x="338.8" y="97.6" width="22.3" height="11.3"/>
+<line class="wk cu" x1="386.0" y1="67.3" x2="386.0" y2="90.0"/>
+<rect class="bd cu" x="374.8" y="67.3" width="22.3" height="22.7"/>
+<line class="wk cd" x1="422.0" y1="40.9" x2="422.0" y2="105.1"/>
+<rect class="bd cd" x="410.8" y="63.6" width="22.3" height="41.6"/>
+<line class="wk cd" x1="458.0" y1="93.8" x2="458.0" y2="131.6"/>
+<rect class="bd cd" x="446.8" y="93.8" width="22.3" height="37.8"/>
+<line class="wk cu" x1="494.0" y1="56.0" x2="494.0" y2="93.8"/>
+<rect class="bd cu" x="482.8" y="90.0" width="22.3" height="1.0"/>
+<line class="wk cd" x1="530.0" y1="48.4" x2="530.0" y2="108.9"/>
+<rect class="bd cd" x="518.8" y="82.4" width="22.3" height="26.4"/>
+<line class="wk cd" x1="566.0" y1="93.8" x2="566.0" y2="184.4" opacity=".34"/>
+<rect class="bd cd" x="554.8" y="116.4" width="22.3" height="22.7" opacity=".34"/>
+<line class="wk cu" x1="602.0" y1="105.1" x2="602.0" y2="142.9" opacity=".34"/>
+<rect class="bd cu" x="590.8" y="124.0" width="22.3" height="18.9" opacity=".34"/>
+<line class="wk cd" x1="638.0" y1="127.8" x2="638.0" y2="199.6" opacity=".34"/>
+<rect class="bd cd" x="626.8" y="127.8" width="22.3" height="60.4" opacity=".34"/>
+<line class="wk cu" x1="674.0" y1="173.1" x2="674.0" y2="226.0" opacity=".34"/>
+<rect class="bd cu" x="662.8" y="180.7" width="22.3" height="18.9" opacity=".34"/>
+<polyline class="gd ph" points="242.0,22.0 422.0,40.9 530.0,48.4"/>
+<polyline class="gd pl" points="170.0,203.3 314.0,165.6 458.0,131.6"/>
+<circle class="ph" cx="242.0" cy="22.0" r="3.6"/>
+<text class="pv" x="242.0" y="14.0">h1</text>
+<circle class="ph" cx="422.0" cy="40.9" r="3.6"/>
+<text class="pv" x="422.0" y="32.9">h2</text>
+<circle class="ph" cx="530.0" cy="48.4" r="3.6"/>
+<text class="pv" x="530.0" y="40.4">h3</text>
+<circle class="pl" cx="170.0" cy="203.3" r="3.6"/>
+<text class="pv" x="170.0" y="217.3">l1</text>
+<circle class="pl" cx="314.0" cy="165.6" r="3.6"/>
+<text class="pv" x="314.0" y="179.6">l2</text>
+<circle class="pl" cx="458.0" cy="131.6" r="3.6"/>
+<text class="pv" x="458.0" y="145.6">l3</text>
+<text class="ax" x="8" y="248">20260114 0310</text>
+<text class="ax" x="692" y="248" text-anchor="end">20260114 0400   11 根 K 棒</text>
+</svg></div>
+<p class="cap">真實 K 棒，跨度中位數的案例（不是最漂亮的那個）。淡化的是型態前後的脈絡棒。紅點 = 樞紐高，綠點 = 樞紐低，虛線連出上下兩緣。</p>
+<p class="lead">高點下移、低點上移 —— 兩邊同時收斂。它是 P29 擴散三角的<b>鏡像</b>：P29 兩邊同時外擴。</p>
+<table class="cd"><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>高單調下移</td><td class="f">h1 &gt; h2 &gt; h3</td><td>上緣</td></tr>
+<tr><td>低單調上移</td><td class="f">l1 &lt; l2 &lt; l3</td><td>下緣</td></tr>
+<tr><td>低在高下</td><td class="f">l1 &lt; h1 且 l3 &lt; h3</td><td>幾何一致性</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>兩條單調條件，沒有任何常數。八年 463 個，是這一組裡最少的 —— 兩邊同時收斂比較難成立。</p>
+</div>
+<div class="pat">
+<div class="hd"><code>P11</code><h2>上升楔形</h2><span class="en">Rising Wedge</span><span class="cell">高升 x 低升，高漲得慢</span><span class="cell">空（反轉）</span><span class="n">八年 1,919 個</span></div>
+<div class="fig"><svg viewBox="0 0 700 260" role="img" aria-label="real bars">
+<line class="wk cd" x1="25.1" y1="48.9" x2="25.1" y2="57.0" opacity=".34"/>
+<rect class="bd cd" x="14.5" y="51.6" width="21.2" height="5.4" opacity=".34"/>
+<line class="wk cu" x1="59.3" y1="43.2" x2="59.3" y2="59.3" opacity=".34"/>
+<rect class="bd cu" x="48.7" y="51.3" width="21.2" height="4.2" opacity=".34"/>
+<line class="wk cu" x1="93.5" y1="41.2" x2="93.5" y2="62.4" opacity=".34"/>
+<rect class="bd cu" x="82.9" y="42.4" width="21.2" height="8.5" opacity=".34"/>
+<line class="wk cd" x1="127.7" y1="40.1" x2="127.7" y2="48.6" opacity=".34"/>
+<rect class="bd cd" x="117.1" y="43.9" width="21.2" height="1.0" opacity=".34"/>
+<line class="wk cd" x1="161.9" y1="37.0" x2="161.9" y2="60.5"/>
+<rect class="bd cd" x="151.3" y="45.1" width="21.2" height="10.0"/>
+<line class="wk cd" x1="196.1" y1="53.2" x2="196.1" y2="67.8"/>
+<rect class="bd cd" x="185.5" y="60.9" width="21.2" height="4.6"/>
+<line class="wk cd" x1="230.3" y1="63.6" x2="230.3" y2="81.7"/>
+<rect class="bd cd" x="219.7" y="63.6" width="21.2" height="15.0"/>
+<line class="wk cd" x1="264.5" y1="72.0" x2="264.5" y2="98.2"/>
+<rect class="bd cd" x="253.9" y="75.1" width="21.2" height="1.9"/>
+<line class="wk cu" x1="298.7" y1="47.0" x2="298.7" y2="75.5"/>
+<rect class="bd cu" x="288.1" y="52.0" width="21.2" height="23.5"/>
+<line class="wk cu" x1="332.9" y1="33.5" x2="332.9" y2="58.2"/>
+<rect class="bd cu" x="322.3" y="34.3" width="21.2" height="19.6"/>
+<line class="wk cu" x1="367.1" y1="35.5" x2="367.1" y2="43.9"/>
+<rect class="bd cu" x="356.5" y="37.0" width="21.2" height="4.2"/>
+<line class="wk cu" x1="401.3" y1="38.6" x2="401.3" y2="46.2"/>
+<rect class="bd cu" x="390.7" y="38.6" width="21.2" height="1.0"/>
+<line class="wk cd" x1="435.5" y1="38.9" x2="435.5" y2="47.8"/>
+<rect class="bd cd" x="424.9" y="38.9" width="21.2" height="1.9"/>
+<line class="wk cu" x1="469.7" y1="36.2" x2="469.7" y2="44.7"/>
+<rect class="bd cu" x="459.1" y="36.2" width="21.2" height="6.9"/>
+<line class="wk cd" x1="503.9" y1="35.5" x2="503.9" y2="39.7"/>
+<rect class="bd cd" x="493.3" y="37.0" width="21.2" height="1.0"/>
+<line class="wk cu" x1="538.1" y1="22.0" x2="538.1" y2="42.4"/>
+<rect class="bd cu" x="527.5" y="28.5" width="21.2" height="11.5"/>
+<line class="wk cd" x1="572.3" y1="27.4" x2="572.3" y2="37.8" opacity=".34"/>
+<rect class="bd cd" x="561.7" y="29.3" width="21.2" height="4.2" opacity=".34"/>
+<line class="wk cu" x1="606.5" y1="27.8" x2="606.5" y2="37.8" opacity=".34"/>
+<rect class="bd cu" x="595.9" y="29.7" width="21.2" height="4.2" opacity=".34"/>
+<line class="wk cu" x1="640.7" y1="28.2" x2="640.7" y2="35.9" opacity=".34"/>
+<rect class="bd cu" x="630.1" y="31.6" width="21.2" height="1.5" opacity=".34"/>
+<line class="wk cu" x1="674.9" y1="154.0" x2="674.9" y2="226.0" opacity=".34"/>
+<rect class="bd cu" x="664.3" y="159.8" width="21.2" height="26.2" opacity=".34"/>
+<polyline class="gd ph" points="161.9,37.0 332.9,33.5 538.1,22.0"/>
+<polyline class="gd pl" points="264.5,98.2 435.5,47.8 538.1,42.4"/>
+<circle class="ph" cx="161.9" cy="37.0" r="3.6"/>
+<text class="pv" x="161.9" y="29.0">h1</text>
+<circle class="ph" cx="332.9" cy="33.5" r="3.6"/>
+<text class="pv" x="332.9" y="25.5">h2</text>
+<circle class="ph" cx="538.1" cy="22.0" r="3.6"/>
+<text class="pv" x="538.1" y="14.0">h3</text>
+<circle class="pl" cx="264.5" cy="98.2" r="3.6"/>
+<text class="pv" x="264.5" y="112.2">l1</text>
+<circle class="pl" cx="435.5" cy="47.8" r="3.6"/>
+<text class="pv" x="435.5" y="61.8">l2</text>
+<circle class="pl" cx="538.1" cy="42.4" r="3.6"/>
+<text class="pv" x="538.1" y="56.4">l3</text>
+<text class="ax" x="8" y="248">20260602 0350</text>
+<text class="ax" x="692" y="248" text-anchor="end">20260602 0445   12 根 K 棒</text>
+</svg></div>
+<p class="cap">真實 K 棒，跨度中位數的案例（不是最漂亮的那個）。淡化的是型態前後的脈絡棒。紅點 = 樞紐高，綠點 = 樞紐低，虛線連出上下兩緣。</p>
+<p class="lead">高低點都在上移，但<b>高點漲得比低點慢</b> —— 空間被由下往上擠掉。它跟已編碼的 P51 上升擴散楔形共用同一格，差別只在誰漲得快。</p>
+<table class="cd"><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>高單調上移</td><td class="f">h1 &lt; h2 &lt; h3</td><td>上緣</td></tr>
+<tr><td>低單調上移</td><td class="f">l1 &lt; l2 &lt; l3</td><td>下緣</td></tr>
+<tr><td>高漲幅小於低漲幅</td><td class="f">(h3−h1) &lt; (l3−l1)</td><td>兩條線的跨距相比，收斂</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>第三條是<b>比較</b>不是門檻 —— 沒有「要收斂多少」這種常數。同一格裡 P51 是 (h3−h1) &gt; (l3−l1)、P11 是 &lt;，另有 140 個兩者相等落在中間，兩個都不算。</p>
+</div>
+<div class="pat">
+<div class="hd"><code>P20</code><h2>下降通道</h2><span class="en">Descending Channel</span><span class="cell">高降 x 低降（整格）</span><span class="cell">空（續勢）</span><span class="n">八年 3,101 個</span></div>
+<div class="fig"><svg viewBox="0 0 700 260" role="img" aria-label="real bars">
+<line class="wk cu" x1="25.1" y1="70.8" x2="25.1" y2="128.3" opacity=".34"/>
+<rect class="bd cu" x="14.5" y="102.5" width="21.2" height="23.0" opacity=".34"/>
+<line class="wk cu" x1="59.3" y1="65.1" x2="59.3" y2="105.3" opacity=".34"/>
+<rect class="bd cu" x="48.7" y="85.2" width="21.2" height="17.2" opacity=".34"/>
+<line class="wk cu" x1="93.5" y1="27.7" x2="93.5" y2="91.0" opacity=".34"/>
+<rect class="bd cu" x="82.9" y="53.6" width="21.2" height="28.7" opacity=".34"/>
+<line class="wk cd" x1="127.7" y1="47.9" x2="127.7" y2="82.3" opacity=".34"/>
+<rect class="bd cd" x="117.1" y="62.2" width="21.2" height="14.4" opacity=".34"/>
+<line class="wk cd" x1="161.9" y1="70.8" x2="161.9" y2="119.7"/>
+<rect class="bd cd" x="151.3" y="76.6" width="21.2" height="37.4"/>
+<line class="wk cu" x1="196.1" y1="79.5" x2="196.1" y2="116.8"/>
+<rect class="bd cu" x="185.5" y="93.8" width="21.2" height="20.1"/>
+<line class="wk cu" x1="230.3" y1="22.0" x2="230.3" y2="91.0"/>
+<rect class="bd cu" x="219.7" y="24.9" width="21.2" height="66.1"/>
+<line class="wk cd" x1="264.5" y1="24.9" x2="264.5" y2="79.5"/>
+<rect class="bd cd" x="253.9" y="24.9" width="21.2" height="46.0"/>
+<line class="wk cd" x1="298.7" y1="65.1" x2="298.7" y2="91.0"/>
+<rect class="bd cd" x="288.1" y="65.1" width="21.2" height="14.4"/>
+<line class="wk cd" x1="332.9" y1="79.5" x2="332.9" y2="105.3"/>
+<rect class="bd cd" x="322.3" y="79.5" width="21.2" height="8.6"/>
+<line class="wk cd" x1="367.1" y1="85.2" x2="367.1" y2="116.8"/>
+<rect class="bd cd" x="356.5" y="91.0" width="21.2" height="17.2"/>
+<line class="wk cu" x1="401.3" y1="96.7" x2="401.3" y2="125.4"/>
+<rect class="bd cu" x="390.7" y="96.7" width="21.2" height="8.6"/>
+<line class="wk cu" x1="435.5" y1="79.5" x2="435.5" y2="99.6"/>
+<rect class="bd cu" x="424.9" y="88.1" width="21.2" height="8.6"/>
+<line class="wk cd" x1="469.7" y1="85.2" x2="469.7" y2="125.4"/>
+<rect class="bd cd" x="459.1" y="91.0" width="21.2" height="34.5"/>
+<line class="wk cu" x1="503.9" y1="105.3" x2="503.9" y2="131.2"/>
+<rect class="bd cu" x="493.3" y="111.1" width="21.2" height="17.2"/>
+<line class="wk cd" x1="538.1" y1="93.8" x2="538.1" y2="125.4"/>
+<rect class="bd cd" x="527.5" y="108.2" width="21.2" height="8.6"/>
+<line class="wk cu" x1="572.3" y1="99.6" x2="572.3" y2="131.2" opacity=".34"/>
+<rect class="bd cu" x="561.7" y="102.5" width="21.2" height="20.1" opacity=".34"/>
+<line class="wk cd" x1="606.5" y1="99.6" x2="606.5" y2="168.5" opacity=".34"/>
+<rect class="bd cd" x="595.9" y="99.6" width="21.2" height="46.0" opacity=".34"/>
+<line class="wk cd" x1="640.7" y1="148.4" x2="640.7" y2="223.1" opacity=".34"/>
+<rect class="bd cd" x="630.1" y="148.4" width="21.2" height="69.0" opacity=".34"/>
+<line class="wk cu" x1="674.9" y1="180.0" x2="674.9" y2="226.0" opacity=".34"/>
+<rect class="bd cu" x="664.3" y="182.9" width="21.2" height="34.5" opacity=".34"/>
+<polyline class="gd ph" points="230.3,22.0 435.5,79.5 538.1,93.8"/>
+<polyline class="gd pl" points="161.9,119.7 401.3,125.4 503.9,131.2"/>
+<circle class="ph" cx="230.3" cy="22.0" r="3.6"/>
+<text class="pv" x="230.3" y="14.0">h1</text>
+<circle class="ph" cx="435.5" cy="79.5" r="3.6"/>
+<text class="pv" x="435.5" y="71.5">h2</text>
+<circle class="ph" cx="538.1" cy="93.8" r="3.6"/>
+<text class="pv" x="538.1" y="85.8">h3</text>
+<circle class="pl" cx="161.9" cy="119.7" r="3.6"/>
+<text class="pv" x="161.9" y="133.7">l1</text>
+<circle class="pl" cx="401.3" cy="125.4" r="3.6"/>
+<text class="pv" x="401.3" y="139.4">l2</text>
+<circle class="pl" cx="503.9" cy="131.2" r="3.6"/>
+<text class="pv" x="503.9" y="145.2">l3</text>
+<text class="ax" x="8" y="248">20250523 1620</text>
+<text class="ax" x="692" y="248" text-anchor="end">20250523 1715   12 根 K 棒</text>
+</svg></div>
+<p class="cap">真實 K 棒，跨度中位數的案例（不是最漂亮的那個）。淡化的是型態前後的脈絡棒。紅點 = 樞紐高，綠點 = 樞紐低，虛線連出上下兩緣。</p>
+<p class="lead">高低點同步下移。<b>這一格就是它</b> —— 沒有跨距條件，所以已編碼的 P52 下降擴散楔形（低跌得比較快）是它的子集，量到 1,716 個，占 55.3%。</p>
+<table class="cd"><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>高單調下移</td><td class="f">h1 &gt; h2 &gt; h3</td><td>上緣</td></tr>
+<tr><td>低單調下移</td><td class="f">l1 &gt; l2 &gt; l3</td><td>下緣</td></tr>
+<tr><td>低在高下</td><td class="f">l1 &lt; h1 且 l3 &lt; h3</td><td>幾何一致性</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>兩條單調，零常數。<b>P52 完全落在 P20 之內，已驗證。</b>依 2026-08-31「兩個都畫」裁示，底層的 P20 與子集 P52 都上圖。</p>
+</div>
+<div class="pat">
+<div class="hd"><code>P22</code><h2>箱型</h2><span class="en">Rectangle / Box</span><span class="cell">高平 x 低平</span><span class="cell">中性</span><span class="n">八年 3,063 個</span></div>
+<div class="fig"><svg viewBox="0 0 700 260" role="img" aria-label="real bars">
+<line class="wk cd" x1="25.1" y1="104.2" x2="25.1" y2="131.6" opacity=".34"/>
+<rect class="bd cd" x="14.5" y="107.3" width="21.2" height="15.2" opacity=".34"/>
+<line class="wk cu" x1="59.3" y1="116.4" x2="59.3" y2="125.5" opacity=".34"/>
+<rect class="bd cu" x="48.7" y="119.4" width="21.2" height="3.0" opacity=".34"/>
+<line class="wk cu" x1="93.5" y1="22.0" x2="93.5" y2="128.6" opacity=".34"/>
+<rect class="bd cu" x="82.9" y="70.7" width="21.2" height="48.7" opacity=".34"/>
+<line class="wk cd" x1="127.7" y1="37.2" x2="127.7" y2="92.0" opacity=".34"/>
+<rect class="bd cd" x="117.1" y="70.7" width="21.2" height="6.1" opacity=".34"/>
+<line class="wk cu" x1="161.9" y1="64.6" x2="161.9" y2="122.5"/>
+<rect class="bd cu" x="151.3" y="67.7" width="21.2" height="12.2"/>
+<line class="wk cd" x1="196.1" y1="61.6" x2="196.1" y2="107.3"/>
+<rect class="bd cd" x="185.5" y="67.7" width="21.2" height="39.6"/>
+<line class="wk cu" x1="230.3" y1="95.1" x2="230.3" y2="119.4"/>
+<rect class="bd cu" x="219.7" y="101.2" width="21.2" height="9.1"/>
+<line class="wk cu" x1="264.5" y1="101.2" x2="264.5" y2="119.4"/>
+<rect class="bd cu" x="253.9" y="104.2" width="21.2" height="1.0"/>
+<line class="wk cd" x1="298.7" y1="95.1" x2="298.7" y2="156.0"/>
+<rect class="bd cd" x="288.1" y="101.2" width="21.2" height="36.5"/>
+<line class="wk cu" x1="332.9" y1="92.0" x2="332.9" y2="137.7"/>
+<rect class="bd cu" x="322.3" y="113.3" width="21.2" height="24.4"/>
+<line class="wk cu" x1="367.1" y1="85.9" x2="367.1" y2="116.4"/>
+<rect class="bd cu" x="356.5" y="89.0" width="21.2" height="27.4"/>
+<line class="wk cu" x1="401.3" y1="64.6" x2="401.3" y2="110.3"/>
+<rect class="bd cu" x="390.7" y="73.8" width="21.2" height="18.3"/>
+<line class="wk cd" x1="435.5" y1="52.4" x2="435.5" y2="89.0"/>
+<rect class="bd cd" x="424.9" y="76.8" width="21.2" height="12.2"/>
+<line class="wk cu" x1="469.7" y1="58.5" x2="469.7" y2="98.1"/>
+<rect class="bd cu" x="459.1" y="67.7" width="21.2" height="21.3"/>
+<line class="wk cd" x1="503.9" y1="64.6" x2="503.9" y2="140.7"/>
+<rect class="bd cd" x="493.3" y="73.8" width="21.2" height="24.4"/>
+<line class="wk cd" x1="538.1" y1="61.6" x2="538.1" y2="122.5"/>
+<rect class="bd cd" x="527.5" y="101.2" width="21.2" height="12.2"/>
+<line class="wk cd" x1="572.3" y1="113.3" x2="572.3" y2="226.0" opacity=".34"/>
+<rect class="bd cd" x="561.7" y="113.3" width="21.2" height="67.0" opacity=".34"/>
+<line class="wk cu" x1="606.5" y1="152.9" x2="606.5" y2="207.7" opacity=".34"/>
+<rect class="bd cu" x="595.9" y="162.1" width="21.2" height="12.2" opacity=".34"/>
+<line class="wk cu" x1="640.7" y1="79.9" x2="640.7" y2="168.1" opacity=".34"/>
+<rect class="bd cu" x="630.1" y="95.1" width="21.2" height="63.9" opacity=".34"/>
+<line class="wk cd" x1="674.9" y1="58.5" x2="674.9" y2="113.3" opacity=".34"/>
+<rect class="bd cd" x="664.3" y="95.1" width="21.2" height="12.2" opacity=".34"/>
+<polyline class="gd ph" points="196.1,61.6 435.5,52.4 538.1,61.6"/>
+<polyline class="gd pl" points="161.9,122.5 298.7,156.0 503.9,140.7"/>
+<circle class="ph" cx="196.1" cy="61.6" r="3.6"/>
+<text class="pv" x="196.1" y="53.6">h1</text>
+<circle class="ph" cx="435.5" cy="52.4" r="3.6"/>
+<text class="pv" x="435.5" y="44.4">h2</text>
+<circle class="ph" cx="538.1" cy="61.6" r="3.6"/>
+<text class="pv" x="538.1" y="53.6">h3</text>
+<circle class="pl" cx="161.9" cy="122.5" r="3.6"/>
+<text class="pv" x="161.9" y="136.5">l1</text>
+<circle class="pl" cx="298.7" cy="156.0" r="3.6"/>
+<text class="pv" x="298.7" y="170.0">l2</text>
+<circle class="pl" cx="503.9" cy="140.7" r="3.6"/>
+<text class="pv" x="503.9" y="154.7">l3</text>
+<text class="ax" x="8" y="248">20240307 2145</text>
+<text class="ax" x="692" y="248" text-anchor="end">20240307 2240   12 根 K 棒</text>
+</svg></div>
+<p class="cap">真實 K 棒，跨度中位數的案例（不是最漂亮的那個）。淡化的是型態前後的脈絡棒。紅點 = 樞紐高，綠點 = 樞紐低，虛線連出上下兩緣。</p>
+<p class="lead">上下緣都停在自己的帶子裡 —— 一段沒有方向的區間。</p>
+<table class="cd"><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>高點落在帶子內</td><td class="f">min(h1,h2) &le; h3 &le; max(h1,h2)</td><td>上緣：前兩個高定帶子</td></tr>
+<tr><td>低點落在帶子內</td><td class="f">min(l1,l2) &le; l3 &le; max(l1,l2)</td><td>下緣：前兩個低定帶子</td></tr>
+<tr><td>兩邊都不單調</td><td class="f">非升也非降</td><td>否則它屬於別的格子</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>原定義是「高完全相等 ＋ 低完全相等」，八年只有 <b>2 個</b>、七個年份掛零 —— 幾乎不存在。區間裝置版 <b>3,063 個</b>、零掛零年，倍率 1,532 倍。</p>
+</div>
+<div class="note"><h3>「完全相等」第三次被算術殺死</h3>P08 與 P22 的原始定義都寫「完全相等」。實測八年：<b>P08 只有 7 個</b>（四個年份掛零）、<b>P22 只有 2 個</b>（七個年份掛零）—— 跟 P53 的 7 個、P54 的 8 個一模一樣。<br><br>改用區間裝置（兩點定帶、第三點受測，容差 = |A−B| 由型態自身給）：P08 <b>2,623</b>、P22 <b>3,063</b>，兩者零掛零年，倍率 375 倍與 1,532 倍。<b>仍然零參數。</b><br><br>這是檢查表第 17 條預測到的，也是 2026-08-28 量過的衰減律：tick 固定 1 點而擺幅八年從 9 點漲到 90 點，完全相等的命中率以 1/擺幅 衰減。<br><br><b>待裁示：</b>若 P08／P22 改用區間裝置，已編碼的 P53／P54（現在用完全相等，7 個與 8 個）要不要一致？改了會動到已驗證的數字。
+</div>
+<div class="note"><h3>誠實聲明</h3>本頁的 K 棒是真實資料，案例取跨度中位數且不跨時段 —— <b>挑最漂亮的案例是在替型態說話</b>。個數由本頁的腳本算出，腳本重放指標自己的十二槽鏈，並以 P29 的 202 與 P52 的 1,716 兩個已驗收數字作為交叉驗證。<b>這五個尚未寫進指標</b>，本頁沒有宣稱 MC12 跑得出這些數字。本頁由 Claude 產出，未經第二方審查。</div>
+</div>
