@@ -79,13 +79,13 @@ p.work b{font-weight:700}
 <div class="quote">今天型態出現了，接下來才是進入規劃訊號以及策略層面的事情。因此應該是全部圖形討論清楚以及邏輯化後，並優化成指標，然後就能夠完整先在圖表上確認所有的圖形型態。這樣才是針對圖形型態的規畫之型態層的落地。<span>Willy，2026-08-31</span></div>
 <div class="kpi">
 <div class="d"><b>28</b><span>已畫且驗收</span></div>
-<div class="r"><b>4</b><span>已編碼待驗收</span></div>
-<div class="t"><b>12</b><span>邏輯從未審查</span></div>
-<div class="o"><b>28</b><span>不繪製</span></div>
+<div class="r"><b>15</b><span>已編碼待驗收</span></div>
+<div class="t"><b>0</b><span>邏輯從未審查</span></div>
+<div class="o"><b>29</b><span>不繪製</span></div>
 <div><b>72</b><span>純圖形型態母體</span></div>
 </div>
-<div class="bar"><i style="width:38.89%;background:var(--done)"></i><i style="width:5.56%;background:var(--ready)"></i><i style="width:16.67%;background:var(--todo)"></i><i style="width:38.89%;background:var(--out)"></i></div>
-<div class="barlbl"><span>已落地 28</span><span>待驗收 4</span><span>要走完整流程 12</span><span>不繪製 28</span></div>
+<div class="bar"><i style="width:38.89%;background:var(--done)"></i><i style="width:20.83%;background:var(--ready)"></i><i style="width:0.00%;background:var(--todo)"></i><i style="width:40.28%;background:var(--out)"></i></div>
+<div class="barlbl"><span>已落地 28</span><span>待驗收 15</span><span>要走完整流程 0</span><span>不繪製 29</span></div>
 <div class="note"><h3>2026-08-31 的兩條裁示</h3><b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，named pattern 疊成子標籤。化約成立不代表畫不出來，而且在真實 K 棒上看「圓弧頂」這個標籤，本身就是在檢查「曲率是擲銅板」那個量測。<br><br><b>②「只需要避開多方型態，但不需要繪製」</b> —— 18 種多方移出待辦。<br><br><b>尚未裁示：</b>已畫在圖上的 15 種裡有 5 個是多方 —— P50 擴散底、P52 下降擴散楔形、P54 右角擴散（下）、P28 杯柄、P61 鑽石底。前三個是 08-28「有出現就畫上去」裁示的直接產物，且 P50 是 P29 的 M7 拆分、拆不開；後兩個是裁示 A1／I1 要求編碼上圖的。<b>要不要拿掉，等你裁示，我不替你推翻你自己三天前的裁示。</b></div>
 <div class="note"><h3>那個 dn／up 的量測放在哪裡</h3>2026-08-31 量到 P18 破位往下 50.43%、P57 54.12%、P17 53.59%，都過不了本專案對 33 次檢定用的 2.96 門檻。<b>那是訊號層規劃時的輸入，不是型態層的成績單。</b>型態層的工作是把形狀講清楚、邏輯化、畫上圖；形狀能不能預測方向，是下一層才問的問題。先前把它當成型態層的判決，是把下一階段的問題提前套在這一階段上。</div>
 <h2>已畫在圖上，且 MC12 驗收過<span class="tag done">28 種</span></h2>
@@ -130,22 +130,26 @@ p.work b{font-weight:700}
 <div class="chip"><code>P11</code><span class="zh">上升楔形</span><span class="en">Rising Wedge</span></div>
 <div class="chip"><code>P22</code><span class="zh">箱型</span><span class="en">Rectangle / Box</span></div>
 </div>
-<h2>邏輯從未審查<span class="tag todo">12 種</span></h2>
-<p>2026-08-24 兩波檢定裡的空方與中性型態。<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，2026-08-25 已因違反標準流程被退回，33 個定義從未逐一審查。Python 裡有程式碼，不等於邏輯討論過。</p>
-<p class="work"><b>要做什麼：</b>走完整流程：<b>討論 → 逐一邏輯規劃 → 對照圖 → .md → HTML → 才程式碼化</b>。每一個都要先確認零參數、確認定義是你認可的，才輪到接線。</p>
+<h2>已完成完整流程，尚未編碼<span class="tag ready">11 種</span></h2>
+<p>2026-08-31 晚。十二種進來、<b>P39 三下降峰在寫定義前就被化約</b>（＝頭頭降原語，5,280 對 5,280 逐字相同）。其餘十一種各有零參數定義、K 棒示意圖與真實案例。四個裝置：<b>排名</b>（Crabel N=4/7，借用常數）、<b>上影 &gt; 實體</b>（把「長」從門檻改成比較）、<b>差距 &lt; 影線</b>（容差由 K 棒自己給）、<b>跑到分出勝負</b>（旗形因此沒有根數）。鏡像倍率 0.78–1.02x，<b>沒有一個偏好空方</b>；三個過 Bonferroni 門檻但方向全反，那是台指偏多漂移不是型態的邊；P41/P42 的鏡像測試<b>結構上是空的</b>（振幅在鏡射下不變）。</p>
+<p class="work"><b>要做什麼：</b><b>編碼上圖。</b>依 08-31 落地標準，「沒有方向」不是不畫的理由 —— 方向的判決屬於訊號層。P41/P42 母體 8.2 萬與 4.4 萬，應比照收斂六種放副圖色帶。</p>
 <div class="chips">
-<div class="chip"><code>P13</code><span class="zh">空方旗形</span><span class="en">Bear Flag</span></div>
-<div class="chip"><code>P14</code><span class="zh">空方三角旗</span><span class="en">Bear Pennant</span></div>
 <div class="chip"><code>P33</code><span class="zh">上衝回落</span><span class="en">Upthrust / Liquidity Sweep</span></div>
 <div class="chip"><code>P35</code><span class="zh">結構破壞（向下）</span><span class="en">Break of Structure, Down</span></div>
 <div class="chip"><code>P37</code><span class="zh">性格轉變（向下）</span><span class="en">Change of Character, Down</span></div>
-<div class="chip"><code>P39</code><span class="zh">三下降峰</span><span class="en">Three Falling Peaks</span></div>
+<div class="chip"><code>P13</code><span class="zh">空方旗形</span><span class="en">Bear Flag</span></div>
+<div class="chip"><code>P14</code><span class="zh">空方三角旗</span><span class="en">Bear Pennant</span></div>
 <div class="chip"><code>P41</code><span class="zh">WR4  最近 4 根最寬</span><span class="en">Widest of 4</span></div>
 <div class="chip"><code>P42</code><span class="zh">WR7  最近 7 根最寬</span><span class="en">Widest of 7</span></div>
 <div class="chip"><code>P43</code><span class="zh">關鍵反轉（空）</span><span class="en">Key Reversal, Bearish</span></div>
 <div class="chip"><code>P45</code><span class="zh">破前時段低</span><span class="en">Prior Session Low Break</span></div>
 <div class="chip"><code>P47</code><span class="zh">號角頂</span><span class="en">Horn Top</span></div>
 <div class="chip"><code>P48</code><span class="zh">管狀頂</span><span class="en">Pipe Top</span></div>
+</div>
+<h2>邏輯從未審查<span class="tag todo">0 種</span></h2>
+<p>2026-08-24 兩波檢定裡的空方與中性型態。<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，2026-08-25 已因違反標準流程被退回，33 個定義從未逐一審查。Python 裡有程式碼，不等於邏輯討論過。</p>
+<p class="work"><b>要做什麼：</b>走完整流程：<b>討論 → 逐一邏輯規劃 → 對照圖 → .md → HTML → 才程式碼化</b>。每一個都要先確認零參數、確認定義是你認可的，才輪到接線。</p>
+<div class="chips">
 </div>
 <h2>不繪製 —— 多方裁示，或多餘<span class="tag out">19 種</span></h2>
 <p>「我認為只需要避開多方型態，但不需要繪製。」十八種多方依此排除。<br><b>P20 下降通道另有理由</b>：降降格 3,101 個 ＝ P52 1,716（已畫）＋ P12 下降楔形 1,299（多方，不畫）＋ 86 個平手。P20 只會把已經在圖上的重貼一次，<b>填不到任何洞</b>。</p>
@@ -171,7 +175,7 @@ p.work b{font-weight:700}
 <div class="chip"><code>P66</code><span class="zh">平底鍋底</span><span class="en">Frypan Bottom</span></div>
 <div class="chip"><code>P20</code><span class="zh">下降通道</span><span class="en">Descending Channel</span></div>
 </div>
-<h2>結構性排除<span class="tag out">9 種</span></h2>
+<h2>結構性排除<span class="tag out">10 種</span></h2>
 <p>缺口組 P31／P62／P67：5 分 K 上不存在跳空，時段內缺口 1,923 個、90.4% 剛好 1 點。D 組 P07／P58／P69／P70／P71：「因為這並非圖形型態探討的範疇」，範疇判定位階在實測之上。</p>
 <p class="work"><b>要做什麼：</b>沒有東西可畫，或不在範疇。這不是待辦。</p>
 <div class="chips">
@@ -184,6 +188,7 @@ p.work b{font-weight:700}
 <div class="chip"><code>P70</code><span class="zh">費波那契回撤</span><span class="en">Fibonacci Retracement</span></div>
 <div class="chip"><code>P71</code><span class="zh">江恩角度線</span><span class="en">Gann Angles</span></div>
 <div class="chip"><code>P68</code><span class="zh">雙頂四變體</span><span class="en">Adam&Adam / Adam&Eve / Eve&Adam / Eve&Eve</span></div>
+<div class="chip"><code>P39</code><span class="zh">三下降峰</span><span class="en">Three Falling Peaks</span></div>
 </div>
 <div class="note"><h3>誠實聲明</h3>六個桶互斥且窮盡 72 種，由本腳本斷言檢查（重複、遺漏、代號存在性）。「已檢定未畫」的 33 種<b>定義存在於 Python，從未接進 MC12</b> —— 2026-08-24 的檢定跑的是 Python。本頁不宣稱它們在 PowerLanguage 裡一定寫得出來，那要逐一評估。本頁由 Claude 產出，未經第二方審查。</div>
 </div>
