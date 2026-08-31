@@ -26,6 +26,10 @@ OUT = os.path.join(SRC, 'S16S_pattern_master.html')
 
 # (file, tab label, one-line summary), grouped by what the group is FOR
 GROUPS = [
+    ('判決', [
+        ('S16S_verdict_diagram', '型態層判決',
+         '2026-08-31：破位方向不含型態資訊。規則寫在數字之前，結論照收'),
+    ]),
     ('現況', [
         ('S16S_pattern_layer_status', '型態層總覽',
          '72 種純圖形走到哪裡，哪些結案、哪些還沒碰'),
