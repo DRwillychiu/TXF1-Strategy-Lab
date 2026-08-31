@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_CONV6  --  the six convergence patterns, as a subchart ribbon
 
-  Build_ID 260900.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260901.  DETECTION ONLY.  Places no orders, holds no position.
 
   P01 NR4 / P02 NR7 / P03 inside x2 / P04 inside x3 / P05 ID-NR4
   / P06 three shrinking ranges
@@ -72,9 +72,23 @@
     41.7% of P02.
 
   ACCEPTANCE, printed on the last bar as CONV6 TALLY
-    P01 135778   P02 89164   P03 12730   P04 1784   P05 57140   P06 63022
-    Measured on the full csv, 421,513 bars.  A chart holding fewer bars
-    prints proportionally fewer; read CONV6 DIAG bars= first.
+    bars 421,507
+    P01 135777   P02 89163   P03 12730   P04 1784   P05 57140   P06 63021
+    VERIFIED in MC12 on 2026-08-31, all six plus the bar count.
+
+    Those are the full csv (421,513 bars) MINUS THIS FILE'S OWN WARM-UP.
+    v_NBars counts from CurrentBar 1, which MC12 places after the deepest
+    bar reference the file makes -- High[6] here, so six bars.  The full-csv
+    figures are 135778 / 89164 / 12730 / 1784 / 57140 / 63022.
+
+    NOTE: two indicators on the SAME chart report different bars=.
+    IND_S16S_P29 reports 421,455 on this chart, 58 short, and that was
+    written up on 2026-08-31 as the chart having loaded fewer bars.  It had
+    not: CONV6 sees 421,507 on the same chart, so the data is complete and
+    the 58 is P29's warm-up.  A property of the code, described as a
+    property of the data -- the same mistake as the diamond index bug
+    earlier the same day.  Read bars= as "this file's warm-up", never as
+    "the chart's length".
 
   HOW TO SET IT UP
     Apply to a SUBCHART, not the price pane.
@@ -83,7 +97,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260900 ),
+    Build_ID                ( 260901 ),
     Sess_Day_Start          ( 845   ),
     Sess_Day_End            ( 1345  ),
     Sess_Night_Start        ( 1500  ),
@@ -218,6 +232,6 @@ if LastBarOnChart then begin
     Print( "CONV6 TALLY  P01=", v_C01:7:0, "  P02=", v_C02:7:0,
            "  P03=", v_C03:6:0, "  P04=", v_C04:5:0,
            "  P05=", v_C05:7:0, "  P06=", v_C06:7:0 );
-    Print( "CONV6 TALLY  reference   135778    89164   12730   1784",
-           "    57140    63022   (full csv, 421,513 bars)" );
+    Print( "CONV6 TALLY  reference   135777    89163   12730   1784",
+           "    57140    63021   (after this file 6-bar warm-up)" );
 end;

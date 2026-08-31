@@ -19,7 +19,18 @@
     first.  P65 sits second from last in the cascade and took the damage.
 
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
-  table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
+  table matched, on a chart THIS FILE begins evaluating at 2019-01-02 13:40:
+
+    CORRECTED 2026-08-31 evening.  The 421,455 was written up as the chart
+    having loaded 58 fewer bars -- a claim about the DATA.  It is not.
+    IND_S16S_CONV6 on the SAME chart reports 421,507, six short, matching
+    its own deepest reference High[6].  So the chart holds the full 421,513
+    and the 58 here is THIS FILE own warm-up.  A property of the code
+    described as a property of the data, which is the same error as the
+    diamond index bug earlier the same day.  Read bars= as "after this
+    file warm-up", never as "the chart length".  The verified numbers are
+    unaffected: cutting the csv at 13:40 and skipping this file first 58
+    bars are the same thing.
 
     bars 421,455   pivot_high 75,136   pivot_low 76,017
     formations 202   P49 112   P50 90   by_year 8 15 18 31 24 31 42 33
