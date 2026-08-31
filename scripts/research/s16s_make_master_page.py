@@ -26,9 +26,13 @@ OUT = os.path.join(SRC, 'S16S_pattern_master.html')
 
 # (file, tab label, one-line summary), grouped by what the group is FOR
 GROUPS = [
-    ('判決', [
-        ('S16S_verdict_diagram', '型態層判決',
-         '2026-08-31：破位方向不含型態資訊。規則寫在數字之前，結論照收'),
+    ('落地', [
+        ('S16S_landing_map', '落地地圖',
+         '72 種裡畫得到的只有 15 種。用「畫得到嗎」而不是「檢定過嗎」盤點'),
+    ]),
+    ('方向量測', [
+        ('S16S_verdict_diagram', '破位方向量測',
+         '2026-08-31：破位方向不含型態資訊。這是訊號層的輸入，不是型態層的成績單'),
     ]),
     ('現況', [
         ('S16S_pattern_layer_status', '型態層總覽',

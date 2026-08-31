@@ -1,0 +1,377 @@
+{
+ "names": {
+  "P01": [
+   "NR4",
+   "Narrowest of 4"
+  ],
+  "P02": [
+   "NR7",
+   "Narrowest of 7"
+  ],
+  "P03": [
+   "內含線 ×2",
+   "Two Inside Bars"
+  ],
+  "P04": [
+   "內含線 ×3",
+   "Three Inside Bars"
+  ],
+  "P05": [
+   "ID/NR4",
+   "Inside AND NR4"
+  ],
+  "P06": [
+   "三根遞減區間",
+   "Three Shrinking Ranges"
+  ],
+  "P08": [
+   "下降三角",
+   "Descending Triangle"
+  ],
+  "P09": [
+   "上升三角",
+   "Ascending Triangle"
+  ],
+  "P10": [
+   "對稱三角",
+   "Symmetrical Triangle"
+  ],
+  "P11": [
+   "上升楔形",
+   "Rising Wedge"
+  ],
+  "P12": [
+   "下降楔形",
+   "Falling Wedge"
+  ],
+  "P13": [
+   "空方旗形",
+   "Bear Flag"
+  ],
+  "P14": [
+   "空方三角旗",
+   "Bear Pennant"
+  ],
+  "P17": [
+   "雙頂",
+   "Double Top"
+  ],
+  "P19": [
+   "雙底",
+   "Double Bottom"
+  ],
+  "P20": [
+   "下降通道",
+   "Descending Channel"
+  ],
+  "P22": [
+   "箱型",
+   "Rectangle / Box"
+  ],
+  "P33": [
+   "上衝回落",
+   "Upthrust / Liquidity Sweep"
+  ],
+  "P34": [
+   "彈簧",
+   "Spring"
+  ],
+  "P35": [
+   "結構破壞（向下）",
+   "Break of Structure, Down"
+  ],
+  "P36": [
+   "結構破壞（向上）",
+   "Break of Structure, Up"
+  ],
+  "P37": [
+   "性格轉變（向下）",
+   "Change of Character, Down"
+  ],
+  "P38": [
+   "性格轉變（向上）",
+   "Change of Character, Up"
+  ],
+  "P39": [
+   "三下降峰",
+   "Three Falling Peaks"
+  ],
+  "P40": [
+   "三上升谷",
+   "Three Rising Valleys"
+  ],
+  "P41": [
+   "WR4  最近 4 根最寬",
+   "Widest of 4"
+  ],
+  "P42": [
+   "WR7  最近 7 根最寬",
+   "Widest of 7"
+  ],
+  "P43": [
+   "關鍵反轉（空）",
+   "Key Reversal, Bearish"
+  ],
+  "P44": [
+   "關鍵反轉（多）",
+   "Key Reversal, Bullish"
+  ],
+  "P45": [
+   "破前時段低",
+   "Prior Session Low Break"
+  ],
+  "P46": [
+   "破前時段高",
+   "Prior Session High Break"
+  ],
+  "P47": [
+   "號角頂",
+   "Horn Top"
+  ],
+  "P48": [
+   "管狀頂",
+   "Pipe Top"
+  ],
+  "P07": [
+   "布林帶寬擠壓",
+   "Bollinger Squeeze"
+  ],
+  "P15": [
+   "頭肩頂",
+   "Head and Shoulders"
+  ],
+  "P16": [
+   "頭肩底",
+   "Inverse Head and Shoulders"
+  ],
+  "P18": [
+   "三重頂",
+   "Triple Top"
+  ],
+  "P21": [
+   "上升通道",
+   "Ascending Channel"
+  ],
+  "P23": [
+   "三重底",
+   "Triple Bottom"
+  ],
+  "P24": [
+   "多方旗形",
+   "Bull Flag"
+  ],
+  "P25": [
+   "多方三角旗",
+   "Bull Pennant"
+  ],
+  "P26": [
+   "圓弧頂",
+   "Rounding Top"
+  ],
+  "P27": [
+   "圓弧底",
+   "Rounding Bottom"
+  ],
+  "P28": [
+   "杯柄",
+   "Cup and Handle"
+  ],
+  "P29": [
+   "擴散三角／喇叭形",
+   "Broadening Formation"
+  ],
+  "P30": [
+   "鑽石頂",
+   "Diamond Top"
+  ],
+  "P31": [
+   "島狀反轉",
+   "Island Reversal"
+  ],
+  "P32": [
+   "V 型反轉",
+   "V Reversal"
+  ],
+  "P49": [
+   "擴散頂／喇叭頂",
+   "Broadening Top / Megaphone"
+  ],
+  "P50": [
+   "擴散底",
+   "Broadening Bottom"
+  ],
+  "P51": [
+   "上升擴散楔形",
+   "Ascending Broadening Wedge"
+  ],
+  "P52": [
+   "下降擴散楔形",
+   "Descending Broadening Wedge"
+  ],
+  "P53": [
+   "右角擴散（上）",
+   "Right-Angled Ascending Broadening"
+  ],
+  "P54": [
+   "右角擴散（下）",
+   "Right-Angled Descending Broadening"
+  ],
+  "P55": [
+   "駝峰反轉",
+   "Bump-and-Run Reversal"
+  ],
+  "P56": [
+   "死貓反彈",
+   "Dead-Cat Bounce"
+  ],
+  "P57": [
+   "測量移動（下）",
+   "Measured Move Down"
+  ],
+  "P58": [
+   "扇形原則",
+   "Fan Principle"
+  ],
+  "P59": [
+   "穿越型態",
+   "Descending Scallop"
+  ],
+  "P60": [
+   "高位緊密旗形",
+   "High and Tight Flag"
+  ],
+  "P61": [
+   "鑽石底",
+   "Diamond Bottom"
+  ],
+  "P62": [
+   "島狀底",
+   "Island Bottom"
+  ],
+  "P63": [
+   "V 型底",
+   "V Bottom"
+  ],
+  "P64": [
+   "倒置杯柄",
+   "Inverted Cup and Handle"
+  ],
+  "P65": [
+   "塔形頂",
+   "Tower Top"
+  ],
+  "P66": [
+   "平底鍋底",
+   "Frypan Bottom"
+  ],
+  "P67": [
+   "缺口四分類",
+   "Breakaway / Runaway / Exhaustion / Common Gap"
+  ],
+  "P68": [
+   "雙頂四變體",
+   "Adam&Adam / Adam&Eve / Eve&Adam / Eve&Eve"
+  ],
+  "P69": [
+   "艾略特 5 波 ／ ABC",
+   "Elliott Wave"
+  ],
+  "P70": [
+   "費波那契回撤",
+   "Fibonacci Retracement"
+  ],
+  "P71": [
+   "江恩角度線",
+   "Gann Angles"
+  ],
+  "P72": [
+   "訂單塊 ／ 反轉塊",
+   "Order Block / Breaker Block"
+  ]
+ },
+ "buckets": {
+  "畫在圖上": [
+   "P18",
+   "P28",
+   "P29",
+   "P30",
+   "P49",
+   "P50",
+   "P51",
+   "P52",
+   "P53",
+   "P54",
+   "P55",
+   "P57",
+   "P61",
+   "P64",
+   "P68"
+  ],
+  "缺口排除": [
+   "P31",
+   "P62",
+   "P67"
+  ],
+  "D組範疇排除": [
+   "P07",
+   "P58",
+   "P69",
+   "P70",
+   "P71"
+  ],
+  "已檢定未畫": [
+   "P01",
+   "P02",
+   "P03",
+   "P04",
+   "P05",
+   "P06",
+   "P08",
+   "P09",
+   "P10",
+   "P11",
+   "P12",
+   "P13",
+   "P14",
+   "P17",
+   "P19",
+   "P20",
+   "P22",
+   "P33",
+   "P34",
+   "P35",
+   "P36",
+   "P37",
+   "P38",
+   "P39",
+   "P40",
+   "P41",
+   "P42",
+   "P43",
+   "P44",
+   "P45",
+   "P47",
+   "P48"
+  ],
+  "化約未畫": [
+   "P24",
+   "P25",
+   "P26",
+   "P27",
+   "P32",
+   "P56",
+   "P59",
+   "P60",
+   "P63",
+   "P65",
+   "P66",
+   "P72"
+  ],
+  "樞紐結案未畫": [
+   "P15",
+   "P16",
+   "P21",
+   "P23"
+  ]
+ }
+}
