@@ -1,7 +1,41 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260880.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260881.  DETECTION ONLY.  Places no orders, holds no position.
+
+  ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
+  table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
+
+    bars 421,455   pivot_high 75,136   pivot_low 76,017
+    formations 202   P49 112   P50 90   by_year 8 15 18 31 24 31 42 33
+    P29 202  P51 1670  P52 1715  P53 7  P54 8
+    P52 by_year 94 172 229 267 169 258 302 224
+    REV   P18 6352   P57 255   P68 1367
+    CUP   P28 7   P64 4   P55 628
+    DIA   P30 0   P61 1
+    break_down 75   break_up 88   expired 39   slot_overflow 0
+    sum = formations on all three LIFE lines
+
+  THE VERDICT, and it is negative
+    P18  dn 2190  up 2153   50.43%   z +0.56
+    P57  dn  105  up   89   54.12%   z +1.15
+    P68  dn  538  up  466   53.59%   z +2.27
+    P29  dn   75  up   88   46.01%   z -1.02   (control)
+
+    These three were selected out of 72 shapes on their mirror ratios
+    (P18 10.19x, P68 6.75x, P57 2.33x), so the threshold that applies is the
+    one for the whole search, not for three tests: this project already set
+    2.96 for its 33 tests, and 72 shapes would need 3.20.  P68's 2.27 does
+    not reach it, and P18 -- the strongest candidate by mirror ratio -- is a
+    coin flip at 50.43%.
+
+    Per the rule written down on 2026-08-30 BEFORE the numbers existed:
+    dn ~ up means break direction carries no pattern information.  The
+    "shapes with a direction" leg of the pattern layer is empty.  What is
+    NOT killed: P64's price band (untested, and 4 instances in eight years
+    is unlikely to carry a test), and the primitives -- the 2x2 of
+    higher-highs by higher-lows, the band device, slope comparison, the
+    decay law -- which describe rather than predict.
 
   Build history, the reasoning behind every rule, and the measurement
   each one rests on:  docs/research/S16S_P29_comment_record.md
