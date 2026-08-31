@@ -1,0 +1,223 @@
+{ ==========================================================================
+  IND_S16S_CONV6  --  the six convergence patterns, as a subchart ribbon
+
+  Build_ID 260900.  DETECTION ONLY.  Places no orders, holds no position.
+
+  P01 NR4 / P02 NR7 / P03 inside x2 / P04 inside x3 / P05 ID-NR4
+  / P06 three shrinking ranges
+
+  WHY A SEPARATE INDICATOR, AND WHY A RIBBON
+
+    Ruling of 2026-08-31: draw all six, but present them concisely.
+
+    Measured first, because the answer follows from the number.  The six
+    together mark 148,748 bars -- 35.29% of the series, one every 2.8 --
+    which is 104 marks on a median 300-bar screen and 145 at the worst.
+    Today's seven pivot shapes are 26 and 58 for comparison.
+
+    At that density TEXT IS THE WRONG PRIMITIVE.  A label reading
+    "P01 #135778" is about ten characters wide; one every 2.8 bars means
+    they overlap horizontally no matter which lane they sit in, because the
+    collision is in width, not in height.  Lanes solved the seven; they
+    cannot solve this.
+
+    So each mark is exactly one bar wide and lives in its own row.  Six
+    rows, rarest at the top, densest at the bottom -- the same ordering the
+    label lanes use in IND_S16S_P29.  A dense row reads as a band, which is
+    information (it shows where compression clusters), and it cannot
+    trespass on another pattern's row.
+
+    Separate file because these six paint nothing on price.  Putting them
+    in IND_S16S_P29 would have them competing with the pattern bodies that
+    file already recolours.
+
+  THE ROWS, bottom to top
+
+    1  P01 NR4            135,778   every 3.1 bars
+    2  P02 NR7             89,164   every 4.7
+    3  P06 3 shrinking     63,022   every 6.7
+    4  P05 ID-NR4          57,140   every 7.4
+    5  P03 inside x2       12,730   every 33.1
+    6  P04 inside x3        1,784   every 236.3
+
+  NO GAPS, ON PURPOSE
+
+    Every row plots on EVERY bar.  Firing is carried by COLOUR, not by
+    whether the plot exists.  On 2026-08-26 a NoPlot-gapped plot in
+    IND_S16S_P29 drew lines spanning the whole chart, because MC12
+    interpolates across the gap.  A plot that never gaps cannot do that.
+    Off-bars take Col_Idle, which should be left close to the chart
+    background.
+
+  SESSION RULE -- the reason this is not optional
+
+    These six read ADJACENT BARS, not pivots, so every one of them is
+    adjacency-dependent and none may span a session break.  Measured cost
+    of leaving it out: P02 3,124 false fires (3.39%), P01 1,785, P05 825,
+    P06 328, P03 31, P04 10.  Same failure as the twelve two-bar patterns
+    on 2026-08-21.
+
+  FREE PARAMETERS
+
+    N = 4 and N = 7 are Crabel's constants and have no geometric
+    derivation.  Accepted by ruling on 2026-08-31 -- recorded here as
+    borrowed, not derived, so nobody later mistakes them for the latter.
+    P03, P04 and P06 carry none.
+
+    "Narrowest" counts ties (<=), matching the inside-bar test, which is
+    non-strict because the previous bar's range IS the band and a
+    non-strict inside bar is exactly the band device of the 2026-08-29
+    ruling.  For NR there is no such derivation, so ties are a CHOICE and
+    still awaiting a ruling; the strict alternative costs 31.8% of P01 and
+    41.7% of P02.
+
+  ACCEPTANCE, printed on the last bar as CONV6 TALLY
+    P01 135778   P02 89164   P03 12730   P04 1784   P05 57140   P06 63022
+    Measured on the full csv, 421,513 bars.  A chart holding fewer bars
+    prints proportionally fewer; read CONV6 DIAG bars= first.
+
+  HOW TO SET IT UP
+    Apply to a SUBCHART, not the price pane.
+    Style tab: set every plot to Point or a thick line.  Scaling tab:
+    set the range to 0 .. 7 so the six rows sit evenly.
+  ======================================================================== }
+
+inputs:
+    Build_ID                ( 260900 ),
+    Sess_Day_Start          ( 845   ),
+    Sess_Day_End            ( 1345  ),
+    Sess_Night_Start        ( 1500  ),
+    Sess_Night_End          ( 500   ),
+    Enable_P01              ( 1     ),     { NR4, 135,778 }
+    Enable_P02              ( 1     ),     { NR7, 89,164 }
+    Enable_P03              ( 1     ),     { inside x2, 12,730 }
+    Enable_P04              ( 1     ),     { inside x3, 1,784 }
+    Enable_P05              ( 1     ),     { ID-NR4, 57,140 }
+    Enable_P06              ( 1     ),     { three shrinking, 63,022 }
+    Col_P01                 ( DarkGray  ),
+    Col_P02                 ( Blue      ),
+    Col_P03                 ( Cyan      ),
+    Col_P04                 ( Magenta   ),
+    Col_P05                 ( DarkGreen ),
+    Col_P06                 ( DarkRed   ),
+    Col_Idle                ( Black     ),  { leave near the background }
+    Print_Events            ( 0     );
+
+variables:
+    v_In_Day                ( False ),
+    v_In_Night              ( False ),
+    v_In_Sess               ( False ),
+    v_Sess_First            ( False ),
+    v_BIS                   ( 0     ),     { bars into the session }
+    v_R                     ( 0     ),
+    v_Ins0                  ( False ),
+    v_Ins1                  ( False ),
+    v_Ins2                  ( False ),
+    v_NR4                   ( False ),
+    v_NR7                   ( False ),
+    v_H1                    ( False ),
+    v_H2                    ( False ),
+    v_H3                    ( False ),
+    v_H4                    ( False ),
+    v_H5                    ( False ),
+    v_H6                    ( False ),
+    v_C01                   ( 0     ),
+    v_C02                   ( 0     ),
+    v_C03                   ( 0     ),
+    v_C04                   ( 0     ),
+    v_C05                   ( 0     ),
+    v_C06                   ( 0     ),
+    v_NBars                 ( 0     ),
+    v_Ymd                   ( 0     );
+
+    { ---------- SESSION.  Same construction as IND_S16S_P29 SECTION 1,
+      deliberately -- a second implementation of the session counter is
+      how two files start disagreeing. ---------- }
+
+v_In_Day   = Time >  Sess_Day_Start   and Time <= Sess_Day_End;
+v_In_Night = Time >  Sess_Night_Start or  Time <= Sess_Night_End;
+v_In_Sess  = v_In_Day or v_In_Night;
+
+v_Sess_First = False;
+if CurrentBar > 1 then begin
+    if v_In_Day   and ( v_In_Day[1]   = False ) then v_Sess_First = True;
+    if v_In_Night and ( v_In_Night[1] = False ) then v_Sess_First = True;
+end;
+
+if v_Sess_First then
+    v_BIS = 1
+else if v_In_Sess then
+    v_BIS = v_BIS + 1
+else
+    v_BIS = 0;
+
+v_NBars = v_NBars + 1;
+
+    { ---------- THE SIX.  Every one needs v_BIS >= its own bar count. --- }
+
+v_R = High - Low;
+
+{ inside bar: the previous bar's range IS the band, and the test is
+  non-strict because that is what the band device says -- 83.3% of P03 and
+  95.6% of P04 turn on this one choice. }
+v_Ins0 = ( High     <= High[1] ) and ( Low     >= Low[1] );
+v_Ins1 = ( High[1]  <= High[2] ) and ( Low[1]  >= Low[2] );
+v_Ins2 = ( High[2]  <= High[3] ) and ( Low[2]  >= Low[3] );
+
+v_NR4 = v_R <= MinList( High[1] - Low[1], High[2] - Low[2],
+                        High[3] - Low[3] );
+v_NR7 = v_NR4
+        and v_R <= MinList( High[4] - Low[4], High[5] - Low[5],
+                            High[6] - Low[6] );
+
+v_H1 = Enable_P01 <> 0 and v_BIS >= 4 and v_NR4;
+v_H2 = Enable_P02 <> 0 and v_BIS >= 7 and v_NR7;
+v_H3 = Enable_P03 <> 0 and v_BIS >= 3 and v_Ins0 and v_Ins1;
+v_H4 = Enable_P04 <> 0 and v_BIS >= 4 and v_Ins0 and v_Ins1 and v_Ins2;
+v_H5 = Enable_P05 <> 0 and v_BIS >= 4 and v_NR4 and v_Ins0;
+v_H6 = Enable_P06 <> 0 and v_BIS >= 3
+       and v_R < High[1] - Low[1]
+       and High[1] - Low[1] < High[2] - Low[2];
+
+if v_H1 then v_C01 = v_C01 + 1;
+if v_H2 then v_C02 = v_C02 + 1;
+if v_H3 then v_C03 = v_C03 + 1;
+if v_H4 then v_C04 = v_C04 + 1;
+if v_H5 then v_C05 = v_C05 + 1;
+if v_H6 then v_C06 = v_C06 + 1;
+
+    { ---------- THE RIBBON.  Rarest on top, densest at the bottom, the
+      same ordering the label lanes use.  Every row plots on every bar so
+      there is no gap for MC12 to interpolate across. ---------- }
+
+Plot1( 1, "NR4" );
+Plot2( 2, "NR7" );
+Plot3( 3, "Shrink3" );
+Plot4( 4, "ID-NR4" );
+Plot5( 5, "Inside2" );
+Plot6( 6, "Inside3" );
+
+if v_H1 then SetPlotColor( 1, Col_P01 ) else SetPlotColor( 1, Col_Idle );
+if v_H2 then SetPlotColor( 2, Col_P02 ) else SetPlotColor( 2, Col_Idle );
+if v_H6 then SetPlotColor( 3, Col_P06 ) else SetPlotColor( 3, Col_Idle );
+if v_H5 then SetPlotColor( 4, Col_P05 ) else SetPlotColor( 4, Col_Idle );
+if v_H3 then SetPlotColor( 5, Col_P03 ) else SetPlotColor( 5, Col_Idle );
+if v_H4 then SetPlotColor( 6, Col_P04 ) else SetPlotColor( 6, Col_Idle );
+
+if Print_Events <> 0 and ( v_H3 or v_H4 ) then begin
+    v_Ymd = Date + 19000000;
+    Print( "CONV6 INSIDE ", v_Ymd:8:0, " ", Time:4:0,
+           "  x2=", v_C03:6:0, "  x3=", v_C04:6:0 );
+end;
+
+if CurrentBar = 1 then Print( "IND_S16S_CONV6 build ", Build_ID:6:0 );
+
+if LastBarOnChart then begin
+    Print( "CONV6 DIAG   bars=", v_NBars:8:0,
+           "  last=", ( Date + 19000000 ):8:0, " ", Time:4:0 );
+    Print( "CONV6 TALLY  P01=", v_C01:7:0, "  P02=", v_C02:7:0,
+           "  P03=", v_C03:6:0, "  P04=", v_C04:5:0,
+           "  P05=", v_C05:7:0, "  P06=", v_C06:7:0 );
+    Print( "CONV6 TALLY  reference   135778    89164   12730   1784",
+           "    57140    63022   (full csv, 421,513 bars)" );
+end;
