@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260891.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260892.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
   table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
@@ -42,7 +42,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260891 ),
+    Build_ID                ( 260892 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -1779,7 +1779,7 @@ if LastBarOnChart then begin
            "  P32=", v_C32:4:0, "  P56=", v_C56:6:0,
            "  P59=", v_C59:5:0, "  P65=", v_C65:6:0,
            "  P72=", v_C72:6:0 );
-    Print( "SEVEN TALLY  reference   5242    60    97    9134    309    8572   18705" );
+    Print( "SEVEN TALLY  reference   5216    60    97    9133    307    3977   18433" );
     Print( "DIA TALLY  P30=", v_Seq30:4:0, "  P61=", v_Seq61:4:0 );
     Print( "DIA TALLY  reference  P30=   0  P61=   1",
            "   (20250908 0955-1150, span 23)" );

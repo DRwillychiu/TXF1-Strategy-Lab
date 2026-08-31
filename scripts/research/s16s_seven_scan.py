@@ -136,6 +136,9 @@ def main():
                 chain = chain[1:]
             chain.append((i, H[i] if k == 1 else L[i], k))
             n_push += 1
+            # ★ 指標用 v_s7Ok 短路：每次推入只有一個型態能成立，長視窗優先。
+            # 這一版原本讓七個各自獨立命中，於是 P65 被算成 8,572 而 MC12 印
+            # 3,977 -- 差 54%。母體的定義不只是述詞，還包括「誰先被問」。
             for code, _, need, start, fn in SEVEN:
                 if len(chain) < need:
                     continue
@@ -144,6 +147,7 @@ def main():
                     continue
                 if fn(s):
                     hit[code].append((s[0][0], s[-1][0]))
+                    break
     print('推入 %s 次   重置 %s 次   最終鏈長 %d'
           % (format(n_push, ','), format(n_reset, ','), len(chain)))
     print()
