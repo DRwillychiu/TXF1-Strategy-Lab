@@ -1,0 +1,289 @@
+<title>七種型態規格對照圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --ph:#c8302e;--pl:#17795e;--acc:#7a5cc4;
+ --serif:'Noto Serif TC',Georgia,serif;
+ --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+ --mono:'JetBrains Mono',ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --ph:#e8564e;--pl:#3ec08d;--acc:#a98ce8}}
+:root[data-theme="dark"]{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --ph:#e8564e;--pl:#3ec08d;--acc:#a98ce8}
+:root[data-theme="light"]{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --ph:#c8302e;--pl:#17795e;--acc:#7a5cc4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+ line-height:1.62}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+h1{font-family:var(--serif);font-size:33px;font-weight:700;margin:0 0 12px;
+ letter-spacing:-.01em}
+.lede{font-size:16px;color:var(--ink2);max-width:64ch;margin:0 0 26px}
+.pat{background:var(--card);border:1px solid var(--line);border-radius:11px;
+ padding:24px 26px;margin:22px 0}
+.hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+ border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+.hd code{font-family:var(--mono);font-size:15px;font-weight:600;
+ color:var(--acc)}
+.hd h2{font-family:var(--serif);font-size:22px;margin:0;font-weight:700}
+.hd .en{font-size:12.5px;color:var(--ink3)}
+.hd .n{margin-left:auto;font-family:var(--mono);font-size:13px;
+ color:var(--ink2);font-variant-numeric:tabular-nums}
+.body{display:grid;gap:24px;grid-template-columns:minmax(300px,1fr) minmax(280px,1fr)}
+.fig{overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+.zz{fill:none;stroke:var(--ink2);stroke-width:2;stroke-linejoin:round}
+circle.ph{fill:var(--ph)}circle.pl{fill:var(--pl)}
+text.pv{font:600 12px 'JetBrains Mono',monospace;fill:var(--ink);
+ text-anchor:middle}
+text.ax{font:500 11px 'Noto Sans TC',sans-serif;fill:var(--ink3)}
+text.cap{font:500 12px 'Noto Sans TC',sans-serif;fill:var(--ink3)}
+p{margin:0 0 12px;font-size:14.5px;color:var(--ink2)}
+p.lead{color:var(--ink);font-size:15px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:6px 0 14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line2);
+ vertical-align:top}
+th{font-size:11.5px;letter-spacing:.06em;color:var(--ink3);font-weight:600;
+ text-transform:uppercase;border-bottom:1px solid var(--line)}
+td.f{font-family:var(--mono);font-size:12.5px;color:var(--ink);
+ white-space:nowrap}
+.zero{background:var(--bg);border-left:3px solid var(--acc);
+ border-radius:0 7px 7px 0;padding:12px 15px;font-size:13.5px;
+ color:var(--ink2);margin:0 0 12px}
+.zero b{color:var(--ink)}
+.nb{font-size:13px;color:var(--ink3);border-top:1px dashed var(--line);
+ padding-top:11px;margin:0}
+.nb b{color:var(--ink2)}
+code{font-family:var(--mono);font-size:12.5px}
+.note{background:var(--card);border:1px solid var(--line);
+ border-left:3px solid var(--ink3);border-radius:10px;padding:18px 20px;
+ margin:26px 0;font-size:14px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.note h3{margin:0 0 8px;font-size:15px;color:var(--ink)}
+</style>
+<div class="wrap">
+<div class="eyebrow">S16_S · 2026-08-31 · Build 260890</div>
+<h1>七種型態 —— 規格逐條對照圖</h1>
+<p class="lede">這七種的邏輯先前已經審查過（08-29 樞紐型 A 組、08-30 母體普查），本頁把每一條規格標到圖上對應的位置，並記錄它為什麼是零參數。定義原樣取自已審查的來源，本頁沒有重寫任何一條。</p>
+<div class="note"><h3>示意圖不是隨手畫的</h3>每張圖的樞紐價格都先寫下來，再餵進<b>與指標同一組述詞</b>檢查它確實成立。座標若不滿足條件，產生器就掛掉。所以圖上看到的排列，就是程式碼會判定成立的排列。</div>
+<div class="pat">
+<div class="hd"><code>P15</code><h2>頭肩頂</h2><span class="en">Head and Shoulders</span><span class="n">八年 5,242 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P15 頭肩頂 規格對照圖">
+<polyline class="zz" points="46.0,90.0 193.5,154.0 341.0,26.0 488.5,146.3 636.0,84.9"/>
+<circle class="ph" cx="46.0" cy="90.0" r="5"/>
+<text class="pv" x="46.0" y="77.0">h0</text>
+<circle class="pl" cx="193.5" cy="154.0" r="5"/>
+<text class="pv" x="193.5" y="173.0">l1</text>
+<circle class="ph" cx="341.0" cy="26.0" r="5"/>
+<text class="pv" x="341.0" y="13.0">h1</text>
+<circle class="pl" cx="488.5" cy="146.3" r="5"/>
+<text class="pv" x="488.5" y="165.3">l2</text>
+<circle class="ph" cx="636.0" cy="84.9" r="5"/>
+<text class="pv" x="636.0" y="71.9">h2</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">5 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">五個交替樞紐，以樞紐高起頭。頭必須高過兩肩 —— 只有這一條。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>頭高過左肩</td><td class="f">h0 &lt; h2</td><td>第 1 與第 3 個高點</td></tr>
+<tr><td>頭高過右肩</td><td class="f">h2 &gt; h4</td><td>第 3 與第 5 個高點</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b><b>肩不要求對稱。</b>「兩肩要多接近」是容差，容差就是參數。頸線水平化同理。加上去的代價量在 <code>s16s_hs_scan.py</code>。</p>
+<p class="nb"><b>註：</b>08-29 原裁示是不編碼（鏡像同樣通過、不含方向）。08-31 標準改為「有出現就畫」，本型態因此進來。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P26</code><h2>圓弧頂</h2><span class="en">Rounding Top</span><span class="n">八年 60 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P26 圓弧頂 規格對照圖">
+<polyline class="zz" points="46.0,113.1 119.8,140.4 193.5,53.2 267.2,85.9 341.0,26.0 414.8,58.7 488.5,72.3 562.2,107.7 636.0,154.0"/>
+<circle class="ph" cx="46.0" cy="113.1" r="5"/>
+<text class="pv" x="46.0" y="100.1">h0</text>
+<circle class="pl" cx="119.8" cy="140.4" r="5"/>
+<text class="pv" x="119.8" y="159.4">l1</text>
+<circle class="ph" cx="193.5" cy="53.2" r="5"/>
+<text class="pv" x="193.5" y="40.2">h1</text>
+<circle class="pl" cx="267.2" cy="85.9" r="5"/>
+<text class="pv" x="267.2" y="104.9">l2</text>
+<circle class="ph" cx="341.0" cy="26.0" r="5"/>
+<text class="pv" x="341.0" y="13.0">h2</text>
+<circle class="pl" cx="414.8" cy="58.7" r="5"/>
+<text class="pv" x="414.8" y="77.7">l3</text>
+<circle class="ph" cx="488.5" cy="72.3" r="5"/>
+<text class="pv" x="488.5" y="59.3">h3</text>
+<circle class="pl" cx="562.2" cy="107.7" r="5"/>
+<text class="pv" x="562.2" y="126.7">l4</text>
+<circle class="ph" cx="636.0" cy="154.0" r="5"/>
+<text class="pv" x="636.0" y="141.0">h4</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">9 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">九個交替樞紐，取其中五個高點。先升後降，而且<b>上行在減速、下行在加速</b>。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>先升後降</td><td class="f">a &lt; b &lt; c &gt; d &gt; e</td><td>五個高點的排列</td></tr>
+<tr><td>上行減速</td><td class="f">(b−a) &gt; (c−b)</td><td>第二段漲幅小於第一段</td></tr>
+<tr><td>下行加速</td><td class="f">(c−d) &lt; (d−e)</td><td>第二段跌幅大於第一段</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>三條全是<b>同尺度的比較</b>，沒有任何外來常數。「圓不圓」不靠曲率門檻，靠兩段漲幅／兩段跌幅誰大誰小。</p>
+<p class="nb"><b>註：</b>08-30 量測：給定「先漲後跌」，圓弧 20.7%／尖頂 30.1%／混合 49.2%，接近兩個獨立銅板的 25/25/50 —— <b>這個標籤被量到沒有內容</b>。照 08-31 裁示仍然畫上去，讓你用眼睛檢查這個量測。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P32</code><h2>V 型反轉</h2><span class="en">V Reversal</span><span class="n">八年 97 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P32 V 型反轉 規格對照圖">
+<polyline class="zz" points="46.0,143.3 119.8,154.0 193.5,111.3 267.2,126.3 341.0,26.0 414.8,90.0 488.5,122.0 562.2,139.1 636.0,154.0"/>
+<circle class="ph" cx="46.0" cy="143.3" r="5"/>
+<text class="pv" x="46.0" y="130.3">h0</text>
+<circle class="pl" cx="119.8" cy="154.0" r="5"/>
+<text class="pv" x="119.8" y="173.0">l1</text>
+<circle class="ph" cx="193.5" cy="111.3" r="5"/>
+<text class="pv" x="193.5" y="98.3">h1</text>
+<circle class="pl" cx="267.2" cy="126.3" r="5"/>
+<text class="pv" x="267.2" y="145.3">l2</text>
+<circle class="ph" cx="341.0" cy="26.0" r="5"/>
+<text class="pv" x="341.0" y="13.0">h2</text>
+<circle class="pl" cx="414.8" cy="90.0" r="5"/>
+<text class="pv" x="414.8" y="109.0">l3</text>
+<circle class="ph" cx="488.5" cy="122.0" r="5"/>
+<text class="pv" x="488.5" y="109.0">h3</text>
+<circle class="pl" cx="562.2" cy="139.1" r="5"/>
+<text class="pv" x="562.2" y="158.1">l4</text>
+<circle class="ph" cx="636.0" cy="154.0" r="5"/>
+<text class="pv" x="636.0" y="141.0">h4</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">9 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">與 P26 <b>同一組九個樞紐</b>，只有加減速方向相反：<b>上行在加速、下行在減速</b> —— 一個尖頂。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>先升後降</td><td class="f">a &lt; b &lt; c &gt; d &gt; e</td><td>與 P26 完全相同</td></tr>
+<tr><td>上行加速</td><td class="f">(b−a) &lt; (c−b)</td><td>第二段漲幅大於第一段</td></tr>
+<tr><td>下行減速</td><td class="f">(c−d) &gt; (d−e)</td><td>第二段跌幅小於第一段</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>與 P26 互斥：兩者的第二、三條剛好相反，所以同一組樞紐不可能兩個都成立，指標裡用 else if 表達。</p>
+<p class="nb"><b>註：</b>「把畫面縮小，任何東西都符合 V」——你 08-30 的這句話成立，量測見左。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P56</code><h2>死貓反彈</h2><span class="en">Dead-Cat Bounce</span><span class="n">八年 9,134 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P56 死貓反彈 規格對照圖">
+<polyline class="zz" points="46.0,26.0 242.7,115.6 439.3,64.4 636.0,154.0"/>
+<circle class="ph" cx="46.0" cy="26.0" r="5"/>
+<text class="pv" x="46.0" y="13.0">h0</text>
+<circle class="pl" cx="242.7" cy="115.6" r="5"/>
+<text class="pv" x="242.7" y="134.6">l1</text>
+<circle class="ph" cx="439.3" cy="64.4" r="5"/>
+<text class="pv" x="439.3" y="51.4">h1</text>
+<circle class="pl" cx="636.0" cy="154.0" r="5"/>
+<text class="pv" x="636.0" y="173.0">l2</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">4 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">四個交替樞紐。跌下來、反彈、<b>反彈死在原本那段的區間裡</b>、然後創更低的低。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>先跌一段</td><td class="f">l1 &lt; h0</td><td>第一個低點低於第一個高點</td></tr>
+<tr><td>反彈死在區間內</td><td class="f">min(l1,h0) ≤ h1 ≤ max(l1,h0)</td><td>第二個高點落在前兩點框出的帶子裡</td></tr>
+<tr><td>再創低</td><td class="f">l2 &lt; l1</td><td>第二個低點低於第一個低點</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b><b>區間裝置</b>（08-29 裁示）：兩點定區間、第三點受測，容差就是 |h0−l1|，由型態自己給。零參數、免疫於衰減律。</p>
+<p class="nb"><b>註：</b>本組最頻繁的三個之一：8 年 9,134 個，每 46 根一個。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P59</code><h2>穿越型態</h2><span class="en">Descending Scallop</span><span class="n">八年 309 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P59 穿越型態 規格對照圖">
+<polyline class="zz" points="46.0,64.4 144.3,102.8 242.7,77.2 341.0,154.0 439.3,90.0 537.7,123.3 636.0,26.0"/>
+<circle class="ph" cx="46.0" cy="64.4" r="5"/>
+<text class="pv" x="46.0" y="51.4">h0</text>
+<circle class="pl" cx="144.3" cy="102.8" r="5"/>
+<text class="pv" x="144.3" y="121.8">l1</text>
+<circle class="ph" cx="242.7" cy="77.2" r="5"/>
+<text class="pv" x="242.7" y="64.2">h1</text>
+<circle class="pl" cx="341.0" cy="154.0" r="5"/>
+<text class="pv" x="341.0" y="173.0">l2</text>
+<circle class="ph" cx="439.3" cy="90.0" r="5"/>
+<text class="pv" x="439.3" y="77.0">h2</text>
+<circle class="pl" cx="537.7" cy="123.3" r="5"/>
+<text class="pv" x="537.7" y="142.3">l3</text>
+<circle class="ph" cx="636.0" cy="26.0" r="5"/>
+<text class="pv" x="636.0" y="13.0">h3</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">7 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">七個交替樞紐，取其中三個低點與頭尾兩個高點 —— <b>一個走完的 J</b>：探底、回升、而且回升比下跌短。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>中間那個低是谷底</td><td class="f">l1 &gt; l2 &lt; l3</td><td>三個低點的排列</td></tr>
+<tr><td>回升短於下跌</td><td class="f">(l1−l2) &gt; (l3−l2)</td><td>從谷底回升的幅度小於跌進谷底的幅度</td></tr>
+<tr><td>尾高過頭高</td><td class="f">h4 &gt; h0</td><td>最後一個高點高於第一個</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>三條都是型態自身兩段長度的比較。「J 的弧度」沒有被量，因為量它就要參數。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P65</code><h2>塔形頂</h2><span class="en">Tower Top</span><span class="n">八年 8,572 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P65 塔形頂 規格對照圖">
+<polyline class="zz" points="46.0,130.7 400.0,26.0 636.0,154.0"/>
+<circle class="pl" cx="46.0" cy="130.7" r="5"/>
+<text class="pv" x="46.0" y="149.7">l1</text>
+<circle class="ph" cx="400.0" cy="26.0" r="5"/>
+<text class="pv" x="400.0" y="13.0">h0</text>
+<circle class="pl" cx="636.0" cy="154.0" r="5"/>
+<text class="pv" x="636.0" y="173.0">l2</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">3 個樞紐，以樞紐低起頭</text>
+</svg></div>
+<div>
+<p class="lead">三個交替樞紐，<b>以樞紐低起頭</b>。漲上去、全數吐回、而且<b>跌的根數不多於漲的根數</b>。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>先漲</td><td class="f">h1 &gt; l0</td><td>中間的高點高於起點的低點</td></tr>
+<tr><td>全數吐回</td><td class="f">l1 &lt; l0</td><td>收尾的低點低於起點的低點</td></tr>
+<tr><td>跌得不比漲慢</td><td class="f">跌的根數 ≤ 漲的根數</td><td>兩段的 K 棒根數相比，不是速度門檻</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>第三條用<b>根數比根數</b>，不是「幾根之內」那種門檻。普查時原本還有一條「跌幅至少等於漲幅」，實測發現它完全被第二條涵蓋，個數一根不變，已刪。</p>
+</div></div></div>
+<div class="pat">
+<div class="hd"><code>P72</code><h2>訂單塊</h2><span class="en">Order Block</span><span class="n">八年 18,705 個</span></div>
+<div class="body">
+<div class="fig"><svg viewBox="0 0 660 200" role="img" aria-label="P72 訂單塊 規格對照圖">
+<polyline class="zz" points="46.0,90.0 341.0,154.0 636.0,26.0"/>
+<circle class="ph" cx="46.0" cy="90.0" r="5"/>
+<text class="pv" x="46.0" y="77.0">h0</text>
+<circle class="pl" cx="341.0" cy="154.0" r="5"/>
+<text class="pv" x="341.0" y="173.0">l1</text>
+<circle class="ph" cx="636.0" cy="26.0" r="5"/>
+<text class="pv" x="636.0" y="13.0">h1</text>
+<text class="ax" x="4" y="30">高</text>
+<text class="ax" x="4" y="154">低</text>
+<text class="cap" x="46" y="186">3 個樞紐，以樞紐高起頭</text>
+</svg></div>
+<div>
+<p class="lead">三個交替樞紐。<b>更高的高點，而且中間那個低點沉在舊高之下</b> —— 也就是那段吃掉舊高的推進，是從舊高底下發動的。</p>
+<table><thead><tr><th>條件</th><th>式子</th><th>圖上哪裡</th></tr></thead><tbody>
+<tr><td>中間的低沉在舊高之下</td><td class="f">l1 &lt; h0</td><td>回檔跌破了第一個高點的價位</td></tr>
+<tr><td>新高過舊高</td><td class="f">h1 &gt; h0</td><td>第二個高點高於第一個</td></tr>
+</tbody></table>
+<p class="zero"><b>零參數：</b>兩條都是價位大小比較。沒有「訂單塊要多大」「要停留幾根」這類外加條件 —— 那些都是參數。</p>
+<p class="nb"><b>註：</b>本組最頻繁：8 年 18,705 個，每 23 根一個。條件只有兩條，寬鬆是必然的。</p>
+</div></div></div>
+<div class="note"><h3>母體與繪圖量</h3>七種合計 <b>42,119</b> 個，加上原有的 3,602 個約 45,700 個型態。標籤與趨勢線都開的話約九萬個繪圖物件。<b>MC12 的上限我不知道，也不猜。</b>依 08-31 裁示七個全開，若跑不動，解法是限制繪製的回看根數，不是停止偵測一個真的發生過的形狀。<br><br>數字由 <code>scripts/research/s16s_seven_scan.py</code> 重放指標自己的十二槽鏈算出，不是沿用普查的滑動視窗 —— 那正是 08-30 整份普查要重算的原因。</div>
+<div class="note"><h3>誠實聲明</h3>本頁的示意圖是<b>示意</b>，不是真實 K 棒案例。真實案例在各自的來源頁（08-29 樞紐型 A 組、08-30 母體普查）。母體數字可複現；指標 Build 260890 <b>尚未在 MC12 跑過</b>，本頁沒有宣稱它跑得出這些數字。本頁由 Claude 產出，未經第二方審查。</div>
+</div>
