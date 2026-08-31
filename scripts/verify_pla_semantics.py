@@ -93,6 +93,46 @@ def classify(src):
     return wr
 
 
+def check_decl_sections(src):
+    """arrays: 區的每個宣告必須帶 [，variables: 區的不可以帶。
+
+    2026-08-31 實證：SECTION 6e 的二十個純量被加進了 arrays: 區，
+    MC12 對每一行回報 "Bracket '[' expected"，二十行編譯錯誤。
+    ASCII、scope、semantics 三支驗證器全部放行 —— 因為沒有人檢查
+    「這個宣告放對區了嗎」。一次編譯往返的代價，一條規則就擋掉。
+    """
+    sec, bad = None, []
+    for n, ln in enumerate(src, 1):
+        t = ln.split('{')[0].strip()
+        if not t:
+            continue
+        low = t.lower()
+        if low.startswith('variables:'):
+            sec = 'v'
+            continue
+        if low.startswith('arrays:'):
+            sec = 'a'
+            continue
+        if low.startswith('inputs:'):
+            sec = 'i'
+            continue
+        if sec not in ('v', 'a'):
+            continue
+        m = re.match(r'^([A-Za-z_]\w*)\s*(\[)?', t)
+        if not m or '(' not in t:
+            if t.endswith(';'):
+                sec = None
+            continue
+        has_idx = m.group(2) is not None
+        if sec == 'a' and not has_idx:
+            bad.append((n, m.group(1), 'arrays: 區的純量宣告，MC12 會要求 ['))
+        if sec == 'v' and has_idx:
+            bad.append((n, m.group(1), 'variables: 區的陣列宣告'))
+        if t.endswith(';'):
+            sec = None
+    return bad
+
+
 CASES = [
     (['v_X = True;'], 1, '單行指派'),
     (['v_A = 1;', 'v_X = False;'], 1, '連續指派'),
@@ -300,6 +340,13 @@ if _IS_IND:
     o('FLOW', '指標：最末行 v_Prev_MP 規範不適用')
 else:
     (o if 'v_Prev_MP' in last else w_)('FLOW', '腳本最末行: %s' % last[:56])
+
+_decl_bad = check_decl_sections(raw.split(chr(10)))
+if _decl_bad:
+    for _n, _nm, _why in _decl_bad:
+        f('DECLSEC', 'line %d  %s -- %s' % (_n, _nm, _why))
+else:
+    o('DECLSEC', 'variables: / arrays: 兩區的宣告形式都正確')
 
 print()
 print('=' * 82)

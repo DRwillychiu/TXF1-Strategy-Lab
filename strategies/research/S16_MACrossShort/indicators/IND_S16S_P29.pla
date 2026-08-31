@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260890.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260891.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
   table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
@@ -42,7 +42,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260890 ),
+    Build_ID                ( 260891 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -301,7 +301,33 @@ variables:
     v_NPvL                  ( 0     ),
     v_FirstYmd              ( 0     ),
     v_FirstTm               ( 0     ),
-    v_Yr                    ( 0     );
+    v_Yr                    ( 0     ),
+
+    { ---- SECTION 6e working set.  These read the SAME twelve-slot chain the
+      diamond and the cup use.  Writing a second chain is what made the
+      2026-08-30 census run against the wrong one and cost a whole rebuild,
+      so there is no second chain here.  Every window start is computed as
+      v_DChain - need, never a hard-coded 0 -- that is the 260881 bug. ---- }
+    v_s7w                   ( 0     ),     { window start = v_DChain - need }
+    v_s7a                   ( 0     ),     { the five highs, oldest first }
+    v_s7b                   ( 0     ),
+    v_s7c                   ( 0     ),
+    v_s7d                   ( 0     ),
+    v_s7e                   ( 0     ),
+    v_s7ub                  ( 0     ),     { P65: bars up, bars down }
+    v_s7db                  ( 0     ),
+    v_s7Ok                  ( False ),
+    v_s7Kind                ( 0     ),
+    v_s7Col                 ( 0     ),
+    v_s7Px                  ( 0     ),
+    v_s7Seq                 ( 0     ),
+    v_C15                   ( 0     ),
+    v_C26                   ( 0     ),
+    v_C32                   ( 0     ),
+    v_C56                   ( 0     ),
+    v_C59                   ( 0     ),
+    v_C65                   ( 0     ),
+    v_C72                   ( 0     );
 
 arrays:
     v_PvPx[7]               ( 0     ),
@@ -336,33 +362,7 @@ arrays:
     v_DTyp[11]              ( 0     ),     { 1 = high, 2 = low }
     v_DM7a[11]              ( 0     ),
     v_DDt[11]               ( 0     ),
-    v_DTm[11]               ( 0     ),
-
-    { ---- SECTION 6e working set.  These read the SAME twelve-slot chain the
-      diamond and the cup use.  Writing a second chain is what made the
-      2026-08-30 census run against the wrong one and cost a whole rebuild,
-      so there is no second chain here.  Every window start is computed as
-      v_DChain - need, never a hard-coded 0 -- that is the 260881 bug. ---- }
-    v_s7w                   ( 0     ),     { window start = v_DChain - need }
-    v_s7a                   ( 0     ),     { the five highs, oldest first }
-    v_s7b                   ( 0     ),
-    v_s7c                   ( 0     ),
-    v_s7d                   ( 0     ),
-    v_s7e                   ( 0     ),
-    v_s7ub                  ( 0     ),     { P65: bars up, bars down }
-    v_s7db                  ( 0     ),
-    v_s7Ok                  ( False ),
-    v_s7Kind                ( 0     ),
-    v_s7Col                 ( 0     ),
-    v_s7Px                  ( 0     ),
-    v_s7Seq                 ( 0     ),
-    v_C15                   ( 0     ),
-    v_C26                   ( 0     ),
-    v_C32                   ( 0     ),
-    v_C56                   ( 0     ),
-    v_C59                   ( 0     ),
-    v_C65                   ( 0     ),
-    v_C72                   ( 0     );
+    v_DTm[11]               ( 0     );
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
