@@ -31,43 +31,57 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 ATLAS = os.path.join('scripts', 'research', 's16s_make_full_atlas.py')
 OUT = os.path.join('docs', 'research', 'S16S_landing_map.html')
 
-# 六個桶，互斥且窮盡 72 種。每個桶：標題、狀態、要做什麼、代號清單
+# 五個桶，互斥且窮盡 72 種。分類軸是「畫得到嗎」，不是「檢定過嗎」。
+#
+# 2026-08-31 兩條裁示改了這張表：
+#   ① 「兩個都畫」 —— 化約掉的型態，底層骨架與 named pattern 都上圖。
+#      化約成立不代表畫不出來；把 named pattern 疊在骨架上當子標籤，
+#      沒有東西被藏起來，而且用戶在真實 K 棒上看那個標籤，
+#      本身就是在檢查「曲率是擲銅板」那個量測。
+#   ② 「只需要避開多方型態，但不需要繪製」 —— 18 種多方移出待辦。
+#
+# 而「已檢定未畫」那 24 種必須跟其餘分開，因為它們是 2026-08-25 被退回的那批：
+# 定義是 Claude 自行發明、自行檢定、事後回報的，從未逐一審查。
+# 定義存在不等於邏輯討論過。它們要走完整流程，不是轉譯工作。
 DRAWN = 'P29 P49 P50 P51 P52 P53 P54 P30 P61 P18 P57 P68 P28 P64 P55'.split()
-TESTED = ('P01 P02 P03 P04 P05 P06 P08 P09 P10 P11 P12 P13 P14 P17 P19 P20 P22 '
-          'P33 P34 P35 P36 P37 P38 P39 P40 P41 P42 P43 P44 P45 P46 P47 P48').split()
-REDUCED = 'P24 P25 P26 P27 P32 P56 P59 P60 P63 P65 P66 P72'.split()
-PIVOT = 'P15 P16 P21 P23'.split()
-GAP = 'P31 P62 P67'.split()
-DGRP = 'P07 P58 P69 P70 P71'.split()
+# 邏輯已審查、可直接接線
+READY = 'P26 P32 P56 P59 P65 P72 P15'.split()
+# 邏輯從未審查（2026-08-25 退回的 33 種裡的空方／中性者）
+UNREVIEWED = ('P01 P02 P03 P04 P05 P06 P08 P10 P11 P13 P14 P17 P20 P22 '
+              'P33 P35 P37 P39 P41 P42 P43 P45 P47 P48').split()
+# 多方，2026-08-31 裁示不繪製
+BULLISH = ('P09 P12 P16 P19 P21 P23 P24 P25 P27 P34 P36 P38 P40 P44 P46 '
+           'P60 P63 P66').split()
+# 結構性排除
+EXCLUDED = 'P31 P62 P67 P07 P58 P69 P70 P71'.split()
 
 BUCKETS = [
     ('done', '已畫在圖上', DRAWN,
      'Build 260881 的 15 種。開圖就看得到，標籤、趨勢線、本體上色都在。',
      '無。型態層在這 15 種上已經落地。'),
-    ('todo', '已檢定，但沒畫在圖上', TESTED,
-     '2026-08-24 兩波檢定的 33 種。Python 裡有定義、跑過檢定（33 次全負，'
-     'Bonferroni 3.17），但從來沒有接進指標 —— 檢定用的是 Python，不是 MC12。',
-     '把 Python 定義轉成 PowerLanguage 並接上繪圖。定義已經存在，'
-     '不需要重新討論邏輯，是轉譯與驗收工作。'),
-    ('todo', '化約結案，但沒畫在圖上', REDUCED,
-     '2026-08-30 的最後 15 種普查，12 個被化約成既有原語 —— '
-     '曲率是擲銅板、趨勢型態只是頭頭比較×底底比較的 2×2 格。',
-     '化約成立不代表畫不出來。零參數定義在普查裡已經寫好，'
-     '要畫的話是接線工作；但先要你裁示：**化約掉的型態還要不要單獨畫**。'),
-    ('todo', '樞紐型結案，但沒畫在圖上', PIVOT,
-     'P15 頭肩頂／P16 頭肩底屬峰谷形狀類，鏡像同樣通過；'
-     'P21 上升通道／P23 三重底是多方，依純空裁示排除。',
-     'P15 與同組已編碼的 P18 共用樞紐鏈，接線成本低。'
-     'P16／P21／P23 是多方型態，要畫的話需要你先鬆綁純空裁示。'),
-    ('out', '缺口組 —— 正當排除', GAP,
-     '5 分 K 上不存在跳空。時段內缺口 1,923 個，90.4% 剛好 1 點。',
-     '沒有東西可畫。這不是待辦，是量出來的事實。'),
-    ('out', 'D 組 —— 範疇裁示排除', DGRP,
-     '「因為這並非圖形型態探討的範疇。」指標型態、趨勢線疊圖、分析框架'
-     '都不是價格形狀本身。P69 實測站得住也不能救它。',
-     '不做。這是範疇判定，位階在實測之上。'),
+    ('ready', '邏輯已審查，等接線', READY,
+     'P26／P32 是 08-30 普查裡曲率被判定為擲銅板的兩個；'
+     'P56／P59／P65／P72 是化約進頭頭×底底 2×2 格的四個；'
+     'P15 頭肩頂在 08-29 樞紐型 A 組結案，與已編碼的 P18 共用樞紐鏈。'
+     '六個都有零參數定義、逐條邏輯與真實 K 棒案例，並經過你的裁示。',
+     '<b>直接接線</b>。依 08-31「兩個都畫」裁示：底層骨架（2×2 格、'
+     '「先漲後跌」）與 named pattern 都上圖，named pattern 疊成子標籤。'),
+    ('todo', '邏輯從未審查', UNREVIEWED,
+     '2026-08-24 兩波檢定裡的空方與中性型態。'
+     '<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，'
+     '2026-08-25 已因違反標準流程被退回，33 個定義從未逐一審查。'
+     'Python 裡有程式碼，不等於邏輯討論過。',
+     '走完整流程：<b>討論 → 逐一邏輯規劃 → 對照圖 → .md → HTML → 才程式碼化</b>。'
+     '每一個都要先確認零參數、確認定義是你認可的，才輪到接線。'),
+    ('out', '多方 —— 08-31 裁示不繪製', BULLISH,
+     '「我認為只需要避開多方型態，但不需要繪製。」',
+     '不做。避開即可，不花力氣畫。'),
+    ('out', '結構性排除', EXCLUDED,
+     '缺口組 P31／P62／P67：5 分 K 上不存在跳空，時段內缺口 1,923 個、'
+     '90.4% 剛好 1 點。D 組 P07／P58／P69／P70／P71：'
+     '「因為這並非圖形型態探討的範疇」，範疇判定位階在實測之上。',
+     '沒有東西可畫，或不在範疇。這不是待辦。'),
 ]
-
 
 def names():
     src = io.open(ATLAS, encoding='utf-8').read()
@@ -93,10 +107,9 @@ def main():
     for c in sorted(seen):
         assert c in nm, '%s 在桶裡但圖鑑沒有它' % c
 
-    n_done = len(DRAWN)
-    n_todo = len(TESTED) + len(REDUCED) + len(PIVOT)
-    n_out = len(GAP) + len(DGRP)
-    assert n_done + n_todo + n_out == 72
+    n_done, n_ready = len(DRAWN), len(READY)
+    n_todo, n_out = len(UNREVIEWED), len(BULLISH) + len(EXCLUDED)
+    assert n_done + n_ready + n_todo + n_out == 72
 
     P = []
     w = P.append
@@ -109,20 +122,20 @@ def main():
     w('''<style>
 :root{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
- --done:#17795e;--todo:#c8302e;--out:#7c8595;
+ --done:#17795e;--ready:#b8860b;--todo:#c8302e;--out:#7c8595;
  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
- --done:#3ec08d;--todo:#e8564e;--out:#79828f}}
+ --done:#3ec08d;--ready:#e0b64a;--todo:#e8564e;--out:#79828f}}
 :root[data-theme="dark"]{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
- --done:#3ec08d;--todo:#e8564e;--out:#79828f}
+ --done:#3ec08d;--ready:#e0b64a;--todo:#e8564e;--out:#79828f}
 :root[data-theme="light"]{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
- --done:#17795e;--todo:#c8302e;--out:#7c8595}
+ --done:#17795e;--ready:#b8860b;--todo:#c8302e;--out:#7c8595}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
  line-height:1.62;-webkit-font-smoothing:antialiased}
@@ -143,7 +156,8 @@ h1{font-family:var(--serif);font-size:34px;font-weight:700;margin:0 0 12px;
 .kpi b{font-family:var(--mono);font-size:30px;line-height:1;font-weight:600;
  font-variant-numeric:tabular-nums}
 .kpi span{font-size:12px;color:var(--ink3);margin-top:6px}
-.kpi .d b{color:var(--done)}.kpi .t b{color:var(--todo)}.kpi .o b{color:var(--out)}
+.kpi .d b{color:var(--done)}.kpi .r b{color:var(--ready)}
+.kpi .t b{color:var(--todo)}.kpi .o b{color:var(--out)}
 .bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:26px 0 6px;
  background:var(--line2)}
 .bar i{display:block}
@@ -155,7 +169,7 @@ h2{font-family:var(--serif);font-size:21px;font-weight:700;margin:38px 0 6px;
  letter-spacing:.08em;padding:2px 8px;border-radius:4px;margin-left:10px;
  vertical-align:3px;color:#fff}
 .tag.done{background:var(--done)}.tag.todo{background:var(--todo)}
-.tag.out{background:var(--out)}
+.tag.ready{background:var(--ready)}.tag.out{background:var(--out)}
 p{margin:0 0 12px;max-width:66ch;font-size:14.5px;color:var(--ink2)}
 p.work{color:var(--ink);border-left:3px solid var(--line);padding-left:14px}
 p.work b{font-weight:700}
@@ -189,19 +203,34 @@ p.work b{font-weight:700}
 
     w('<div class="kpi">')
     w('<div class="d"><b>%d</b><span>已畫在圖上</span></div>' % n_done)
-    w('<div class="t"><b>%d</b><span>有裁示，但沒畫在圖上</span></div>' % n_todo)
-    w('<div class="o"><b>%d</b><span>正當排除</span></div>' % n_out)
+    w('<div class="r"><b>%d</b><span>邏輯已審查，等接線</span></div>' % n_ready)
+    w('<div class="t"><b>%d</b><span>邏輯從未審查</span></div>' % n_todo)
+    w('<div class="o"><b>%d</b><span>不繪製</span></div>' % n_out)
     w('<div><b>72</b><span>純圖形型態母體</span></div>')
     w('</div>')
 
     w('<div class="bar">'
       '<i style="width:%.2f%%;background:var(--done)"></i>'
+      '<i style="width:%.2f%%;background:var(--ready)"></i>'
       '<i style="width:%.2f%%;background:var(--todo)"></i>'
       '<i style="width:%.2f%%;background:var(--out)"></i></div>'
-      % (100.0 * n_done / 72, 100.0 * n_todo / 72, 100.0 * n_out / 72))
-    w('<div class="barlbl"><span>已落地 %d</span>'
-      '<span>待接線 %d</span><span>排除 %d</span></div>' % (n_done, n_todo, n_out))
+      % (100.0 * n_done / 72, 100.0 * n_ready / 72,
+         100.0 * n_todo / 72, 100.0 * n_out / 72))
+    w('<div class="barlbl"><span>已落地 %d</span><span>等接線 %d</span>'
+      '<span>要走完整流程 %d</span><span>不繪製 %d</span></div>'
+      % (n_done, n_ready, n_todo, n_out))
 
+    w('<div class="note"><h3>2026-08-31 的兩條裁示</h3>'
+      '<b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，'
+      'named pattern 疊成子標籤。化約成立不代表畫不出來，'
+      '而且在真實 K 棒上看「圓弧頂」這個標籤，本身就是在檢查'
+      '「曲率是擲銅板」那個量測。<br><br>'
+      '<b>②「只需要避開多方型態，但不需要繪製」</b> —— 18 種多方移出待辦。<br><br>'
+      '<b>尚未裁示：</b>已畫在圖上的 15 種裡有 5 個是多方 —— '
+      'P50 擴散底、P52 下降擴散楔形、P54 右角擴散（下）、P28 杯柄、P61 鑽石底。'
+      '前三個是 08-28「有出現就畫上去」裁示的直接產物，'
+      '且 P50 是 P29 的 M7 拆分、拆不開；後兩個是裁示 A1／I1 要求編碼上圖的。'
+      '<b>要不要拿掉，等你裁示，我不替你推翻你自己三天前的裁示。</b></div>')
     w('<div class="note"><h3>那個 dn／up 的量測放在哪裡</h3>'
       '2026-08-31 量到 P18 破位往下 50.43%、P57 54.12%、P68 53.59%，'
       '都過不了本專案對 33 次檢定用的 2.96 門檻。'
@@ -230,7 +259,8 @@ p.work b{font-weight:700}
 
     io.open(OUT, 'w', encoding='utf-8', newline='\n').write('\n'.join(P))
     print('wrote %s' % OUT)
-    print('  已落地 %d / 待接線 %d / 排除 %d   合計 %d' % (n_done, n_todo, n_out, 72))
+    print('  已落地 %d / 等接線 %d / 走完整流程 %d / 不繪製 %d   合計 %d'
+          % (n_done, n_ready, n_todo, n_out, n_done + n_ready + n_todo + n_out))
 
 
 if __name__ == '__main__':

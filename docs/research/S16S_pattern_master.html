@@ -82,18 +82,18 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 <style>/* S16S_landing_map */
 #pg1{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
- --done:#17795e;--todo:#c8302e;--out:#7c8595;
+ --done:#17795e;--ready:#b8860b;--todo:#c8302e;--out:#7c8595;
  --serif:'Noto Serif TC',Georgia,'Songti TC',serif;
  --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #pg1{
  --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
- --done:#3ec08d;--todo:#e8564e;--out:#79828f}}[data-theme="dark"] #pg1{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --done:#3ec08d;--ready:#e0b64a;--todo:#e8564e;--out:#79828f}}[data-theme="dark"] #pg1{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
  --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
- --done:#3ec08d;--todo:#e8564e;--out:#79828f}[data-theme="light"] #pg1{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --done:#3ec08d;--ready:#e0b64a;--todo:#e8564e;--out:#79828f}[data-theme="light"] #pg1{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
  --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
- --done:#17795e;--todo:#c8302e;--out:#7c8595}#pg1, #pg1 *{box-sizing:border-box}#pg1{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+ --done:#17795e;--ready:#b8860b;--todo:#c8302e;--out:#7c8595}#pg1, #pg1 *{box-sizing:border-box}#pg1{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
  line-height:1.62;-webkit-font-smoothing:antialiased}#pg1 .wrap{max-width:1120px;margin:0 auto;padding:44px 20px 84px}#pg1 .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
  text-transform:uppercase;color:var(--ink3);margin-bottom:10px}#pg1 h1{font-family:var(--serif);font-size:34px;font-weight:700;margin:0 0 12px;
  letter-spacing:-.01em;text-wrap:balance}#pg1 .lede{font-size:16px;color:var(--ink2);max-width:64ch;margin:0 0 30px}#pg1 .quote{font-family:var(--serif);font-size:17px;color:var(--ink);
@@ -101,12 +101,12 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
  max-width:64ch}#pg1 .quote span{display:block;font-family:var(--sans);font-size:13px;
  color:var(--ink3);margin-top:8px}#pg1 .kpi{display:flex;flex-wrap:wrap;gap:34px;margin:0 0 8px;
  padding:22px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}#pg1 .kpi div{display:flex;flex-direction:column}#pg1 .kpi b{font-family:var(--mono);font-size:30px;line-height:1;font-weight:600;
- font-variant-numeric:tabular-nums}#pg1 .kpi span{font-size:12px;color:var(--ink3);margin-top:6px}#pg1 .kpi .d b{color:var(--done)}#pg1 .kpi .t b{color:var(--todo)}#pg1 .kpi .o b{color:var(--out)}#pg1 .bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:26px 0 6px;
+ font-variant-numeric:tabular-nums}#pg1 .kpi span{font-size:12px;color:var(--ink3);margin-top:6px}#pg1 .kpi .d b{color:var(--done)}#pg1 .kpi .r b{color:var(--ready)}#pg1 .kpi .t b{color:var(--todo)}#pg1 .kpi .o b{color:var(--out)}#pg1 .bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:26px 0 6px;
  background:var(--line2)}#pg1 .bar i{display:block}#pg1 .barlbl{display:flex;justify-content:space-between;font-size:12px;
  color:var(--ink3);font-family:var(--mono);margin-bottom:34px}#pg1 h2{font-family:var(--serif);font-size:21px;font-weight:700;margin:38px 0 6px;
  padding-top:22px;border-top:1px solid var(--line)}#pg1 .tag{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;
  letter-spacing:.08em;padding:2px 8px;border-radius:4px;margin-left:10px;
- vertical-align:3px;color:#fff}#pg1 .tag.done{background:var(--done)}#pg1 .tag.todo{background:var(--todo)}#pg1 .tag.out{background:var(--out)}#pg1 p{margin:0 0 12px;max-width:66ch;font-size:14.5px;color:var(--ink2)}#pg1 p.work{color:var(--ink);border-left:3px solid var(--line);padding-left:14px}#pg1 p.work b{font-weight:700}#pg1 .chips{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+ vertical-align:3px;color:#fff}#pg1 .tag.done{background:var(--done)}#pg1 .tag.todo{background:var(--todo)}#pg1 .tag.ready{background:var(--ready)}#pg1 .tag.out{background:var(--out)}#pg1 p{margin:0 0 12px;max-width:66ch;font-size:14.5px;color:var(--ink2)}#pg1 p.work{color:var(--ink);border-left:3px solid var(--line);padding-left:14px}#pg1 p.work b{font-weight:700}#pg1 .chips{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
  border-radius:7px;overflow:hidden;margin:16px 0 4px;
  grid-template-columns:repeat(auto-fill,minmax(232px,1fr))}#pg1 .chip{background:var(--card);padding:9px 13px;display:flex;gap:10px;
  align-items:baseline}#pg1 .chip code{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink3);
@@ -762,12 +762,14 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 <div class="quote">今天型態出現了，接下來才是進入規劃訊號以及策略層面的事情。因此應該是全部圖形討論清楚以及邏輯化後，並優化成指標，然後就能夠完整先在圖表上確認所有的圖形型態。這樣才是針對圖形型態的規畫之型態層的落地。<span>Willy，2026-08-31</span></div>
 <div class="kpi">
 <div class="d"><b>15</b><span>已畫在圖上</span></div>
-<div class="t"><b>49</b><span>有裁示，但沒畫在圖上</span></div>
-<div class="o"><b>8</b><span>正當排除</span></div>
+<div class="r"><b>7</b><span>邏輯已審查，等接線</span></div>
+<div class="t"><b>24</b><span>邏輯從未審查</span></div>
+<div class="o"><b>26</b><span>不繪製</span></div>
 <div><b>72</b><span>純圖形型態母體</span></div>
 </div>
-<div class="bar"><i style="width:20.83%;background:var(--done)"></i><i style="width:68.06%;background:var(--todo)"></i><i style="width:11.11%;background:var(--out)"></i></div>
-<div class="barlbl"><span>已落地 15</span><span>待接線 49</span><span>排除 8</span></div>
+<div class="bar"><i style="width:20.83%;background:var(--done)"></i><i style="width:9.72%;background:var(--ready)"></i><i style="width:33.33%;background:var(--todo)"></i><i style="width:36.11%;background:var(--out)"></i></div>
+<div class="barlbl"><span>已落地 15</span><span>等接線 7</span><span>要走完整流程 24</span><span>不繪製 26</span></div>
+<div class="note"><h3>2026-08-31 的兩條裁示</h3><b>①「兩個都畫」</b> —— 化約掉的型態，底層骨架與 named pattern 都上圖，named pattern 疊成子標籤。化約成立不代表畫不出來，而且在真實 K 棒上看「圓弧頂」這個標籤，本身就是在檢查「曲率是擲銅板」那個量測。<br><br><b>②「只需要避開多方型態，但不需要繪製」</b> —— 18 種多方移出待辦。<br><br><b>尚未裁示：</b>已畫在圖上的 15 種裡有 5 個是多方 —— P50 擴散底、P52 下降擴散楔形、P54 右角擴散（下）、P28 杯柄、P61 鑽石底。前三個是 08-28「有出現就畫上去」裁示的直接產物，且 P50 是 P29 的 M7 拆分、拆不開；後兩個是裁示 A1／I1 要求編碼上圖的。<b>要不要拿掉，等你裁示，我不替你推翻你自己三天前的裁示。</b></div>
 <div class="note"><h3>那個 dn／up 的量測放在哪裡</h3>2026-08-31 量到 P18 破位往下 50.43%、P57 54.12%、P68 53.59%，都過不了本專案對 33 次檢定用的 2.96 門檻。<b>那是訊號層規劃時的輸入，不是型態層的成績單。</b>型態層的工作是把形狀講清楚、邏輯化、畫上圖；形狀能不能預測方向，是下一層才問的問題。先前把它當成型態層的判決，是把下一階段的問題提前套在這一階段上。</div>
 <h2>已畫在圖上<span class="tag done">15 種</span></h2>
 <p>Build 260881 的 15 種。開圖就看得到，標籤、趨勢線、本體上色都在。</p>
@@ -789,9 +791,21 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 <div class="chip"><code>P64</code><span class="zh">倒置杯柄</span><span class="en">Inverted Cup and Handle</span></div>
 <div class="chip"><code>P55</code><span class="zh">駝峰反轉</span><span class="en">Bump-and-Run Reversal</span></div>
 </div>
-<h2>已檢定，但沒畫在圖上<span class="tag todo">33 種</span></h2>
-<p>2026-08-24 兩波檢定的 33 種。Python 裡有定義、跑過檢定（33 次全負，Bonferroni 3.17），但從來沒有接進指標 —— 檢定用的是 Python，不是 MC12。</p>
-<p class="work"><b>要做什麼：</b>把 Python 定義轉成 PowerLanguage 並接上繪圖。定義已經存在，不需要重新討論邏輯，是轉譯與驗收工作。</p>
+<h2>邏輯已審查，等接線<span class="tag ready">7 種</span></h2>
+<p>P26／P32 是 08-30 普查裡曲率被判定為擲銅板的兩個；P56／P59／P65／P72 是化約進頭頭×底底 2×2 格的四個；P15 頭肩頂在 08-29 樞紐型 A 組結案，與已編碼的 P18 共用樞紐鏈。六個都有零參數定義、逐條邏輯與真實 K 棒案例，並經過你的裁示。</p>
+<p class="work"><b>要做什麼：</b><b>直接接線</b>。依 08-31「兩個都畫」裁示：底層骨架（2×2 格、「先漲後跌」）與 named pattern 都上圖，named pattern 疊成子標籤。</p>
+<div class="chips">
+<div class="chip"><code>P26</code><span class="zh">圓弧頂</span><span class="en">Rounding Top</span></div>
+<div class="chip"><code>P32</code><span class="zh">V 型反轉</span><span class="en">V Reversal</span></div>
+<div class="chip"><code>P56</code><span class="zh">死貓反彈</span><span class="en">Dead-Cat Bounce</span></div>
+<div class="chip"><code>P59</code><span class="zh">穿越型態</span><span class="en">Descending Scallop</span></div>
+<div class="chip"><code>P65</code><span class="zh">塔形頂</span><span class="en">Tower Top</span></div>
+<div class="chip"><code>P72</code><span class="zh">訂單塊 ／ 反轉塊</span><span class="en">Order Block / Breaker Block</span></div>
+<div class="chip"><code>P15</code><span class="zh">頭肩頂</span><span class="en">Head and Shoulders</span></div>
+</div>
+<h2>邏輯從未審查<span class="tag todo">24 種</span></h2>
+<p>2026-08-24 兩波檢定裡的空方與中性型態。<b>那批定義是 Claude 自行發明、自行檢定、事後才回報的</b>，2026-08-25 已因違反標準流程被退回，33 個定義從未逐一審查。Python 裡有程式碼，不等於邏輯討論過。</p>
+<p class="work"><b>要做什麼：</b>走完整流程：<b>討論 → 逐一邏輯規劃 → 對照圖 → .md → HTML → 才程式碼化</b>。每一個都要先確認零參數、確認定義是你認可的，才輪到接線。</p>
 <div class="chips">
 <div class="chip"><code>P01</code><span class="zh">NR4</span><span class="en">Narrowest of 4</span></div>
 <div class="chip"><code>P02</code><span class="zh">NR7</span><span class="en">Narrowest of 7</span></div>
@@ -800,71 +814,54 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 <div class="chip"><code>P05</code><span class="zh">ID/NR4</span><span class="en">Inside AND NR4</span></div>
 <div class="chip"><code>P06</code><span class="zh">三根遞減區間</span><span class="en">Three Shrinking Ranges</span></div>
 <div class="chip"><code>P08</code><span class="zh">下降三角</span><span class="en">Descending Triangle</span></div>
-<div class="chip"><code>P09</code><span class="zh">上升三角</span><span class="en">Ascending Triangle</span></div>
 <div class="chip"><code>P10</code><span class="zh">對稱三角</span><span class="en">Symmetrical Triangle</span></div>
 <div class="chip"><code>P11</code><span class="zh">上升楔形</span><span class="en">Rising Wedge</span></div>
-<div class="chip"><code>P12</code><span class="zh">下降楔形</span><span class="en">Falling Wedge</span></div>
 <div class="chip"><code>P13</code><span class="zh">空方旗形</span><span class="en">Bear Flag</span></div>
 <div class="chip"><code>P14</code><span class="zh">空方三角旗</span><span class="en">Bear Pennant</span></div>
 <div class="chip"><code>P17</code><span class="zh">雙頂</span><span class="en">Double Top</span></div>
-<div class="chip"><code>P19</code><span class="zh">雙底</span><span class="en">Double Bottom</span></div>
 <div class="chip"><code>P20</code><span class="zh">下降通道</span><span class="en">Descending Channel</span></div>
 <div class="chip"><code>P22</code><span class="zh">箱型</span><span class="en">Rectangle / Box</span></div>
 <div class="chip"><code>P33</code><span class="zh">上衝回落</span><span class="en">Upthrust / Liquidity Sweep</span></div>
-<div class="chip"><code>P34</code><span class="zh">彈簧</span><span class="en">Spring</span></div>
 <div class="chip"><code>P35</code><span class="zh">結構破壞（向下）</span><span class="en">Break of Structure, Down</span></div>
-<div class="chip"><code>P36</code><span class="zh">結構破壞（向上）</span><span class="en">Break of Structure, Up</span></div>
 <div class="chip"><code>P37</code><span class="zh">性格轉變（向下）</span><span class="en">Change of Character, Down</span></div>
-<div class="chip"><code>P38</code><span class="zh">性格轉變（向上）</span><span class="en">Change of Character, Up</span></div>
 <div class="chip"><code>P39</code><span class="zh">三下降峰</span><span class="en">Three Falling Peaks</span></div>
-<div class="chip"><code>P40</code><span class="zh">三上升谷</span><span class="en">Three Rising Valleys</span></div>
 <div class="chip"><code>P41</code><span class="zh">WR4  最近 4 根最寬</span><span class="en">Widest of 4</span></div>
 <div class="chip"><code>P42</code><span class="zh">WR7  最近 7 根最寬</span><span class="en">Widest of 7</span></div>
 <div class="chip"><code>P43</code><span class="zh">關鍵反轉（空）</span><span class="en">Key Reversal, Bearish</span></div>
-<div class="chip"><code>P44</code><span class="zh">關鍵反轉（多）</span><span class="en">Key Reversal, Bullish</span></div>
 <div class="chip"><code>P45</code><span class="zh">破前時段低</span><span class="en">Prior Session Low Break</span></div>
-<div class="chip"><code>P46</code><span class="zh">破前時段高</span><span class="en">Prior Session High Break</span></div>
 <div class="chip"><code>P47</code><span class="zh">號角頂</span><span class="en">Horn Top</span></div>
 <div class="chip"><code>P48</code><span class="zh">管狀頂</span><span class="en">Pipe Top</span></div>
 </div>
-<h2>化約結案，但沒畫在圖上<span class="tag todo">12 種</span></h2>
-<p>2026-08-30 的最後 15 種普查，12 個被化約成既有原語 —— 曲率是擲銅板、趨勢型態只是頭頭比較×底底比較的 2×2 格。</p>
-<p class="work"><b>要做什麼：</b>化約成立不代表畫不出來。零參數定義在普查裡已經寫好，要畫的話是接線工作；但先要你裁示：**化約掉的型態還要不要單獨畫**。</p>
+<h2>多方 —— 08-31 裁示不繪製<span class="tag out">18 種</span></h2>
+<p>「我認為只需要避開多方型態，但不需要繪製。」</p>
+<p class="work"><b>要做什麼：</b>不做。避開即可，不花力氣畫。</p>
 <div class="chips">
-<div class="chip"><code>P24</code><span class="zh">多方旗形</span><span class="en">Bull Flag</span></div>
-<div class="chip"><code>P25</code><span class="zh">多方三角旗</span><span class="en">Bull Pennant</span></div>
-<div class="chip"><code>P26</code><span class="zh">圓弧頂</span><span class="en">Rounding Top</span></div>
-<div class="chip"><code>P27</code><span class="zh">圓弧底</span><span class="en">Rounding Bottom</span></div>
-<div class="chip"><code>P32</code><span class="zh">V 型反轉</span><span class="en">V Reversal</span></div>
-<div class="chip"><code>P56</code><span class="zh">死貓反彈</span><span class="en">Dead-Cat Bounce</span></div>
-<div class="chip"><code>P59</code><span class="zh">穿越型態</span><span class="en">Descending Scallop</span></div>
-<div class="chip"><code>P60</code><span class="zh">高位緊密旗形</span><span class="en">High and Tight Flag</span></div>
-<div class="chip"><code>P63</code><span class="zh">V 型底</span><span class="en">V Bottom</span></div>
-<div class="chip"><code>P65</code><span class="zh">塔形頂</span><span class="en">Tower Top</span></div>
-<div class="chip"><code>P66</code><span class="zh">平底鍋底</span><span class="en">Frypan Bottom</span></div>
-<div class="chip"><code>P72</code><span class="zh">訂單塊 ／ 反轉塊</span><span class="en">Order Block / Breaker Block</span></div>
-</div>
-<h2>樞紐型結案，但沒畫在圖上<span class="tag todo">4 種</span></h2>
-<p>P15 頭肩頂／P16 頭肩底屬峰谷形狀類，鏡像同樣通過；P21 上升通道／P23 三重底是多方，依純空裁示排除。</p>
-<p class="work"><b>要做什麼：</b>P15 與同組已編碼的 P18 共用樞紐鏈，接線成本低。P16／P21／P23 是多方型態，要畫的話需要你先鬆綁純空裁示。</p>
-<div class="chips">
-<div class="chip"><code>P15</code><span class="zh">頭肩頂</span><span class="en">Head and Shoulders</span></div>
+<div class="chip"><code>P09</code><span class="zh">上升三角</span><span class="en">Ascending Triangle</span></div>
+<div class="chip"><code>P12</code><span class="zh">下降楔形</span><span class="en">Falling Wedge</span></div>
 <div class="chip"><code>P16</code><span class="zh">頭肩底</span><span class="en">Inverse Head and Shoulders</span></div>
+<div class="chip"><code>P19</code><span class="zh">雙底</span><span class="en">Double Bottom</span></div>
 <div class="chip"><code>P21</code><span class="zh">上升通道</span><span class="en">Ascending Channel</span></div>
 <div class="chip"><code>P23</code><span class="zh">三重底</span><span class="en">Triple Bottom</span></div>
+<div class="chip"><code>P24</code><span class="zh">多方旗形</span><span class="en">Bull Flag</span></div>
+<div class="chip"><code>P25</code><span class="zh">多方三角旗</span><span class="en">Bull Pennant</span></div>
+<div class="chip"><code>P27</code><span class="zh">圓弧底</span><span class="en">Rounding Bottom</span></div>
+<div class="chip"><code>P34</code><span class="zh">彈簧</span><span class="en">Spring</span></div>
+<div class="chip"><code>P36</code><span class="zh">結構破壞（向上）</span><span class="en">Break of Structure, Up</span></div>
+<div class="chip"><code>P38</code><span class="zh">性格轉變（向上）</span><span class="en">Change of Character, Up</span></div>
+<div class="chip"><code>P40</code><span class="zh">三上升谷</span><span class="en">Three Rising Valleys</span></div>
+<div class="chip"><code>P44</code><span class="zh">關鍵反轉（多）</span><span class="en">Key Reversal, Bullish</span></div>
+<div class="chip"><code>P46</code><span class="zh">破前時段高</span><span class="en">Prior Session High Break</span></div>
+<div class="chip"><code>P60</code><span class="zh">高位緊密旗形</span><span class="en">High and Tight Flag</span></div>
+<div class="chip"><code>P63</code><span class="zh">V 型底</span><span class="en">V Bottom</span></div>
+<div class="chip"><code>P66</code><span class="zh">平底鍋底</span><span class="en">Frypan Bottom</span></div>
 </div>
-<h2>缺口組 —— 正當排除<span class="tag out">3 種</span></h2>
-<p>5 分 K 上不存在跳空。時段內缺口 1,923 個，90.4% 剛好 1 點。</p>
-<p class="work"><b>要做什麼：</b>沒有東西可畫。這不是待辦，是量出來的事實。</p>
+<h2>結構性排除<span class="tag out">8 種</span></h2>
+<p>缺口組 P31／P62／P67：5 分 K 上不存在跳空，時段內缺口 1,923 個、90.4% 剛好 1 點。D 組 P07／P58／P69／P70／P71：「因為這並非圖形型態探討的範疇」，範疇判定位階在實測之上。</p>
+<p class="work"><b>要做什麼：</b>沒有東西可畫，或不在範疇。這不是待辦。</p>
 <div class="chips">
 <div class="chip"><code>P31</code><span class="zh">島狀反轉</span><span class="en">Island Reversal</span></div>
 <div class="chip"><code>P62</code><span class="zh">島狀底</span><span class="en">Island Bottom</span></div>
 <div class="chip"><code>P67</code><span class="zh">缺口四分類</span><span class="en">Breakaway / Runaway / Exhaustion / Common Gap</span></div>
-</div>
-<h2>D 組 —— 範疇裁示排除<span class="tag out">5 種</span></h2>
-<p>「因為這並非圖形型態探討的範疇。」指標型態、趨勢線疊圖、分析框架都不是價格形狀本身。P69 實測站得住也不能救它。</p>
-<p class="work"><b>要做什麼：</b>不做。這是範疇判定，位階在實測之上。</p>
-<div class="chips">
 <div class="chip"><code>P07</code><span class="zh">布林帶寬擠壓</span><span class="en">Bollinger Squeeze</span></div>
 <div class="chip"><code>P58</code><span class="zh">扇形原則</span><span class="en">Fan Principle</span></div>
 <div class="chip"><code>P69</code><span class="zh">艾略特 5 波 ／ ABC</span><span class="en">Elliott Wave</span></div>
