@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260892.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260893.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
   table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
@@ -42,7 +42,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260892 ),
+    Build_ID                ( 260893 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -321,6 +321,8 @@ variables:
     v_s7Col                 ( 0     ),
     v_s7Px                  ( 0     ),
     v_s7Seq                 ( 0     ),
+    v_s7Lane                ( 0     ),     { 260893: fixed row per pattern }
+    v_s7Unit                ( 0     ),
     v_C15                   ( 0     ),
     v_C26                   ( 0     ),
     v_C32                   ( 0     ),
@@ -1371,44 +1373,58 @@ for v_k = 1 to 2 begin
                 v_s7Seq = 0;
                 if v_s7Kind = 15 then begin
                     v_C15   = v_C15 + 1;
-                    v_s7Seq = v_C15;
-                    v_s7Col = Col_P15;
+                    v_s7Seq  = v_C15;
+                    v_s7Col  = Col_P15;
+                    v_s7Lane = 3;
                 end;
                 if v_s7Kind = 26 then begin
                     v_C26   = v_C26 + 1;
-                    v_s7Seq = v_C26;
-                    v_s7Col = Col_P26;
+                    v_s7Seq  = v_C26;
+                    v_s7Col  = Col_P26;
+                    v_s7Lane = 6;
                 end;
                 if v_s7Kind = 32 then begin
                     v_C32   = v_C32 + 1;
-                    v_s7Seq = v_C32;
-                    v_s7Col = Col_P32;
+                    v_s7Seq  = v_C32;
+                    v_s7Col  = Col_P32;
+                    v_s7Lane = 5;
                 end;
                 if v_s7Kind = 56 then begin
                     v_C56   = v_C56 + 1;
-                    v_s7Seq = v_C56;
-                    v_s7Col = Col_P56;
+                    v_s7Seq  = v_C56;
+                    v_s7Col  = Col_P56;
+                    v_s7Lane = 2;
                 end;
                 if v_s7Kind = 59 then begin
                     v_C59   = v_C59 + 1;
-                    v_s7Seq = v_C59;
-                    v_s7Col = Col_P59;
+                    v_s7Seq  = v_C59;
+                    v_s7Col  = Col_P59;
+                    v_s7Lane = 4;
                 end;
                 if v_s7Kind = 65 then begin
                     v_C65   = v_C65 + 1;
-                    v_s7Seq = v_C65;
-                    v_s7Col = Col_P65;
+                    v_s7Seq  = v_C65;
+                    v_s7Col  = Col_P65;
+                    v_s7Lane = 1;
                 end;
                 if v_s7Kind = 72 then begin
                     v_C72   = v_C72 + 1;
-                    v_s7Seq = v_C72;
-                    v_s7Col = Col_P72;
+                    v_s7Seq  = v_C72;
+                    v_s7Col  = Col_P72;
+                    v_s7Lane = 0;
                 end;
 
+                { 260893: LANES.  The old placement was the last pivot
+                  price plus one offset, so two formations a few bars apart
+                  printed on top of each other -- and the worst 300-bar
+                  window holds 58 of them.  Anchoring to High and stepping by
+                  a fixed lane makes every pattern keep its own row: the rows
+                  stay level because the unit is a percentage of PRICE, not
+                  of each formation's span, which differs.  Ruling of
+                  2026-08-31: draw all seven, fix the arrangement. }
                 if Show_Labels <> 0 then begin
-                    v_s7Px = v_DPx[v_DChain - 1]
-                             + AbsValue( v_DPx[v_DChain - 1] )
-                               * Label_Offset_Pct / 1000;
+                    v_s7Unit = Close * Label_Offset_Pct / 10000;
+                    v_s7Px   = High + ( v_s7Lane + 1 ) * v_s7Unit;
                     v_Txt  = Text_New( Date, Time, v_s7Px,
                                        "P" + NumToStr( v_s7Kind, 0 )
                                        + " #" + NumToStr( v_s7Seq, 0 ) );
