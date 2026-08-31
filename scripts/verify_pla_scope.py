@@ -50,7 +50,11 @@ PUSH = 'if v_Push then begin'   # NOT `for v_k = 1 to 2 begin`: that loop runs
                                 # than "only on a push".  Checking the weaker
                                 # one passed Build 260871, which was wrong.
 
-PER_PUSH = ['v_Cnt29', 'v_Cnt51', 'v_Cnt52', 'v_Cnt53', 'v_Cnt54', 'v_CntForm',
+# 260890: SECTION 6e 的七個計數與其餘同層 -- 在 if v_Push 內、每次推入一次。
+# 這支驗證器就是為了 260871 那個「每根跑兩次」的 bug 而寫的，
+# 新增計數不納入清單，等於把它關掉。
+PER_PUSH = ['v_C15', 'v_C26', 'v_C32', 'v_C56', 'v_C59', 'v_C65', 'v_C72',
+            'v_Cnt29', 'v_Cnt51', 'v_Cnt52', 'v_Cnt53', 'v_Cnt54', 'v_CntForm',
             'v_Seq49', 'v_Seq50', 'v_Seq30', 'v_Seq61',
             'v_Cnt18', 'v_Cnt57', 'v_Cnt68',
             'v_Cnt28', 'v_Cnt64', 'v_Cnt55']

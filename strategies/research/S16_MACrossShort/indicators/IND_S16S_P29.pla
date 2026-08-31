@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260881.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260890.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260881.  Every line of the acceptance
   table matched, on a chart of 421,455 bars starting 2019-01-02 13:40:
@@ -42,7 +42,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260881 ),
+    Build_ID                ( 260890 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -109,6 +109,40 @@ inputs:
     Enable_P64              ( 1       ),   { inverted cup and handle, 4 }
     Enable_P55              ( 1       ),   { bump-and-run, 628 }
     Col_Cup                 ( Yellow  ),   { the two rims }
+    { ---- SECTION 6e, the seven whose logic was already reviewed ----------
+      2026-08-31 ruling: the pattern layer lands when a shape that OCCURS is
+      drawn, not when it tests.  These seven have zero-parameter definitions,
+      per-condition logic and real bar cases, and all seven carry Willy's
+      ruling.  Definitions transcribed unchanged from
+        s16s_census15_scan.py   P26 P32 P56 P59 P65 P72
+        s16s_hs_scan.py         P15  (the loose form -- shoulder symmetry
+                                would need a tolerance, so it is not used)
+
+      P15 was ruled DO-NOT-CODE on 08-29, on the grounds that the mirror passes
+      too and so it carries no direction.  That was the OLD standard.  The
+      08-31 standard is "a shape that happened gets drawn", exactly as P51
+      and P52 were reinstated on 08-28.  Superseded, and recorded as such.
+
+      The counts are large and that is a fact, not a reason to hide them:
+        P72 18,705   P56 9,134   P65 8,572   P15 5,242
+        P59    309   P32    97   P26    60          total 42,119
+      Drawing rides on the file's existing Show_Labels and Line_Mode
+      switches, so the capacity decision stays where the other patterns'
+      already is rather than becoming seven private defaults. ---- }
+    Enable_P15              ( 1       ),   { head and shoulders, 5,242 }
+    Enable_P26              ( 1       ),   { rounding top, 60 }
+    Enable_P32              ( 1       ),   { V reversal, 97 }
+    Enable_P56              ( 1       ),   { dead-cat bounce, 9,134 }
+    Enable_P59              ( 1       ),   { descending scallop, 309 }
+    Enable_P65              ( 1       ),   { tower top, 8,572 }
+    Enable_P72              ( 1       ),   { order block, 18,705 }
+    Col_P15                 ( Magenta   ),
+    Col_P26                 ( DarkGray  ),
+    Col_P32                 ( Red       ),
+    Col_P56                 ( Green     ),
+    Col_P59                 ( Blue      ),
+    Col_P65                 ( LightGray ),
+    Col_P72                 ( Cyan      ),
     Col_Bump                ( Magenta );   { the lead-in line }   { display nudge only, as a percentage of
                                              the formation's own height -- self
                                              referential, so not a magic distance }
@@ -302,7 +336,33 @@ arrays:
     v_DTyp[11]              ( 0     ),     { 1 = high, 2 = low }
     v_DM7a[11]              ( 0     ),
     v_DDt[11]               ( 0     ),
-    v_DTm[11]               ( 0     );
+    v_DTm[11]               ( 0     ),
+
+    { ---- SECTION 6e working set.  These read the SAME twelve-slot chain the
+      diamond and the cup use.  Writing a second chain is what made the
+      2026-08-30 census run against the wrong one and cost a whole rebuild,
+      so there is no second chain here.  Every window start is computed as
+      v_DChain - need, never a hard-coded 0 -- that is the 260881 bug. ---- }
+    v_s7w                   ( 0     ),     { window start = v_DChain - need }
+    v_s7a                   ( 0     ),     { the five highs, oldest first }
+    v_s7b                   ( 0     ),
+    v_s7c                   ( 0     ),
+    v_s7d                   ( 0     ),
+    v_s7e                   ( 0     ),
+    v_s7ub                  ( 0     ),     { P65: bars up, bars down }
+    v_s7db                  ( 0     ),
+    v_s7Ok                  ( False ),
+    v_s7Kind                ( 0     ),
+    v_s7Col                 ( 0     ),
+    v_s7Px                  ( 0     ),
+    v_s7Seq                 ( 0     ),
+    v_C15                   ( 0     ),
+    v_C26                   ( 0     ),
+    v_C32                   ( 0     ),
+    v_C56                   ( 0     ),
+    v_C59                   ( 0     ),
+    v_C65                   ( 0     ),
+    v_C72                   ( 0     );
 
     { ---------- SECTION 1 - SESSION ---------------------------------- }
 
@@ -1174,6 +1234,210 @@ for v_k = 1 to 2 begin
                 end;
             end;
 
+            { ---------- SECTION 6e - THE SEVEN ALREADY-REVIEWED SHAPES -----
+              P15 P26 P32 P56 P59 P65 P72.  One window per pattern, taken
+              from the END of the shared twelve-slot chain.  Each start is
+              v_DChain - need; none is a literal 0, which is the 260881 bug.
+
+              Only ONE of the seven fires per push.  The tests run longest
+              window first, so the rarer and more specific shape wins and
+              v_s7Ok short-circuits the rest.  That keeps one label per
+              formation instead of stacking three on the same bar. ---- }
+            v_s7Ok   = False;
+            v_s7Kind = 0;
+
+            { P26 rounding top / P32 V reversal -- nine pivots, H first,
+              five highs.  Both need rise-then-fall; they differ only in
+              which side decelerates, so they cannot both be true. }
+            if v_s7Ok = False and v_DChain >= 9 then begin
+                v_s7w = v_DChain - 9;
+                if v_DTyp[v_s7w] = 1 then begin
+                    v_s7a = v_DPx[v_s7w + 0];
+                    v_s7b = v_DPx[v_s7w + 2];
+                    v_s7c = v_DPx[v_s7w + 4];
+                    v_s7d = v_DPx[v_s7w + 6];
+                    v_s7e = v_DPx[v_s7w + 8];
+                    if v_s7a < v_s7b and v_s7b < v_s7c
+                       and v_s7c > v_s7d and v_s7d > v_s7e then begin
+                        if ( v_s7b - v_s7a ) > ( v_s7c - v_s7b )
+                           and ( v_s7c - v_s7d ) < ( v_s7d - v_s7e ) then begin
+                            if Enable_P26 <> 0 then begin
+                                v_s7Ok   = True;
+                                v_s7Kind = 26;
+                            end;
+                        end
+                        else if ( v_s7b - v_s7a ) < ( v_s7c - v_s7b )
+                                and ( v_s7c - v_s7d ) > ( v_s7d - v_s7e ) then begin
+                            if Enable_P32 <> 0 then begin
+                                v_s7Ok   = True;
+                                v_s7Kind = 32;
+                            end;
+                        end;
+                    end;
+                end;
+            end;
+
+            { P59 descending scallop -- seven pivots, H first.  One completed
+              J: the middle low is the trough, the recovery leg is shorter
+              than the fall into it, and the far high clears the near one. }
+            if v_s7Ok = False and Enable_P59 <> 0 and v_DChain >= 7 then begin
+                v_s7w = v_DChain - 7;
+                if v_DTyp[v_s7w] = 1 then begin
+                    v_s7a = v_DPx[v_s7w + 0];
+                    v_s7b = v_DPx[v_s7w + 1];
+                    v_s7c = v_DPx[v_s7w + 3];
+                    v_s7d = v_DPx[v_s7w + 5];
+                    v_s7e = v_DPx[v_s7w + 6];
+                    if v_s7b > v_s7c and v_s7c < v_s7d
+                       and ( v_s7b - v_s7c ) > ( v_s7d - v_s7c )
+                       and v_s7e > v_s7a then begin
+                        v_s7Ok   = True;
+                        v_s7Kind = 59;
+                    end;
+                end;
+            end;
+
+            { P15 head and shoulders -- five pivots, H first.  The head must
+              clear both shoulders.  Shoulder symmetry is NOT required: how
+              equal they must be is a tolerance, and a tolerance is a
+              parameter.  Measured cost of adding it is in s16s_hs_scan.py. }
+            if v_s7Ok = False and Enable_P15 <> 0 and v_DChain >= 5 then begin
+                v_s7w = v_DChain - 5;
+                if v_DTyp[v_s7w] = 1 then begin
+                    if v_DPx[v_s7w] < v_DPx[v_s7w + 2]
+                       and v_DPx[v_s7w + 2] > v_DPx[v_s7w + 4] then begin
+                        v_s7Ok   = True;
+                        v_s7Kind = 15;
+                    end;
+                end;
+            end;
+
+            { P56 dead-cat bounce -- four pivots, H first.  The bounce dies
+              inside the band the first two pivots define, then price makes a
+              lower low.  Band device, ruling of 2026-08-29: the tolerance is
+              the pattern's own high-minus-low, so it costs no parameter. }
+            if v_s7Ok = False and Enable_P56 <> 0 and v_DChain >= 4 then begin
+                v_s7w = v_DChain - 4;
+                if v_DTyp[v_s7w] = 1 then begin
+                    v_s7a = v_DPx[v_s7w + 0];
+                    v_s7b = v_DPx[v_s7w + 1];
+                    v_s7c = v_DPx[v_s7w + 2];
+                    v_s7d = v_DPx[v_s7w + 3];
+                    if v_s7b < v_s7a
+                       and v_s7c >= MinList( v_s7b, v_s7a )
+                       and v_s7c <= MaxList( v_s7b, v_s7a )
+                       and v_s7d < v_s7b then begin
+                        v_s7Ok   = True;
+                        v_s7Kind = 56;
+                    end;
+                end;
+            end;
+
+            { P65 tower top -- three pivots, L first.  Up, then down through
+              where it started, and the fall takes no more bars than the
+              rise.  Bars compared with bars, not a speed threshold. }
+            if v_s7Ok = False and Enable_P65 <> 0 and v_DChain >= 3 then begin
+                v_s7w = v_DChain - 3;
+                if v_DTyp[v_s7w] = 2 then begin
+                    v_s7ub = v_DBar[v_s7w + 1] - v_DBar[v_s7w];
+                    v_s7db = v_DBar[v_s7w + 2] - v_DBar[v_s7w + 1];
+                    if v_DPx[v_s7w + 1] > v_DPx[v_s7w]
+                       and v_DPx[v_s7w + 2] < v_DPx[v_s7w]
+                       and v_s7db <= v_s7ub then begin
+                        v_s7Ok   = True;
+                        v_s7Kind = 65;
+                    end;
+                end;
+            end;
+
+            { P72 order block -- three pivots, H first.  A higher high whose
+              intervening low sat below the first high: the leg that took out
+              the old high began from under it. }
+            if v_s7Ok = False and Enable_P72 <> 0 and v_DChain >= 3 then begin
+                v_s7w = v_DChain - 3;
+                if v_DTyp[v_s7w] = 1 then begin
+                    if v_DPx[v_s7w + 2] > v_DPx[v_s7w]
+                       and v_DPx[v_s7w + 1] < v_DPx[v_s7w] then begin
+                        v_s7Ok   = True;
+                        v_s7Kind = 72;
+                    end;
+                end;
+            end;
+
+            { ---- count first, draw second.  The count is the census and is
+              never gated on a drawing switch -- that was the 260852 bug. -- }
+            if v_s7Ok then begin
+                v_s7Col = Col_P72;
+                v_s7Seq = 0;
+                if v_s7Kind = 15 then begin
+                    v_C15   = v_C15 + 1;
+                    v_s7Seq = v_C15;
+                    v_s7Col = Col_P15;
+                end;
+                if v_s7Kind = 26 then begin
+                    v_C26   = v_C26 + 1;
+                    v_s7Seq = v_C26;
+                    v_s7Col = Col_P26;
+                end;
+                if v_s7Kind = 32 then begin
+                    v_C32   = v_C32 + 1;
+                    v_s7Seq = v_C32;
+                    v_s7Col = Col_P32;
+                end;
+                if v_s7Kind = 56 then begin
+                    v_C56   = v_C56 + 1;
+                    v_s7Seq = v_C56;
+                    v_s7Col = Col_P56;
+                end;
+                if v_s7Kind = 59 then begin
+                    v_C59   = v_C59 + 1;
+                    v_s7Seq = v_C59;
+                    v_s7Col = Col_P59;
+                end;
+                if v_s7Kind = 65 then begin
+                    v_C65   = v_C65 + 1;
+                    v_s7Seq = v_C65;
+                    v_s7Col = Col_P65;
+                end;
+                if v_s7Kind = 72 then begin
+                    v_C72   = v_C72 + 1;
+                    v_s7Seq = v_C72;
+                    v_s7Col = Col_P72;
+                end;
+
+                if Show_Labels <> 0 then begin
+                    v_s7Px = v_DPx[v_DChain - 1]
+                             + AbsValue( v_DPx[v_DChain - 1] )
+                               * Label_Offset_Pct / 1000;
+                    v_Txt  = Text_New( Date, Time, v_s7Px,
+                                       "P" + NumToStr( v_s7Kind, 0 )
+                                       + " #" + NumToStr( v_s7Seq, 0 ) );
+                    if v_Txt >= 0 then begin
+                        Text_SetColor( v_Txt, v_s7Col );
+                        Text_SetSize( v_Txt, Label_Size );
+                    end;
+                end;
+
+                if Line_Mode = 1 then begin
+                    v_TLup = TL_New( v_DDt[v_s7w], v_DTm[v_s7w],
+                                     v_DPx[v_s7w],
+                                     v_DDt[v_DChain - 1], v_DTm[v_DChain - 1],
+                                     v_DPx[v_DChain - 1] );
+                    if v_TLup >= 0 then begin
+                        TL_SetColor( v_TLup, v_s7Col );
+                        TL_SetSize( v_TLup, 1 );
+                    end;
+                end;
+
+                if Print_Events <> 0 then begin
+                    v_Ymd = Date + 19000000;
+                    Print( "SEVEN FORM  P", v_s7Kind:2:0, "  ", v_Ymd:8:0,
+                           " ", Time:4:0, "  seq=", v_s7Seq:6:0,
+                           "  span=",
+                           ( v_DBar[v_DChain - 1] - v_DBar[v_s7w] ):4:0 );
+                end;
+            end;
+
 
     end;
 
@@ -1511,6 +1775,11 @@ if LastBarOnChart then begin
            "  exp=", v_Ex68:6:0, "  sum=", ( v_Dn68 + v_Up68 + v_Ex68 ):6:0,
            "  formations=", v_Cnt68:6:0 );
     Print( "P18 LIFE   sum must equal formations; dn vs up is the verdict" );
+    Print( "SEVEN TALLY  P15=", v_C15:6:0, "  P26=", v_C26:4:0,
+           "  P32=", v_C32:4:0, "  P56=", v_C56:6:0,
+           "  P59=", v_C59:5:0, "  P65=", v_C65:6:0,
+           "  P72=", v_C72:6:0 );
+    Print( "SEVEN TALLY  reference   5242    60    97    9134    309    8572   18705" );
     Print( "DIA TALLY  P30=", v_Seq30:4:0, "  P61=", v_Seq61:4:0 );
     Print( "DIA TALLY  reference  P30=   0  P61=   1",
            "   (20250908 0955-1150, span 23)" );
