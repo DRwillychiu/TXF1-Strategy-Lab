@@ -1,7 +1,7 @@
 { ==========================================================================
   IND_S16S_P29  --  broadening formation detector (P29 / P49 / P50)
 
-  Build_ID 260911.  DETECTION ONLY.  Places no orders, holds no position.
+  Build_ID 260912.  DETECTION ONLY.  Places no orders, holds no position.
 
   ACCEPTED IN MC12, 2026-08-31, build 260893 -- SECTION 6e, the seven:
 
@@ -36,7 +36,7 @@
     formations 202   P49 112   P50 90   by_year 8 15 18 31 24 31 42 33
     P29 202  P51 1670  P52 1715  P53 7  P54 8
     P52 by_year 94 172 229 267 169 258 302 224
-    REV   P18 6352   P57 255   P68 1367
+    REV   P18 6352   P57 255   P17 1367
     CUP   P28 7   P64 4   P55 628
     DIA   P30 0   P61 1
     break_down 75   break_up 88   expired 39   slot_overflow 0
@@ -45,13 +45,13 @@
   THE VERDICT, and it is negative
     P18  dn 2190  up 2153   50.43%   z +0.56
     P57  dn  105  up   89   54.12%   z +1.15
-    P68  dn  538  up  466   53.59%   z +2.27
+    P17  dn  538  up  466   53.59%   z +2.27
     P29  dn   75  up   88   46.01%   z -1.02   (control)
 
     These three were selected out of 72 shapes on their mirror ratios
-    (P18 10.19x, P68 6.75x, P57 2.33x), so the threshold that applies is the
+    (P18 10.19x, P17 6.75x, P57 2.33x), so the threshold that applies is the
     one for the whole search, not for three tests: this project already set
-    2.96 for its 33 tests, and 72 shapes would need 3.20.  P68's 2.27 does
+    2.96 for its 33 tests, and 72 shapes would need 3.20.  P17's 2.27 does
     not reach it, and P18 -- the strongest candidate by mirror ratio -- is a
     coin flip at 50.43%.
 
@@ -68,7 +68,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260911 ),
+    Build_ID                ( 260912 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -150,7 +150,7 @@ inputs:
     { 260870 -- record }
     Enable_P18              ( 1       ),   { triple top, band device, 10.19x }
     Enable_P57              ( 1       ),   { measured move down, 2.33x }
-    Enable_P68              ( 1       ),   { double top, 6.75x }
+    Enable_P17              ( 1       ),   { double top, 6.75x }
     Col_Revisit             ( LightGray ),  { labels only -- see below }
 
     { 260880.  Ruling A1: the cup is drawn to be SEEN, not traded -- 7 in eight
@@ -325,10 +325,10 @@ variables:
     v_bandHi                ( 0     ),
     v_Cnt18                 ( 0     ),
     v_Cnt57                 ( 0     ),
-    v_Cnt68                 ( 0     ),
+    v_Cnt17                 ( 0     ),
     v_Seq18                 ( 0     ),
     v_Seq57                 ( 0     ),
-    v_Seq68                 ( 0     ),
+    v_Seq17                 ( 0     ),
 
     { 260880 -- record }
     v_d0                    ( 0     ),
@@ -350,9 +350,9 @@ variables:
     v_Dn57                  ( 0     ),
     v_Up57                  ( 0     ),
     v_Ex57                  ( 0     ),
-    v_Dn68                  ( 0     ),
-    v_Up68                  ( 0     ),
-    v_Ex68                  ( 0     ),
+    v_Dn17                  ( 0     ),
+    v_Up17                  ( 0     ),
+    v_Ex17                  ( 0     ),
     v_TL                    ( 0     ),
     v_RevPx                 ( 0     ),
 
@@ -1148,15 +1148,15 @@ for v_k = 1 to 2 begin
             end;
         end;
 
-            { SECTION 6c - P18 / P57 / P68 -- record }
+            { SECTION 6c - P18 / P57 / P17 -- record }
 
         v_RevPx = 0;
 
-        if Enable_P68 <> 0 and v_Chain >= 3 then begin
+        if Enable_P17 <> 0 and v_Chain >= 3 then begin
             v_a = v_Chain - 3;
             if v_PvTyp[v_a] = 1 and v_PvPx[v_a] = v_PvPx[v_a + 2] then begin
-                v_Cnt68 = v_Cnt68 + 1;
-                v_Seq68 = v_Seq68 + 1;
+                v_Cnt17 = v_Cnt17 + 1;
+                v_Seq17 = v_Seq17 + 1;
 
                 { ruling C: the break levels are the formation's OWN -- record }
                 if Break_Mode <> 0 then begin
@@ -1174,13 +1174,13 @@ for v_k = 1 to 2 begin
                     v_BkUp[v_Free]  = MaxList( v_PvPx[v_a], v_PvPx[v_a + 2] );
                     v_BkSt[v_Free]  = CurrentBar + 1;
                     v_BkEnd[v_Free] = CurrentBar + 1 + ( v_PvBar[v_a + 2] - v_PvBar[v_a] );
-                    v_BkSeq[v_Free] = v_Seq68;
-                    v_BkVar[v_Free] = 68;
+                    v_BkSeq[v_Free] = v_Seq17;
+                    v_BkVar[v_Free] = 17;
                 end;
                 if Show_Labels <> 0 then begin
                     v_RevPx = High + ( High - Low ) * Label_Offset_Pct / 100;
                     v_Txt = Text_New( Date, Time, v_RevPx,
-                                      "P68 #" + NumToStr( v_Seq68, 0 ) );
+                                      "P17 #" + NumToStr( v_Seq17, 0 ) );
                     if v_Txt >= 0 then begin
                         Text_SetColor( v_Txt, Col_Revisit );
                         Text_SetSize( v_Txt, Label_Size );
@@ -1188,7 +1188,7 @@ for v_k = 1 to 2 begin
                 end;
                 if Print_Events <> 0 then begin
                     v_Ymd = Date + 19000000;
-                    Print( "P68 FORM ", v_Ymd:8:0, " ", Time:4:0,
+                    Print( "P17 FORM ", v_Ymd:8:0, " ", Time:4:0,
                            "  px=", v_PvPx[v_a]:7:0,
                            "  span=", ( v_PvBar[v_a + 2] - v_PvBar[v_a] ):3:0 );
                 end;
@@ -1781,7 +1781,7 @@ if Break_Mode <> 0 then begin
                     v_CntExp = v_CntExp + 1;
                 if v_BkVar[v_s] = 18 then v_Ex18 = v_Ex18 + 1;
                 if v_BkVar[v_s] = 57 then v_Ex57 = v_Ex57 + 1;
-                if v_BkVar[v_s] = 68 then v_Ex68 = v_Ex68 + 1;
+                if v_BkVar[v_s] = 17 then v_Ex17 = v_Ex17 + 1;
                 if Print_Events <> 0 then begin
                     v_Ymd = Date + 19000000;
                     Print( "P29 BK_NONE ", v_Ymd:8:0, " ", Time:4:0,
@@ -1796,7 +1796,7 @@ if Break_Mode <> 0 then begin
                         v_CntDn = v_CntDn + 1;
                     if v_BkVar[v_s] = 18 then v_Dn18 = v_Dn18 + 1;
                     if v_BkVar[v_s] = 57 then v_Dn57 = v_Dn57 + 1;
-                    if v_BkVar[v_s] = 68 then v_Dn68 = v_Dn68 + 1;
+                    if v_BkVar[v_s] = 17 then v_Dn17 = v_Dn17 + 1;
                     if v_BkHit <> 1 then begin
                         v_BkHit   = 1;
                         v_BkHitSq = v_BkSeq[v_s];
@@ -1815,7 +1815,7 @@ if Break_Mode <> 0 then begin
                         v_CntUp = v_CntUp + 1;
                     if v_BkVar[v_s] = 18 then v_Up18 = v_Up18 + 1;
                     if v_BkVar[v_s] = 57 then v_Up57 = v_Up57 + 1;
-                    if v_BkVar[v_s] = 68 then v_Up68 = v_Up68 + 1;
+                    if v_BkVar[v_s] = 17 then v_Up17 = v_Up17 + 1;
                     if v_BkHit = 0 then begin
                         v_BkHit   = 2;
                         v_BkHitSq = v_BkSeq[v_s];
@@ -2000,7 +2000,7 @@ if LastBarOnChart then begin
     Print( "P29 VARIANT  reference  202    1670    1716   1678   1464",
            "   P53/P54 are now containment, not exact" );
     Print( "REV TALLY  P18=", v_Cnt18:6:0,
-           "  P57=", v_Cnt57:5:0, "  P68=", v_Cnt68:6:0 );
+           "  P57=", v_Cnt57:5:0, "  P17=", v_Cnt17:6:0 );
     Print( "REV TALLY  reference  6352          255    1367",
            "   (Pivot_Window = 1)" );
     Print( "PIVOT      window=", Pivot_Window:2:0,
@@ -2014,9 +2014,9 @@ if LastBarOnChart then begin
     Print( "P57 LIFE   dn=", v_Dn57:6:0, "  up=", v_Up57:6:0,
            "  exp=", v_Ex57:6:0, "  sum=", ( v_Dn57 + v_Up57 + v_Ex57 ):6:0,
            "  formations=", v_Cnt57:6:0 );
-    Print( "P68 LIFE   dn=", v_Dn68:6:0, "  up=", v_Up68:6:0,
-           "  exp=", v_Ex68:6:0, "  sum=", ( v_Dn68 + v_Up68 + v_Ex68 ):6:0,
-           "  formations=", v_Cnt68:6:0 );
+    Print( "P17 LIFE   dn=", v_Dn17:6:0, "  up=", v_Up17:6:0,
+           "  exp=", v_Ex17:6:0, "  sum=", ( v_Dn17 + v_Up17 + v_Ex17 ):6:0,
+           "  formations=", v_Cnt17:6:0 );
     Print( "P18 LIFE   sum must equal formations; dn vs up is the verdict" );
     Print( "SEVEN TALLY  P15=", v_C15:6:0, "  P26=", v_C26:4:0,
            "  P32=", v_C32:4:0, "  P56=", v_C56:6:0,

@@ -12,9 +12,9 @@ description each and jumped to the statistics.  Rebuilt to the same depth.
 Four corrections stand behind the numbers, and the page says so rather than
 presenting the final figures as if they had arrived first:
 
-  control v1   whole-series shuffle      P68 391x   artifact
-  control v2   year-stratified           P68  80x   artifact
-  control v3   block-local, 200 frames   P68 6.8x   holds
+  control v1   whole-series shuffle      P17 391x   artifact
+  control v2   year-stratified           P17  80x   artifact
+  control v3   block-local, 200 frames   P17 6.8x   holds
   definition   P18 written as an arithmetic progression, not a triple top --
                0.92x became 87.93x once corrected
 
@@ -180,7 +180,7 @@ PAT = [
   '上升版對照 2.17x <b>也通過</b>。'
   '2026 掉到 13，<b>與其他精確相等類一樣在衰減</b>。'),
 
- ('P68', '雙頂', 'Double Top', '空', 'H L H',
+ ('P17', '雙頂', 'Double Top', '空', 'H L H',
   [('H', 84), ('L', 26), ('H', 84)], [(0, 2, 'tlu solid')],
   ['PH1 = PH2　<b>完全相等</b>', 'PL1 不設條件'],
   '1,365', '178.7', 3, [278, 229, 158, 192, 182, 140, 144, 42],
@@ -192,12 +192,12 @@ PAT = [
 ]
 
 CTRL = [
- ('1', '整條序列打散', 'P68 = 391x',
+ ('1', '整條序列打散', 'P17 = 391x',
   '拿 2019 的高點跟 2026 的比。台指從萬點漲到四萬多，'
   '<b>打散後精確相等幾乎不可能</b>，期望值假到 3.5。'),
- ('2', '同年內打散', 'P68 = 80x',
+ ('2', '同年內打散', 'P17 = 80x',
   '一月比十二月，年內也差幾千點。<b>仍然是假的</b>。'),
- ('3', '鄰近 200 個框架內打散', 'P68 = 6.75x',
+ ('3', '鄰近 200 個框架內打散', 'P17 = 6.75x',
   '保留局部價格水準與波動度，<b>只破壞配對</b>。'
   '雙頂的兩個高點中位相隔 3 根 K 棒 —— <b>它們價格接近是因為時間接近</b>，'
   '任何打破鄰近性的對照都會製造巨大倍率。<b>這一版才站得住。</b>'),
@@ -224,13 +224,13 @@ INV = [('P29 擴散', '0.16x', '0.18x', '0.20x'),
        ('沙漏（鏡像）', '0.80x', '0.79x', '0.77x'),
        ('頭肩 峰:谷', '0.958 : 1', '0.981 : 1', '0.944 : 1')]
 
-CODED = {'P18', 'P57', 'P68'}
+CODED = {'P18', 'P57', 'P17'}
 
 CLS = [('單調方向', 'P29 0.16x　收斂 0.22x　P51 2.08x　P52 2.12x',
         '與高低點同向共動 10.3 : 1 的結構互動', '含資訊 <b>且有方向性</b>', True),
        ('峰谷形狀', '頭肩 0.958:1　鑽石 0.80x 對沙漏 0.80x',
         '完全不碰那個結構', '<b>不含資訊</b>', False),
-       ('精確相等', 'P18 87.9x　P68 6.75x　P21 2.82x　P57 2.33x',
+       ('精確相等', 'P18 87.9x　P17 6.75x　P21 2.82x　P57 2.33x',
         '價位與幅度會被精確重訪', '含資訊，<b>但鏡像同樣通過，無方向性</b>', None)]
 
 
@@ -386,7 +386,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            EX[cid]['span'], EX[cid]['amp'], format(EX[cid]['n'], ','))
         for cid, zh in (('P15', '頭肩頂'), ('P16', '頭肩底'), ('P18', '三重頂'),
                         ('P23', '三重底'), ('P21', '上升通道'),
-                        ('P57', '測量移動（下）'), ('P68', '雙頂')))
+                        ('P57', '測量移動（下）'), ('P17', '雙頂')))
 
     PR_ = ('<section class="panel"><div class="ph2"><h2>二、真實案例</h2>'
            '<span class="tag">紫框＝型態本體　綠點＝樞紐高　橘點＝樞紐低</span></div>'
@@ -497,7 +497,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            '</tr></thead><tbody>'
            '<tr class="hit"><td>P18 三重頂</td><td style="text-align:left">'
            '讀鏈上<b>最後 5 個</b>樞紐，區間裝置。參考 <b>6,352</b></td></tr>'
-           '<tr class="hit"><td>P68 雙頂</td><td style="text-align:left">'
+           '<tr class="hit"><td>P17 雙頂</td><td style="text-align:left">'
            '讀鏈上<b>最後 3 個</b>樞紐。參考 <b>1,365</b></td></tr>'
            '<tr class="hit"><td>P57 測量移動（下）</td><td style="text-align:left">'
            '讀鏈上<b>最後 5 個</b>樞紐（條件只用前 4 個）。參考 <b>255</b></td></tr>'
@@ -516,7 +516,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            '而 P18 每年 831 個，塗色會把 P29 家族整個埋掉。'
            '</p>'
            '<div class="big"><p><b>★ 260870 錯，260871 也錯，260872 才是修正版。</b>'
-           '用戶實跑 260870，得到 <b>P18 16,565 ／ P57 743 ／ P68 3,946</b>，'
+           '用戶實跑 260870，得到 <b>P18 16,565 ／ P57 743 ／ P17 3,946</b>，'
            '是參考值的 2.6～2.9 倍 —— 而他的圖表<b>少了 11,909 根 K 棒</b>，'
            '數字只可能偏低，不可能偏高。</p>'
            '<p>倍率就是答案：<b>每 2.8 根 K 棒出現一個樞紐</b>。'
@@ -553,7 +553,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
            '<b>260870 與 260871 當負向對照，各抓出 5 個 FAIL。</b>'
            '另加 begin／end 平衡檢查，確認搬移沒有破壞巢狀。</p></div>'
            '<p class="cap"><b>驗收</b>：'
-           '<code>REV TALLY  P18= 6352  P57= 255  P68= 1365</code>'
+           '<code>REV TALLY  P18= 6352  P57= 255  P17= 1365</code>'
            '（Pivot_Window = 1、完整資料）。'
            '你的圖表少 11,909 根，預期會略低於此（P18 約 6,170）；'
            '<b>P29 的 75／85／39／0 與鑽石的 0／1 必須維持不變</b>。</p>'
@@ -564,7 +564,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '<div class="steps">'
           '<div class="st ok"><div class="n">OK</div><div class="bd2">'
           '<h3>已裁示<em>P15/P16 完整　P18/P23 改區間　P21 改相似平行　'
-          'P57/P68 通過</em></h3>'
+          'P57/P17 通過</em></h3>'
           '<p>本頁七張卡的定義<b>已全部依裁示更新</b>。'
           'P18 從 43 個變 6,352 個且倍率不變；P21 從 140 個變 1,276 個但倍率'
           '從 2.82x 掉到 1.75x。以下是裁示後<b>仍未決</b>的部分。</p></div></div>'
@@ -575,12 +575,12 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '維持「肩不設條件」，接受形狀對照 0.958:1 不含資訊的結論。</p></div></div>'
           '<div class="st"><div class="n">L</div><div class="bd2">'
           '<h3>五個通過的型態怎麼用<em>要你決定</em></h3>'
-          '<p>P18／P23／P21／P57／P68 全部通過，'
+          '<p>P18／P23／P21／P57／P17 全部通過，'
           '<b>但每一個的鏡像也通過，所以沒有方向性</b>。'
           '<b>L1</b> 比照裁示 A1 全部當屬性（不是濾網）／'
           '<b>L2</b> 只編碼上圖如鑽石／<b>L3</b> 選擇性保留。'
           '密度參考：P18 831／年、P23 858／年、P21 167／年、'
-          'P57 33／年、P68 179／年。</p></div></div>'
+          'P57 33／年、P17 179／年。</p></div></div>'
           '<div class="st"><div class="n">M</div><div class="bd2">'
           '<h3>「價位重訪」要不要獨立立項<em>新問題</em></h3>'
           '<p>區間裝置測到的 1.75x ~ 10.19x 是本專案目前<b>最強的統計效果</b>，'

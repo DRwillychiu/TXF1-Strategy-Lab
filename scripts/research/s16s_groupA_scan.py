@@ -2,7 +2,7 @@
 """Group A, all seven pivot-based patterns, measured in one pass.
 
 P15 head and shoulders   P16 inverse   P18 triple top   P21 ascending channel
-P23 triple bottom        P57 measured move down         P68 double top
+P23 triple bottom        P57 measured move down         P17 double top
 
 Provisional zero-parameter definitions throughout.  That is good enough for
 the question being asked here -- a population that comes back empty or flooded
@@ -101,14 +101,14 @@ def main():
                  format(a, ','), format(b, ','),
                  '零參數' if t == 0 else '引進自由參數'))
 
-    # ---------------- P68 double top --------------------------------------
+    # ---------------- P17 double top --------------------------------------
     print()
     print('=' * 82)
-    print(' P68 雙頂 —— 兩個高點完全相等，中間一個低點')
+    print(' P17 雙頂 —— 兩個高點完全相等，中間一個低點')
     print('=' * 82)
     p68 = [f for f in f3t if H[f[0]] == H[f[2]]]
     p68b = [f for f in f3b if L[f[0]] == L[f[2]]]
-    rep(rows, 'P68 雙頂（完全相等）', p68, len(f3t), N)
+    rep(rows, 'P17 雙頂（完全相等）', p68, len(f3t), N)
     rep(rows, '雙底（鏡像對照）', p68b, len(f3b), N)
     print('  占三樞紐框架 %.2f%% / %.2f%%'
           % (100.0 * len(p68) / len(f3t), 100.0 * len(p68b) / len(f3b)))

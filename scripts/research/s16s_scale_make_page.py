@@ -68,7 +68,7 @@ INV = [('P29 擴散', '0.16x', '0.18x', '0.20x'),
        ('頭肩 峰:谷', '0.958 : 1', '0.981 : 1', '0.944 : 1')]
 
 BEAR = [('P18', '三重頂', '★ 通過', '10.19x', '6,352 個，八年無掛零', True),
-        ('P68', '雙頂', '★ 通過', '6.75x', '1,365 個', True),
+        ('P17', '雙頂', '★ 通過', '6.75x', '1,365 個', True),
         ('P57', '測量移動（下）', '★ 通過', '2.33x', '255 個', True),
         ('P29', '擴散三角', '稀有', '0.16x', '逆結構，但破位方向 37:43 是銅板', False),
         ('P51', '上升擴散楔形', '屬性', '2.08x', '218／年，裁示 A1 當屬性', False),
@@ -245,7 +245,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '<p class="cap"><b>多方型態（依裁示不作為進場依據）</b>：' + BULL + '</p>'
           '<div class="big"><p>已研究 19 個型態，'
           '<b>空方且通過嚴格對照的只有三個</b>：'
-          'P18 三重頂、P68 雙頂、P57 測量移動（下）。</p>'
+          'P18 三重頂、P17 雙頂、P57 測量移動（下）。</p>'
           '<small>三個的<b>鏡像也全部通過</b>，'
           '所以它們證實的是「價位與幅度會被精確重訪」，<b>不是方向性</b>。'
           '要當空方素材，方向必須另外來 —— 例如 S16_S 本身的 ZLEMA 死亡交叉。<br><br>'
@@ -263,13 +263,13 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '<tr><td>—</td><td style="text-align:left">操作週期是 5 分 K</td>'
           '<td style="text-align:left">寫進 input 檔頭註解，見第四節</td></tr>'
           '<tr><td>—</td><td style="text-align:left">只挑空方</td>'
-          '<td style="text-align:left"><b>P18／P68／P57</b> 三個進指標，'
+          '<td style="text-align:left"><b>P18／P17／P57</b> 三個進指標，'
           'P21 上升通道因是多方而排除</td></tr>'
           '<tr><td>17/18</td><td style="text-align:left">區間裝置與尺度</td>'
           '<td style="text-align:left">檢查表 15 條 → <b>18 條</b></td></tr>'
           '</tbody></table>'
           '<p class="cap"><b>三個型態不新增任何鏈</b> —— 既有六樞紐鏈已經握著最後六個'
-          '交替樞紐，P68 讀最後 3 個、P18／P57 讀最後 5 個。'
+          '交替樞紐，P17 讀最後 3 個、P18／P57 讀最後 5 個。'
           '鏈本身保證交替，所以只需檢查第一個的型別。'
           '鑽石的十樞紐鏈也<b>一行沒動</b>。</p>'
           '<p class="warn"><b>三個型態不塗 K 棒，只下標籤。</b>'
@@ -280,7 +280,7 @@ tr.hit td:first-child{color:var(--ph);font-weight:600}
           '<table><thead><tr><th>輸出</th><th style="text-align:left">應讀到</th>'
           '</tr></thead><tbody>'
           '<tr><td>REV TALLY</td><td style="text-align:left">'
-          '<code>P18= 6352　P57= 255　P68= 1365</code></td></tr>'
+          '<code>P18= 6352　P57= 255　P17= 1365</code></td></tr>'
           '<tr><td>PIVOT</td><td style="text-align:left">'
           '<code>window= 1　pivot_high= 75127　pivot_low= 76020</code>'
           '（依圖表載入根數而定）</td></tr>'

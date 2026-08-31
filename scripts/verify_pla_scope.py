@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Check WHERE a counter lives, not just what it computes.
 
-Build 260870 shipped P18 / P57 / P68 with the right arithmetic in the wrong
+Build 260870 shipped P18 / P57 / P17 with the right arithmetic in the wrong
 place.  The tests sat after the `for v_k = 1 to 2` pivot-push loop instead of
 inside it, so they ran once per BAR rather than once per PUSH.  A pivot arrives
 every 2.8 bars and the chain does not change in between, so every formation was
@@ -59,7 +59,7 @@ PER_PUSH = ['v_Cnt11', 'v_Cnt10', 'v_Cnt08', 'v_Cnt22',
             'v_C15', 'v_C26', 'v_C32', 'v_C56', 'v_C59', 'v_C65', 'v_C72',
             'v_Cnt29', 'v_Cnt51', 'v_Cnt52', 'v_Cnt53', 'v_Cnt54', 'v_CntForm',
             'v_Seq49', 'v_Seq50', 'v_Seq30', 'v_Seq61',
-            'v_Cnt18', 'v_Cnt57', 'v_Cnt68',
+            'v_Cnt18', 'v_Cnt57', 'v_Cnt17',
             'v_Cnt28', 'v_Cnt64', 'v_Cnt55']
 PER_BAR = ['v_CntExp', 'v_CntDn', 'v_CntUp']
 

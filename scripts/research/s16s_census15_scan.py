@@ -13,7 +13,7 @@ close.  Measured on the three patterns with exact MC12 references:
                      reset chain    merged chain    MC12 verified
     P18 triple top   6,352          16,718          6,352
     P57 measured mv  255            512             255
-    P68 double top   1,365          1,560           1,365
+    P17 double top   1,365          1,560           1,365
 
 The reset chain reproduces MC12 exactly.  Every count on the census page was
 therefore computed against a chain the indicator has never used, and the cup

@@ -379,7 +379,7 @@ Line numbers are the ones from git `7780b3c`, before the move.
       revisited exactly -- not a direction.  Direction has to come from
       elsewhere, which for S16_S is its own ZLEMA death cross.
 
-      Reference at Pivot_Window = 1:  P18 6,352   P57 255   P68 1,365 ---- }
+      Reference at Pivot_Window = 1:  P18 6,352   P57 255   P17 1,365 ---- }
 ```
 
 ## ruling C break tracking
@@ -735,19 +735,19 @@ Line numbers are the ones from git `7780b3c`, before the move.
                           already bright, so this spends no new colour. }
 ```
 
-## SECTION 6c - P18 / P57 / P68
+## SECTION 6c - P18 / P57 / P17
 
 *was lines 1220-1249*
 
 ```
-            { ---------- SECTION 6c - P18 / P57 / P68 -------------------------
+            { ---------- SECTION 6c - P18 / P57 / P17 -------------------------
               The three BEARISH patterns of group A that survived their control, coded
               per Willy's ruling of 2026-08-28.
 
               No new chain.  The six-pivot chain holds the last six alternating pivots,
               so the last three and the last five are slices of it:
 
-                  P68  last 3   H L H
+                  P17  last 3   H L H
                   P18  last 5   H L H L H
                   P57  last 5   H L H L H   (uses the first four)
 

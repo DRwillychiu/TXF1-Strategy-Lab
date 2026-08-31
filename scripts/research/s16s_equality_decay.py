@@ -120,7 +120,7 @@ def main():
                      [H[f[4]] for f in f5t]])
     test('P23 三重底', [[L[f[0]] for f in f5b], [L[f[2]] for f in f5b],
                      [L[f[4]] for f in f5b]])
-    test('P68 雙頂（對照）', [[H[f[0]] for f in f3t], [H[f[2]] for f in f3t]])
+    test('P17 雙頂（對照）', [[H[f[0]] for f in f3t], [H[f[2]] for f in f3t]])
     test('   雙底（對照）', [[L[f[0]] for f in f3b], [L[f[2]] for f in f3b]])
 
     print()
