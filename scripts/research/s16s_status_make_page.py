@@ -144,18 +144,19 @@ HEAD = ('<title>型態層總覽</title>\n'
         '&amp;display=swap" rel="stylesheet">\n<style>' + CSS + EXTRA + '</style>\n')
 
 TOP = ('<div class="wrap"><header class="top">'
-       '<div class="eyebrow">S16_S 型態層 · 總覽 · 2026-08-30</div>'
+       '<div class="eyebrow">S16_S 型態層 · 結案理由 · 2026-09-01</div>'
        '<h1>型態層總覽</h1>'
-       '<p class="sub">純圖形型態 <b>72 種</b>：<b>已全部結案</b>。'
+       '<p class="sub">純圖形型態 <b>72 種</b>，本頁記的是<b>每一種為什麼被這樣處理</b>。<br><b>進度看「落地地圖」那一頁</b> —— 用戶 08-31 改寫了落地標準：<b>型態層落地 ＝ 畫得到，不是檢定過</b>。依那個標準：已落地 <b>28</b>、等 MC12 驗收 <b>4</b>、要走完整流程 <b>12</b>、不繪製 <b>28</b>。'
        '狀態讀自圖鑑清單並與結案文件交叉查核 —— <b>24 個結案全部有文件佐證</b>。</p>'
        '<div class="kpi">'
        '<span><b>33</b>已編碼並檢定</span>'
-       '<span><b>39</b>已結案（含文件）</span>'
-       '<span><b>15</b>畫在指標上</span>'
-       '<span><b>0</b>尚未討論</span>'
+       '<span><b>28</b>已落地（畫在圖上且驗收過）</span>'
+       '<span><b>4</b>等 MC12 驗收</span>'
+       '<span><b>12</b>要走完整流程</span>'
+       '<span><b>28</b>不繪製</span>'
        '</div></header>')
 
-P1 = ('<section class="panel"><div class="ph2"><h2>一、七十二種的結案理由</h2>'
+P1 = ('<section class="panel"><div class="ph2"><h2>一、七十二種各自為什麼被這樣處理</h2>'
       '<span class="tag">每一項都有結案文件</span></div>'
       '<div class="done">' + done + '</div></section>')
 
