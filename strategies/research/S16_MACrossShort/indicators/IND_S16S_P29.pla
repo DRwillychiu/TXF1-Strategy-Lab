@@ -8,7 +8,7 @@
   ======================================================================== }
 
 inputs:
-    Build_ID                ( 260880 ),
+    Build_ID                ( 260881 ),
     M7_Bars                 ( 12    ),     { ruling 11.  PINNED.  Never sweep. }
 
     { 260870, ruling X3 of 2026-08-28 -- record }
@@ -768,10 +768,17 @@ for v_k = 1 to 2 begin
                 v_DOk = True;
 
             { ruling 12 again: M7 is read at the pattern's FIRST pivot, so the
-              top/bottom split costs no new parameter. }
+              top/bottom split costs no new parameter.
+              260881: that pivot is v_d0, NOT slot 0.  The cup work widened
+              this chain from 10 slots to 12, so v_d0 = v_DChain - 10 is now
+              2 rather than 0 and the split was reading a pivot two positions
+              BEFORE the diamond began.  It flipped the only diamond in eight
+              years from P61 to P30.  The 260830 handoff predicted exactly
+              this failure and put DIA TALLY in the acceptance table to catch
+              it; the guardrail worked. }
             if v_DOk then begin
                 v_DKind = 61;
-                if v_DM7a[0] > 0 then
+                if v_DM7a[v_d0] > 0 then
                     v_DKind = 30;
                 if ( v_DKind = 30 and Enable_P30 = 0 )
                    or ( v_DKind = 61 and Enable_P61 = 0 ) then
@@ -1453,7 +1460,7 @@ if LastBarOnChart then begin
            "   (P52 is 1715 if the chart starts 20190102 1340)" );
     Print( "REV TALLY  P18=", v_Cnt18:6:0,
            "  P57=", v_Cnt57:5:0, "  P68=", v_Cnt68:6:0 );
-    Print( "REV TALLY  reference  6352          255    1365",
+    Print( "REV TALLY  reference  6352          255    1367",
            "   (Pivot_Window = 1)" );
     Print( "PIVOT      window=", Pivot_Window:2:0,
            "  pivot_high=", v_NPvH:7:0, "  pivot_low=", v_NPvL:7:0 );

@@ -68,6 +68,15 @@ STMT_END = re.compile(r'(;|\]|\bbegin\b|\bthen\b|\belse\b)\s*$', re.I)
 # 真的「宣告了卻忘記賦值」被忽略。下標整段可選。
 ASSIGN = re.compile(r'^(?:for\s+)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*=(?!=)')
 
+# `if cond then v_X = v_X + 1;` --- 指派在 then / else 之後，同一行。
+# 行首錨定的 ASSIGN 看不到它（該行以 if 開頭），於是計數器被判成
+# 「只讀不寫，恆為初值 0」。2026-08-28 撞過一次，當時選了改 .pla 寫法
+# 而不是改這裡，於是 08-30 另一台機器用同樣寫法又撞一次（v_Dn18 等九個）。
+# 假 WARN 的代價不是吵，是讓真的漏賦值被當成雜訊略過。
+# then / else 本身就確立了敘述位置，所以不需要檢查前一行。
+POST_THEN = re.compile(
+    r'\b(?:then|else)\s+([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*=(?!=)', re.I)
+
 
 def classify(src):
     wr, prev = collections.Counter(), ';'
@@ -78,6 +87,8 @@ def classify(src):
         m = ASSIGN.match(t)
         if m and STMT_END.search(prev) and not t.lower().startswith('for '):
             wr[m.group(1)] += 1
+        for pm in POST_THEN.finditer(t):
+            wr[pm.group(1)] += 1
         prev = t
     return wr
 
@@ -92,6 +103,11 @@ CASES = [
     (['for v_X = 1 to 80 begin'], 0, 'for 迴圈計數器'),
     (['if v_X = True then begin'], 0, 'if 條件'),
     (['v_A = 1;', 'v_X = 0;', 'v_X = 1;'], 2, '同名多次指派'),
+    (['if v_B[v_s] = 18 then v_X = v_X + 1;'], 1, 'then 之後同行指派'),
+    (['if a then v_X = 1', 'else v_X = 2;'], 2, 'then / else 兩邊都指派'),
+    (['if v_X = True then begin'], 0, 'then 之後是 begin --- 負向對照'),
+    (['else if v_X = 51 then'], 0, 'then 收尾的條件 --- 負向對照'),
+    (['if v_X >= 1 and v_X <= 7 then'], 0, '條件裡的比較 --- 負向對照'),
 ]
 for src, exp, why in CASES:
     got = classify(src)['v_X']
