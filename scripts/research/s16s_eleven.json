@@ -1,0 +1,126 @@
+{
+ "bars": 421513,
+ "rows": [
+  {
+   "id": "P33",
+   "zh": "上衝回落",
+   "en": "Upthrust / Liquidity Sweep",
+   "dir": "空",
+   "sk": "pivot",
+   "n": 18000,
+   "mirror": 17747,
+   "ratio": 1.014,
+   "span": 3
+  },
+  {
+   "id": "P35",
+   "zh": "結構破壞（向下）",
+   "en": "Break of Structure, Down",
+   "dir": "空",
+   "sk": "pivot",
+   "n": 24129,
+   "mirror": 26016,
+   "ratio": 0.927,
+   "span": 3
+  },
+  {
+   "id": "P37",
+   "zh": "性格轉變（向下）",
+   "en": "Change of Character, Down",
+   "dir": "空",
+   "sk": "pivot",
+   "n": 12673,
+   "mirror": 12639,
+   "ratio": 1.003,
+   "span": 3
+  },
+  {
+   "id": "P13",
+   "zh": "空方旗形",
+   "en": "Bear Flag",
+   "dir": "空",
+   "sk": "bar",
+   "n": 12038,
+   "mirror": 11859,
+   "ratio": 1.015,
+   "span": 3
+  },
+  {
+   "id": "P14",
+   "zh": "空方三角旗",
+   "en": "Bear Pennant",
+   "dir": "空",
+   "sk": "bar",
+   "n": 5884,
+   "mirror": 5819,
+   "ratio": 1.011,
+   "span": 2
+  },
+  {
+   "id": "P41",
+   "zh": "WR4 最近四根最寬",
+   "en": "Widest of 4",
+   "dir": "中性",
+   "sk": "bar",
+   "n": 82209,
+   "mirror": 82209,
+   "ratio": 1.0,
+   "span": 3
+  },
+  {
+   "id": "P42",
+   "zh": "WR7 最近七根最寬",
+   "en": "Widest of 7",
+   "dir": "中性",
+   "sk": "bar",
+   "n": 44403,
+   "mirror": 44403,
+   "ratio": 1.0,
+   "span": 6
+  },
+  {
+   "id": "P43",
+   "zh": "關鍵反轉（空）",
+   "en": "Key Reversal, Bearish",
+   "dir": "空",
+   "sk": "bar",
+   "n": 8299,
+   "mirror": 8248,
+   "ratio": 1.006,
+   "span": 1
+  },
+  {
+   "id": "P45",
+   "zh": "破前時段低",
+   "en": "Prior Session Low Break",
+   "dir": "空",
+   "sk": "bar",
+   "n": 1477,
+   "mirror": 1894,
+   "ratio": 0.78,
+   "span": 1
+  },
+  {
+   "id": "P47",
+   "zh": "號角頂",
+   "en": "Horn Top",
+   "dir": "空",
+   "sk": "bar",
+   "n": 5019,
+   "mirror": 5226,
+   "ratio": 0.96,
+   "span": 2
+  },
+  {
+   "id": "P48",
+   "zh": "管狀頂",
+   "en": "Pipe Top",
+   "dir": "空",
+   "sk": "bar",
+   "n": 4973,
+   "mirror": 5343,
+   "ratio": 0.931,
+   "span": 1
+  }
+ ]
+}
