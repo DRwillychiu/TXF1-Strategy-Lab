@@ -1,0 +1,480 @@
+{ ==========================================================================
+  IND_S16S_ELEVEN  --  the last eleven chart patterns, as a subchart ribbon
+
+  Build_ID 260913.  DETECTION ONLY.  Places no orders, holds no position.
+
+  P33 upthrust / P35 break of structure / P37 change of character
+  / P13 bear flag / P14 bear pennant / P41 WR4 / P42 WR7
+  / P43 key reversal / P45 prior session low break / P47 horn top
+  / P48 pipe top
+
+  WHY A RIBBON AND NOT LABELS ON PRICE
+
+    The eleven together mark 197,095 bars.  That is denser than the six
+    convergence patterns (148,748) which already forced the ribbon on
+    2026-08-31.  P41 alone is 82,258 -- one bar in five.  Text labels lose
+    to that density in WIDTH, not in height, so lanes cannot rescue them;
+    the ruling of 2026-08-31 (present everything, keep it clean) lands here
+    as a second ribbon.
+
+  TWO SKELETONS, AND THE ROWS SAY SO
+
+    The scan that defined these calls the split out explicitly, so the
+    ribbon groups by it rather than by density alone.  Rows 1-8 read OHLC
+    directly.  Rows 9-11 read pivot LEVELS, and are the only three that
+    carry structure rather than shape.
+
+      row 11  P37  change of character   12,675
+      row 10  P33  upthrust              18,003
+      row  9  P35  break of structure    24,132     <- pivot skeleton
+      row  8  P45  prior session low      1,463
+      row  7  P48  pipe top               4,973
+      row  6  P47  horn top               5,020
+      row  5  P14  bear pennant           5,883
+      row  4  P43  key reversal           8,308
+      row  3  P13  bear flag             12,041
+      row  2  P42  WR7                   44,455
+      row  1  P41  WR4                   82,258     <- bar skeleton
+
+    Within each group the densest row sits at the bottom, the same
+    ordering IND_S16S_CONV6 and the label lanes in IND_S16S_P29 use.
+
+  THE ONE-BAR LAG, AND WHY IT IS CORRECT RATHER THAN TOLERATED
+
+    The scan skips any bar whose NEXT bar opens a new session, because the
+    fractal test needs that next bar.  So the classification of a bar is
+    not decidable on that bar -- not by this code, and not by a trader
+    either.  This file therefore classifies bar [1] and marks the result on
+    bar [0].
+
+    A mark means "confirmed here", not "the shape ended here".  It is the
+    same convention the pivot chain in IND_S16S_P29 has always used, and it
+    is what a live chart can actually honour.
+
+  DEVICES, ALL ZERO-PARAMETER
+
+    rank            widest of the last N.  N = 4 and N = 7 are Crabel's,
+                    accepted by ruling on 2026-08-31 and recorded as
+                    BORROWED, not derived.
+    shadow vs body  "long upper shadow" written as a comparison -- upper
+                    shadow greater than the body.  Nothing to tune.
+    gap vs shadow   "two highs at a similar level" takes its tolerance from
+                    the bars themselves: the difference between the highs
+                    smaller than the shorter of the two upper shadows.
+    resolution      the bear flag carries no bar count.  The drift runs
+                    until one side gives -- close under the pole low, or
+                    the pole high exceeded -- so "how long is a flag" is
+                    never asked.
+
+  THE FLAG POLE LIST
+
+    Several poles can be live at once.  Measured on the full series the
+    list never exceeds THREE, so four slots is one spare; the fifth would
+    increment v_Ovf, which the tally prints.  A silent cap is how a
+    population quietly stops being a population.
+
+    A pole is NOT killed by a session break.  The scan carries a branch
+    that says it is, and that branch is unreachable behind the session
+    guard -- measured: reached 0 times, while 419 flags (3.48% of P13)
+    genuinely span a break.  This file reproduces the CODE, which is what
+    the reference numbers came from, and says so here rather than quietly
+    matching a comment instead.
+
+  COUNTERS ARE NOT GATED BY Enable_
+
+    Lesson of 2026-08-31: in build 260850 an Enable_ input gated v_Ok, so
+    switching a pattern off stopped it being REGISTERED, not just drawn.
+    "I do not want to see it" silently became "it was never measured".
+    Here every counter runs unconditionally and Enable_ touches colour only.
+
+  ACCEPTANCE, printed on the last bar as ELEVEN TALLY
+
+    bars 421,506   pole_overflow 0
+    P33 18003  P35 24132  P37 12675  P13 12041  P14  5883  P41 82258
+    P42 44455  P43  8308  P45  1463  P47  5020  P48  4973
+
+    NOT VERIFIED IN MC12 YET.  Those come from
+    scripts/research/s16s_eleven_pla_model.py, which replays these
+    predicates through THIS file's window -- seven bars of warm-up, empty
+    state machines at bar 1, the one-bar lag -- and then diffs bar by bar
+    against s16s_eleven_scan.py.  Zero disagreements across all eleven.
+
+    bars= is 421,513 minus this file's own warm-up, and the warm-up is 7
+    because High[7] is the deepest reference made here.  Read bars= as
+    "after this file's warm-up", NEVER as "the chart's length" -- on
+    2026-08-31 that confusion was written into three documents.
+
+  ONE CSV IS NOT THE OTHER CSV
+
+    2026-09-01: the desktop and the laptop each ran the defining scan on a
+    CSV of 421,513 rows spanning the same first and last bar, and disagreed
+    on ten of the eleven -- P41 82,209 vs 82,258, P45 1,477 vs 1,463.  The
+    CSV is gitignored, so nothing in the repo could catch it.
+
+    The numbers above are the LAPTOP's, md5 47e4054ff31b086df392bb3022e90e03.
+    The scan now stamps that md5 into its json.  On the desktop, expect the
+    desktop's own figures and compare against those, exactly as
+    S16S_DESKTOP_BASELINE_20260901.md already rules for IND_S16S_P29.
+
+  HOW TO SET IT UP
+    Apply to a SUBCHART, not the price pane, and not the CONV6 pane.
+    Style tab: every plot to Point, or a thick line.
+    Scaling tab: fixed range 0 .. 12 so the eleven rows sit evenly.
+  ======================================================================== }
+
+inputs:
+    Build_ID                ( 260913 ),
+    Sess_Day_Start          ( 845   ),
+    Sess_Day_End            ( 1345  ),
+    Sess_Night_Start        ( 1500  ),
+    Sess_Night_End          ( 500   ),
+    Enable_P41              ( 1     ),     { WR4,               82,258 }
+    Enable_P42              ( 1     ),     { WR7,               44,455 }
+    Enable_P13              ( 1     ),     { bear flag,         12,041 }
+    Enable_P43              ( 1     ),     { key reversal,       8,308 }
+    Enable_P14              ( 1     ),     { bear pennant,       5,883 }
+    Enable_P47              ( 1     ),     { horn top,           5,020 }
+    Enable_P48              ( 1     ),     { pipe top,           4,973 }
+    Enable_P45              ( 1     ),     { prior session low,  1,463 }
+    Enable_P35              ( 1     ),     { break of structure,24,132 }
+    Enable_P33              ( 1     ),     { upthrust,          18,003 }
+    Enable_P37              ( 1     ),     { change of char,    12,675 }
+    Col_Bar                 ( DarkGray  ),  { rows 1-8,  bar skeleton }
+    Col_Flag                ( DarkRed   ),  { P13 / P14, the drift pair }
+    Col_Pivot               ( Blue      ),  { rows 9-11, pivot skeleton }
+    Col_Choch               ( Magenta   ),  { P37, the rarest structure }
+    Col_Idle                ( Black     ),  { leave near the background }
+    Print_Events            ( 0     );
+
+arrays:
+    v_PoH[4]                ( 0 ),          { pole high }
+    v_PoL[4]                ( 0 ),          { pole low }
+    v_PoN[4]                ( 0 ),          { drift bars survived }
+    v_PoCv[4]               ( 0 ),          { 1 while ranges keep shrinking }
+    v_PoLast[4]             ( 0 );          { previous drift bar range }
+
+variables:
+    v_In_Day                ( False ),
+    v_In_Night              ( False ),
+    v_In_Sess               ( False ),
+    v_Sess_First            ( False ),
+    v_BIS                   ( 0     ),     { bars into the session }
+    v_Go                    ( False ),     { the scan guard, one bar lagged }
+    v_Rng                   ( 0     ),
+    v_CurLo                 ( 0     ),
+    v_CurSet                ( False ),
+    v_SessLo                ( 0     ),
+    v_SessSet               ( False ),
+    v_HiPv                  ( 0     ),
+    v_HiSet                 ( False ),
+    v_ArmHi                 ( False ),
+    v_LoPv                  ( 0     ),
+    v_LoSet                 ( False ),
+    v_ArmLo                 ( False ),
+    v_UpLast                ( False ),
+    v_NPole                 ( 0     ),
+    v_Ovf                   ( 0     ),
+    v_K                     ( 0     ),
+    v_W                     ( 0     ),
+    v_Keep                  ( False ),
+    v_UpA                   ( 0     ),
+    v_UpB                   ( 0     ),
+    v_BdA                   ( 0     ),
+    v_BdB                   ( 0     ),
+    v_h33                   ( False ),
+    v_h35                   ( False ),
+    v_h37                   ( False ),
+    v_h13                   ( False ),
+    v_h14                   ( False ),
+    v_h41                   ( False ),
+    v_h42                   ( False ),
+    v_h43                   ( False ),
+    v_h45                   ( False ),
+    v_h47                   ( False ),
+    v_h48                   ( False ),
+    v_c33                   ( 0     ),
+    v_c35                   ( 0     ),
+    v_c37                   ( 0     ),
+    v_c13                   ( 0     ),
+    v_c14                   ( 0     ),
+    v_c41                   ( 0     ),
+    v_c42                   ( 0     ),
+    v_c43                   ( 0     ),
+    v_c45                   ( 0     ),
+    v_c47                   ( 0     ),
+    v_c48                   ( 0     ),
+    v_NBars                 ( 0     ),
+    v_Ymd                   ( 0     );
+
+    { ---------- SECTION 1  SESSION.  Same construction as IND_S16S_P29
+      SECTION 1 and IND_S16S_CONV6, deliberately -- a second implementation
+      of the session counter is how two files start disagreeing. ---------- }
+
+v_In_Day   = Time >  Sess_Day_Start   and Time <= Sess_Day_End;
+v_In_Night = Time >  Sess_Night_Start or  Time <= Sess_Night_End;
+v_In_Sess  = v_In_Day or v_In_Night;
+
+v_Sess_First = False;
+if CurrentBar > 1 then begin
+    if v_In_Day   and ( v_In_Day[1]   = False ) then v_Sess_First = True;
+    if v_In_Night and ( v_In_Night[1] = False ) then v_Sess_First = True;
+end;
+
+if v_Sess_First then
+    v_BIS = 1
+else if v_In_Sess then
+    v_BIS = v_BIS + 1
+else
+    v_BIS = 0;
+
+v_NBars = v_NBars + 1;
+
+v_h33 = False;  v_h35 = False;  v_h37 = False;  v_h13 = False;
+v_h14 = False;  v_h41 = False;  v_h42 = False;  v_h43 = False;
+v_h45 = False;  v_h47 = False;  v_h48 = False;
+
+    { ---------- SECTION 2  SESSION LOW.  Runs on EVERY bar, ahead of the
+      guard, exactly as the scan does -- the low of a session that the
+      guard skipped still has to be carried forward. ---------- }
+
+if v_BIS[1] < v_BIS[2] then begin
+    v_SessLo  = v_CurLo;
+    v_SessSet = v_CurSet;
+    v_CurLo   = Low[1];
+    v_CurSet  = True;
+end
+else if ( v_CurSet = False ) or Low[1] < v_CurLo then begin
+    v_CurLo  = Low[1];
+    v_CurSet = True;
+end;
+
+    { ---------- SECTION 3  THE GUARD.  Skip when the classified bar is
+      too early in its session, or when the bar AFTER it opens a new one --
+      that second half is what forces the whole file one bar late. -------- }
+
+v_Go = v_BIS[1] >= 2 and v_BIS >= v_BIS[1];
+
+if v_Go then begin
+
+    v_Rng = High[1] - Low[1];
+
+    { ------ SECTION 4  PIVOT LEVEL.  Read the standing level, then arm
+      or disarm it.  Each level is swept or broken at most once. ------ }
+
+    if v_HiSet and v_ArmHi and High[1] > v_HiPv and Close[1] < v_HiPv then begin
+        v_h33 = True;
+        v_c33 = v_c33 + 1;
+        v_ArmHi = False;
+    end;
+
+    if v_LoSet and v_ArmLo and Close[1] < v_LoPv then begin
+        v_h35 = True;
+        v_c35 = v_c35 + 1;
+        if v_UpLast then begin
+            v_h37 = True;
+            v_c37 = v_c37 + 1;
+        end;
+        v_UpLast = False;
+        v_ArmLo  = False;
+    end;
+
+    if v_HiSet and Close[1] > v_HiPv then v_UpLast = True;
+
+    { ------ SECTION 5  BAR LEVEL. ------ }
+
+    if v_BIS[1] >= 5
+       and v_Rng > High[2] - Low[2]
+       and v_Rng > High[3] - Low[3]
+       and v_Rng > High[4] - Low[4] then begin
+        v_h41 = True;
+        v_c41 = v_c41 + 1;
+    end;
+
+    if v_BIS[1] >= 8
+       and v_Rng > High[2] - Low[2]
+       and v_Rng > High[3] - Low[3]
+       and v_Rng > High[4] - Low[4]
+       and v_Rng > High[5] - Low[5]
+       and v_Rng > High[6] - Low[6]
+       and v_Rng > High[7] - Low[7] then begin
+        v_h42 = True;
+        v_c42 = v_c42 + 1;
+    end;
+
+    if v_BIS[1] >= 3 and High[1] > High[2] and Close[1] < Low[2] then begin
+        v_h43 = True;
+        v_c43 = v_c43 + 1;
+    end;
+
+    if v_SessSet and v_BIS[1] >= 2 and Close[1] < v_SessLo then begin
+        v_h45 = True;
+        v_c45 = v_c45 + 1;
+        v_SessSet = False;
+    end;
+
+    { horn: two spikes ONE BAR APART, both shadow-dominant, a dip between,
+      highs closer together than the shorter shadow }
+    if v_BIS[1] >= 4 then begin
+        v_UpA = High[3] - MaxList( Open[3], Close[3] );
+        v_BdA = AbsValue( Close[3] - Open[3] );
+        v_UpB = High[1] - MaxList( Open[1], Close[1] );
+        v_BdB = AbsValue( Close[1] - Open[1] );
+        if v_UpA > v_BdA and v_UpB > v_BdB
+           and High[3] > High[2] and High[1] > High[2]
+           and AbsValue( High[3] - High[1] ) < MinList( v_UpA, v_UpB ) then begin
+            v_h47 = True;
+            v_c47 = v_c47 + 1;
+        end;
+    end;
+
+    { pipe: the same test on two ADJACENT spikes }
+    if v_BIS[1] >= 4 then begin
+        v_UpA = High[2] - MaxList( Open[2], Close[2] );
+        v_BdA = AbsValue( Close[2] - Open[2] );
+        v_UpB = High[1] - MaxList( Open[1], Close[1] );
+        v_BdB = AbsValue( Close[1] - Open[1] );
+        if v_UpA > v_BdA and v_UpB > v_BdB
+           and High[2] > High[3] and High[1] > High
+           and AbsValue( High[2] - High[1] ) < MinList( v_UpA, v_UpB ) then begin
+            v_h48 = True;
+            v_c48 = v_c48 + 1;
+        end;
+    end;
+
+    { ------ SECTION 6  BEAR FLAG AND PENNANT.  Pole, drift, resolution.
+      The high is tested BEFORE the low: a bar that clears the pole high
+      and closes under the pole low kills the flag without registering
+      one, and that ordering is part of the definition. ------ }
+
+    v_W = 0;
+    if v_NPole > 0 then begin
+    for v_K = 0 to v_NPole - 1 begin
+        v_Keep = False;
+        if High[1] <= v_PoH[v_K] then begin
+            if Close[1] < v_PoL[v_K] then begin
+                if v_PoN[v_K] >= 1 then begin
+                    v_h13 = True;
+                    v_c13 = v_c13 + 1;
+                    if v_PoCv[v_K] > 0 then begin
+                        v_h14 = True;
+                        v_c14 = v_c14 + 1;
+                    end;
+                end;
+            end
+            else
+                v_Keep = True;
+        end;
+        if v_Keep then begin
+            if v_Rng >= v_PoLast[v_K] then v_PoCv[v_K] = 0;
+            v_PoLast[v_K] = v_Rng;
+            v_PoN[v_K]    = v_PoN[v_K] + 1;
+            v_PoH[v_W]    = v_PoH[v_K];
+            v_PoL[v_W]    = v_PoL[v_K];
+            v_PoN[v_W]    = v_PoN[v_K];
+            v_PoCv[v_W]   = v_PoCv[v_K];
+            v_PoLast[v_W] = v_PoLast[v_K];
+            v_W = v_W + 1;
+        end;
+    end;
+    end;
+    v_NPole = v_W;
+
+    { a new pole is a WR4 bar that closed down }
+    if v_BIS[1] >= 5 and Close[1] < Open[1]
+       and v_Rng > High[2] - Low[2]
+       and v_Rng > High[3] - Low[3]
+       and v_Rng > High[4] - Low[4] then begin
+        if v_NPole < 4 then begin
+            v_PoH[v_NPole]    = High[1];
+            v_PoL[v_NPole]    = Low[1];
+            v_PoN[v_NPole]    = 0;
+            v_PoCv[v_NPole]   = 1;
+            v_PoLast[v_NPole] = v_Rng;
+            v_NPole = v_NPole + 1;
+        end
+        else
+            v_Ovf = v_Ovf + 1;
+    end;
+
+    { ------ SECTION 7  PUSH THE PIVOT for the bar just classified.  Last,
+      because the scan pushes at the END of its iteration -- the level a
+      break is measured against must be the one standing BEFORE this
+      bar. ------ }
+
+    if High[1] > High[2] and High[1] > High then begin
+        v_HiPv  = High[1];
+        v_HiSet = True;
+        v_ArmHi = True;
+    end;
+
+    if Low[1] < Low[2] and Low[1] < Low then begin
+        v_LoPv  = Low[1];
+        v_LoSet = True;
+        v_ArmLo = True;
+    end;
+
+end;
+
+    { ---------- SECTION 8  THE RIBBON.  Every row plots on EVERY bar; the
+      firing is carried by COLOUR.  A NoPlot-gapped plot made MC12
+      interpolate a line across the whole chart on 2026-08-26. ---------- }
+
+Plot1 (  1, "WR4"      );
+Plot2 (  2, "WR7"      );
+Plot3 (  3, "BearFlag" );
+Plot4 (  4, "KeyRev"   );
+Plot5 (  5, "Pennant"  );
+Plot6 (  6, "HornTop"  );
+Plot7 (  7, "PipeTop"  );
+Plot8 (  8, "PrevSLow" );
+Plot9 (  9, "BOS"      );
+Plot10( 10, "Upthrust" );
+Plot11( 11, "CHoCH"    );
+
+if v_h41 and Enable_P41 <> 0 then SetPlotColor(  1, Col_Bar   )
+                             else SetPlotColor(  1, Col_Idle  );
+if v_h42 and Enable_P42 <> 0 then SetPlotColor(  2, Col_Bar   )
+                             else SetPlotColor(  2, Col_Idle  );
+if v_h13 and Enable_P13 <> 0 then SetPlotColor(  3, Col_Flag  )
+                             else SetPlotColor(  3, Col_Idle  );
+if v_h43 and Enable_P43 <> 0 then SetPlotColor(  4, Col_Bar   )
+                             else SetPlotColor(  4, Col_Idle  );
+if v_h14 and Enable_P14 <> 0 then SetPlotColor(  5, Col_Flag  )
+                             else SetPlotColor(  5, Col_Idle  );
+if v_h47 and Enable_P47 <> 0 then SetPlotColor(  6, Col_Bar   )
+                             else SetPlotColor(  6, Col_Idle  );
+if v_h48 and Enable_P48 <> 0 then SetPlotColor(  7, Col_Bar   )
+                             else SetPlotColor(  7, Col_Idle  );
+if v_h45 and Enable_P45 <> 0 then SetPlotColor(  8, Col_Bar   )
+                             else SetPlotColor(  8, Col_Idle  );
+if v_h35 and Enable_P35 <> 0 then SetPlotColor(  9, Col_Pivot )
+                             else SetPlotColor(  9, Col_Idle  );
+if v_h33 and Enable_P33 <> 0 then SetPlotColor( 10, Col_Pivot )
+                             else SetPlotColor( 10, Col_Idle  );
+if v_h37 and Enable_P37 <> 0 then SetPlotColor( 11, Col_Choch )
+                             else SetPlotColor( 11, Col_Idle  );
+
+    { ---------- SECTION 9  DIAGNOSTICS ---------- }
+
+if Print_Events <> 0 and ( v_h37 or v_h45 ) then begin
+    v_Ymd = Date + 19000000;
+    Print( "ELEVEN EVENT ", v_Ymd:8:0, " ", Time:4:0,
+           "  CHoCH=", v_c37:6:0, "  PrevSLow=", v_c45:6:0 );
+end;
+
+if CurrentBar = 1 then Print( "IND_S16S_ELEVEN build ", Build_ID:6:0 );
+
+if LastBarOnChart then begin
+    Print( "ELEVEN DIAG   bars=", v_NBars:8:0,
+           "  pole_overflow=", v_Ovf:5:0,
+           "  last=", ( Date + 19000000 ):8:0, " ", Time:4:0 );
+    Print( "ELEVEN TALLY  P33=", v_c33:6:0, "  P35=", v_c35:6:0,
+           "  P37=", v_c37:6:0, "  P13=", v_c13:6:0,
+           "  P14=", v_c14:6:0, "  P41=", v_c41:6:0 );
+    Print( "ELEVEN TALLY  P42=", v_c42:6:0, "  P43=", v_c43:6:0,
+           "  P45=", v_c45:6:0, "  P47=", v_c47:6:0,
+           "  P48=", v_c48:6:0 );
+    Print( "ELEVEN REF     18003   24132   12675   12041    5883   82258" );
+    Print( "ELEVEN REF     44455    8308    1463    5020    4973",
+           "   (laptop csv, bars 421506, overflow 0)" );
+end;

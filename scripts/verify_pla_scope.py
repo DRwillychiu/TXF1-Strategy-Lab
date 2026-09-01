@@ -44,6 +44,18 @@ TARGET = os.path.join('strategies', 'research', 'S16_MACrossShort',
 if len(sys.argv) > 1:          # a path lets the fixed build be checked against
     TARGET = sys.argv[1]       # the broken one -- a checker that cannot fail
                                # proves nothing.
+# 260913: IND_S16S_ELEVEN gates on `if v_Go then begin`, not on a pivot
+# push, so the anchor is now per file.  A checker hard-wired to one file
+# silently passes every other file -- the same failure as leaving a new
+# counter out of the list, which happened twice on 2026-08-31.
+CONFIG = {
+    'IND_S16S_ELEVEN.pla': dict(
+        anchor='if v_Go then begin',
+        per_gate=['v_c33', 'v_c35', 'v_c37', 'v_c13', 'v_c14', 'v_c41',
+                  'v_c42', 'v_c43', 'v_c45', 'v_c47', 'v_c48', 'v_Ovf'],
+        per_bar=['v_NBars']),
+}
+
 PUSH = 'if v_Push then begin'   # NOT `for v_k = 1 to 2 begin`: that loop runs
                                 # twice on EVERY bar whether a pivot exists or
                                 # not, so "inside the loop" is a WEAKER claim
@@ -103,16 +115,24 @@ def loop_span(clean):
 
 
 def main():
+    global PUSH
+    cfg = CONFIG.get(os.path.basename(TARGET))
+    gate, per_gate, per_bar = 'per push', PER_PUSH, PER_BAR
+    if cfg is not None:
+        PUSH = cfg['anchor']
+        gate = 'per gate'
+        per_gate = cfg['per_gate']
+        per_bar = cfg['per_bar']
     lines = open(TARGET, encoding='utf-8').read().split('\n')
     clean = strip_noise(lines)
     lo, hi = loop_span(clean)
     print('=' * 78)
     print('  %s' % TARGET)
-    print('  if v_Push  %d .. %d' % (lo + 1, hi + 1))
+    print('  %s  %d .. %d' % (PUSH, lo + 1, hi + 1))
     print('-' * 78)
 
     bad = 0
-    for want, names in (('per push', PER_PUSH), ('per bar', PER_BAR)):
+    for want, names in ((gate, per_gate), ('per bar', per_bar)):
         for n in names:
             pat = re.compile(r'\b%s\s*=\s*%s\s*\+\s*1\b' % (n, n))
             hits = [i for i, x in enumerate(clean) if pat.search(x)]
@@ -122,19 +142,19 @@ def main():
                 continue
             for i in hits:
                 inside = lo < i < hi
-                ok = inside if want == 'per push' else not inside
+                ok = inside if want != 'per bar' else not inside
                 if not ok:
                     bad += 1
                 print('  %s  %-10s  line %-5d  %s  (要求 %s)'
                       % ('ok   ' if ok else 'FAIL ', n, i + 1,
-                         '推入區塊內' if inside else '區塊外', want))
+                         '閘門區塊內' if inside else '區塊外', want))
 
     print('-' * 78)
     if bad:
         print('  %d 個計數放在錯誤的 scope' % bad)
     else:
         print('  全部 %d 個計數的 scope 正確'
-              % (len(PER_PUSH) + len(PER_BAR)))
+              % (len(per_gate) + len(per_bar)))
     print('=' * 78)
     return 1 if bad else 0
 

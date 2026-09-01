@@ -46,6 +46,7 @@ Counts only.  No P&L.
 Run:  python scripts/research/s16s_eleven_scan.py
 """
 import csv
+import hashlib
 import io
 import json
 import os
@@ -214,6 +215,30 @@ NAMES = [
 ]
 
 
+def fingerprint():
+    """Which CSV produced these numbers.
+
+    2026-09-01: the desktop and the laptop each ran THIS script on a CSV of
+    the same 421,513 rows, spanning the same first and last bar, and got
+    different counts for ten of the eleven -- P41 82,209 vs 82,258, P45
+    1,477 vs 1,463, P13 12,038 vs 12,041.  The CSV is gitignored (.gitignore
+    line 14), so nothing in the repo could have caught it.
+
+    A number without the fingerprint of the data behind it cannot be
+    compared across machines.  Emitted into the json and printed, so the
+    next disagreement is loud instead of silent.
+    """
+    h = hashlib.md5()
+    n = 0
+    with open(CSV, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 20), b''):
+            h.update(chunk)
+    with io.open(CSV, encoding='utf-8') as f:
+        for _ in f:
+            n += 1
+    return {'csv_rows': n - 1, 'csv_md5': h.hexdigest()}
+
+
 def main():
     rows, O, H, L, C, S = load()
     a = scan(O, H, L, C, S)
@@ -237,8 +262,12 @@ def main():
         print('  %-6s %-18s %-5s %-6s %-10s %-10s %-8s %d 根'
               % (cid, zh, d, sk, format(n, ','), format(m, ','),
                  ('%.2fx' % r) if r else '-', med))
-    json.dump({'bars': len(rows), 'rows': out},
-              open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    fp = fingerprint()
+    print('  CSV  %d rows  md5 %s' % (fp['csv_rows'], fp['csv_md5']))
+    d = {'bars': len(rows), 'rows': out}
+    d.update(fp)
+    json.dump(d, open(OUT, 'w', encoding='utf-8'),
+              ensure_ascii=False, indent=1)
     print('\n  -> %s' % OUT)
     print('=' * 76)
 

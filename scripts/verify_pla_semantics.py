@@ -174,7 +174,7 @@ setprofittarget xaverage average highest lowest atr avgtruerange truerange minli
 maxlist intportion absvalue mod square squareroot dayofweek dayofmonth month year
 currentdate currenttime iff numericseries numericsimple booleansimple print inputs
 variables arrays crosses above below alert barinterval timetominutes
-plot1 plot2 plot3 plot4 plot5 plot6 plot7 plot8 plot9 noplot
+plot1 plot2 plot3 plot4 plot5 plot6 plot7 plot8 plot9 plot10 plot11 plot12 noplot
 setplotcolor setplotwidth setplottype plotpaintbar
 tl_new tl_delete tl_setcolor tl_setsize tl_setend tl_setbegin
 text_new text_delete text_setcolor text_setsize text_setstyle

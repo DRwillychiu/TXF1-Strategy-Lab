@@ -7,8 +7,8 @@
    "en": "Upthrust / Liquidity Sweep",
    "dir": "空",
    "sk": "pivot",
-   "n": 18000,
-   "mirror": 17747,
+   "n": 18003,
+   "mirror": 17749,
    "ratio": 1.014,
    "span": 3
   },
@@ -18,9 +18,9 @@
    "en": "Break of Structure, Down",
    "dir": "空",
    "sk": "pivot",
-   "n": 24129,
-   "mirror": 26016,
-   "ratio": 0.927,
+   "n": 24132,
+   "mirror": 26017,
+   "ratio": 0.928,
    "span": 3
   },
   {
@@ -29,8 +29,8 @@
    "en": "Change of Character, Down",
    "dir": "空",
    "sk": "pivot",
-   "n": 12673,
-   "mirror": 12639,
+   "n": 12675,
+   "mirror": 12641,
    "ratio": 1.003,
    "span": 3
   },
@@ -40,8 +40,8 @@
    "en": "Bear Flag",
    "dir": "空",
    "sk": "bar",
-   "n": 12038,
-   "mirror": 11859,
+   "n": 12041,
+   "mirror": 11868,
    "ratio": 1.015,
    "span": 3
   },
@@ -51,9 +51,9 @@
    "en": "Bear Pennant",
    "dir": "空",
    "sk": "bar",
-   "n": 5884,
-   "mirror": 5819,
-   "ratio": 1.011,
+   "n": 5883,
+   "mirror": 5823,
+   "ratio": 1.01,
    "span": 2
   },
   {
@@ -62,8 +62,8 @@
    "en": "Widest of 4",
    "dir": "中性",
    "sk": "bar",
-   "n": 82209,
-   "mirror": 82209,
+   "n": 82258,
+   "mirror": 82258,
    "ratio": 1.0,
    "span": 3
   },
@@ -73,8 +73,8 @@
    "en": "Widest of 7",
    "dir": "中性",
    "sk": "bar",
-   "n": 44403,
-   "mirror": 44403,
+   "n": 44455,
+   "mirror": 44455,
    "ratio": 1.0,
    "span": 6
   },
@@ -84,9 +84,9 @@
    "en": "Key Reversal, Bearish",
    "dir": "空",
    "sk": "bar",
-   "n": 8299,
-   "mirror": 8248,
-   "ratio": 1.006,
+   "n": 8308,
+   "mirror": 8253,
+   "ratio": 1.007,
    "span": 1
   },
   {
@@ -95,9 +95,9 @@
    "en": "Prior Session Low Break",
    "dir": "空",
    "sk": "bar",
-   "n": 1477,
-   "mirror": 1894,
-   "ratio": 0.78,
+   "n": 1463,
+   "mirror": 1880,
+   "ratio": 0.778,
    "span": 1
   },
   {
@@ -106,8 +106,8 @@
    "en": "Horn Top",
    "dir": "空",
    "sk": "bar",
-   "n": 5019,
-   "mirror": 5226,
+   "n": 5020,
+   "mirror": 5227,
    "ratio": 0.96,
    "span": 2
   },
@@ -118,9 +118,11 @@
    "dir": "空",
    "sk": "bar",
    "n": 4973,
-   "mirror": 5343,
-   "ratio": 0.931,
+   "mirror": 5346,
+   "ratio": 0.93,
    "span": 1
   }
- ]
+ ],
+ "csv_rows": 421513,
+ "csv_md5": "47e4054ff31b086df392bb3022e90e03"
 }
