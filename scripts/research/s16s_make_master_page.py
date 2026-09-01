@@ -26,9 +26,13 @@ OUT = os.path.join(SRC, 'S16S_pattern_master.html')
 
 # (file, tab label, one-line summary), grouped by what the group is FOR
 GROUPS = [
+    ('複習', [
+        ('S16S_day0831_review', '8/31 一日複習',
+         '25 個 commit、兩支指標驗收、六條教訓。型態層的落地標準在那天被改寫'),
+    ]),
     ('落地', [
         ('S16S_landing_map', '落地地圖',
-         '72 種裡畫得到的只有 15 種。用「畫得到嗎」而不是「檢定過嗎」盤點'),
+         '72 種裡 28 種畫得到、0 種未審查。用「畫得到嗎」而不是「檢定過嗎」盤點'),
     ]),
     ('2x2 家族', [
         ('S16S_grid5_diagram', '五個新格子',
