@@ -1,0 +1,364 @@
+<title>十一種的編碼邏輯</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --up:#c8302e;--dn:#17795e;--acc:#7a5cc4;--accw:#b9a5e8;
+ --serif:'Noto Serif TC',Georgia,serif;
+ --sans:'Noto Sans TC',-apple-system,'Microsoft JhengHei',sans-serif;
+ --mono:'JetBrains Mono',ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --up:#e8564e;--dn:#3ec08d;--acc:#a98ce8;--accw:#6d5aa0}}
+:root[data-theme="dark"]{--ink:#eef1f6;--ink2:#a8b2c1;--ink3:#79828f;
+ --bg:#0e1116;--card:#171b22;--line:#262c36;--line2:#1e232b;
+ --up:#e8564e;--dn:#3ec08d;--acc:#a98ce8;--accw:#6d5aa0}
+:root[data-theme="light"]{--ink:#14171c;--ink2:#4a525e;--ink3:#7c8595;
+ --bg:#f5f6f8;--card:#ffffff;--line:#dfe3ea;--line2:#eef1f5;
+ --up:#c8302e;--dn:#17795e;--acc:#7a5cc4;--accw:#b9a5e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+ line-height:1.62}
+.wrap{max-width:1140px;margin:0 auto;padding:44px 20px 84px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+h1{font-family:var(--serif);font-size:34px;font-weight:700;margin:0 0 12px;
+ letter-spacing:-.01em;text-wrap:balance}
+.lede{font-size:16px;color:var(--ink2);max-width:64ch;margin:0 0 30px}
+h2{font-family:var(--serif);font-size:22px;font-weight:700;margin:44px 0 14px;
+ padding-top:24px;border-top:1px solid var(--line)}
+p{margin:0 0 12px;font-size:14.5px;color:var(--ink2);max-width:70ch}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0 20px;
+ font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line2);
+ vertical-align:top}
+th{font-size:11.5px;letter-spacing:.06em;color:var(--ink3);font-weight:600;
+ text-transform:uppercase;border-bottom:1px solid var(--line)}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+code{font-family:var(--mono);font-size:12.5px;background:var(--line2);
+ padding:1px 5px;border-radius:3px}
+.pat{background:var(--card);border:1px solid var(--line);border-radius:12px;
+ padding:24px 26px;margin:20px 0}
+.hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;
+ margin-bottom:4px}
+.hd .id{font-family:var(--mono);font-size:13px;font-weight:600;
+ color:var(--acc)}
+.hd h3{margin:0;font-size:19px;font-weight:700;font-family:var(--serif)}
+.hd .en{font-size:12.5px;color:var(--ink3);font-family:var(--mono)}
+.meta{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;color:var(--ink3);
+ font-family:var(--mono);margin-bottom:16px}
+.one{font-family:var(--serif);font-size:17px;font-weight:500;color:var(--ink);
+ border-left:3px solid var(--acc);padding-left:15px;margin:0 0 18px;
+ max-width:64ch}
+.grid{display:grid;grid-template-columns:minmax(300px,1fr) minmax(280px,1fr);
+ gap:22px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.fig{overflow-x:auto}
+svg{display:block;max-width:100%;height:auto}
+.cap{font-size:12.5px;color:var(--ink3);margin-top:6px;max-width:60ch}
+h4{margin:0 0 5px;font-size:12px;font-weight:700;letter-spacing:.06em;
+ text-transform:uppercase;color:var(--ink3)}
+.blk{margin-bottom:15px}
+.blk p{font-size:14px;margin:0}
+.lv{font:600 11px 'JetBrains Mono',monospace;fill:var(--ink3)}
+.bl{font:600 11px 'Noto Sans TC',sans-serif;fill:var(--ink3)}
+.note{background:var(--card);border:1px solid var(--line);
+ border-left:3px solid var(--ink3);border-radius:10px;padding:18px 20px;
+ margin:22px 0;font-size:14px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.note h3{margin:0 0 8px;font-size:15px;color:var(--ink)}
+</style>
+<div class="wrap">
+<div class="eyebrow">S16_S · IND_S16S_ELEVEN · Build 260913</div>
+<h1>十一種的編碼邏輯</h1>
+<p class="lede">型態層的最後十一種，逐條寫成程式碼之後的樣子。每一張示意圖都被它自己的述詞斷言過 —— 畫出來的形狀若不滿足定義，這一頁就生不出來。</p>
+<h2>一、為什麼是副圖色帶，不是主圖標籤</h2>
+<p>十一種合計 <b>219,211 個標記</b>，比逼出第一條色帶的收斂六種（148,748）還密。P41 一個就 82,258 —— <b>每 5.1 根 K 棒就有一根</b>。</p>
+<p>那個密度下文字標籤會在<b>寬度</b>上互撞，不是高度，所以車道救不了。每個標記做成<b>一根 K 棒寬</b>、各佔一列，密的那列自然讀成一條帶子，而帶子本身就是資訊 —— 它顯示壓縮或擴張聚在哪裡。</p>
+<table><thead><tr><th class="n">列</th><th>代號</th><th>名稱</th><th>骨架</th><th class="n">母體</th><th class="n">每幾根一次</th></tr></thead><tbody>
+<tr><td class="n">11</td><td><code>P37</code></td><td>性格轉變（向下）</td><td>樞紐</td><td class="n">12,675</td><td class="n">33.3</td></tr>
+<tr><td class="n">10</td><td><code>P33</code></td><td>上衝回落</td><td>樞紐</td><td class="n">18,003</td><td class="n">23.4</td></tr>
+<tr><td class="n">9</td><td><code>P35</code></td><td>結構破壞（向下）</td><td>樞紐</td><td class="n">24,132</td><td class="n">17.5</td></tr>
+<tr><td class="n">8</td><td><code>P45</code></td><td>破前時段低</td><td>K 棒</td><td class="n">1,463</td><td class="n">288.1</td></tr>
+<tr><td class="n">7</td><td><code>P48</code></td><td>管狀頂</td><td>K 棒</td><td class="n">4,973</td><td class="n">84.8</td></tr>
+<tr><td class="n">6</td><td><code>P47</code></td><td>號角頂</td><td>K 棒</td><td class="n">5,020</td><td class="n">84.0</td></tr>
+<tr><td class="n">5</td><td><code>P14</code></td><td>空方三角旗</td><td>K 棒</td><td class="n">5,883</td><td class="n">71.6</td></tr>
+<tr><td class="n">4</td><td><code>P43</code></td><td>關鍵反轉（空）</td><td>K 棒</td><td class="n">8,308</td><td class="n">50.7</td></tr>
+<tr><td class="n">3</td><td><code>P13</code></td><td>空方旗形</td><td>K 棒</td><td class="n">12,041</td><td class="n">35.0</td></tr>
+<tr><td class="n">2</td><td><code>P42</code></td><td>WR7 最近七根最寬</td><td>K 棒</td><td class="n">44,455</td><td class="n">9.5</td></tr>
+<tr><td class="n">1</td><td><code>P41</code></td><td>WR4 最近四根最寬</td><td>K 棒</td><td class="n">82,258</td><td class="n">5.1</td></tr>
+</tbody></table>
+<p>列的排法先分<b>骨架</b>再分密度：下面八列直接讀 OHLC，上面三列讀<b>樞紐位階</b>，是唯三帶「結構」而不只是「形狀」的。每一組裡最密的擺最下面，跟 CONV6 與標籤車道同一個慣例。</p>
+<h2>二、四個裝置，全部零參數</h2>
+<table><thead><tr><th>裝置</th><th>原本會是門檻的地方</th><th>改寫成什麼</th></tr></thead><tbody>
+<tr><td><b>排名</b></td><td>「區間夠大／夠小」</td><td>比前 N 根每一根都大（P41 P42）</td></tr>
+<tr><td><b>影線 vs 實體</b></td><td>「長上影線」＝ 影線 &gt; 實體的幾倍？</td><td>上影線比實體長，就這樣（P47 P48）</td></tr>
+<tr><td><b>差距 vs 影線</b></td><td>「兩個高點差不多齊」＝ 差幾點以內？</td><td>差距小於兩根上影線裡較短的那一根 —— <b>容忍度由 K 棒自己提供</b></td></tr>
+<tr><td><b>跑到分出勝負</b></td><td>「旗形飄移 5 到 20 根」</td><td>跑到收破旗桿低或穿越旗桿高 —— <b>「多長」這個問題不會被問到</b>（P13 P14）</td></tr>
+</tbody></table>
+<p>唯一的自由參數是 <b>N = 4 與 N = 7</b>，Crabel 的常數，2026-08-31 裁示接受並記錄為<b>借用</b>而非推導。其餘九種一個參數都沒有。</p>
+<h2>三、十一條，逐條對照圖</h2>
+<div class="pat">
+<div class="hd"><span class="id">P41</span><h3>WR4 最近四根最寬</h3><span class="en">Widest of 4</span></div>
+<div class="meta"><span>方向 中性</span><span>骨架 K 棒</span><span>跨度 4 根</span><span>母體 82,258</span><span>色帶第 1 列</span></div>
+<p class="one">這一根的高低差，比前面三根每一根都大。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 284 240" role="img" aria-label="P41 WR4 最近四根最寬 示意">
+<line x1="44" y1="88.0" x2="44" y2="128.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="101.5" width="20" height="13.5" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="74.5" x2="100" y2="115.0" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="88.0" width="20" height="13.5" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="61.1" x2="156" y2="101.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="146" y="74.5" width="20" height="13.5" fill="var(--up)" rx="1.5"/>
+<line x1="212" y1="47.6" x2="212" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="202" y="74.5" width="20" height="94.4" fill="var(--acc)" rx="1.5"/>
+<text x="212" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 3 根區間 10，前三根都是 3 ── 嚴格大於，四根裡最寬。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>這是 NR4「最近四根最窄」的鏡像。NR4 在 IND_S16S_CONV6 裡是第 1 列，WR4 在這裡也是第 1 列 —— 同一個排名裝置，方向相反。N=4 是 Crabel 的常數，2026-08-31 裁示接受，記錄為<b>借用</b>而非推導。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p><b>嚴格大於</b>。平手不算，因為 WR 沒有「內含線」那種幾何理由可以把平手納入 —— 那個理由只存在於 NR 那一邊，而 NR 的平手處置至今待裁示。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P42</span><h3>WR7 最近七根最寬</h3><span class="en">Widest of 7</span></div>
+<div class="meta"><span>方向 中性</span><span>骨架 K 棒</span><span>跨度 7 根</span><span>母體 44,455</span><span>色帶第 2 列</span></div>
+<p class="one">這一根的高低差，比前面六根每一根都大。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 452 240" role="img" aria-label="P42 WR7 最近七根最寬 示意">
+<line x1="44" y1="148.7" x2="44" y2="182.4" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="159.9" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="137.5" x2="100" y2="171.2" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="148.7" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="115.0" x2="156" y2="159.9" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="146" y="137.5" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="212" y1="115.0" x2="212" y2="148.7" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="202" y="126.2" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="268" y1="103.8" x2="268" y2="137.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="258" y="115.0" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="324" y1="81.3" x2="324" y2="126.2" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="314" y="103.8" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="380" y1="47.6" x2="380" y2="159.9" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="370" y="103.8" width="20" height="44.9" fill="var(--acc)" rx="1.5"/>
+<text x="380" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 6 根區間 10，前六根最大的是 4 ── 七根裡最寬。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>跟 P41 同一個裝置，只是視窗換成 Crabel 的第二個常數 N=7。<b>P42 在邏輯上是 P41 的子集</b>（前六根含前三根），所以兩列會有大量重疊，這是定義本身決定的，不是 bug。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>同 P41，嚴格大於。時段內至少 8 根才起算。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P13</span><h3>空方旗形</h3><span class="en">Bear Flag</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 中位 3 根</span><span>母體 12,041</span><span>色帶第 3 列</span></div>
+<p class="one">一根寬而收黑的旗桿之後，價格在旗桿的高低之間橫走，最後收破旗桿的低點。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 452 240" role="img" aria-label="P13 空方旗形 示意">
+<rect x="30" y="47.6" width="406" height="112.4" fill="var(--accw)" opacity=".16"/>
+<line x1="44" y1="81.3" x2="44" y2="115.0" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="92.5" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="70.1" x2="100" y2="103.8" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="81.3" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="58.8" x2="156" y2="92.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="146" y="70.1" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="212" y1="47.6" x2="212" y2="159.9" stroke="var(--accw)" stroke-width="1.6"/>
+<rect x="202" y="70.1" width="20" height="78.7" fill="var(--accw)" rx="1.5"/>
+<text x="212" y="228" class="bl" text-anchor="middle">旗桿</text>
+<line x1="268" y1="115.0" x2="268" y2="154.3" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="258" y="126.2" width="20" height="22.5" fill="var(--up)" rx="1.5"/>
+<line x1="324" y1="103.8" x2="324" y2="148.7" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="314" y="126.2" width="20" height="11.2" fill="var(--dn)" rx="1.5"/>
+<line x1="380" y1="115.0" x2="380" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="370" y="137.5" width="20" height="33.7" fill="var(--acc)" rx="1.5"/>
+<text x="380" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">旗桿 = 第 3 根（WR4 且收黑），高 105 低 95。飄移兩根都待在帶內，第 6 根收 94 跌破 95 ── 旗形成立。第 5 根區間 4 大於第 4 根的 3.5，收斂中斷，所以這個例子<b>是 P13 不是 P14</b>。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p><b>旗形沒有根數。</b>圖鑑通常寫「飄移 5 到 20 根」，那是一個要調的參數。這裡改成「跑到分出勝負為止」：飄移一直跑，直到收盤跌破旗桿低（成立）或高點被穿越（作廢）。<b>「旗形要多長」這個問題從此不會被問到。</b><br><br>旗桿的定義直接借 P41 —— WR4 而且收黑。不另發明。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>高點先判、低點後判：<b>同一根既穿過旗桿高、又收破旗桿低，算作廢，不算成立。</b>這個先後順序是定義的一部分。<br>飄移至少 1 根（<code>n &gt;= 1</code>），旗桿當根收破不算。<br><b>旗形會跨時段</b> —— 母體裡 419 個（3.48%）真的跨。原腳本有一條「時段結束旗形」的分支，實測走到 0 次，是死碼；本頁與指標照程式碼，不照註解。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P43</span><h3>關鍵反轉（空）</h3><span class="en">Key Reversal, Bearish</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 2 根</span><span>母體 8,308</span><span>色帶第 4 列</span></div>
+<p class="one">創了前一根的新高，卻收在前一根的最低之下。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 172 240" role="img" aria-label="P43 關鍵反轉（空） 示意">
+<line x1="44" y1="66.8" x2="44" y2="143.9" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="86.1" width="20" height="57.8" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="47.6" x2="100" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="90" y="86.1" width="20" height="77.1" fill="var(--acc)" rx="1.5"/>
+<text x="100" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 1 根高 105 > 前高 104，收 99 < 前低 100。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>這是「外包吞噬」的一種寫法，但兩端都用<b>比較</b>而不是幅度門檻：高要更高、收要低於前低。沒有「至少幾點」「至少幾趴」這種可調的東西。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>兩端都是<b>嚴格</b>。碰到前低不算，要收在它之下。看的是 <b>Close 對 Low</b>，不是 Low 對 Low —— 影線刺破不算，要收進去。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P14</span><h3>空方三角旗</h3><span class="en">Bear Pennant</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 中位 2 根</span><span>母體 5,883</span><span>色帶第 5 列</span></div>
+<p class="one">跟空方旗形完全一樣，額外要求飄移期間每一根都比前一根窄。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 452 240" role="img" aria-label="P14 空方三角旗 示意">
+<rect x="30" y="47.6" width="406" height="112.4" fill="var(--accw)" opacity=".16"/>
+<line x1="44" y1="81.3" x2="44" y2="115.0" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="92.5" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="70.1" x2="100" y2="103.8" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="81.3" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="58.8" x2="156" y2="92.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="146" y="70.1" width="20" height="11.2" fill="var(--up)" rx="1.5"/>
+<line x1="212" y1="47.6" x2="212" y2="159.9" stroke="var(--accw)" stroke-width="1.6"/>
+<rect x="202" y="70.1" width="20" height="78.7" fill="var(--accw)" rx="1.5"/>
+<text x="212" y="228" class="bl" text-anchor="middle">旗桿</text>
+<line x1="268" y1="115.0" x2="268" y2="154.3" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="258" y="126.2" width="20" height="22.5" fill="var(--up)" rx="1.5"/>
+<line x1="324" y1="115.0" x2="324" y2="143.1" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="314" y="126.2" width="20" height="11.2" fill="var(--dn)" rx="1.5"/>
+<line x1="380" y1="126.2" x2="380" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="370" y="137.5" width="20" height="33.7" fill="var(--acc)" rx="1.5"/>
+<text x="380" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">同一個旗桿，但飄移區間 10 → 3.5 → 2.5 一路變窄，所以這一次<b>P13 與 P14 同時成立</b>。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p><b>P14 是 P13 的真子集</b>，唯一的差別是收斂旗。這也是為什麼兩列並排放：看得到哪些旗形是收斂的、哪些不是，比例一眼可讀（5,883 / 12,041 ＝ 48.9%）。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>收斂是<b>嚴格遞減</b>，而且<b>一旦中斷就永不恢復</b> —— 中間有一根沒有變窄，這個旗桿之後就只能是 P13。收破那一根<b>不參與</b>收斂判定。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P47</span><h3>號角頂</h3><span class="en">Horn Top</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 3 根</span><span>母體 5,020</span><span>色帶第 6 列</span></div>
+<p class="one">兩根長上影線的高點差不多齊，中間隔著一根較低的高點 —— 像兩支角。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 228 240" role="img" aria-label="P47 號角頂 示意">
+<line x1="44" y1="47.6" x2="44" y2="182.4" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="157.9" width="20" height="12.3" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="121.1" x2="100" y2="157.9" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="145.6" width="20" height="2.2" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="53.7" x2="156" y2="157.9" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="146" y="133.4" width="20" height="12.3" fill="var(--acc)" rx="1.5"/>
+<text x="156" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">兩支角高 110 與 109.5，差 0.5；上影線 9 與 6.5，取短的 6.5。0.5 &lt; 6.5 ── 算齊。中間那根高 104，比兩支都低。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>「長上影線」與「差不多齊」原本都是門檻。這裡兩個都改寫成<b>比較</b>：<br>長上影線 → <b>上影線比實體長</b>；<br>差不多齊 → <b>兩個高點的差距，小於兩根上影線中較短的那一根</b>。<br><br>第二條是關鍵：容忍度<b>由 K 棒自己提供</b>。震幅變大時影線跟著變長，容忍度自動放寬 —— 這正是 2026-08-31「改成尺度不變」裁示要的效果。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>中間那根只看<b>高點</b>要比兩支角都低，不看它的影線或實體。兩支角之間<b>剛好隔一根</b>，不多不少。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P48</span><h3>管狀頂</h3><span class="en">Pipe Top</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 2 根</span><span>母體 4,973</span><span>色帶第 7 列</span></div>
+<p class="one">兩根<b>相鄰</b>的長上影線，高點差不多齊，而且這一對是局部高點。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 284 240" role="img" aria-label="P48 管狀頂 示意">
+<line x1="44" y1="130.6" x2="44" y2="182.4" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="140.9" width="20" height="31.1" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="47.6" x2="100" y2="130.6" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="109.8" width="20" height="10.4" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="52.8" x2="156" y2="120.2" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="146" y="109.8" width="20" height="10.4" fill="var(--acc)" rx="1.5"/>
+<text x="156" y="228" class="bl" text-anchor="middle">成立</text>
+<line x1="212" y1="99.4" x2="212" y2="140.9" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="202" y="120.2" width="20" height="10.4" fill="var(--dn)" rx="1.5"/>
+</svg></div><p class="cap">兩根高 112 與 111.5，差 0.5 &lt; 短影線 5.5。左邊 104、右邊 107 都比這一對低 ── 這一對是局部高點。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>跟號角頂共用同一組裝置，唯一差別是兩支角<b>貼在一起</b>而不是隔一根。所以這兩個型態不會互相汙染母體。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>「這一對是局部高點」寫成兩個條件：<b>第一根的高要高過它前一根</b>、<b>第二根的高要高過它後一根</b>。<br><br>後面那一根就是<b>整支指標必須落後一根</b>的原因 —— 管狀頂在它自己的第二根上不可判定，要等下一根才知道。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P45</span><h3>破前時段低</h3><span class="en">Prior Session Low Break</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 K 棒</span><span>跨度 1 根</span><span>母體 1,463</span><span>色帶第 8 列</span></div>
+<p class="one">收盤跌破<b>上一個時段</b>的最低點。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 228 240" role="img" aria-label="P45 破前時段低 示意">
+<line x1="30" y1="155.5" x2="212" y2="155.5" stroke="var(--ink3)" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="210" y="149.5" class="lv" text-anchor="end">前時段低 97</text>
+<line x1="44" y1="47.6" x2="44" y2="101.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="74.5" width="20" height="2.2" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="47.6" x2="100" y2="128.5" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="90" y="74.5" width="20" height="27.0" fill="var(--dn)" rx="1.5"/>
+<line x1="156" y1="74.5" x2="156" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="146" y="101.5" width="20" height="67.4" fill="var(--acc)" rx="1.5"/>
+<text x="156" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">虛線 97 是上一個時段的最低。第 2 根收 96.5，收在它之下。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>這是十一種裡唯一一個跨時段的型態，也是唯一一個<b>每個時段最多算一次</b>的。第一次收破就登記，然後那個位階作廢，同一個時段不會重複計。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>用 <b>Close</b> 不是 Low ── 影線刺破不算。<br>「上一個時段」是日盤與夜盤各自算一段（日 08:45-13:45、夜 15:00-05:00），不是一個交易日。<br><b>這是唯一一個鏡像倍率明顯偏離 1 的：0.78</b>（破前低 1,463 對 破前高 1,880）── 也就是說台指<b>破前時段高比破前時段低更常見</b>，跟指數長期偏多一致。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P35</span><h3>結構破壞（向下）</h3><span class="en">Break of Structure, Down</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 樞紐</span><span>跨度 3 根</span><span>母體 24,132</span><span>色帶第 9 列</span></div>
+<p class="one">收盤跌破<b>目前站著的那個樞紐低</b>。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 284 240" role="img" aria-label="P35 結構破壞（向下） 示意">
+<line x1="30" y1="157.9" x2="268" y2="157.9" stroke="var(--ink3)" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="266" y="151.9" class="lv" text-anchor="end">樞紐低 96</text>
+<line x1="44" y1="47.6" x2="44" y2="133.4" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="34" y="59.8" width="20" height="61.3" fill="var(--dn)" rx="1.5"/>
+<line x1="100" y1="108.9" x2="100" y2="157.9" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="90" y="121.1" width="20" height="24.5" fill="var(--dn)" rx="1.5"/>
+<line x1="156" y1="121.1" x2="156" y2="145.6" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="146" y="133.4" width="20" height="12.3" fill="var(--up)" rx="1.5"/>
+<line x1="212" y1="121.1" x2="212" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="202" y="133.4" width="20" height="36.8" fill="var(--acc)" rx="1.5"/>
+<text x="212" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 1 根是樞紐低（96 低於左右兩根）。第 3 根收 95，收破 96。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p><b>這不是「低更低」原語。</b>兩者差很多：收破站著的樞紐低發生 24,132 次，而「下一個樞紐低印得更低」發生 34,116 次。<br><br>差的那 9,984 次，全是<b>價格戳到下面又收回來</b>的情形 —— 而那正是這個型態要排除的東西。所以它沒有被化約掉，不像 P39（三個下降峰）被化約成頭頭降原語。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>用 <b>Close</b>。<b>每個樞紐低只被破一次</b>：破過就解除武裝，要等下一個樞紐低印出來才重新上膛。<br>樞紐用碎形定義（<code>L[i] &lt; L[i±1]</code>），所以它<b>晚一根才確認</b> —— 破位比對的一定是「這一根之前就站著」的位階。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P33</span><h3>上衝回落</h3><span class="en">Upthrust / Liquidity Sweep</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 樞紐</span><span>跨度 3 根</span><span>母體 18,003</span><span>色帶第 10 列</span></div>
+<p class="one">高點衝過站著的樞紐高，收盤卻收回它下面。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 284 240" role="img" aria-label="P33 上衝回落 示意">
+<line x1="30" y1="68.3" x2="268" y2="68.3" stroke="var(--ink3)" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="266" y="62.3" class="lv" text-anchor="end">樞紐高 110</text>
+<line x1="44" y1="89.1" x2="44" y2="182.4" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="99.4" width="20" height="72.6" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="68.3" x2="100" y2="109.8" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="78.7" width="20" height="20.7" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="99.4" x2="156" y2="130.6" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="146" y="109.8" width="20" height="10.4" fill="var(--dn)" rx="1.5"/>
+<line x1="212" y1="47.6" x2="212" y2="130.6" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="202" y="89.1" width="20" height="31.1" fill="var(--acc)" rx="1.5"/>
+<text x="212" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 1 根是樞紐高 110。第 3 根衝到 112 穿過去，卻收 108 回到下面。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>「掃流動性」這個說法要成立，必須<b>同一根</b>又穿又收回 —— 穿了就走是突破，穿了收回才是掃單。所以兩個條件綁在同一根上：<code>High &gt; 位階</code> 且 <code>Close &lt; 位階</code>。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>跟 P35 對稱：<b>每個樞紐高只被掃一次</b>。<br>高點用 <b>High</b>（要真的穿過去），收盤用 <b>Close</b>。<br>鏡像倍率 1.01 ── <b>上衝回落與下探回升一樣常見</b>，這個形狀本身不帶方向資訊，方向來自它掃的是哪一邊。</p></div>
+</div></div></div>
+<div class="pat">
+<div class="hd"><span class="id">P37</span><h3>性格轉變（向下）</h3><span class="en">Change of Character, Down</span></div>
+<div class="meta"><span>方向 空</span><span>骨架 樞紐</span><span>跨度 3 根</span><span>母體 12,675</span><span>色帶第 11 列</span></div>
+<p class="one"><b>在一次向上突破之後</b>，第一次收破樞紐低。</p>
+<div class="grid">
+<div><div class="fig"><svg viewBox="0 0 508 240" role="img" aria-label="P37 性格轉變（向下） 示意">
+<line x1="30" y1="62.6" x2="492" y2="62.6" stroke="var(--ink3)" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="490" y="56.6" class="lv" text-anchor="end">樞紐高 110</text>
+<line x1="30" y1="159.9" x2="492" y2="159.9" stroke="var(--ink3)" stroke-width="1.4" stroke-dasharray="5 4"/>
+<line x1="44" y1="77.5" x2="44" y2="145.0" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="34" y="85.0" width="20" height="52.4" fill="var(--up)" rx="1.5"/>
+<line x1="100" y1="62.6" x2="100" y2="92.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="90" y="70.1" width="20" height="15.0" fill="var(--up)" rx="1.5"/>
+<line x1="156" y1="85.0" x2="156" y2="107.5" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="146" y="92.5" width="20" height="7.5" fill="var(--dn)" rx="1.5"/>
+<line x1="212" y1="47.6" x2="212" y2="107.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="202" y="55.1" width="20" height="44.9" fill="var(--up)" rx="1.5"/>
+<line x1="268" y1="47.6" x2="268" y2="137.5" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="258" y="55.1" width="20" height="74.9" fill="var(--dn)" rx="1.5"/>
+<line x1="324" y1="115.0" x2="324" y2="159.9" stroke="var(--dn)" stroke-width="1.6"/>
+<rect x="314" y="130.0" width="20" height="22.5" fill="var(--dn)" rx="1.5"/>
+<line x1="380" y1="130.0" x2="380" y2="152.5" stroke="var(--up)" stroke-width="1.6"/>
+<rect x="370" y="137.5" width="20" height="15.0" fill="var(--up)" rx="1.5"/>
+<line x1="436" y1="130.0" x2="436" y2="182.4" stroke="var(--acc)" stroke-width="1.6"/>
+<rect x="426" y="137.5" width="20" height="37.5" fill="var(--acc)" rx="1.5"/>
+<text x="436" y="228" class="bl" text-anchor="middle">成立</text>
+</svg></div><p class="cap">第 3 根收 111 站上樞紐高 110 ── 記下「上一次是往上」。第 5 根是樞紐低 97（要等第 6 根低點更高才確認得了），第 7 根收 95 破掉它 ── 這一次的結構破壞<b>同時是性格轉變</b>。<br><b>第 6 根不能省</b>：樞紐要有右肩才成立，而收破那一根的收盤永遠 &gt;= 它自己的低，做不了右肩。</p></div>
+<div>
+<div class="blk"><h4>為什麼這樣定義</h4><p>P37 是 P35 的真子集，多了一個記憶：<b>上一次結構性事件是往上的</b>。<br><br>它捕捉的是「趨勢方向翻面的那一刻」，而不是「下跌途中又破一個低」—— 後者是 P35 的大多數。12,675 / 24,132 ＝ <b>52.5% 的結構破壞同時是性格轉變</b>。</p></div>
+<div class="blk"><h4>釘死的邊界</h4><p>只認<b>第一次</b>：登記之後 upLast 立刻清掉，要等下一次收上樞紐高才重新武裝。<br>「向上」的定義是<b>收盤高過站著的樞紐高</b>（不需要是樞紐、不需要回落）。</p></div>
+</div></div></div>
+<h2>四、整支指標落後一根，而那是對的</h2>
+<p>定義這十一種的腳本，會<b>跳過任何一根「下一根就開新時段」的 K 棒</b>，因為碎形樞紐的判定需要下一根。這代表一根 K 棒的分類<b>在它自己身上不可判定</b> —— 這支程式不行，坐在螢幕前的人也不行。</p>
+<p>所以指標分類的是 <code>[1]</code>，標記畫在 <code>[0]</code>。<b>一個標記的意思是「在這裡被確認」，不是「形狀在這裡結束」。</b>P48 管狀頂把這件事講得最清楚：它的第二根要比<b>再下一根</b>高，所以在第二根當下根本不知道自己是不是管狀頂。</p>
+<p>這跟 IND_S16S_P29 的樞紐鏈一直以來用的是同一個慣例，而且是實盤唯一守得住的慣例。</p>
+<h2>五、旗桿清單：四槽，而不是「應該夠了」</h2>
+<p>同一時間可以有好幾根旗桿活著。<b>實測整條序列最深是三根</b>（深度 3 出現 181 次，深度 2 出現 5,862 次），所以四槽是一格餘裕，第五根會去累加 <code>v_Ovf</code>，而那個數字印在驗收行上。</p>
+<p><b>安靜的上限，是母體安靜地不再是母體的方式。</b></p>
+<div class="note"><h3>兩件必須講明的事</h3><b>一、順序錯了。</b>專案規範是「五段總整理 → 對照圖 → HTML → 才程式碼化」，而 2026-09-01 我是先寫進 <code>.pla</code> 才回頭補這一頁。內容補齊了，順序沒有補回來。<br><br><b>二、Build 260913 尚未在 MC12 編譯或執行。</b>本頁的母體數字來自 <code>s16s_eleven_pla_model.py</code> —— 它用這支 .pla 真正的視窗（7 根暖身、狀態機從第 8 根空著起跑、一根落後）重放述詞，再與定義腳本<b>逐根對，11 種零分歧</b>。那是預測，不是結果。</div>
+<div class="note"><h3>誠實聲明</h3>1. 十一張示意圖的座標都經過真實述詞斷言，斷言在 <code>s16s_eleven_make_logic_page.py</code> 的 <code>main()</code>。<br>2. 母體數字是<b>筆電</b>的 CSV（md5 47e4054f…）。桌機同一支腳本得到不同數字，見 <code>S16S_CSV_DIVERGENCE_20260901.md</code>。<br>3. <b>沒有任何報酬檢定。</b>本頁只講形狀怎麼被定義與偵測。<br>4. P13「旗形跨時段」是照<b>程式碼</b>寫的，定義腳本的註解說的是相反的事，那條分支實測走到 0 次。<br>5. 本文由 Claude 產出，未經第二方審查。</div>
+</div>
