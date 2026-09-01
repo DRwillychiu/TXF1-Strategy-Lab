@@ -1051,8 +1051,8 @@ tr.mxsum td{border-bottom:none;color:var(--mxink);font-weight:600}
 <div class="chip"><code>P06</code><span class="zh">三根遞減區間</span><span class="en">Three Shrinking Ranges</span></div>
 </div>
 <h2>已編碼，尚未 MC12 驗收<span class="tag ready">15 種</span></h2>
-<p>Build 260910 把 3x3 格補滿：P11 上升楔形 1,919、P10 對稱三角 463、P08 下降三角 2,065、P22 箱型 3,063。同一版把 P53／P54 的「平」從<b>完全相等</b>改成<b>收斂</b>（散布 &lt; 對邊移動距離）—— 完全相等是全檔唯一尺度相依的測試，八年只有 7 個和 8 個且 2026 掛零。全等的那些保留成子標籤。</p>
-<p class="work"><b>要做什麼：</b><b>跑 MC12 驗收</b>。三道護欄必須不動（P29 202／P51 1670／P52 1716），全等子集必須仍是 7 與 8。</p>
+<p><b>IND_S16S_P29</b> Build 260910 把 3x3 格補滿：P11 上升楔形 1,919、P10 對稱三角 463、P08 下降三角 2,065、P22 箱型 3,063。同一版把 P53／P54 的「平」從<b>完全相等</b>改成<b>收斂</b>（散布 &lt; 對邊移動距離）—— 完全相等是全檔唯一尺度相依的測試，八年只有 7 個和 8 個且 2026 掛零。全等的那些保留成子標籤。<br><br><b>IND_S16S_ELEVEN</b> Build 260913（<b>新檔</b>，第二條副圖色帶）把最後十一種編碼：P41 WR4 82,258、P42 WR7 44,455、P35 結構破壞 24,132、P33 上衝回落 18,003、P37 性格轉變 12,675、P13 空方旗形 12,041、P43 關鍵反轉 8,308、P14 空方三角旗 5,883、P47 號角頂 5,020、P48 管狀頂 4,973、P45 破前時段低 1,463 —— <b>合計 219,211</b>，比收斂六種還密，所以走色帶不走標籤。十一列先分骨架再分密度。</p>
+<p class="work"><b>要做什麼：</b><b>跑兩份 MC12 驗收</b>。260910 的三道護欄必須不動（P29 202／P51 1670／P52 1716），全等子集必須仍是 7 與 8；260913 應印 <code>bars= 421506  pole_overflow= 0</code> 與上列十一個數字（<b>筆電</b> csv，桌機請對桌機自己重跑的）。</p>
 <div class="chips">
 <div class="chip"><code>P08</code><span class="zh">下降三角</span><span class="en">Descending Triangle</span></div>
 <div class="chip"><code>P10</code><span class="zh">對稱三角</span><span class="en">Symmetrical Triangle</span></div>
