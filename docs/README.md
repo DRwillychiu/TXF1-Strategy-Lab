@@ -68,13 +68,13 @@
 ### L 系列（live）
 | 文件 | 對應策略 / 版本 |
 |------|---------------|
-| `L1_v26_20260622_gap_miss_case.md` | L1 v2.6 Gap miss 案例分析 |
-| `L4_v142_pathA_entry_diagnostic.md` | L4 v14.2 Path A 進場品質診斷 |
-| `L4_v142_pathB_variant_matrix.md` | L4 v14.2 Path B 變體矩陣 |
-| `L4_v142_variant_results.md` | L4 v14.2 A-G 七變體實證結果 |
-| `L5_v198_pretrail_sp_design.md` | L5 v19.8 SP 模組設計 |
-| `L5_v198_variant_results.md` | L5 v19.8 A/B 六變體實證 |
-| `L5_v199_1contract_removed_code.md` | L5 v19.9 移除多口邏輯碼 |
+| `L1_v2.6_20260622_gap_miss_case.md` | L1 v2.6 Gap miss 案例分析 |
+| `L4_v14.2_pathA_entry_diagnostic.md` | L4 v14.2 Path A 進場品質診斷 |
+| `L4_v14.2_pathB_variant_matrix.md` | L4 v14.2 Path B 變體矩陣 |
+| `L4_v14.2_variant_results.md` | L4 v14.2 A-G 七變體實證結果 |
+| `L5_v19.8_pretrail_sp_design.md` | L5 v19.8 SP 模組設計 |
+| `L5_v19.8_variant_results.md` | L5 v19.8 A/B 六變體實證 |
+| `L5_v19.9_1contract_removed_code.md` | L5 v19.9 移除多口邏輯碼 |
 | `range_force_exit_deployment_20260617.md` | L3/L4 RangeForceExit 部署紀錄 |
 | `range_force_exit_rollback_20260617.md` | L3/L4 RangeForceExit 回滾原因 |
 

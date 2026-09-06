@@ -1,5 +1,8 @@
 # strategies/live/ — 實盤上架策略（真金白銀）
 
+> **版本以 [`docs/LIVE_VERSIONS.md`](../../docs/LIVE_VERSIONS.md) 為單一真相來源。**
+> 本檔版本欄若與該檔不符，以該檔為準。
+
 > 這裡的策略都已部署到 MultiCharts 9.0 實盤帳戶，每天真金白銀運作。
 > 任何變更必須 **空手時部署**，並通過 `scripts/verify_all_live.py` 全 110 項驗證。
 
@@ -107,6 +110,6 @@ python scripts/verify_l4_v142.py      # 67/67 項
 
 - [docs/methodology/entry_exit_sop.md](../../docs/methodology/entry_exit_sop.md) — 9 層出場架構標準
 - [docs/methodology/position_sizing_and_capacity.md](../../docs/methodology/position_sizing_and_capacity.md) — 口數配置
-- [docs/strategy_archive/L4_v142_variant_results.md](../../docs/strategy_archive/L4_v142_variant_results.md) — L4 A/B 完整實證
-- [docs/strategy_archive/L5_v198_variant_results.md](../../docs/strategy_archive/L5_v198_variant_results.md) — L5 A/B 完整實證
+- [docs/strategy_archive/L4_v14.2_variant_results.md](../../docs/strategy_archive/L4_v14.2_variant_results.md) — L4 A/B 完整實證
+- [docs/strategy_archive/L5_v19.8_variant_results.md](../../docs/strategy_archive/L5_v19.8_variant_results.md) — L5 A/B 完整實證
 - [docs/research/optimization_opportunities_2026Q2.md](../../docs/research/optimization_opportunities_2026Q2.md) — 優化空間清單

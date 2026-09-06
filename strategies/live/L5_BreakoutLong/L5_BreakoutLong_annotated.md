@@ -44,7 +44,7 @@ v19.9 .pla 保留在 git 歷史中（commit cca5326 之前），不部署。
 
 **10 個出場標籤移除**（BL_TP/SP/TrailSP/HoldSP/HoldBE × Bot/Mid），**16 個保留**。
 
-完整移除程式碼歸檔：[L5_v199_1contract_removed_code.md](../../docs/strategy_archive/L5_v199_1contract_removed_code.md)
+完整移除程式碼歸檔：[L5_v19.9_1contract_removed_code.md](../../docs/strategy_archive/L5_v19.9_1contract_removed_code.md)
 
 日後擴展至多口數時（建議 5 口以上），按歸檔文件中的 Restoration guide 恢復。
 
@@ -91,7 +91,7 @@ Stage 2:    Trail（4 階動態）> BE（進場價）
 
 裁定：**全 5 變體 FAIL**，SP 程式碼在 v19.9 完全移除。
 - L5 淨利 88% 集中在 Top-10 大贏家，SP 截斷大尾巴 = 自殺
-- 完整實證：[L5_v198_variant_results.md](../../docs/strategy_archive/L5_v198_variant_results.md)
+- 完整實證：[L5_v19.8_variant_results.md](../../docs/strategy_archive/L5_v19.8_variant_results.md)
 
 ---
 

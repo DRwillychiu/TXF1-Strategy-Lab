@@ -6,9 +6,9 @@
 > 平台：MultiCharts 9.0 PowerLanguage x64
 > 狀態：🟢 **生產配置已封裝**（用戶端 MC9 把 `Night_Block_On` 設為 true 即生效）
 > 口數：1 口
-> 完整實證：[L4_v142_variant_results.md](../../docs/L4_v142_variant_results.md)
-> Path A 診斷：[L4_v142_pathA_entry_diagnostic.md](../../docs/L4_v142_pathA_entry_diagnostic.md)
-> Path B 設計（已駁回）：[L4_v142_pathB_variant_matrix.md](../../docs/L4_v142_pathB_variant_matrix.md)
+> 完整實證：[L4_v14.2_variant_results.md](../../docs/L4_v14.2_variant_results.md)
+> Path A 診斷：[L4_v14.2_pathA_entry_diagnostic.md](../../docs/L4_v14.2_pathA_entry_diagnostic.md)
+> Path B 設計（已駁回）：[L4_v14.2_pathB_variant_matrix.md](../../docs/L4_v14.2_pathB_variant_matrix.md)
 
 ## v14.2B 生產配置（A/B 實證後封裝）
 

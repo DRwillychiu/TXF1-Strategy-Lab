@@ -106,10 +106,10 @@ CL_ReEntry  n=49  平均 -6,049  t = -0.40
 
 | 路徑 | 說明 |
 |---|---|
-| `strategies/research/L2_TrendShort/L2_v54/L2_TrendShort_v54.pla` | L2 標籤版，錨點通過 |
-| `strategies/research/L3_ConsolidationLong/L3_v151/L3_ConsolidationLong_v151.pla` | L3 標籤版，錨點通過 |
-| `docs/research/L2_reentry_label_runcard_20260825.md` ／ `L2_v54_label_anchor_result_20260825.md` | L2 執行卡與結果 |
-| `docs/research/L3_reentry_label_runcard_20260825.md` ／ `L3_v151_label_anchor_result_20260825.md` | L3 執行卡與結果 |
+| `strategies/research/L2_TrendShort/L2_v5.4/L2_TrendShort_v5.4.pla` | L2 標籤版，錨點通過 |
+| `strategies/research/L3_ConsolidationLong/L3_v15.1/L3_ConsolidationLong_v15.1.pla` | L3 標籤版，錨點通過 |
+| `docs/research/L2_reentry_label_runcard_20260825.md` ／ `L2_v5.4_label_anchor_result_20260825.md` | L2 執行卡與結果 |
+| `docs/research/L3_reentry_label_runcard_20260825.md` ／ `L3_v15.1_label_anchor_result_20260825.md` | L3 執行卡與結果 |
 | `docs/research/L5_reentry_L28_measurement_20260825.md` | **L5 量測 ＋ L3 統計檢定** |
 | `docs/research/label_taxonomy_audit_20260824.md` | 標籤稽核（L-1/L-2/L-3 三條規則） |
 | `.claude/skills/comparison-table/SKILL.md` | **比較表呈現規範**（用戶 2026-08-25 裁示） |

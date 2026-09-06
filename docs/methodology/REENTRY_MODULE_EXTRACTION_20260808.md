@@ -517,12 +517,12 @@ strategies/live/L1_TrendLong/L1_TrendLong.pla
 strategies/live/L3_ConsolidationLong/L3_ConsolidationLong.pla
 strategies/live/L5_BreakoutLong/L5_BreakoutLong.pla
 strategies/live_simulation/S1_NightMomentum/S1_NightMomentum.pla
-strategies/research/L1_TrendLong/L1_v30/L1_TrendLong_v30.pla
-strategies/research/L1_TrendLong/L1_v31/L1_TrendLong_v31.pla
-strategies/research/L3_ConsolidationLong/L3_v141/L3_ConsolidationLong_v141.pla
-strategies/research/L3_ConsolidationLong/L3_v15/L3_ConsolidationLong_v15.pla
-strategies/research/L5_BreakoutLong/L5_v198/L5_BreakoutLong_v198.pla
-strategies/research/L5_BreakoutLong/L5_v199/L5_BreakoutLong_v199.pla
+strategies/research/L1_TrendLong/L1_v3.0/L1_TrendLong_v3.0.pla
+strategies/research/L1_TrendLong/L1_v3.1/L1_TrendLong_v3.1.pla
+strategies/research/L3_ConsolidationLong/L3_v14.1/L3_ConsolidationLong_v14.1.pla
+strategies/research/L3_ConsolidationLong/L3_v15.0/L3_ConsolidationLong_v15.0.pla
+strategies/research/L5_BreakoutLong/L5_v19.8/L5_BreakoutLong_v19.8.pla
+strategies/research/L5_BreakoutLong/L5_v19.9/L5_BreakoutLong_v19.9.pla
 strategies/live_simulation/S16_S_MACrossShort/IND_S16_S_Monitor.pla   <- 指標非策略
 ```
 也就是說 **L1 / L3 / L5 / S1 這四族連 research 版都沒有 `ExitFired`**，不是「live 版落後」而是「這個機制從未被引入該策略族」。

@@ -45,8 +45,8 @@
 
 | 檔案 | 處置 |
 |---|---|
-| `L4_v18/L4_ConsolidationShort_v18.pla` | **保留在 research/，不推進、不刪除** |
-| `L4_v18/L4_ConsolidationShort_v18_DIAG.pla` | **保留，未執行** |
+| `L4_v18.0/L4_ConsolidationShort_v18.0.pla` | **保留在 research/，不推進、不刪除** |
+| `L4_v18.0/L4_ConsolidationShort_v18.0_DIAG.pla` | **保留，未執行** |
 
 **狀態標註：已建、退化錨點通過（79 筆 / 877,200 逐筆相同）、`ReEntry_On = 1` 時零觸發、未除錯。**
 

@@ -192,7 +192,7 @@ L4 做空要取**較低價**才是較緊。方向寫反不會報錯，只會讓�
 
 ## 7. 建議的 Step 1 內容（待 E1-E4 定案後動工）
 
-**落點**：`strategies/research/L4_ConsolidationShort/L4_v15/`
+**落點**：`strategies/research/L4_ConsolidationShort/L4_v15.1/`
 
 **新增 inputs（數值 0/1，不可用 TrueFalse）**：
 

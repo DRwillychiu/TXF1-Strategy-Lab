@@ -3,7 +3,7 @@
 **寫於**：2026-06-18
 **目的**：從 portfolio 視角解釋 L4 為何即使年化僅 3.7% 仍有保留價值
 **讀者對象**：用戶（未來檢視 portfolio 配置）+ 任何接手的 Claude
-**前置文件**：[L4 v14.4 深度績效剖析](L4_v144_deep_analysis_20260618.md)
+**前置文件**：[L4 v14.4 深度績效剖析](L4_v14.4_deep_analysis_20260618.md)
 
 ---
 
@@ -234,8 +234,8 @@ L4 與 L1/L3/L5/S1 同時持倉時：
 
 ## 十、相關文件
 
-- [L4 v14.4 深度績效剖析](L4_v144_deep_analysis_20260618.md) — 8 個核心發現
-- [L4 v14.5 設計規格](L4_v145_design_spec_20260618.md) — CS_BreakExit 修正
+- [L4 v14.4 深度績效剖析](L4_v14.4_deep_analysis_20260618.md) — 8 個核心發現
+- [L4 v14.5 設計規格](L4_v14.5_design_spec_20260618.md) — CS_BreakExit 修正
 - [Settlement_Flat 設計憲法 v1.2](SETTLEMENT_DAY_DESIGN_CONSTITUTION.md)
-- [L4_v142_variant_results.md](L4_v142_variant_results.md) — A/B 七變體結果
+- [L4_v14.2_variant_results.md](L4_v14.2_variant_results.md) — A/B 七變體結果
 - [策略分類×Settlement 角色決策矩陣](strategy_classification_decision_matrix.svg)

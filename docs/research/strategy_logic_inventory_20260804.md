@@ -147,20 +147,20 @@ repo root：`C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\`
 
 | 策略 ID | 層級 | 檔案路徑（相對 repo root） | 實測行數 | 方向 | 主週期 | 版本 | 備註 |
 |---|---|---|---|---|---|---|---|
-| L1_TrendLong_v31 | research-head | `strategies\research\L1_TrendLong\L1_v31\L1_TrendLong_v31.pla` | 706 | Long | 同 L1 | V3.1 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略，是 live 的快照** |
-| L3_ConsolidationLong_v15 | research-head | `strategies\research\L3_ConsolidationLong\L3_v15\L3_ConsolidationLong_v15.pla` | 474 | Long | 同 L3 | v15.0 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略** |
-| L5_BreakoutLong_v199 | research-head | `strategies\research\L5_BreakoutLong\L5_v199\L5_BreakoutLong_v199.pla` | 729 | Long | 同 L5 | v19.9 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略** |
-| L4_ConsolidationShort_v16 | research-head | `strategies\research\L4_ConsolidationShort\L4_v16\L4_ConsolidationShort_v16.pla` | 657 | Short | 15M + 60M + Daily | v16.0 | **KILLED**（`L4_v16_FINAL_VERDICT.md:3`，2026-07-26）；**與 live 不同（主對話 Get-FileHash 不同）**；bull path 6 年 0 筆；Rule #12 **0/3**；研究線 CLOSED |
+| L1_TrendLong_v3.1 | research-head | `strategies\research\L1_TrendLong\L1_v3.1\L1_TrendLong_v3.1.pla` | 706 | Long | 同 L1 | V3.1 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略，是 live 的快照** |
+| L3_ConsolidationLong_v15.0 | research-head | `strategies\research\L3_ConsolidationLong\L3_v15.0\L3_ConsolidationLong_v15.0.pla` | 474 | Long | 同 L3 | v15.0 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略** |
+| L5_BreakoutLong_v19.9 | research-head | `strategies\research\L5_BreakoutLong\L5_v19.9\L5_BreakoutLong_v19.9.pla` | 729 | Long | 同 L5 | v19.9 | **與 live byte-identical（主對話 Get-FileHash 完全相同）→ 非獨立策略** |
+| L4_ConsolidationShort_v16.0 | research-head | `strategies\research\L4_ConsolidationShort\L4_v16.0\L4_ConsolidationShort_v16.0.pla` | 657 | Short | 15M + 60M + Daily | v16.0 | **KILLED**（`L4_v16.0_FINAL_VERDICT.md:3`，2026-07-26）；**與 live 不同（主對話 Get-FileHash 不同）**；bull path 6 年 0 筆；Rule #12 **0/3**；研究線 CLOSED |
 | S3_VolSqueezeShort_v196_ANTIHUNT | research-head | `strategies\research\S03_VolSqueezeShort\S3_VolSqueezeShort_v196_ANTIHUNT.pla` | 1110 | Short | 同 S3_S | v1.9.6-ANTIHUNT | 與 live_sim S3_S **可執行碼零差異**，僅檔頭 13 行 PROMOTE 區塊；行號 = live_sim 行號 − 13 |
 | S16_S_MACrossShort_v1.12.0 | research-head | `strategies\research\S16_MACrossShort\S16_S_MACrossShort_v1.12.0.pla` | 918 | Short | 5M | v1.12.0 | 領先 live_sim 六版；含 true BE（`BE_Cost_Pts=10`）+ P3b Profit Trail（1.20/80） |
 | S16_S_10M_MACrossShort | research-variant | `strategies\research\S16_MACrossShort\S16_MACrossShort_10M\S16_S_10M_MACrossShort.pla` | 497 | Short | 10M | v0.1-PORT | **封存變體**（檔頭 `:7-12` 明示為 timeframe robustness 佐證，`NOT a replacement`）；Rule #12 **1/3**；回測基準 1 lot / 1,000,000（與全庫 2 lot / 2,000,000 不同） |
 
-被取代版本（抽取檔有提及、非 head）：`L1_v30`（680 行）、`L3_v141`（394 行）、`L4_v15`（594 行）、`L5_v198`（695 行）、`S3_VolSqueezeShort_v196_EXPERIMENTAL`、目錄內未帶版號的 `S3_VolSqueezeShort.pla`（v1.5 殘留）與 `S16_S_MACrossShort.pla`（v1.4-BELATE 殘留）、S16_S v1.9.0 / v1.10.0（KILLED）/ v1.11.0。
+被取代版本（抽取檔有提及、非 head）：`L1_v3.0`（680 行）、`L3_v14.1`（394 行）、`L4_v15.1`（594 行）、`L5_v19.8`（695 行）、`S3_VolSqueezeShort_v196_EXPERIMENTAL`、目錄內未帶版號的 `S3_VolSqueezeShort.pla`（v1.5 殘留）與 `S16_S_MACrossShort.pla`（v1.4-BELATE 殘留）、S16_S v1.9.0 / v1.10.0（KILLED）/ v1.11.0。
 
 ### 1.3 母體結論（4 行）
 
 1. **真正獨立的在役策略 = 10 隻**（live 5 隻：L1–L5；live_simulation 5 隻：S1 / S3_L / S3_S / S3_RPS / S16_S）。
-2. `L1_v31` / `L3_v15` / `L5_v199` 三檔經主對話 Get-FileHash 實測與 live 完全相同，是 **live 的 byte-identical 快照**，不得計為獨立策略或「下一代設計」；`S3_S` 的 research head 與 live_sim 亦為可執行碼零差異。
+2. `L1_v3.1` / `L3_v15.0` / `L5_v19.9` 三檔經主對話 Get-FileHash 實測與 live 完全相同，是 **live 的 byte-identical 快照**，不得計為獨立策略或「下一代設計」；`S3_S` 的 research head 與 live_sim 亦為可執行碼零差異。
 3. **開發中版本線只有 1 條有實質前進**：S16_S 5M（research v1.12.0 領先 live_sim v1.6.2 六版，落後內容 100% 落在停損停利）。L1 / L3 / L5 三條已 promote 完畢無前進；L4 一條已 KILLED / CLOSED（且 v16 相對 live v14.6 在 Rule #12 上是退步）；S16_S_10M 為封存變體。
 4. L2 在 4 份抽取檔中完全沒有 research 線資料 `[抽取檔未涵蓋]`；模組化時 L2 只有 live 一份實作可參考。
 
@@ -304,7 +304,7 @@ repo root：`C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\`
 | **S3_L** | 缺 `SetStopContract`（全檔 grep 0 命中）；缺 `SL_Pct` input | `strategies\live_simulation\S3_VolSqueezeLong\S3_VolSqueezeLong.pla:396`（僅存 `SetStopLoss`）；guard 於 `:395` | `extract_livesim.md` F 節 + 附錄 2 |
 | **S3_S** | 缺 `SetStopContract`（全檔 grep 0 命中）；缺 `SL_Pct` input；且 `SetStopLoss` 為單行 `if` 無 `begin/end`，補 `SetStopContract` 時必須同步補 | `strategies\live_simulation\S3_S_VolSqueezeShort\S3_S_VolSqueezeShort.pla:709-710` | `extract_livesim.md` F 節 + 附錄 2 + 附錄 4 #6；`extract_research_S.md` A-F 節（research 對應行號 `:696-697`） |
 | **S3_RPS** | 結構齊全但 `SL_Pct = 0` → `if SL_Pct > 0` 兩處皆不執行，cap 功能未啟用 | `strategies\live_simulation\S3_RapidPullbackShort\S3_RapidPullbackShort.pla:138`；受影響處 `:673`、`:809` | `extract_livesim.md` E / F 節 |
-| L4_v16（research，非在役） | **0/3**：缺 `SetStopContract`、缺 `SL_Pct` | `strategies\research\L4_ConsolidationShort\L4_v16\L4_ConsolidationShort_v16.pla:450-451`（僅 `SetStopLoss`） | `extract_research_L.md` 3-F 節 |
+| L4_v16.0（research，非在役） | **0/3**：缺 `SetStopContract`、缺 `SL_Pct` | `strategies\research\L4_ConsolidationShort\L4_v16.0\L4_ConsolidationShort_v16.0.pla:450-451`（僅 `SetStopLoss`） | `extract_research_L.md` 3-F 節 |
 | S16_S_10M（封存變體，非在役） | **1/3**：缺 `SetStopContract`、缺 `SL_Pct` | `strategies\research\S16_MACrossShort\S16_MACrossShort_10M\S16_S_10M_MACrossShort.pla:306-307` | `extract_research_S.md` C-F 節 |
 
 依 CLAUDE.md Rule #12 原文：缺 `SetStopContract` → `SetStopLoss` 金額為 TOTAL POSITION 而非 per-contract，固定 2 口下引擎停損實際窄一半。此為規範文字推論，**非本次實測**。
@@ -373,7 +373,7 @@ repo root：`C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\`
 | F-05 | S3_S Rule #12 僅 1/3（同上）+ `SetStopLoss` 單行 if 無 begin/end | `strategies\live_simulation\S3_S_VolSqueezeShort\S3_S_VolSqueezeShort.pla:709-710` | `extract_livesim.md` 附錄 2 / 附錄 4 #6；`extract_research_S.md` A-F |
 | F-06 | S3_RPS `SL_Pct=0`，百分比 cap 結構存在但未啟用；註解自承尚未做 MC sweep | `strategies\live_simulation\S3_RapidPullbackShort\S3_RapidPullbackShort.pla:138` | `extract_livesim.md` E / F |
 | F-07 | L2 Priority 5 區塊未設 `ExitFired`，與 P0–P4 pattern 不一致（因 `IsDay`/`IsNight` 互斥故實務影響為零） | `strategies\live\L2_TrendShort\L2_TrendShort.pla:721-728` | `extract_live.md` L2-J |
-| F-08 | L4 Priority 3 停損區塊未檢查 `if ExitFired = 0`，同棒 Market + Stop 並存 | `strategies\live\L4_ConsolidationShort\L4_ConsolidationShort.pla:705-717` | `extract_live.md` L4-J（同型 pattern 亦見於 L4_v16:642-655） |
+| F-08 | L4 Priority 3 停損區塊未檢查 `if ExitFired = 0`，同棒 Market + Stop 並存 | `strategies\live\L4_ConsolidationShort\L4_ConsolidationShort.pla:705-717` | `extract_live.md` L4-J（同型 pattern 亦見於 L4_v16.0:642-655） |
 | F-09 | L3 P3b guard 多一個 `v_Box_Qualified` 條件：箱型存在但不合格時不刷新引擎停損 | `strategies\live\L3_ConsolidationLong\L3_ConsolidationLong.pla:338` | `extract_live.md` L3-F |
 | F-10 | L5 P3b `SL_Pct` 基準價用 `v_Box_Btm`，其餘四檔用 `Close`（全庫唯一不一致） | `strategies\live\L5_BreakoutLong\L5_BreakoutLong.pla:517` | `extract_live.md` L5-F；`extract_research_L.md` 6-5 |
 | F-11 | `SetStopContract` 放在條件塊內（L2 在 guard 內、L3 在 `if v_is_in_consolidation` 內），與 L5:486 註解 `must be outside conditional` 相反 | `L2_TrendShort.pla:469`、`L3_ConsolidationLong.pla:337` | `extract_live.md` L2-F / L3-F；`extract_research_L.md` 6-4 |
@@ -423,7 +423,7 @@ repo root：`C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\`
 | U6 | **L1 的 Section 4 安全出場（Market）與 Section 3（Stop）同棒並存的優先序** | Section 4 在程式碼中位於 Section 3 **之後**，兩區塊**無互斥旗標**（不同於 L2/L4 的 `ExitFired`）。同棒可同時掛 Stop 單與 Market 單，實際成交序取決於 MC 引擎的 order-type 排序 | MC12 實測 | `extract_live.md` L1-J |
 | U7 | **L3 無 `ExitFired` 時 `CL_TP`（Limit）與 `CL_SL`/`CL_BE`（Stop）同棒並存的成交序** | L3 無互斥旗標；L3:428 與 L3:431/433 同棒掛出，Section 6 的 Market 單亦同棒並存 | MC12 實測 | `extract_live.md` L3-J |
 | U8 | **L5 無 `ExitFired` 時 Priority 0 Market 與 Stage 1/2/3 Stop/Limit 並存的成交序** | 註解（L5:574-575）宣稱 Market-type「runs before stop/limit logic in PL engine」，但這是**註解的主張**，程式碼本身無法佐證 | MC12 實測或 PowerLanguage 官方文件 | `extract_live.md` L5-J；`extract_research_L.md` 6-7 |
-| U9 | **L4 / L4_v16 的 P3 停損區塊缺 `ExitFired` 保護是否為 bug** | P0–P2 都有 `if ExitFired = 0`，P3（L4:705-717 / v16:642-655）沒有，每根都會掛一張 Stop 單。live v14.6 與 research v16 **寫法相同**，故至少不是 v16 新引入 | 設計意圖確認（使用者 ruling）+ MC12 同棒 Market/Stop 仲裁實測 | `extract_live.md` L4-J；`extract_research_L.md` 6-8 |
+| U9 | **L4 / L4_v16.0 的 P3 停損區塊缺 `ExitFired` 保護是否為 bug** | P0–P2 都有 `if ExitFired = 0`，P3（L4:705-717 / v16:642-655）沒有，每根都會掛一張 Stop 單。live v14.6 與 research v16 **寫法相同**，故至少不是 v16 新引入 | 設計意圖確認（使用者 ruling）+ MC12 同棒 Market/Stop 仲裁實測 | `extract_live.md` L4-J；`extract_research_L.md` 6-8 |
 | U10 | **`SetStopContract` 放在條件塊內是否等價於頂層無條件呼叫** | L2:469（guard 內）與 L3:337（`if v_is_in_consolidation` 內）vs L1:524 / L4:508 / L5:487（頂層），且 L5:486 註解明寫 `must be outside conditional` | MC PowerLanguage 官方文件對 `SetStopContract` 作用域的定義 | `extract_live.md` L2-F / L3-F；`extract_research_L.md` 6-4 |
 | U11 | **某根 K 棒未呼叫 `SetStopLoss` 時 MC 引擎的行為（沿用前值 vs 失效）** | L3:342 / L4:541 / L5:518 皆位於 `if v_is_in_consolidation and v_Box_Top > v_Box_Btm` 內，箱型消失時該區塊不執行 → `SetStopLoss` 不被呼叫 | MC PowerLanguage 官方文件 | `extract_live.md` L3-F / L4-F / L5-F |
 | U12 | **L3 的 P3b guard 多 `v_Box_Qualified` 的實際風險** | 箱型存在但不合格（`Box_Range/ATR < 8.5`）時不設引擎停損。因該情況也不會進場，理論上無風險，但若**已持倉且箱型變為不合格**，引擎停損不會刷新 | MC12 回測中是否出現該狀態序列 | `extract_live.md` L3-F |
@@ -432,7 +432,7 @@ repo root：`C:\Users\WILLY CHIU\Desktop\TXF1-Strategy-Lab\`
 | U15 | **各策略的實際口數** | 10 隻 `.pla` 內**皆無**口數指定語法（無 `SetPositionSize`、無 `Buy N contracts`；唯一命中是 `SetStopContract` 字串）。「固定 2 口」來自專案 CLAUDE.md，屬 MC 策略屬性設定，**非程式碼證據**。L5 用 `MaxContracts` / `CurrentContracts` 讀取，其分批邏輯完全依賴外部口數設定 | MC12 策略屬性截圖 | `extract_research_L.md` 6-3；`extract_live.md` 各檔 K 節；`extract_livesim.md` 各檔 K 節 |
 | U16 | **`Close of Data3` 未用 `[1]` 是否構成規範問題** | L1:445-446 / L3:319-320 / L5:480-481 直接引用當根 `Close of Data3`。專案 CLAUDE.md PowerLanguage 規範第 3 條只點名「Data2 引用用 `[1]`」，未明述 Data3 | 規範文字釐清（使用者 ruling） | `extract_research_L.md` 6-6 |
 | U17 | **Priority 0 市價出場相對主出場邏輯的實際優先序** | 四個 L head 的安全出場在程式碼順序上位置不一（L1/L3/L5 在主出場之後，L4 在 `ExitFired` 鏈最前）。實際成交序依賴 MC 引擎「市價單優先於停損單」的行為 | MC12 實測 | `extract_research_L.md` 6-7；`extract_live.md` 檢查 1（該節亦自承「這是推測」） |
-| U18 | **L4 的「research head」定義** | `L4_v16` 是目錄最新且 git 最後 commit，但 `L4_v16_FINAL_VERDICT.md:3` = `KILLED`、`L4_RESEARCH_SUMMARY.md:6` = 研究線 `CLOSED`，live 走 v14.6。若 head = 「當前開發中的下一代」則 **L4 沒有 head** | 使用者對「head」定義的 ruling | `extract_research_L.md` 6-1 |
+| U18 | **L4 的「research head」定義** | `L4_v16.0` 是目錄最新且 git 最後 commit，但 `L4_v16.0_FINAL_VERDICT.md:3` = `KILLED`、`L4_RESEARCH_SUMMARY.md:6` = 研究線 `CLOSED`，live 走 v14.6。若 head = 「當前開發中的下一代」則 **L4 沒有 head** | 使用者對「head」定義的 ruling | `extract_research_L.md` 6-1 |
 | U19 | **S3_S 缺 `SetStopContract` / `SL_Pct` 是遺漏還是豁免** | CLAUDE.md Rule #12 列為強制三件套，註記「2026-07-26 已修 L2/L4/L5/S16_S」**未提 S3_S**；檔內 S3_S:661 自稱 `(Rule #12, SHORT variant)` 卻只實作三件之一。唯讀範圍內查無豁免 ruling | 使用者 ruling（另列 8b-1） | `extract_research_S.md` F-1；`extract_livesim.md` 附錄 2 |
 | U20 | **S3_S 的 `v_TargetDist` 未凍結是設計還是疏漏** | `v_TargetDist = v_ATR * TargetATRMult` 每根重算（S3_S:646），而 SL 明確凍結（S3_S:681-686）。檔內註解未說明此不對稱 | 使用者 ruling / 設計意圖確認 | `extract_research_S.md` F-2 |
 | U21 | **S16_S v1.12.0 的 P3 停單與 P1b 市價單的實際競爭順序** | 檔內 `:42-43` / `:852-853` 宣稱停單能搶在 QuickStop_Time 市價單之前，但 code 順序上 P1b（`:783`）先於 P3（`:884`）且 P1b 會設 `ExitFired`。機制生效須依賴「P3 停單在前一根已掛出」 | MC12 回測 / 訂單生命週期 log | `extract_research_S.md` F-3 / B-J |

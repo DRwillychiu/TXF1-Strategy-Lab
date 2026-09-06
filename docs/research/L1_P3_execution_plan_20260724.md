@@ -1,7 +1,7 @@
 # L1 P3 Execution Plan — 2026-07-24
 
 > Framework: Adversarial Engineering SOP (Step 0 self-verification + Step 7 Before/After/Expected).
-> Input: L1_P3_initial_SL_architecture_20260723.md (design spec) + L1_V30_backtest_analysis_20260723.md (baseline).
+> Input: L1_P3_initial_SL_architecture_20260723.md (design spec) + L1_v3.0_backtest_analysis_20260723.md (baseline).
 > Output: per-layer task breakdown, verification criteria, expected results, alternative angles.
 > Status: PLANNING ONLY. No code changes until user ruling on Section 9 questions.
 
@@ -354,7 +354,7 @@ Rationale: Each adds ~30 min of analysis. Broader net = better; more options = m
 
 - Baseline: `strategies/live/L1_TrendLong.pla` (commit 18facd4)
 - Architecture spec: `docs/research/L1_P3_initial_SL_architecture_20260723.md`
-- Backtest analysis: `docs/research/L1_V30_backtest_analysis_20260723.md`
+- Backtest analysis: `docs/research/L1_v3.0_backtest_analysis_20260723.md`
 - Forensics (loss origin): `docs/research/L1_stop_forensics_20260722.md`
 - Deep research (SL mechanisms): `docs/research/L1_stop_mechanism_deep_research_20260722.md`
 - SOP: `.claude/skills/adversarial-engineering-sop`

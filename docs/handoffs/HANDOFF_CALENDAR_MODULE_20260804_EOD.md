@@ -188,8 +188,8 @@ sh .githooks/pre-commit
 ### 7.3 未追蹤項目（刻意保留，非遺漏）
 
 - 各目錄的 `.bak_*` 備份（鐵律 3 產物，本機恢復用；跨機恢復靠 git 歷史）
-- `strategies/research/L1_v31/`（僅含 `.bak_20260724` 與一個 log，非原始碼；
-  真正的 v31 原始碼在 `strategies/research/L1_TrendLong/L1_v31/`，已在版控內）
+- `strategies/research/L1_v3.1/`（僅含 `.bak_20260724` 與一個 log，非原始碼；
+  真正的 v31 原始碼在 `strategies/research/L1_TrendLong/L1_v3.1/`，已在版控內）
 
 ---
 

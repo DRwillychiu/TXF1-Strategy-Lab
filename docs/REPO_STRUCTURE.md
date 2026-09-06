@@ -1,5 +1,8 @@
 # 目錄結構
 
+> **五支 live 與 research 的現行版本，見 [`LIVE_VERSIONS.md`](LIVE_VERSIONS.md)。**
+> 本檔只畫目錄結構，不記版本號。
+
 > **本檔來源**：2026-08-04 自 `CLAUDE.md` 拆出。CLAUDE.md 觸及 300 行硬上限
 > （MAINTENANCE_PROTOCOL §2），此段為純參考資訊、非強制規範，故移出。
 > CLAUDE.md 保留一行指標指向本檔。
@@ -40,18 +43,25 @@ strategies/                        # 策略原始碼三層分類
 └── research/                      # 研究中（單軌 OFFICIAL_ROADMAP）
     ├── README.md
     ├── L1_TrendLong/              # L1 研究版本
-    │   ├── L1_v30/                        # v30 實驗
-    │   └── L1_v31/                        # v31 SL_Pct + SetStopContract
+    │   ├── L1_v3.0/                        # V3.0 IOG + StopProfit + FrozenSL
+    │   ├── L1_v3.1/                        # V3.1 = 現行 live
+    │   └── L1_v3.2/                        # V3.2 二次進場模組 (ratio 0.20 已採用)
+    ├── L2_TrendShort/             # L2 研究版本
+    │   └── L2_v5.4/                        # v5.4 二次進場標籤 (純標籤, 錨點 24/24)
     ├── L3_ConsolidationLong/      # L3 研究版本
-    │   ├── L3_v141/
-    │   └── L3_v15/
+    │   ├── L3_v14.1/
+    │   ├── L3_v15.0/                       # v15.0 = 現行 live
+    │   └── L3_v15.1/                       # v15.1 二次進場標籤 (純標籤, 錨點 24/24)
     ├── L4_ConsolidationShort/     # L4 研究版本
     │   ├── L4_RESEARCH_SUMMARY.md
-    │   ├── L4_v15/
-    │   └── L4_v16/
+    │   ├── L4_v14.7/                       # ** 最新 ** 二次進場標籤 (純標籤)
+    │   ├── L4_v15.1/                       # KILLED 2026-07-26
+    │   ├── L4_v16.0/                       # KILLED
+    │   ├── L4_v17.0/                       # 風險形態掃描錨點基準 (四腿全推翻)
+    │   └── L4_v18.0/                       # KILLED 2026-08-24 二次進場零觸發
     ├── L5_BreakoutLong/           # L5 研究版本
-    │   ├── L5_v198/
-    │   └── L5_v199/
+    │   ├── L5_v19.8/
+    │   └── L5_v19.9_R1/                    # v19.9-R1 二次進場 log (錨點 0 差異)
     ├── S03_VolSqueezeShort/       # S3_S 完整研發史
     ├── S04_MACDDivergenceShort/   # S4 W0 pre-verify (KILLED)
     ├── S16_MACrossLong/           # S16_L (SUSPENDED)
@@ -105,9 +115,9 @@ docs/                              # 機構級文件分類（data-analyst 規範
 │   ├── structural_issues_review_20260618.md
 │   └── optimization_opportunities_2026Q2.md
 ├── strategy_archive/              # 既有策略歷史演進
-│   ├── L1_v26_20260622_gap_miss_case.md
-│   ├── L4_v142_*.md               # pathA / pathB / variant_results
-│   ├── L5_v198_*.md / L5_v199_*.md
+│   ├── L1_v2.6_20260622_gap_miss_case.md
+│   ├── L4_v14.2_*.md               # pathA / pathB / variant_results
+│   ├── L5_v19.8_*.md / L5_v19.9_*.md
 │   ├── S1_v23_*.md / S1_v24_*.md
 │   └── range_force_exit_*.md      # deployment + rollback
 └── archive/                       # 歸檔（off-roadmap、舊 handoffs）

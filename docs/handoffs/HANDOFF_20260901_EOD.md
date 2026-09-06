@@ -121,8 +121,8 @@ formations 202/112/90、break 75/88/39、DIA 0/1。
 
 ### 5.5 待處理的雜項
 
-`strategies/research/L1_v31/` 是**未追蹤**目錄，內含 7/24 的 `.bak` 與一份 log，
-**路徑放錯**（正確位置是 `strategies/research/L1_TrendLong/L1_v31/`）。
+`strategies/research/L1_v3.1/` 是**未追蹤**目錄，內含 7/24 的 `.bak` 與一份 log，
+**路徑放錯**（正確位置是 `strategies/research/L1_TrendLong/L1_v3.1/`）。
 未擅自處理，待裁示。
 
 ---

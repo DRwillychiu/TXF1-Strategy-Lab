@@ -146,17 +146,17 @@
 |---|---|
 | `scripts/compare_mc12_reports.py` | **MC12 報告比較前置閘門**（三閘門 + 退出碼；今日修過版本差異誤判） |
 | `docs/policies/lesson_L28_measure_before_you_build.md` | **Lesson L28** |
-| `docs/research/L4_v17_anchor_runcard_20260824.md` | v17 錨點執行卡 |
-| `docs/research/L4_v17_anchor_result_20260824.md` | v17 錨點結果 ＋ Trail 量測 |
-| `docs/research/L4_v17_RunA_StopForm_result_20260824.md` | **Run A 否證** |
-| `docs/research/L4_v17_RunD_EntryRiskGate_result_20260824.md` | **Run D 否證** |
-| `docs/research/L4_v18_reentry_design_and_anchor_20260824.md` | v18 設計 ＋ 錨點卡 |
-| `docs/research/L4_v18_anchor_result_and_analysis_20260824.md` | v18 錨點 ＋ 筆數分析 |
-| `docs/research/L4_v18_reentry_zero_fire_20260824.md` | **零觸發 ＋ 我的設計錯誤** |
+| `docs/research/L4_v17.0_anchor_runcard_20260824.md` | v17 錨點執行卡 |
+| `docs/research/L4_v17.0_anchor_result_20260824.md` | v17 錨點結果 ＋ Trail 量測 |
+| `docs/research/L4_v17.0_RunA_StopForm_result_20260824.md` | **Run A 否證** |
+| `docs/research/L4_v17.0_RunD_EntryRiskGate_result_20260824.md` | **Run D 否證** |
+| `docs/research/L4_v18.0_reentry_design_and_anchor_20260824.md` | v18 設計 ＋ 錨點卡 |
+| `docs/research/L4_v18.0_anchor_result_and_analysis_20260824.md` | v18 錨點 ＋ 筆數分析 |
+| `docs/research/L4_v18.0_reentry_zero_fire_20260824.md` | **零觸發 ＋ 我的設計錯誤** |
 | `docs/research/L4_REENTRY_FINAL_VERDICT_20260824.md` | **L4 結案** |
 | `docs/research/L2_reentry_L28_check_20260824.md` | **L2 L28 檢查**（在 `3102a37` 裡） |
 | `docs/research/label_taxonomy_audit_20260824.md` | **標籤稽核** |
-| `strategies/research/L4_ConsolidationShort/L4_v18/*.pla` | v18 ＋ v18_DIAG，**保留不推進** |
+| `strategies/research/L4_ConsolidationShort/L4_v18.0/*.pla` | v18 ＋ v18_DIAG，**保留不推進** |
 
 ### 未動
 

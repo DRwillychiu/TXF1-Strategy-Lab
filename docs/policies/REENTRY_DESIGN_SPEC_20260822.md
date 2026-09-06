@@ -194,7 +194,7 @@ L5 `Buy ("BL_Entry_Bot") next bar at v_Box_Btm Stop`，進場條件是
 
 ## 5. L1 v32 — Step 1 規格（已實作）
 
-**檔案**：`strategies/research/L1_TrendLong/L1_v32/L1_TrendLong_v32.pla`
+**檔案**：`strategies/research/L1_TrendLong/L1_v3.2/L1_TrendLong_v3.2.pla`
 
 ### 5.1 掛鉤點對照
 

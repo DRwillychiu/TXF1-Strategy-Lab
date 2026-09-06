@@ -56,7 +56,7 @@ L1 停損機制戰役**研究+修復閉環, 只剩用戶 MC9 部署動作**。V2
 - `docs/research/L1_stop_mechanism_deep_research_20260722.md`
 - `docs/research/L1_stop_replay_bench_bug_ledger_20260722.md` (B1-B7 + L37)
 - `docs/research/L1_stop_forensics_20260722.md` (F1-F3 + 脈絡地圖 ← 方案 2 的起點)
-- `docs/research/L1_V29_p3b_fix_spec_20260722.md` (含雙 gate PASS 記錄)
+- `docs/research/L1_v2.9_p3b_fix_spec_20260722.md` (含雙 gate PASS 記錄)
 - `docs/research/L1_buffer_reclaim_tests_20260722.md` (L35/L36)
 - `.claude/skills/adversarial-engineering-sop/SKILL.md` (第 7 步 + 附錄 C)
 

@@ -127,7 +127,7 @@ A: It was NOT completely unreviewed — but it went through a **different, light
 
 - v13.2B had a comprehensive review: 431-trade per-trade analysis, 4 acceptance gates, variant D rejection, variant B approval. This review lives in `L3_ConsolidationLong_review.md`.
 - v14.1 was developed 7/2-7/4 as part of a "live optimization" sprint covering all 5 strategies. It went through its OWN workflow:
-  - Dedicated folder: `docs/live_optimization/L3_v14_matrix_range_capture/`
+  - Dedicated folder: `docs/live_optimization/L3_v14.1_matrix_range_capture/`
   - 147-line summary.md with problem statement, matrix design, 2 optimization rounds, MC9 backtest comparison, 11-item deployment checklist (all checked)
   - Python pre-verify script (536 lines, 28-year TWII daily direction confirmation)
   - Detailed commit messages with design rationale
@@ -262,7 +262,7 @@ This is why cooldown + "same-box ban" is important for L5 specifically. The v19.
 
 **Q: You say fixed % is ineffective for this breakout strategy. What's the data?**
 
-A: Hard data from v19.8 SP module A/B testing (`L5_v198_variant_results.md`):
+A: Hard data from v19.8 SP module A/B testing (`L5_v19.8_variant_results.md`):
 
 The 3 largest winning trades across all 5 SP variants were ALL truncated:
 - 2026-04-07: baseline +376,400 → best SP variant only +15,800 (-96% truncated)

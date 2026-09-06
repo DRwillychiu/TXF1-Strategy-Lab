@@ -1,0 +1,708 @@
+{ ============================================================
+  ADAPTIVE FARMER - TREND LONG STRATEGY
+  Signal Name : Strategy_TXF_60M_Breakout_B_ATR_V2_3_CPU_Opt
+  MC Load Name: WILLY_ATR_LONG_V31_RESEARCH
+                *** RESEARCH BUILD. DO NOT save over the live signal
+                    name WILLY_ATR_LONG_60M. ***
+  Version     : V3.1 (V3.0 base + SL_Pct percentage cap)
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 9.0 PowerLanguage x64
+  Timeframe   : Data1 = 45M / Data2 = Daily / Data3 = Weekly
+                (NOTE: strategy name says 60M but Excel report
+                 confirms compression = 45 Minutes. Name kept for
+                 live continuity; actual chart is 45M.)
+
+  CHANGELOG:
+    V2.3  Label unification (TL_ prefix). No logic changes.
+    V2.4  (2026-06-12) P5 Holiday module rebuilt as HolidayFlat_v3:
+          - Iron Rule: flat (0 position) BEFORE the 05:00 close of
+            the last night session preceding every market closure.
+          - Old design (eve date >= 13:30) replaced: it missed the
+            post-midnight tail (00:00-05:00 bars stamped with the
+            next calendar date) and never blocked entries.
+          - Array semantics changed: Holiday_Tail = last trading
+            day + 1 calendar day (the tail-bar date stamp).
+          - Date errors fixed: Labor Day added for every year;
+            all three 2026 entries corrected vs official TAIFEX
+            115-yr calendar; H2 2026 + 2027/1/1 added.
+          - Header performance figures reflect the OLD module;
+            re-backtest pending after deployment.
+          - Fail-safe horizon guard: Registry_Valid_Until input.
+            Beyond the last verified registry date the strategy
+            blocks entries and flattens (TL_RegistryEnd) - future
+            holidays beyond the published TAIFEX calendar are
+            unknowable, so walking off the verified map must fail
+            safe, not fail silent. 30-day red warning on chart.
+    V2.5  (2026-06-12) P3 initial stop FROZEN at entry:
+          - Old code recomputed the stop EVERY BAR from current
+            45M ATR and Daily ATR, so the floor drifted with
+            volatility during the trade (user observed the live
+            stop shifting between reloads). Now computed once on
+            the entry bar close and locked (v_SL_Locked pattern,
+            same as L2 SL_Locked / S1 v_EntryATR).
+          - MA55 trail (P4) still updates by design; the frozen
+            initial stop is the floor it can never drop below.
+          - No new inputs. No entry-logic change.
+          - DEPLOYMENT: changes historical exits -> recalculated
+            chart may disagree with a live open position. Deploy
+            ONLY WHEN FLAT (see annotated doc deployment note).
+    V2.6  (2026-06-12) P7 Stop Profit Guard, ported from L2
+          (Trendbearish_V1 SECTION 12), user-directed:
+          - Activation: CLOSE-based profit >= 250 pts. Peak profit
+            (posbleProfit_Long) ratchets up only; lock floor =
+            Entry + peak x 45 pct moves only in the profit
+            direction and never disarms until flat.
+          - Guarantees: an armed runner can never round-trip into
+            a loss (floor > entry by construction); giveback from
+            peak is capped at 55 pct.
+          - Data basis (469-trade MFE audit): 83 trades reached
+            +100pts yet closed negative (-1,520,200); MFE>=250
+            trades gave back median 50 pct / P90 112 pct; Top-10
+            endpoint giveback max only 28 pct -> 55 pct tolerance
+            clears the fat tail with huge margin.
+          - Integrated as a third floor in Final_Exit (single-stop
+            architecture kept; L2 uses an order-priority chain
+            instead - effect identical). New exit label TL_SP.
+          - Optimistic-bound improvement +1.93M; path-level
+            whipsaw cost invisible to MFE data -> MC9 A/B is the
+            final arbiter. Deploy only when flat.
+    V2.7  (2026-07-02) Plan A: SP threshold 250 -> 500.
+          - Backtest (SP500 only): Net +3,938K (+22.5%), PF 1.484,
+            MDD -461K, trades 451, win/loss 3.19x, avg +6001/trade.
+          - TL_SP exits 68 -> 12; freed trades flow to TL_TP
+            (103 -> 141), letting trends run longer.
+          Plan C REJECTED after A/B test:
+          - Re-entry after passive exit (TL_SL/TL_SP/TL_SL_Gap).
+          - Hypothesis +2.1M looked attractive but MC9 path-level
+            backtest (A+C combined, SP500) showed Net 3,018K vs
+            Plan A alone 3,938K = -920K drag. 69 re-entry trades
+            net negative. Re-entry positions hit SL at worse prices
+            than original breakout entries.
+          - Decision: Plan A only. Plan C code removed.
+          - Deploy only when flat.
+    V2.6+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on the
+            ENTRY BAR itself (no IOG dependency). Closes the
+            structural 45-minute unprotected window between fill
+            and first custom stop order (IOG=false -> script
+            evaluates at bar close only).
+          - Distance = same as P3 frozen SL. (V2.6+..V2.7 shipped
+            MaxList of DISTANCES here = the LOOSER leg, a doc-
+            propagated paraphrase bug fixed in V2.9 -> MinList.)
+          - Called only when flat (MP<=0) -> freezes automatically
+            when position established (same principle as V2.5
+            Frozen SL via v_SL_Locked).
+          - Does NOT replace P3/P4/P7 exit logic. Once custom
+            stops tighten beyond SetStopLoss, engine picks the
+            tighter level. SetStopLoss becomes dormant backup.
+          - Deploy only when flat.
+    V2.9  (2026-07-22) P3b leg-selection fix + explicit contract basis:
+          - ROOT CAUSE (doc-propagated bug): P3 code freezes
+            MaxList of the two stop PRICES = Entry - MinList of
+            the two DISTANCES = the TIGHTER leg; the cap leg
+            (Daily_Cap_Multiplier) exists to LIMIT the distance.
+            The old header wrongly paraphrased this as "entry -
+            MaxList(distances)"; V2.6+ P3b copied that formula
+            shape, so the entry-bar engine stop took the LOOSER
+            leg: 1.6-2.8x wider than design intent on every entry.
+          - Forensics (1M-bar reconstruction of ATR45/DailyATR,
+            456 trades, frozen-distance prediction error p90 =
+            1 pt): tight leg = ATR leg at 99-100 pct of entries;
+            12 same-bar deaths filled at the wide leg (-460 pts
+            excess); 2 legacy winners (#66 2020-12, #95 2021-05)
+            survived the entry bar only because of the wide leg
+            (-584 pts if killed). Expected net impact approx
+            -124 pts / 6.5y (excl. re-entry) = EV-neutral
+            insurance fix. At 2026-07-22 volatility: wide leg
+            736 pts vs intended 266 pts (2.77x) -> fix removes
+            ~470 pts unintended entry-bar exposure per entry.
+          - SetStopContract declared explicitly: SetStopLoss
+            amount is per-CONTRACT, invariant to lot count.
+            Without it (per-position default) a 2-lot live
+            deployment halves the effective stop distance; with
+            MinList that would fire at half the frozen distance
+            (a new bug). 1-lot backtests identical either way.
+          - Verifier fixed in the same commit: the old
+            verify_l1_immediate_stop.py V-4 asserted the buggy
+            MaxList shape -- the bug passed verification because
+            the verifier encoded the bug. Now asserts MinList +
+            SetStopContract semantics.
+          - V2.8 number skipped (daily-loss-cap experiment,
+            REJECTED and reverted 2026-07-22).
+          - MC12 gate BEFORE MC9 deploy: V2.7 vs V2.9 trade-list
+            diff must concentrate in <= 52 candidate trades and
+            every diff must be explained. Deploy only when flat.
+            GATE RESULT (2026-07-22): PASS. 65 diffs all explained
+            (12/12 same-bar saves, 2/2 predicted kills, 7 borderline
+            grazes, 6 chain re-entries). Net -36 pts / 6.5y, closed
+            MDD unchanged at 2,038 pts.
+    V2.9.1 (2026-07-22) Exit-label taxonomy fix (labels only, no logic):
+          - User ruling: loss-stop labels may ONLY mark losing
+            exits; profit-taking must use separate labels. Old
+            routing broke this twice: TL_TP (trail) could fire
+            below entry (#452 -444 pts, 2026-07-07), and
+            TL_SL_Gap could fire above entry (SP-lock gap-downs).
+          - New routing = leg x side-of-entry:
+            loss side  : Stop Loss (P3b engine, entry bar only),
+                         TL_SL (frozen stop), TL_SL_Gap (gap,
+                         level < entry), TL_TSL (trail < entry)
+            profit side: TL_TP (trail >= entry), TL_SP (SP lock),
+                         TL_SP_Gap (gap, level >= entry)
+          - Labels are assigned at order placement; a gap through
+            the entry price can still fill a profit-labeled order
+            at a small loss (documented edge, not an overlap).
+          - Zero P&L impact by construction. Re-gate: MC12 rerun
+            must show IDENTICAL numbers, labels redistributed.
+    V3.0  (2026-07-23) IOG migration: tick-level strategy evaluation.
+          - IntrabarOrderGeneration = true. Script evaluates on every
+            Data1 tick instead of only at 45M bar close.
+          - BarStatus(1) = 2 guards on: indicators, weekly filter,
+            holiday/settlement detection, entry (Crosses Over), P3
+            frozen SL lock, MDD visualizer. These run at bar close
+            only, preserving V2.9.1 semantics.
+          - P7 now tracks intrabar peaks in real-time. Threshold
+            lowered 500 -> 200 pts (IOG makes lower viable).
+          - P4 trail upgraded to uni-directional ratchet (v_Trail_High
+            via MaxList, never descends). Old bi-directional breathing
+            let the effective stop sag during pullbacks.
+          - IntraBarPersist added to posbleProfit_Long, stopProfitPrice_L,
+            v_Trail_High -- without it these reset to bar-open on each tick.
+          - Gap detection moved from every-tick to BarStatus=2 (bar close
+            indicator recalc can push stop above Close; BarStatus=0 was
+            dead code -- pending stop fills before script at bar open).
+          - Daily_ATR [1] fix: references previous completed daily bar.
+          - Code restructured: MP + SetStop moved before BarStatus=2 guard
+            around entry logic (no data dependency between groups).
+          - Backtest requires Bar Magnifier (1 min minimum).
+          - 33/33 adversarial audit tests PASS (2 rounds).
+          - GATE: MC12 entry count must match V2.9.1 (same period/params).
+            Deploy only when flat.
+    V3.1  (2026-07-24) P3 percentage-based SL cap (research):
+          - New input SL_Pct: fixed percentage stop distance.
+            Leg 3 = Entry * SL_Pct / 100.
+          - P3 becomes triple-layered: MaxList(ATR leg, Cap leg, Pct leg).
+            Pct leg caps the stop at a fixed % of entry price,
+            solving the high-index problem (ATR scales non-linearly
+            with index level; % scales linearly).
+          - SL_Pct = 0 disables Leg 3 (exact V3.0 behavior).
+          - P3b mirror updated: MinList adds Pct distance when > 0.
+          - Base code = V3.0 (no L1_c, no Layer 1b).
+
+  STRATEGY LOGIC:
+    P2 Entry  : Close crosses above MA61 + ATR x Entry_Multiplier
+    P3 Stop   : Frozen at entry: MaxList of THREE stop PRICES
+                Leg 1: Entry - ATR x SL_Mult (intraday vol)
+                Leg 2: Entry - Daily_ATR x Cap_Mult (daily cap)
+                Leg 3: Entry - Entry x SL_Pct / 100 (pct cap, V3.1)
+                MaxList = TIGHTEST leg, locked for the whole trade.
+                SL_Pct = 0 disables Leg 3 (V3.0 two-leg mode).
+    P3b Guard : SetStopLoss (engine-level, active on entry bar)
+                Covers the 45min IOG=false gap between fill and
+                first custom stop order. V2.9: MinList distance
+                (true mirror of P3) on SetStopContract basis.
+    P4 Trail  : MA55 - TrailOffset, uni-directional ratchet (V3.0)
+    P7 Guard  : Stop Profit - armed at +200 pts tick-based (V3.0 IOG),
+                lock floor = Entry + peak x 45 pct, ratchets up only
+    P5 v3     : Pre-holiday flat rule (block entries on tail bars,
+                forced market exit from Holiday_Flat_Time)
+    P6 Filter : Data3 Weekly OR filter (20MA / 60MA)
+    Exit      : single stop at Max(P4 trail, P3 frozen, P7 lock)
+
+  PERFORMANCE (Excel Report 2026/07/02, SP 500, Initial Capital 1M):
+    Net Profit    : 3,018,400 TWD
+    Profit Factor : 1.496
+    Win Rate      : 31.3%
+    Win/Loss Ratio: 3.28x
+    MDD           : -547,800 (-21.2%)
+    Total Trades  : 476
+    Avg Trade     : +6,341 TWD
+    Backtest      : 2019/12/16 - 2026/07/02
+  ============================================================ }
+
+[IntrabarOrderGeneration = true]
+
+Inputs:
+    { P2: Attack Engine (Data1) }
+    Length60(61),
+    Entry_Multiplier(2.0),
+
+    { P3: Defense Engine (Strict Stop-Loss) }
+    SL_Multiplier(1.5),
+    Daily_Cap_Multiplier(0.5),
+    SL_Pct(0.5),                       { V3.1: %-based SL cap. distance = Entry * SL_Pct / 100. 0 = disabled (V3.0 mode). }
+
+    { P4: Trailing Engine (Legacy MA55) }
+    Length20(55),
+    TrailOffset(50),
+
+    { P7: Stop Profit Guard (ported from L2 Trendbearish_V1) }
+    stopProfitPoints_Long(200),    { activation: tick-based profit >= this many points (V3.0: 500->200, IOG) }
+    profitReturnPrcnt_Long(55),    { allowed giveback pct of peak profit }
+
+    ATR_Length(20),
+
+    { P5 v3: Pre-Holiday Flat Rule }
+    Manual_Kill_Switch(False),
+    Holiday_Flat_Time(345),        { 03:45 trigger -> fill 03:45, retry 04:30, flat before 05:00 close }
+    Registry_Valid_Until(1270101), { last date covered by the verified holiday registry;
+                                     beyond it the strategy fails safe: no entries, flatten all.
+                                     Bump this when rebuilding the registry from the next
+                                     TAIFEX annual calendar (Q4 each year). }
+
+    { P6 (2026-06-17): Monthly Settlement Flat
+      TXF1 settles every month's 3rd Wednesday at 13:30.
+      Position held to settlement gets force cash-settled by exchange.
+      Detection: DayOfWeek = 3 (Wed) AND DayOfMonth in [15,21].
+      Flat-time 12:30 gives 1hr buffer before 13:30 settlement.
+      Same exit-priority framework as Holiday_Flat_Time. }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 monthly settlement }
+
+    { P6: Data3 (Weekly) Filter Settings }
+    Weekly_MA_Fast(20),
+    Weekly_MA_Slow(60);
+
+Variables:
+    maBase(0),
+    maTrail(0),
+    Breakout_Level(0),
+    Current_ATR(0),
+    Daily_ATR(0),
+    Cond_Breakout(False),
+    MP(0),
+    Entry_P(0),
+    Exit_Price_ATR(0),
+    Exit_Price_Cap(0),
+    Exit_Price_Pct(0),
+    Exit_Price_SL(0),
+    Exit_Price_Trail(0),
+    Final_Exit_Price(0),
+    v_SL_Locked(False),
+    v_Frozen_SL(0),
+
+    { P5 v3 Module Variables }
+    Init_Done(False),
+    v_Holiday_Block(False),
+    v_Registry_Expired(False),
+    Registry_Warn_ID(-1),
+    idx(0),
+
+    { P6 Settlement Variables }
+    v_Settlement_Day(False),
+
+    { MDD Visual Tracking Variables }
+    MyEquity(0),
+    Current_Year_Log(0),
+    Year_Start_Equity(0),
+    Year_High_Equity(0),
+    Year_DD(0),
+    Year_Max_DD(0),
+    Year_Net_Profit(0),
+    txtID(0),
+    strMsg(""),
+
+    { P6: Weekly Filter Variables }
+    v_Weekly_MA_Fast(0),
+    v_Weekly_MA_Slow(0),
+    v_Weekly_Filter(false);
+
+Variables: IntraBarPersist
+    posbleProfit_Long(0),
+    stopProfitPrice_L(0),
+    v_Trail_High(0);
+
+Array:
+    Holiday_Tail[80](0);
+
+{ ==========================================
+  0. P5 v3: Holiday Tail Registry (2019-2026)
+
+  Holiday_Tail = the calendar date stamped on the 00:00-05:00
+  tail bars of the LAST night session before each market
+  closure. Always = last trading day + 1 calendar day
+  (robust to closure length; Saturday tails are valid).
+
+  Iron Rule: position must be 0 before that session's 05:00
+  close. Tail bars block entries and force a market exit.
+
+  Sources: TAIFEX official annual market calendars.
+  - 2026 verified against the official 115-yr PDF (2026-06-12).
+  - Entries marked * were MISSING from the old eve-based list
+    (Labor Day every year; 2025 new statutory holidays) and are
+    reconstructed; verify vs archived TAIFEX PDFs before
+    trusting re-backtest stats on those windows.
+  ========================================== }
+
+if Init_Done = False then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;  { 2020 New Year }
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;  { CNY }
+    Holiday_Tail[5]  = 1200228;  { 228 }
+    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+    Holiday_Tail[7]  = 1200501;  { * Labor Day }
+    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+    Holiday_Tail[10] = 1201009;  { National Day }
+    Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;  { CNY }
+    Holiday_Tail[13] = 1210227;  { 228 }
+    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+    Holiday_Tail[17] = 1211009;  { National Day }
+    Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;  { CNY }
+    Holiday_Tail[20] = 1220226;  { 228 }
+    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+    Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+    Holiday_Tail[25] = 1221008;  { National Day }
+    Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;  { CNY }
+    Holiday_Tail[28] = 1230225;  { 228 }
+    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+    Holiday_Tail[30] = 1230429;  { * Labor Day }
+    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+    Holiday_Tail[33] = 1231007;  { National Day }
+    Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;  { CNY }
+    Holiday_Tail[36] = 1240228;  { 228 }
+    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+    Holiday_Tail[38] = 1240501;  { * Labor Day }
+    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+    Holiday_Tail[41] = 1241010;  { National Day }
+    Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+    { --- 2025 (* rows pending check vs 114-yr TAIFEX PDF) --- }
+    Holiday_Tail[43] = 1250123;  { CNY }
+    Holiday_Tail[44] = 1250228;  { 228 }
+    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+    Holiday_Tail[46] = 1250501;  { * Labor Day }
+    Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up; old list had 1250530 as eve = the holiday itself, could never fire) }
+    Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+    Holiday_Tail[50] = 1251010;  { * National Day }
+    Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+    Holiday_Tail[52] = 1251225;  { * Constitution Day }
+    Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+    { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11; 2/12-2/13 closed }
+    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+    Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 (Saturday tail) }
+    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+
+    Init_Done = True;
+
+end;
+
+{ ==========================================
+  1. Core Indicators Calculation
+  ========================================== }
+
+if BarStatus(1) = 2 then begin
+    maBase  = Average(Close, Length60);
+    maTrail = Average(Close, Length20);
+
+    Current_ATR = AvgTrueRange(ATR_Length) of Data1;
+    Daily_ATR   = AvgTrueRange(ATR_Length)[1] of Data2;
+
+    Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
+end;
+
+{ ==========================================
+  P6: Weekly Filter Logic (Data3 - Weekly)
+  OR logic: either MA condition allows long entries.
+  Trend strategies need early entry at trend inception.
+  AND logic would miss the early bull phase.
+  ========================================== }
+
+if BarStatus(1) = 2 then begin
+    v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
+    v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+
+    if (Close of Data3 > v_Weekly_MA_Fast) or
+       (Close of Data3 > v_Weekly_MA_Slow) then
+        v_Weekly_Filter = true
+    else
+        v_Weekly_Filter = false;
+end;
+
+{ ==========================================
+  1b. P5 v3: Holiday Tail Detection
+  Tail bars only exist in the 00:00-05:00 window
+  (Time <= 0500 guard keeps the scan cheap).
+  Computed BEFORE entry logic so the gate uses
+  the current bar's state, not the prior bar's.
+  ========================================== }
+
+if BarStatus(1) = 2 then begin
+    v_Holiday_Block = False;
+
+    if Time <= 500 then begin
+        for idx = 1 to 80 begin
+            if Date = Holiday_Tail[idx] then
+                v_Holiday_Block = True;
+        end;
+    end;
+
+    { Fail-safe: beyond the verified registry horizon the future
+      holiday schedule is UNKNOWN (next TAIFEX annual calendar not
+      yet published / not yet loaded). Never trade unverified dates:
+      block all entries and flatten any position. }
+
+    v_Registry_Expired = False;
+
+    if Date > Registry_Valid_Until then begin
+        v_Registry_Expired = True;
+        v_Holiday_Block    = True;
+    end;
+end;
+
+{ ==========================================
+  P6 Settlement-Day Detection (2026-06-17 added)
+  TXF1 monthly settlement = 3rd Wednesday of each month.
+  Logic: DayOfWeek=3 (Wed in MC) AND DayOfMonth in [15,21].
+  Dynamic detection - no registry needed (TAIFEX rule is stable).
+  ========================================== }
+
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+{ Live-chart warning: registry horizon within ~30 days }
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "P5 HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ==========================================
+  2. Entry Logic (gated by Holiday Tail)
+  ========================================== }
+
+MP = MarketPosition;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when flat -> freezes at signal-bar ATR once position opens.
+  V2.9 (2026-07-22): MaxList -> MinList. MinList of DISTANCES is the
+  TIGHTER leg = exactly what P3 freezes below (MaxList of PRICES).
+  The old MaxList picked the LOOSER leg: entry-bar risk ran 1.6-2.8x
+  wider than the frozen SL for the whole V2.6+ era.
+  SetStopContract makes the amount per-CONTRACT (lot-count invariant);
+  per-position default would halve the distance at 2 lots. }
+SetStopContract;
+if MP <= 0 then begin
+    if SL_Pct > 0 then
+        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                            MinList(Daily_ATR * Daily_Cap_Multiplier,
+                                    Close * SL_Pct / 100)) * BigPointValue)
+    else
+        SetStopLoss(MinList(Current_ATR * SL_Multiplier,
+                            Daily_ATR * Daily_Cap_Multiplier) * BigPointValue);
+end;
+
+if BarStatus(1) = 2 then begin
+    Cond_Breakout = (Close Crosses Over Breakout_Level);
+
+    if MP = 0 and
+       Cond_Breakout and
+       (v_Weekly_Filter = true) and
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
+        Buy ("TL_Entry") next bar at Market;
+    end;
+end;
+
+{ ==========================================
+  3. Exit Management (P3 and P4 Integrated)
+  ========================================== }
+
+if MP > 0 then begin
+
+    Entry_P = EntryPrice;
+
+    { P3 V3.1: Triple-Layered Initial Stop, FROZEN at entry.
+      Leg 1: 45M ATR * multiplier (intraday vol).
+      Leg 2: Daily ATR * cap multiplier (daily vol ceiling).
+      Leg 3: Entry * SL_Pct / 100 (percentage cap, V3.1 new).
+      MaxList picks the TIGHTEST (highest price for long).
+      SL_Pct = 0 disables Leg 3 (V3.0 compatible mode). }
+    if BarStatus(1) = 2 and v_SL_Locked = False then begin
+        Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
+        Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
+        if SL_Pct > 0 then
+            Exit_Price_Pct = Entry_P - (Entry_P * SL_Pct / 100)
+        else
+            Exit_Price_Pct = 0;
+        v_Frozen_SL    = MaxList(Exit_Price_ATR, MaxList(Exit_Price_Cap, Exit_Price_Pct));
+        v_SL_Locked    = True;
+    end;
+
+    Exit_Price_SL = v_Frozen_SL;
+
+    { P7 V2.6: Stop Profit Guard (L2 SECTION 12 ported to long).
+      Close-based peak profit ratchets up only; once armed the
+      lock floor never disarms until flat. An armed runner can
+      never round-trip into a loss. }
+    if (Close - Entry_P) >= stopProfitPoints_Long then begin
+        if (Close - Entry_P) > posbleProfit_Long then
+            posbleProfit_Long = Close - Entry_P;
+        stopProfitPrice_L = Entry_P +
+            (posbleProfit_Long * (1.0 - profitReturnPrcnt_Long / 100.0));
+    end;
+
+    { P4 V3.0: MA55 trail with uni-directional ratchet.
+      v_Trail_High only moves up (MaxList prevents descent).
+      maTrail updates at bar close only (BarStatus=2 guarded). }
+    v_Trail_High = MaxList(v_Trail_High, maTrail - TrailOffset);
+    Exit_Price_Trail = v_Trail_High;
+    Final_Exit_Price = MaxList(Exit_Price_Trail,
+                       MaxList(Exit_Price_SL, stopProfitPrice_L));
+
+    { Execution with unified TL_ labels.
+      V2.9.1: loss side and profit side never share a label; the
+      side is judged at order placement by exit level vs entry. }
+    if BarStatus(1) = 2 and Close < Final_Exit_Price then begin
+        if Final_Exit_Price >= Entry_P then
+            Sell ("TL_SP_Gap") next bar at Market
+        else
+            Sell ("TL_SL_Gap") next bar at Market;
+    end else begin
+        if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then
+            Sell ("TL_SL") next bar at Final_Exit_Price Stop
+        else if stopProfitPrice_L > 0 and
+                AbsValue(Final_Exit_Price - stopProfitPrice_L) < 0.001 then
+            Sell ("TL_SP") next bar at Final_Exit_Price Stop
+        else if Exit_Price_Trail >= Entry_P then
+            Sell ("TL_TP") next bar at Final_Exit_Price Stop
+        else
+            Sell ("TL_TSL") next bar at Final_Exit_Price Stop;
+    end;
+
+end else begin
+    { Flat: release locks for the next trade }
+    v_SL_Locked       = False;
+    v_Frozen_SL       = 0;
+    posbleProfit_Long = 0;
+    stopProfitPrice_L = 0;
+    v_Trail_High      = 0;
+end;
+
+{ ==========================================
+  4. P5 v3: Pre-Holiday Forced Flat (Iron Rule)
+  On tail bars, force a market exit from
+  Holiday_Flat_Time (03:45) onward:
+    45M grid -> trigger on the 03:45 bar, fill at
+    03:45; retry on the 04:30 bar, fill at 04:30.
+    Always flat before the 05:00 session close.
+  Typhoon / unscheduled closures cannot be
+  pre-coded: use Manual_Kill_Switch + the
+  pre-holiday manual check (SOP sec 3-1).
+  ========================================== }
+
+if MP > 0 then begin
+
+    if v_Registry_Expired then begin
+        Sell ("TL_RegistryEnd") next bar at Market;
+    end
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+        Sell ("TL_Holiday") next bar at Market;
+    end
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+        Sell ("TL_Settlement") next bar at Market;
+    end;
+
+    if Manual_Kill_Switch = True then begin
+        Sell ("TL_Kill") next bar at Market;
+    end;
+
+end;
+
+{ ==========================================
+  5. Annual MDD Visualizer Module
+  No label changes needed in this section.
+  ========================================== }
+
+if BarStatus(1) = 2 then begin
+
+if CurrentBar = 1 then begin
+    Current_Year_Log  = Year(Date);
+    Year_Start_Equity = InitialCapital;
+    Year_High_Equity  = InitialCapital;
+    Year_Max_DD       = 0;
+end;
+
+MyEquity = InitialCapital + NetProfit + OpenPositionProfit;
+
+if Year(Date) <> Current_Year_Log or LastBarOnChart then begin
+
+    if LastBarOnChart and Year(Date) = Current_Year_Log then
+        Year_Net_Profit = MyEquity - Year_Start_Equity
+    else
+        Year_Net_Profit = MyEquity[1] - Year_Start_Equity;
+
+    if Current_Year_Log >= 2024 then begin
+        strMsg = "Year: " + NumToStr(Current_Year_Log, 0) + NewLine +
+                 "MDD: $" + NumToStr(Year_Max_DD, 0);
+        if LastBarOnChart then
+            txtID = Text_New(Date,    Time,    High    + 200, strMsg)
+        else
+            txtID = Text_New(Date[1], Time[1], High[1] + 200, strMsg);
+        Text_SetStyle(txtID,     2, 1);
+        Text_SetColor(txtID,     Green);
+        Text_SetSize(txtID,      12);
+        Text_SetAttribute(txtID, 1, true);
+    end;
+
+    Current_Year_Log = Year(Date);
+
+    if LastBarOnChart = False then begin
+        Year_Start_Equity = MyEquity[1];
+        Year_High_Equity  = MyEquity[1];
+        Year_Max_DD       = 0;
+    end;
+
+end;
+
+if Year(Date) = Current_Year_Log then begin
+    if MyEquity > Year_High_Equity then
+        Year_High_Equity = MyEquity;
+    Year_DD = Year_High_Equity - MyEquity;
+    if Year_DD > Year_Max_DD then
+        Year_Max_DD = Year_DD;
+end;
+
+end;

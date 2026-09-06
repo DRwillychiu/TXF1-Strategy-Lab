@@ -1,7 +1,7 @@
 ---
 建立日期: 2026-08-26
 主題: L5 二次進場可讀性 — 為什麼不貼標籤，改印 log
-狀態: 程式碼已寫、已推雲端；MC12 物理驗證未做
+狀態: 程式碼已寫、已推雲端；MC12 退化錨點 2026-08-26 已跑，3,965 列 0 差異（見下方章節）
 前置: docs/research/L2L5_reentry_label_decision_20260825.md
 ---
 
@@ -62,7 +62,7 @@ L5 的 `SL_Pct = 1.0`（不是 0）。引擎層 `SetStopLoss` 可以在**沒有�
 
 ## 6. 改了什麼
 
-檔案：`strategies/research/L5_BreakoutLong/L5_v199_R1/L5_BreakoutLong_v199_R1.pla`
+檔案：`strategies/research/L5_BreakoutLong/L5_v19.9_R1/L5_BreakoutLong_v19.9_R1.pla`
 （live 一個位元組沒動）
 
 ```

@@ -167,11 +167,11 @@ Bootstrap 10,000 次（Rule #18 五件套之一）：
 | 路徑 | 說明 |
 |---|---|
 | `docs/policies/REENTRY_DESIGN_SPEC_20260822.md` | **二次進場設計規格**，取代 07-30 舊版 |
-| `strategies/research/L1_TrendLong/L1_v32/L1_TrendLong_v32.pla` | L1 二次進場，`Trend_Ratio=0.20` 已回寫 |
-| `strategies/research/L4_ConsolidationShort/L4_v17/L4_ConsolidationShort_v17.pla` | **L4 風險形式**，四開關預設現行 |
-| `docs/research/L1_v32_step1_anchor_result_20260822.md` | 錨點證明 |
-| `docs/research/L1_v32_reentry_first_measurement_20260822.md` | 第一次量測 |
-| `docs/research/L1_v32_ratio02_adoption_20260822.md` | 採用紀錄 |
+| `strategies/research/L1_TrendLong/L1_v3.2/L1_TrendLong_v3.2.pla` | L1 二次進場，`Trend_Ratio=0.20` 已回寫 |
+| `strategies/research/L4_ConsolidationShort/L4_v17.0/L4_ConsolidationShort_v17.0.pla` | **L4 風險形式**，四開關預設現行 |
+| `docs/research/L1_v3.2_step1_anchor_result_20260822.md` | 錨點證明 |
+| `docs/research/L1_v3.2_reentry_first_measurement_20260822.md` | 第一次量測 |
+| `docs/research/L1_v3.2_ratio02_adoption_20260822.md` | 採用紀錄 |
 | `docs/research/L1_version_performance_table.html` / `L1_version_performance_history_20260822.md` | **版本績效總表** |
 | `docs/research/L1_entry_threshold_ATR_vs_percent_20260822.md` | 進場門檻研究（待排，含 4 條可證偽預測） |
 | `docs/research/L4_reentry_deep_analysis_20260822.md` | L4 二次進場讀碼 |
@@ -202,7 +202,7 @@ git config core.hooksPath .githooks
 
 ### 7.3 ⚠ 過程中的失誤（已修正，記錄供警惕）
 
-第一次建 L4 檔案時寫進 `L4_v15`，**該目錄已有一份 dual-path entry 研究版本**，被覆蓋。
+第一次建 L4 檔案時寫進 `L4_v15.1`，**該目錄已有一份 dual-path entry 研究版本**，被覆蓋。
 已從 git 還原，改用 v17（v16 亦被佔用）。
 
 **教訓：宣告版本號前先 `ls` 該策略的 research 目錄。**

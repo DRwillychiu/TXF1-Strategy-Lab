@@ -8,7 +8,7 @@
 > 依據：`docs/methodology/entry_exit_sop.md` 九層架構 + 假日平倉鐵律 + Rule #11/#12/#13/#14
 > 數據來源：MC12 真實 60M 回測（81 筆，2020-02-21 ~ 2026-06-06）
 > 對應 .pla：[L4_ConsolidationShort.pla](L4_ConsolidationShort.pla) (v14.4)
-> 相關 audit：[docs/archive/offRoadmap_2026Q2/L4_v144_deep_analysis_20260618.md](../../docs/archive/offRoadmap_2026Q2/L4_v144_deep_analysis_20260618.md)
+> 相關 audit：[docs/archive/offRoadmap_2026Q2/L4_v14.4_deep_analysis_20260618.md](../../docs/archive/offRoadmap_2026Q2/L4_v14.4_deep_analysis_20260618.md)
 
 ---
 

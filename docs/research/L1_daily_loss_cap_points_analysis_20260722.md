@@ -2,7 +2,7 @@
 
 - **Date**: 2026-07-22 (continued from earlier session)
 - **Strategy**: L1_TrendLong V2.7
-- **Prerequisite**: `L1_V28_backtest_verdict_20260722.md` (V2.8 REJECT), `L1_daily_loss_cap_design_20260722.md`
+- **Prerequisite**: `L1_v2.8_backtest_verdict_20260722.md` (V2.8 REJECT), `L1_daily_loss_cap_design_20260722.md`
 - **Status**: **PAUSED** — data analysis complete, pending user decision on whether L1 needs a daily cap at all
 
 ---

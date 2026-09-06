@@ -26,7 +26,7 @@
 
 L4 在 P0-2 Walk-Forward 與 Bootstrap 階段已暴露 5 大結構性問題，皆引自先前正式文件：
 
-### 2.1 五大失敗證據（引用自 `portfolio_walk_forward_20260620.md` 與 `L4_v144_deep_analysis_20260618.md`）
+### 2.1 五大失敗證據（引用自 `portfolio_walk_forward_20260620.md` 與 `L4_v14.4_deep_analysis_20260618.md`）
 
 | # | 指標 | L4 實測值 | 門檻 | 結果 |
 |---|---|---|---|---|
@@ -260,7 +260,7 @@ L4 退役當下的完整狀態快照，未來若需 audit 或 reinstate 可直�
 | Decision authorization | User explicit confirmation（Auto + Ultracode session） | 2026-06-20 |
 | Override of prior commitment | Acknowledged and documented in §3 | 2026-06-20 |
 | Document author | Claude Code (Opus 4.7 1M) | 2026-06-20 |
-| Cross-references verified | `portfolio_walk_forward_20260620.md`, `L4_v144_deep_analysis_20260618.md`, `L4_portfolio_role_20260618.md`, `portfolio_allocation_v2_20260620.md` | 2026-06-20 |
+| Cross-references verified | `portfolio_walk_forward_20260620.md`, `L4_v14.4_deep_analysis_20260618.md`, `L4_portfolio_role_20260618.md`, `portfolio_allocation_v2_20260620.md` | 2026-06-20 |
 
 ---
 

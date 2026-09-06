@@ -158,7 +158,7 @@ L3 的 **106.3%** 意思是：Bootstrap 顯示有 5% 的機率**輸掉超過整�
 
 ## 6. ⚠ 附帶發現：L1 回測不可重現
 
-同一份 `L1_TrendLong_v32`、同樣 `ReEntry_On=1 / Trend_Ratio=0.2`、同樣期間與資本：
+同一份 `L1_TrendLong_v3.2`、同樣 `ReEntry_On=1 / Trend_Ratio=0.2`、同樣期間與資本：
 
 | 檔案 | 筆數 | 淨利 |
 |---|---|---|

@@ -90,7 +90,7 @@
 
           REFERENCES:
             strategies/live/L1_TrendLong.pla - V2.6 SP source
-            docs/L4_v142_variant_results.md  - what to avoid
+            docs/L4_v14.2_variant_results.md  - what to avoid
 
           DEPLOY ONLY WHEN FLAT. Production default = OFF.
 
@@ -245,7 +245,7 @@ inputs:
               FAILED net-vs-baseline. Best variant D was -14 pct
               net + Top-10 retention only 50 pct. SP permanently
               disabled in production. Code preserved for
-              archival/research only. See L5_v198_variant_results.md }
+              archival/research only. See L5_v19.8_variant_results.md }
     SP_Trigger_Pts(0),             { PERMANENT 0 = off. All A/B variants FAILED.
                                      B/C/D/E/F all killed 3 mega-winners
                                      (2026-04-07 +376K, 2026-03-31 +177K,

@@ -270,9 +270,9 @@ print("=" * 75)
 required_docs = [
     'docs/entry_exit_sop.md',
     'docs/position_sizing_and_capacity.md',
-    'docs/L4_v142_pathA_entry_diagnostic.md',
-    'docs/L4_v142_pathB_variant_matrix.md',
-    'docs/L4_v142_variant_results.md',
+    'docs/L4_v14.2_pathA_entry_diagnostic.md',
+    'docs/L4_v14.2_pathB_variant_matrix.md',
+    'docs/L4_v14.2_variant_results.md',
     'strategies/live/L1_TrendLong_annotated.md',
     'strategies/live/L1_TrendLong_review.md',
     'strategies/live/L2_TrendShort_review.md',
@@ -281,7 +281,7 @@ required_docs = [
     'strategies/live/L4_ConsolidationShort_annotated.md',
     'strategies/live/L5_BreakoutLong_annotated.md',
     'strategies/live/L5_BreakoutLong_review.md',
-    'docs/L5_v198_pretrail_sp_design.md',
+    'docs/L5_v19.8_pretrail_sp_design.md',
 ]
 for p in required_docs:
     report(f"DOC: {p}", os.path.exists(p), "")

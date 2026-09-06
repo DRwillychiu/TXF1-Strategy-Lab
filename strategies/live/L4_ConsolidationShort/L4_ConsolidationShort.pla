@@ -18,7 +18,7 @@
 
    v14.2B (2026-06-13) PRODUCTION: Variant B sealed (Path A on, Path B off).
           A/B trial complete (variants A-G all backtested in MC9).
-          See docs/L4_v142_variant_results.md for full data.
+          See docs/L4_v14.2_variant_results.md for full data.
 
           WINNER: Variant B (Night_Block_On=true, BE=0, SP=0)
             Net  : 581,200 -> 687,200  (+106,000, +18.2 pct)
@@ -137,8 +137,8 @@
                   retention <70 pct, OR MDD worse by >10 pct
 
           REFERENCES:
-            docs/L4_v142_pathA_entry_diagnostic.md - 28 BR analysis
-            docs/L4_v142_pathB_variant_matrix.md   - variant design
+            docs/L4_v14.2_pathA_entry_diagnostic.md - 28 BR analysis
+            docs/L4_v14.2_pathB_variant_matrix.md   - variant design
 
           DEPLOY ONLY WHEN FLAT (changes historical stop fills).
           Production defaults = all off = v14.1 (regression-safe).
@@ -149,7 +149,7 @@
    Win Rate      : 41.7722%
    MDD           : -789,200  (-23.5470%)
    Total Trades  : 79
-   Source        : docs/research/L4_v18_anchor_result_and_analysis_20260824.md
+   Source        : docs/research/L4_v18.0_anchor_result_and_analysis_20260824.md
    Confirmed three times over - live v14.6, the v17 anchor and the
    v18 anchor all produced the same 24 figures to four decimals.
 
@@ -206,7 +206,7 @@
           User decision 2026-06-18: B selected = accept L4 v14.4 as
           final, stop optimizing, fully remove v14.5 code.
 
-          See: docs/L4_v145_ab_results_20260618.md for full analysis.
+          See: docs/L4_v14.5_ab_results_20260618.md for full analysis.
           See: memory feedback_filter_redundancy_check.md for rule.
 
    v14.4+ (2026-06-18) P3b Immediate Stop Guard:
@@ -241,7 +241,7 @@
           v15-v16 research line CLOSED (2026-07-26):
             v15.0/v15.1/v15.1_opt/v16.0 all FAILED. L4 alpha = bear/neutral
             trap signal only. Bull market zero trades = correct behavior.
-            See strategies/research/L4_v15/ and L4_v16/ for full postmortem.
+            See strategies/research/L4_v15.1/ and L4_v16.0/ for full postmortem.
 
    STATUS: v14.6 + SetStopContract + SL_Pct is the PRODUCTION version.
    Do NOT re-add Strong_Long_Filter or Fast_BreakExit without

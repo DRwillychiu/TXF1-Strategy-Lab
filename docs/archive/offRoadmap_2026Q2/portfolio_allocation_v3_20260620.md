@@ -303,9 +303,9 @@ L1 / L2 / L3 / L5 / S1 **仍處於 production frozen 狀態**：
 ### 9.4 L4 歷史相關文件（封存供參）
 
 - [L4_portfolio_role_20260618.md](L4_portfolio_role_20260618.md) — L4 原本「不歸零」承諾來源
-- [L4_v144_deep_analysis_20260618.md](L4_v144_deep_analysis_20260618.md) — L4 結構性問題深度分析
-- [L4_v145_design_spec_20260618.md](L4_v145_design_spec_20260618.md) — L4 v14.5 設計規格（已凍結）
-- [L4_v145_ab_results_20260618.md](L4_v145_ab_results_20260618.md) — L4 v14.5 A/B 結果
+- [L4_v14.4_deep_analysis_20260618.md](L4_v14.4_deep_analysis_20260618.md) — L4 結構性問題深度分析
+- [L4_v14.5_design_spec_20260618.md](L4_v14.5_design_spec_20260618.md) — L4 v14.5 設計規格（已凍結）
+- [L4_v14.5_ab_results_20260618.md](L4_v14.5_ab_results_20260618.md) — L4 v14.5 A/B 結果
 
 ---
 

@@ -1,7 +1,7 @@
 # L2 二次進場標籤 —— 執行卡（2026-08-25）
 
 **改動性質：純標籤。零新增 input，零行為變化。**
-**檔案：`strategies/research/L2_TrendShort/L2_v54/L2_TrendShort_v54.pla`（v5.3 base）**
+**檔案：`strategies/research/L2_TrendShort/L2_v5.4/L2_TrendShort_v5.4.pla`（v5.3 base）**
 **`strategies/live/` 已復原至 `fc833c8`，未動。**
 依據：[`label_taxonomy_audit_20260824.md`](label_taxonomy_audit_20260824.md) 規則 **L-3**
 ＋ [`L2_reentry_L28_check_20260824.md`](L2_reentry_L28_check_20260824.md)（L2 已有 22 次二次進場）
@@ -171,7 +171,7 @@
 
 | | |
 |---|---|
-| 研究版 | `strategies/research/L2_TrendShort/L2_v54/L2_TrendShort_v54.pla`（900 行） |
+| 研究版 | `strategies/research/L2_TrendShort/L2_v5.4/L2_TrendShort_v5.4.pla`（900 行） |
 | MC 載入名稱 | **`Trendbearish_V54_RESEARCH`**，與 live 的 `Trendbearish_V1` **不同名** |
 | live | 已 `git checkout fc833c8 --` 復原，**逐位元組相同**，782 行，只有 `TS_Entry` |
 

@@ -28,7 +28,7 @@
 ### 1.1 L1 — 機制有了、標籤也有了
 
 ```
-strategies/research/L1_TrendLong/L1_v32/L1_TrendLong_v32.pla
+strategies/research/L1_TrendLong/L1_v3.2/L1_TrendLong_v3.2.pla
 Version : V3.2 (V3.1 base + re-entry module)
 
 進場標籤 : "TL_Entry"  +  "TL_ReEntry"        <- 兩條路徑，兩個標籤

@@ -1,7 +1,7 @@
 # L3 二次進場標籤 v15.1 —— 執行卡（2026-08-25）
 
 **改動性質：純標籤。零新增 input，零行為變化。**
-**檔案：`strategies/research/L3_ConsolidationLong/L3_v151/L3_ConsolidationLong_v151.pla`（604 行）**
+**檔案：`strategies/research/L3_ConsolidationLong/L3_v15.1/L3_ConsolidationLong_v15.1.pla`（604 行）**
 **`strategies/live/` 未動。**
 
 依據：`label_taxonomy_audit_20260824.md` 規則 **L-3**
