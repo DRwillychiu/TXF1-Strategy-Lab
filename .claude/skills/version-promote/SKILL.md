@@ -18,11 +18,11 @@ strategies/
   live/
     L1_TrendLong.pla              <-- always the CURRENT production version
   research/
-    L1_v30/                       <-- archived V3.0
-      L1_TrendLong_v30.pla
-    L1_v31/                       <-- archived V3.1 (also the source for current live)
-      L1_TrendLong_v31.pla
-      L1_V32_X4_FINAL_VERDICT.md  <-- killed experiment docs stay with their base version
+    L1_v3.0/                       <-- archived V3.0
+      L1_TrendLong_v3.0.pla
+    L1_v3.1/                       <-- archived V3.1 (also the source for current live)
+      L1_TrendLong_v3.1.pla
+      L1_v3.2_X4_FINAL_VERDICT.md  <-- killed experiment docs stay with their base version
 ```
 
 Naming: `L{N}_v{MAJOR}{MINOR}/L{N}_TrendLong_v{MAJOR}{MINOR}.pla`
@@ -99,14 +99,14 @@ Every version ever deployed is findable in `strategies/research/L{N}_v{XX}/`.
 
 | Version | Date | Location | Key change |
 |---------|------|----------|------------|
-| V3.0 | 2026-07-23 | `research/L1_v30/` | IOG migration, tick-level SP/trail |
-| V3.1 | 2026-07-25 | `research/L1_v31/` + `live/` | SL_Pct percentage stop cap (0.5%) |
-| V3.2 | KILLED | `research/L1_v31/L1_V32_X4_FINAL_VERDICT.md` | X4 Breakout Quality Filter (cross-TF cliff-edge) |
+| V3.0 | 2026-07-23 | `research/L1_v3.0/` | IOG migration, tick-level SP/trail |
+| V3.1 | 2026-07-25 | `research/L1_v3.1/` + `live/` | SL_Pct percentage stop cap (0.5%) |
+| V3.2 | KILLED | `research/L1_v3.1/L1_v3.2_X4_FINAL_VERDICT.md` | X4 Breakout Quality Filter (cross-TF cliff-edge) |
 
 ## Notes
 
 - FINAL_VERDICT docs for killed experiments stay in the base version's folder
-  (V3.2 was based on V3.1, so its verdict is in L1_v31/)
+  (V3.2 was based on V3.1, so its verdict is in L1_v3.1/)
 - The .bak files in live/ (e.g. L1_TrendLong.pla.bak_20260723) are legacy
   manual backups; this skill replaces that pattern with proper versioned archives
 - Deploy only when flat (no open position in MC9)
