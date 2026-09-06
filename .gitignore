@@ -22,3 +22,20 @@ scripts/research/s16s_5min.csv
 # Added 2026-08-26 after the count reached 44.
 *.bak_*
 *.bak2_*
+
+# MC12 匯出的原始資料。107 MB，可隨時重新匯出，不進 git
+data/mc_export/
+
+# 聚合快取。可由原始資料重建
+*.pkl
+
+# 對帳報告與實戰紀錄（含帳務資訊）
+data/parity_reports/
+data/live_records/
+
+# 券商設定與憑證。任何情況都不得進 git
+config/broker_*.yaml
+config/*_credentials.*
+.env.broker
+*.pfx
+*.p12
