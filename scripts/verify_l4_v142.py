@@ -237,9 +237,9 @@ print("=" * 72)
 import os
 docs_dir = 'docs/'
 report("DOC1: pathA_entry_diagnostic.md exists",
-       os.path.exists(docs_dir + 'L4_v142_pathA_entry_diagnostic.md'), "")
+       os.path.exists(docs_dir + 'L4_v14.2_pathA_entry_diagnostic.md'), "")
 report("DOC2: pathB_variant_matrix.md exists",
-       os.path.exists(docs_dir + 'L4_v142_pathB_variant_matrix.md'), "")
+       os.path.exists(docs_dir + 'L4_v14.2_pathB_variant_matrix.md'), "")
 
 # Header explanations
 report("DOC3: Changelog v14.2 dated 2026-06-13",

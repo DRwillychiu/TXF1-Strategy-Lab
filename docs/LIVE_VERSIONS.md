@@ -115,6 +115,8 @@
 | L1 的 MC Load Name 寫 `60M` 但實際 45M | 改名會斷掉 live 訊號連續性 |
 | `strategies/live/L4_ConsolidationShort/docs/L4_v15_matrix_range_capture/` | 資料夾名寫 v15，內文只談 v14.4（2026-07-04 CLOSED）。**原作者意圖不明，不臆測改名** |
 | L4 混用兩套編號 | v14.x 是產品線、v15/16/17/18 是實驗序號。**因此 v14.7 比 v18.0 新** |
+| **L1 有兩個 V3.2** | **2026-07-25 的 X4 突破品質濾網（KILLED）** 與 **2026-08-22 的二次進場模組**（現存於 `L1_v3.2/`）。前者被砍後版號被重用。X4 結案書依 `version-promote` 慣例留在 `L1_v3.1/`（結案文件跟著它的 base 版本），檔名 `L1_v3.2_X4_FINAL_VERDICT.md` 指的是**被砍的那個 V3.2**。**不重新編號——那會改寫歷史。** |
+| `scripts/verify_l4_v142.py` | Python 檔名不加小數點（`.` 會讓模組無法 import）。內容引用已更新 |
 
 ---
 
