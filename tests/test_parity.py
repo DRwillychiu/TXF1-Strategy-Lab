@@ -188,3 +188,151 @@ def test_invariant_log_reports_first_occurrence():
     r = log.report()
     assert "1190806" in r and "detail-a" in r
     assert "2 次" in r or "    2" in r
+
+
+# ==================================================================
+# MC12 對帳基準 —— 2026-09-07 從 repo 的 anchor 文件挖出
+# ==================================================================
+
+def test_anchors_all_carry_an_export_date():
+    """每個 anchor 都必須註明它是哪一次執行的產物。
+
+    L2 / L4 來自 `docs/research/` 的 anchor 文件（最可信）。
+    L3 目前只有標頭的 PERFORMANCE 區塊，且該檔內部矛盾
+    （376/2,446,000 vs v15.1 CHANGELOG 的 360/1,389,600）。
+    """
+    from txfcore.parity.anchors import ANCHORS
+    for a in ANCHORS.values():
+        assert a.export_date > 1260000
+        assert a.source_doc
+
+
+def test_backtest_window_is_per_strategy():
+    """**視窗的影響比成交假設、對齊規則、換月假象加起來都大。**
+
+    L3 實測：同程式碼同資料，視窗 2019-12-16 -> 2020-05-12
+    使筆數差距從 +23 掉到 +3。
+    """
+    from txfcore.parity.anchors import ANCHORS
+    assert ANCHORS["L3"].backtest_start == 1200512     # v14.1 標頭明載
+    assert ANCHORS["L2"].backtest_start == 1191216     # 未載明，沿用 L1
+    assert ANCHORS["L3"].backtest_start != ANCHORS["L2"].backtest_start
+
+
+def test_l4_anchor_is_82_not_79():
+    """**79 是 CS_Entry 的數量，不是總筆數。**
+
+    我先前拿 79 當總數比，於是「多 4 筆」——實際只多 1 筆。
+    """
+    from txfcore.parity.anchors import L4_V147
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    assert L4_V147.total_trades == 82
+    assert L4_V147.entry_labels == {"CS_Entry": 79, "CS_ReEntry": 3}
+    assert sum(L4_V147.entry_labels.values()) == 82
+    assert L4ConsolShort().expected_trigger_range() == (82, 82)
+
+
+def test_l2_entry_split_is_57_20_not_55_22():
+    """標頭那組 55/22 是事前登記，anchor 文件的 R-2 已推翻。"""
+    from txfcore.parity.anchors import L2_V54
+    from txfcore.strategies.l2_trendshort import L2TrendShort
+    assert L2_V54.entry_labels == {"TS_Entry": 57, "TS_ReEntry": 20}
+    assert sum(L2_V54.entry_labels.values()) == 77
+    assert L2TrendShort().expected_trigger_range() == (77, 77)
+
+
+def test_l4_exit_labels_are_recorded():
+    """v14.7 文件給了完整的出場標籤分布，那是最強的對帳訊號。"""
+    from txfcore.parity.anchors import L4_V147
+    assert L4_V147.exit_labels == {"CS_SL": 38, "CS_BreakExit": 30, "CS_TimeExit": 14}
+    assert sum(L4_V147.exit_labels.values()) == 82
+
+
+def test_two_l4_anchors_have_different_data_windows():
+    """v14.7（82 筆 / 800,000）與 v18.0（79 筆 / 877,200）資料區間不同。
+
+    v14.7 的文件明載「舊量測時 live 淨利是 877,200，本次是 800,000」。
+    **兩者的筆數與淨利不可直接比較。**
+    """
+    from txfcore.parity.anchors import L4_V147, L4_V180
+    assert L4_V147.total_trades != L4_V180.total_trades
+    assert L4_V147.net_profit != L4_V180.net_profit
+    assert L4_V147.export_date != L4_V180.export_date
+
+
+def test_label_distance():
+    from txfcore.parity.anchors import label_distance
+    assert label_distance({"a": 3}, {"a": 3}) == 0
+    assert label_distance({"a": 3, "b": 1}, {"a": 2}) == 2
+
+
+def test_l3_anchor_and_reentry_range():
+    """re-entry 無法事前登記精確值——「同一 episode」需要 K 棒資料。
+
+    登記為區間 20 <= CL_ReEntry <= 115。**超過 115 代表 episode 閘門沒作用。**
+    """
+    from txfcore.parity.anchors import L3_V150
+    from txfcore.strategies.l3_consollong import L3ConsolLong
+    assert L3_V150.total_trades == 376
+    assert L3ConsolLong().expected_reentry_range() == (20, 115)
+    assert L3ConsolLong().expected_trigger_range() == (360, 376)
+
+
+def test_l3_disarm_is_structural_not_price_based():
+    """**L4 v18 零觸發是因為價格解除被自己的停損蘊含。**
+
+    L3 完全不測價格——episode 變了就解除，所以避開了那個陷阱。
+    原始碼註解明載這一點。
+    """
+    import inspect
+    from txfcore.strategies import l3_consollong
+    src = inspect.getsource(l3_consollong.L3ConsolLong.on_bar)
+    assert "ps.episode_id != ps.reentry_episode" in src
+    assert "reentry_armed = False" in src
+
+
+# ==================================================================
+# 樣本內外切分 —— 2026-09-07 發現先前全部跑錯窗口
+# ==================================================================
+
+def test_live_start_is_the_real_trading_start():
+    """**2026-06-17 是真實下單開始的日子**（實戰紀錄檔名 `260617開始`）。
+
+    先前所有回測都跑到 2026-09-05，把樣本內外混在一起——
+    **樣本外的衰退完全看不出來**。
+    """
+    from txfcore.parity.windows import BACKTEST_END, LIVE_START
+    assert LIVE_START == 1260617
+    # 2026-09-07 會議裁決：回測至 06/17 為止，之後是實戰。**不留空窗。**
+    assert BACKTEST_END == 1260616
+    assert BACKTEST_END + 1 == LIVE_START
+
+
+def test_split_puts_every_trade_in_exactly_one_bucket():
+    from txfcore.parity.windows import split
+    from txfcore.engine.accounting import ClosedTrade
+    from txfcore.types.orders import MarketPosition
+
+    def t(d):
+        return ClosedTrade("X", "E", "X", MarketPosition.LONG, 2,
+                           20000, 20100, d, 945, d, 1145, 0.0)
+    ins, out, gap = split([t(1250101), t(1260616), t(1260701)])
+    assert len(ins) == 2 and len(out) == 1
+    assert not gap                       # 不留空窗，每筆都歸在其中一邊
+
+
+def test_completeness_names_the_consequence_of_each_gap():
+    """**只列「缺什麼」沒有用，要說「缺了會怎樣」。**"""
+    from txfcore.parity.completeness import CAPABILITIES, summary
+    done, total = summary()
+    assert total == 12 and done == 5
+    for c in CAPABILITIES:
+        assert c.why, c.protocol
+
+
+def test_orphan_modules_are_registered():
+    """**寫好但沒有呼叫者的模組，比沒寫更危險**——它看起來像有。"""
+    from txfcore.parity.completeness import ORPHANS
+    names = {f for f, _ in ORPHANS}
+    assert "risk/protections.py" in names
+    assert "timing/latency.py" in names

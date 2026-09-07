@@ -1,6 +1,18 @@
 """訂單型別。
 
-裁決 2026-09-06：**口數由風險層決定，策略層不輸出口數。**
+裁決 2026-09-06：**進場口數由風險層決定，策略層不輸出進場口數。**
+
+**2026-09-07 修正**：那個裁決只適用於**進場**。
+
+    進場口數   風險決策 —— 要下多大
+    出場口數   策略決策 —— 要平掉部位的多少
+
+L5 的 40% 分批出場是**策略的結構決定**，不是風險的 sizing。
+把兩者合成一件事的後果：`FixedLotRiskGate` 把分批的 1 口覆寫成 2 口，
+於是每次分批都變成全平，`CurrentContracts < MaxContracts` 永不成立，
+**Stage 2/3 的 MFE 三階追蹤從未執行**——而那正是 L5 賺錢的機制。
+
+實測：持倉 6008 根，Stage 1 = 6008、Stage 2/3 = 0、分批 0 組。
 
 所以這裡有兩個型別而不是一個：
 
@@ -57,6 +69,9 @@ class OrderIntent:
     signal_date: int = 0
     signal_time: int = 0
     from_entry: str | None = None   # 腿綁定，只有 L5 用得到
+    # **出場口數**。策略決策，風險層必須遵守。
+    # None = 平掉該腿的全部。只有 L5 的分批出場會設它。
+    exit_quantity: int | None = None
     seq: int = 0
 
     def __post_init__(self) -> None:
@@ -64,6 +79,11 @@ class OrderIntent:
             raise ValueError("市價單不得帶價格")
         if self.order_type is not OrderType.MARKET and self.price is None:
             raise ValueError(f"{self.order_type} 必須帶價格")
+        if self.exit_quantity is not None:
+            if self.is_entry:
+                raise ValueError("進場單不得指定 exit_quantity —— 進場口數是風險決策")
+            if self.exit_quantity <= 0:
+                raise ValueError("exit_quantity 必須 > 0")
 
     @property
     def idem_key(self) -> str:

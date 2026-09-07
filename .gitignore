@@ -42,3 +42,6 @@ config/*_credentials.*
 
 # 命名重構時隔離的舊檔，確認無用後手動刪除
 _quarantine/
+
+# 回測產出物，可由 tools\report.py 重建
+reports/

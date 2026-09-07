@@ -39,6 +39,7 @@ class BacktestResult:
     orders_emitted: int = 0
     engine_stop_exits: int = 0
     same_bar_exits: int = 0
+    oco_cancelled: int = 0
     lineage: Lineage | None = None
     policy: str = ""
     notes: list[str] = field(default_factory=list)
@@ -63,6 +64,14 @@ class FixedLotRiskGate:
         self.lots = lots
 
     def size(self, intent: OrderIntent) -> SizedOrder:
+        """**出場口數由策略決定，風險層必須遵守。**
+
+        2026-09-07：原本一律回傳固定口數，把 L5 的 40% 分批覆寫成全平，
+        導致 Stage 2/3 從未執行。
+        """
+        if intent.exit_quantity is not None:
+            return SizedOrder(intent=intent, quantity=intent.exit_quantity,
+                              sized_by="strategy_exit")
         return SizedOrder(intent=intent, quantity=self.lots, sized_by="fixed_lot")
 
 
@@ -166,7 +175,7 @@ class BacktestRunner:
                         pos.prev_position_profit = t.net_ntd(self.instrument)
                         if pos.is_flat:
                             entry_leg = None
-                    break                     # 一根只成交一筆（L2/L4 的 ExitFired 語意）
+                    break                     # L2 靠 ExitFired 保證單根單張
                 pending = []
                 entry_leg, protective = self._same_bar_stop(
                     bar, pos, entry_leg, protective, ledger, res, name)

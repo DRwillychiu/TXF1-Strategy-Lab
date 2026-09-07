@@ -166,16 +166,16 @@ class L2TrendShort(Strategy[L2PerTrade, L2PerSession]):
         return StrategyState(per_trade=L2PerTrade(), per_session=L2PerSession())
 
     def expected_trigger_range(self) -> tuple[int, int]:
-        """事前登記（判官 4）。
+        """事前登記（判官 4）。**來源是 anchor 文件，不是標頭。**
 
-        完整回測 77-78 筆。但自 2025-06-03 起 **443 天零交易** ——
-        標頭 STATUS 記載，推定原因是週線濾網要求收盤低於 SMA13，
-        而指數自 21,000 走到 47,000。
+        `docs/research/L2_v5.4_label_anchor_result_20260825.md`：
+        77 筆 / 2,670,000 / PF 2.7456，進場拆分 **TS_Entry 57 + TS_ReEntry 20**。
 
-        移植驗收：跑 2025-06-03 之後的資料必須也是 0 筆。
-        有觸發即為移植錯誤。
+        標頭那組 55 / 22 是**事前登記**，該文件的 R-2 已推翻它。
+
+        自 2025-06-03 起 **443 天零交易**——移植驗收：那之後必須也是 0 筆。
         """
-        return (77, 78)
+        return (77, 77)
 
     # ------------------------------------------------------------------
     def on_bar(

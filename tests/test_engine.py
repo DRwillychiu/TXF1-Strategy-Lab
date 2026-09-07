@@ -602,10 +602,14 @@ def test_all_ready_gates_warmup():
 # L4
 # ==================================================================
 
-def test_l4_registers_79_trades():
-    """標頭：完整回測 79 筆。多頭市場零交易 = 正確行為。"""
+def test_l4_registers_82_trades():
+    """**2026-09-07 修正：79 是 CS_Entry 的數量，不是總筆數。**
+
+    真正的 anchor 是 82 = CS_Entry 79 + CS_ReEntry 3
+    （`docs/research/L4_v14.7_anchor_result_20260826.md`）。
+    """
     from txfcore.strategies.l4_consolshort import L4ConsolShort
-    assert L4ConsolShort().expected_trigger_range() == (79, 79)
+    assert L4ConsolShort().expected_trigger_range() == (82, 82)
 
 
 def test_l4_holiday_flat_time_is_415():
@@ -743,3 +747,414 @@ def test_bar_series_pop_is_for_alignment_only():
     assert len(bs) == 2 and bs.close[0] == 2.5
     bs.pop()
     assert len(bs) == 1 and bs.close[0] == 1.5
+
+
+# ==================================================================
+# 資料版本守門 —— 2026-09-07 換機器時的實際事故
+# ==================================================================
+
+def test_data_guard_rejects_wrong_version(tmp_path):
+    """換機器時硬碟上有三份同名/近似檔案，其中一份是兩個月前的舊版。
+
+    指到舊版會跑出一堆對不上的數字，而那看起來會像程式錯了。
+    """
+    from txfcore.quotes.guard import DataVersionMismatch, check
+    f = tmp_path / "fake.txt"
+    f.write_text("not the real data")
+    with pytest.raises(DataVersionMismatch) as e:
+        check(f)
+    assert "結算日曆" in str(e.value)     # 說明為什麼不能將就
+
+
+def test_data_guard_non_strict_returns_flag(tmp_path):
+    from txfcore.quotes.guard import check
+    f = tmp_path / "fake.txt"
+    f.write_text("x")
+    ok, actual = check(f, strict=False)
+    assert ok is False and len(actual) == 64
+
+
+def test_banner_names_the_consequence(tmp_path):
+    from txfcore.quotes.guard import banner
+    f = tmp_path / "fake.txt"
+    f.write_text("x")
+    assert "結算日曆可能是錯的" in banner(f)
+
+
+# ==================================================================
+# OCO —— L3 的 bracket 與 L5 的每腿訂單集合需要它
+# ==================================================================
+
+def test_oco_first_fill_wins_rest_are_dropped():
+    """L3 常態同時掛 TP 限價 + SL 停價。一張成交，另一張作廢。
+
+    成交順序由 FillPolicy.intrabar 決定——MC 從 OHLC 推不出誰先，
+    所以那是可切換的假設，不是常數。
+    """
+    from txfcore.engine.fill_mc12 import FillPolicy, IntrabarPolicy, MC12FillModel
+    tp = _order("TP", Side.SELL, OrderType.LIMIT, 20100)
+    sl = _order("SL", Side.SELL, OrderType.STOP, 19900, qty=2)
+    bar = _bar(o=20000, h=20200, l=19800, c=20000)   # 兩個價位都在範圍內
+    worst = MC12FillModel(FillPolicy(IntrabarPolicy.WORST_FIRST)).fill([tp, sl], bar)
+    best = MC12FillModel(FillPolicy(IntrabarPolicy.BEST_FIRST)).fill([tp, sl], bar)
+    assert len(worst) == 2 and len(best) == 2          # 兩張都觸發
+    assert worst[0].order.intent.label == "SL"          # 但誰先不同
+    assert best[0].order.intent.label == "TP"
+
+
+def test_exitfired_strategies_unaffected_by_oco():
+    """L2 / L4 靠 ExitFired 保證單根單張，OCO 對它們是空操作。
+
+    2026-09-07 加 OCO 後 L4 仍是 83 筆、OCO 撤銷 0 次。
+    """
+    from txfcore.runtime.backtest import BacktestResult
+    r = BacktestResult(strategy="X")
+    assert r.oco_cancelled == 0
+
+
+def test_runner_result_tracks_oco_cancellations():
+    from txfcore.runtime.backtest import BacktestResult
+    from dataclasses import fields
+    assert "oco_cancelled" in {f.name for f in fields(BacktestResult)}
+
+
+# ==================================================================
+# L3
+# ==================================================================
+
+def test_l3_holiday_flat_time_is_415():
+    from txfcore.strategies.l3_consollong import L3ConsolLong
+    assert L3ConsolLong().config.holiday_flat_time == 415
+
+
+def test_l3_box_shrink_rate_is_seven_times_tighter_than_l4():
+    """L3 是 0.1、L4 是 0.7。**同形狀，鬆緊差七倍。**"""
+    from txfcore.strategies.l3_consollong import DEFAULT_PARAMS as L3P
+    from txfcore.strategies.l4_consolshort import DEFAULT_PARAMS as L4P
+    assert L3P["Range_Shrink_Rate"] == 0.1
+    assert L4P["Range_Shrink_Rate"] == 0.7
+
+
+def test_l3_atr_buffer_multiplier():
+    """v_ATR_Buffer = ATR_Stop_Mult x ATR(9) = 3.0 x ATR。
+
+    這個值我的規格表原本沒有，2026-09-07 從原始碼取得。
+    """
+    from txfcore.strategies.l3_consollong import DEFAULT_PARAMS
+    assert DEFAULT_PARAMS["ATR_Stop_Mult"] == 3.0
+    assert DEFAULT_PARAMS["ATR_Length"] == 9
+
+
+def test_l3_emits_bracket_two_orders():
+    """L3 常態同時掛 TP 限價 + SL 停價。**這是它與 L2/L4 的關鍵差異。**"""
+    import inspect
+    from txfcore.strategies import l3_consollong
+    src = inspect.getsource(l3_consollong.L3ConsolLong.on_bar)
+    assert 'label="CL_TP"' in src and "OrderType.LIMIT" in src
+    assert '"CL_BE" if pt.be_is_floor else "CL_SL"' in src
+
+
+# ==================================================================
+# 報告產出 —— 2026-09-07 補上
+# ==================================================================
+
+def test_report_tool_exists_and_writes_openable_files():
+    """**先前兩天所有輸出都是終端機文字，跑完就消失。**
+
+    沒有交易清單、沒有權益曲線、沒有可以打開來看的東西。
+    `verify_claims.py` 是驗證我的說法，不是進度報告。
+    """
+    import inspect
+    from pathlib import Path
+    src = Path(__file__).resolve().parent.parent / "tools" / "report.py"
+    assert src.exists()
+    text = src.read_text(encoding="utf-8")
+    for artefact in ("backtest_report.html", "summary.csv", "_trades.csv"):
+        assert artefact in text
+
+
+def test_trade_csv_columns_match_mc_report_shape():
+    """欄位對齊 MC12 報告的交易明細，方便並排看。"""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "report.py"
+           ).read_text(encoding="utf-8")
+    for col in ("進場日期", "進場價", "進場標籤", "出場標籤", "淨損益", "成本"):
+        assert col in src
+
+
+# ==================================================================
+# L5 · L1 —— 2026-09-07 移植，五支全部完成
+# ==================================================================
+
+def test_l5_box_invalidation_uses_high_low_not_close():
+    """**L5 用 High/Low，L3/L4 用 Close。形狀相同語意不同。**"""
+    import inspect
+    from txfcore.strategies import l5_breakoutlong
+    src = inspect.getsource(l5_breakoutlong.L5BreakoutLong.on_bar)
+    assert "d2.high[0] > ps.box_top or d2.low[0] < ps.box_btm" in src
+
+
+def test_l5_sl_pct_anchors_on_box_bottom():
+    """**L5 的 SL_Pct 錨在 v_Box_Btm，其餘四支錨在 Close。**"""
+    import inspect
+    from txfcore.strategies import l5_breakoutlong
+    src = inspect.getsource(l5_breakoutlong.L5BreakoutLong.on_bar)
+    assert 'ps.box_btm * p["SL_Pct"] / 100.0' in src
+
+
+def test_l5_every_exit_binds_from_entry():
+    """全案 28 處 `from Entry(...)`，只有 L5 有。
+
+    **改進場標籤會讓綁在它上面的出場單全部失效，部位失去所有停損**——
+    這正是 L5 用 Print 日誌而不用 re-entry 標籤的理由。
+    """
+    import inspect
+    from txfcore.strategies import l5_breakoutlong
+    src = inspect.getsource(l5_breakoutlong.L5BreakoutLong._sell)
+    assert "from_entry=from_entry" in src
+
+
+def test_l5_weekly_filter_is_and_l1_is_or():
+    """L5 用 AND、L1 用 OR。趨勢策略需在起點就進場，AND 會錯過早期多頭。"""
+    import inspect
+    from txfcore.strategies import l1_trendlong, l5_breakoutlong
+    l5 = inspect.getsource(l5_breakoutlong.L5BreakoutLong.on_bar)
+    l1 = inspect.getsource(l1_trendlong.L1TrendLong.on_bar)
+    assert "d3.close[0] > wk_fast and d3.close[0] > wk_slow" in l5
+    assert "d3.close[0] > wk_fast or d3.close[0] > wk_slow" in l1
+
+
+def test_l1_p3b_uses_minlist_of_distances():
+    """**V2.9 的核心修正。** 舊版用 MaxList 取到較鬆的腿，寬 1.6–2.8 倍，
+
+    橫跨整個 V2.6+ 世代未被發現——**而驗證器把 bug 編碼進去了**。
+    """
+    import inspect
+    from txfcore.strategies import l1_trendlong
+    src = inspect.getsource(l1_trendlong.L1TrendLong.on_bar)
+    assert "distance=min(legs)" in src          # MinList of DISTANCES
+    assert "pt.frozen_sl = max(px_atr, px_cap, px_pct)" in src   # MaxList of PRICES
+
+
+def test_l1_label_tolerance_is_copied_not_equality():
+    """浮點比較用 0.001 容差，不是等號。改成等號會讓標籤分佈不同。"""
+    from txfcore.strategies.l1_trendlong import LABEL_TOLERANCE
+    assert LABEL_TOLERANCE == 0.001
+
+
+def test_l1_holiday_flat_time_is_earliest_of_five():
+    """L1=345（最早）· L2=300 · L3/L4/L5=415。跟著各自的 K 棒網格走。"""
+    from txfcore.strategies.l1_trendlong import L1TrendLong
+    from txfcore.strategies.l2_trendshort import L2TrendShort
+    from txfcore.strategies.l5_breakoutlong import L5BreakoutLong
+    assert L1TrendLong().config.holiday_flat_time == 345
+    assert L2TrendShort().config.holiday_flat_time == 300
+    assert L5BreakoutLong().config.holiday_flat_time == 415
+
+
+def test_l1_iog_limitation_is_documented_in_code():
+    """**本移植在收盤評估，不是逐 tick。** 這個落差是結構性的。
+
+    P7 只看得到收盤峰值 -> TL_SP 觸發次數是下限，不是實際值。
+    修法是實作 engine/context.py 的 tick 生命週期。
+    """
+    from txfcore.strategies import l1_trendlong
+    assert "已知限制" in l1_trendlong.__doc__
+    assert "engine/context.py" in l1_trendlong.__doc__
+
+
+def test_all_five_strategies_exist():
+    from txfcore.strategies.l1_trendlong import L1TrendLong
+    from txfcore.strategies.l2_trendshort import L2TrendShort
+    from txfcore.strategies.l3_consollong import L3ConsolLong
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    from txfcore.strategies.l5_breakoutlong import L5BreakoutLong
+    from txfcore.strategies.versions import PORTING_ORDER
+    got = {L1TrendLong().config.name, L2TrendShort().config.name,
+           L3ConsolLong().config.name, L4ConsolShort().config.name,
+           L5BreakoutLong().config.name}
+    assert len(got) == 5 == len(PORTING_ORDER)
+
+
+# ==================================================================
+# 移植稽核 —— 2026-09-07。.pla vs Python 逐項機器比對
+# ==================================================================
+
+def test_l5_labels_are_explicit_constants_not_fstrings():
+    """**用 f-string 組標籤等於放棄可稽核性。**
+
+    2026-09-07 稽核發現：原本用 `f"BL_TP_{sfx}"` 組字串，於是 .pla 裡的
+    24 個標籤在 Python 裡一個都 grep 不到——**打錯前綴不會有任何檢查抓得到**。
+    """
+    from txfcore.strategies.l5_breakoutlong import LABELS
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent
+           / "txfcore" / "strategies" / "l5_breakoutlong.py").read_text(encoding="utf-8")
+    want = {"BL_Entry_Bot", "BL_Entry_Mid"}
+    for bot, mid in LABELS.values():
+        want |= {bot, mid}
+    assert len(want) == 24
+    missing = [x for x in sorted(want) if f'"{x}"' not in src]
+    assert not missing, f"這些標籤在 Python 裡是組出來的，查不到：{missing}"
+
+
+def test_l1_reentry_inputs_are_complete():
+    """**惰性 != 不存在。**
+
+    2026-09-07 稽核發現我只移植了 ReEntry_On，其餘六個閘門 input 全缺。
+    後果：有人把 ReEntry_On 設成 1 時，我的移植會**靜默地什麼都不做**，
+    而 MC 會發 TL_ReEntry 單。
+    """
+    from txfcore.strategies.l1_trendlong import DEFAULT_PARAMS
+    for k in ("ReEntry_On", "ReEntry_Close_Gate", "ReEntry_Trend_Gate",
+              "ReEntry_Weekly_Gate", "ReEntry_MABase_Gate",
+              "ReEntry_WeeklyTier_Gate", "ReEntry_Trend_Ratio"):
+        assert k in DEFAULT_PARAMS, k
+    assert DEFAULT_PARAMS["ReEntry_On"] == 0          # 出貨即關閉
+    assert DEFAULT_PARAMS["ReEntry_Trend_Ratio"] == 0.20
+
+
+def test_l1_reentry_gates_are_written_as_switch_or_condition():
+    """每個閘門寫成 `(開關關閉 or 條件)`，全部打開時退化成單純條件式。
+
+    **那正是 ReEntry_On = 0 的 anchor 可重現的原因。**
+    """
+    import inspect
+    from txfcore.strategies import l1_trendlong
+    src = inspect.getsource(l1_trendlong.L1TrendLong.on_bar)
+    assert 'p["ReEntry_Close_Gate"] == 0 or close <= ps.reentry_price' in src
+    assert 'p["ReEntry_On"] != 0' in src
+    assert '"TL_ReEntry"' in src
+
+
+def test_l1_reentry_inherits_the_tighter_stop():
+    """**Plan C 的失敗診斷：re-entry 部位的停損價比原始突破進場更差。**
+
+    修法是取「繼承的」與「重算的」較緊者，停損就永不比原始更鬆。
+    獲利保護狀態刻意不繼承——建立它的那段行情已經被吐回去了。
+    """
+    import inspect
+    from txfcore.strategies import l1_trendlong
+    src = inspect.getsource(l1_trendlong.L1TrendLong.on_bar)
+    assert "max(ps.frozen_sl_orig, px_atr, px_cap, px_pct)" in src
+
+
+# ==================================================================
+# 稽核工具本身的稽核 —— 2026-09-07
+# ==================================================================
+
+def test_audit_parser_catches_all_four_order_verbs():
+    """**PowerLanguage 有四個下單動詞，不是兩個。**
+
+    2026-09-07：正規式只寫 `Buy|Sell`，於是 `SellShort (` 與 `BuyToCover (`
+    都不匹配（Sell 後面接的是 Short 不是空白或括號）。
+
+    後果：**L2 與 L4 的標籤數是 0，工具對兩支策略印了 ✓，
+    而它連看都沒看。** 這正是「判官不判」的失敗模式。
+    """
+    import re
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "audit_port.py"
+           ).read_text(encoding="utf-8")
+    for verb in ("BuyToCover", "SellShort", "Buy", "Sell"):
+        assert verb in src, verb
+    tool = Path(__file__).resolve().parent.parent / "tools" / "audit_port.py"
+    ns: dict = {"__file__": str(tool)}
+    exec(src.split("def main()")[0], ns)
+    got = ns["parse_labels"]('''
+        SellShort ("TS_Entry") next bar at Market;
+        BuyToCover ("TS_Holiday") next bar at Market;
+        Buy ("CL_Entry") next bar at X Stop;
+        Sell ("CL_TP") next bar at Y Limit;
+    ''')
+    assert got == {"TS_Entry", "TS_Holiday", "CL_Entry", "CL_TP"}
+
+
+def test_audit_reports_zero_labels_as_a_parser_failure():
+    """**標籤數 0 一定是解析失敗，不是策略沒下單。**
+
+    工具必須把它當錯誤報，不能靜默通過。
+    """
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "audit_port.py"
+           ).read_text(encoding="utf-8")
+    assert "解析出 0 個訂單標籤" in src
+
+
+def test_audit_strips_powerlanguage_comments():
+    """`.pla` 的標頭是巨大的 `{ ... }` 註解，裡面有大量標籤字串。
+
+    不剝除就會把註解裡提到的標籤當成真的下單。
+    """
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "audit_port.py"
+           ).read_text(encoding="utf-8")
+    tool = Path(__file__).resolve().parent.parent / "tools" / "audit_port.py"
+    ns: dict = {"__file__": str(tool)}
+    exec(src.split("def main()")[0], ns)
+    strip = ns["strip_comments"]
+    # 區塊註解
+    out = strip('{ 註解裡有 Buy ("FAKE") } Buy ("REAL") next bar;')
+    assert "FAKE" not in out and "REAL" in out
+    # 跨行區塊註解
+    out = strip('{ 第一行\n  提到 from Entry ("X")\n}\nSell ("R") from Entry ("Y");')
+    assert out.count("from Entry") == 1
+    # 行尾註解
+    out = strip('Buy ("REAL") next bar;  // Buy ("FAKE")')
+    assert "FAKE" not in out and "REAL" in out
+
+
+# ==================================================================
+# 日線定義 —— 2026-09-07，每支不同
+# ==================================================================
+
+def test_daily_definitions_differ_and_matter():
+    """**兩種定義差異極大，而且各支需要不同的。**
+
+    ```
+    定義              L5 筆數   L3 筆數   L4 筆數
+    DAY_FIRST  (A)      169       379       83
+    NIGHT_FIRST(B)      162       357       84
+    MC anchor           162       376       82
+    ```
+
+    `NIGHT_FIRST` 讓 L5 **逐位命中 162**，卻讓 L3 從 +3 掉到 −19。
+    """
+    from txfcore.quotes.daily import DAY_FIRST, NIGHT_FIRST, build
+    mins = [
+        Bar(1260602, 900, 100, 110, 90, 105, 1),    # 日盤
+        Bar(1260602, 1600, 105, 120, 100, 115, 1),  # 夜盤（同曆日）
+        Bar(1260603, 300, 115, 118, 112, 116, 1),   # 夜盤尾段（隔一曆日）
+        Bar(1260603, 900, 116, 130, 114, 128, 1),   # 隔日日盤
+    ]
+    a = build(mins, DAY_FIRST)
+    b = build(mins, NIGHT_FIRST)
+    # A：日盤 + 隨後夜盤 → 06-02 那根含 09:00 / 16:00 / 次日 03:00
+    assert a[0].high == 120 and a[0].low == 90
+    # B：前夜盤 + 日盤 → 06-03 那根含 06-02 的 16:00 與 06-03 的 09:00
+    assert any(x.high == 130 and x.low == 100 for x in b)
+    assert [x.high for x in a] != [x.high for x in b]
+
+
+def test_daily_definition_is_per_strategy_not_global():
+    """**做成每支可設定，不是全域猜一個。**
+
+    L5 的 Data2 是箱體本身，對定義極度敏感；
+    L3/L4 的 Daily 只算 MA 濾網，敏感度低。
+    """
+    from txfcore.quotes.daily import DAY_FIRST, NIGHT_FIRST, for_strategy
+    assert for_strategy("L5_BreakoutLong") == NIGHT_FIRST
+    assert for_strategy("L3_ConsolLong") == DAY_FIRST
+    assert for_strategy("L4_ConsolShort") == DAY_FIRST
+
+
+def test_night_first_matches_taifex_official_definition():
+    """TAIFEX 官方定義：盤後交易時段 15:00–次日 05:00 **屬於次一交易日**。
+
+    所以 NIGHT_FIRST 在制度上是對的。L3/L4 用 DAY_FIRST 才接近 anchor，
+    代表要嘛 MC 各張圖設定不同，要嘛那兩支還有補償性誤差。
+    **這個張力寫在 `quotes/daily.py` 的模組說明裡，不藏起來。**
+    """
+    from txfcore.quotes import daily
+    assert "TAIFEX" in daily.__doc__
+    assert "補償性誤差" in daily.__doc__

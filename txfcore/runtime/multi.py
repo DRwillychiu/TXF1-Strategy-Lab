@@ -67,6 +67,7 @@ class MultiStreamRunner:
         pending: list[SizedOrder] = []
         protective = None
         entry_leg: tuple[str, float, int, int] | None = None
+        entry_bar: tuple[int, int] | None = None   # 本輪部位是哪一根開的
 
         for bar in d1:
             clock.advance_to(bar_close_dt(bar))
@@ -91,20 +92,40 @@ class MultiStreamRunner:
                         fills = [ef]
                         res.engine_stop_exits += 1
 
+                # **OCO 語意**：L3 常態同時掛 TP 限價 + SL 停價，
+                # L5 每腿各一組。一張成交，同組其餘作廢。
+                #
+                # L2 / L4 靠 ExitFired 保證單根單張，所以這段對它們沒有影響
+                # （fills 最多一張）。但 L3 / L5 需要它。
+                #
+                # 成交順序由 FillPolicy.intrabar 決定 —— MC 從 OHLC 推不出
+                # 誰先，所以那是可切換的假設，不是常數。
+                closed_this_bar = False
                 for f in fills:
                     side = f.order.intent.side
                     if side in (Side.BUY, Side.SELL_SHORT):
-                        if not pos.is_flat:
+                        # **L5 的雙腿**：Bot 與 Mid 都在空手時掛出，
+                        # 所以同一根 K 棒可以兩張都成交。允許同根加腿，
+                        # 但不允許跨根加倉（那不是任何一支的行為）。
+                        same_bar = entry_bar == (bar.mc_date, bar.mc_time)
+                        if not pos.is_flat and not same_bar:
                             continue
                         pos.open_leg(f.order.intent.label, f.price, f.quantity,
                                      bar.mc_date, bar.mc_time, side)
-                        entry_leg = (f.order.intent.label, f.price,
-                                     bar.mc_date, bar.mc_time)
+                        if entry_leg is None or not same_bar:
+                            entry_leg = (f.order.intent.label, f.price,
+                                         bar.mc_date, bar.mc_time)
+                        entry_bar = (bar.mc_date, bar.mc_time)
                     else:
-                        if pos.is_flat or entry_leg is None:
-                            continue
+                        if pos.is_flat or entry_leg is None or closed_this_bar:
+                            continue          # OCO：同根已成交過出場單
                         lbl, epx, ed, et = entry_leg
                         qty = min(f.quantity, pos.current_contracts)
+                        if f.order.intent.from_entry:
+                            leg = pos.leg(f.order.intent.from_entry)
+                            if leg is None:
+                                continue          # 該腿不存在，此單作廢
+                            qty = min(qty, leg.quantity)
                         direction = pos.direction
                         pos.close(qty, from_entry=f.order.intent.from_entry)
                         t = ClosedTrade(
@@ -118,9 +139,11 @@ class MultiStreamRunner:
                         res.trades.append(t)
                         ledger.record(t)
                         pos.prev_position_profit = t.net_ntd(self.instrument)
+                        res.oco_cancelled += len(fills) - 1 if len(fills) > 1 else 0
+                        closed_this_bar = True
                         if pos.is_flat:
                             entry_leg = None
-                    break
+                            entry_bar = None
                 pending = []
                 entry_leg, protective = self._same_bar_stop(
                     bar, pos, entry_leg, protective, ledger, res, name)

@@ -32,6 +32,7 @@ from txfcore.quotes.history import MC12MinuteSource
 from txfcore.runtime.backtest import BacktestRunner
 from txfcore.runtime.multi import MultiStreamRunner
 from txfcore.strategies.l2_trendshort import L2TrendShort
+from txfcore.strategies.l3_consollong import L3ConsolLong
 from txfcore.strategies.l4_consolshort import L4ConsolShort
 from txfcore.tradecal.settlement import SETTLEMENT_CLOSE, SETTLEMENT_SET
 from txfcore.types.bar import Bar
@@ -87,6 +88,10 @@ def main() -> int:
     args = ap.parse_args()
     cd = Path(args.cache_dir)
 
+    # 資料版本守門。不一致立刻停 —— 結算日曆是從特定版本反推的。
+    from txfcore.quotes.guard import banner, check
+    print(banner(args.data))
+    check(args.data)
     print("讀取與聚合…")
     mins = list(MC12MinuteSource(args.data).stream())
     m15 = cached(cd, "15m", lambda: list(aggregate_bars(mins, 15)))
@@ -143,7 +148,58 @@ def main() -> int:
     claim("  CS_BreakExit 勝率", f"{sum(1 for x in bw if x>0)/len(bw)*100:.1f}%" if bw else "—", "0.0%")
 
     # ---------------------------------------------------------------
-    hdr(3, "成交假設掃描（L2 全期）")
+    hdr(3, "L3 回測（2026-09-07 移植）")
+    from txfcore.parity.anchors import ANCHORS, window
+    r3 = MultiStreamRunner(L3ConsolLong(), TXF, warmup_bars=200).run(m15, m60, md)
+    a3 = ANCHORS["L3"]
+    t3 = window(r3.trades, a3)          # 2020-05-12 ~ 2026-07-25，標頭明載
+    net, wr, pf = stats(t3)
+    print(f"  視窗 {a3.backtest_start} ~ {a3.backtest_end}（v14.1 標頭明載）")
+    claim("筆數", len(t3), 379)
+    claim("與 MC 376 的差", len(t3) - 376, 3)
+    claim("PF", f"{pf:.3f}", "1.319")
+    claim("勝率", f"{wr:.1f}%", "45.9%")
+    e3 = collections.Counter(t.entry_label for t in t3)
+    claim("CL_ReEntry", e3["CL_ReEntry"], 50)
+    lo, hi = L3ConsolLong().expected_reentry_range()
+    claim("re-entry 在登記區間 20-115", "是" if lo <= e3["CL_ReEntry"] <= hi else "否", "是")
+    print("  出場:", dict(collections.Counter(t.exit_label for t in t3).most_common()))
+
+    print("\n  ★ 視窗的影響（同程式碼同資料）")
+    for start, lbl in ((1191216, "2019-12-16 我原本用的"), (1200512, "2020-05-12 標頭明載")):
+        x = [t for t in r3.trades if start <= t.entry_date <= a3.backtest_end]
+        print(f"    {lbl:<24}{len(x):>4} 筆   與 MC 376 差 {len(x)-376:+d}")
+
+    # ---------------------------------------------------------------
+    hdr(4, "★ 對 repo 內的真實 anchor（2026-09-07 挖出）")
+    from txfcore.parity.anchors import check_window_effect
+    for key, tl in (("L2", t2), ("L4", t4)):
+        a = ANCHORS[key]
+        ent = collections.Counter(t.entry_label for t in tl)
+        ext = collections.Counter(t.exit_label for t in tl)
+        print(f"\n  --- {a.strategy} {a.version} ---   {a.source_doc}")
+        print(f"  {'項目':<20}{'我的':>8}{'MC':>8}{'差':>7}")
+        print(f"  {'-'*45}")
+        print(f"  {'總筆數':<20}{len(tl):>8}{a.total_trades:>8}{len(tl)-a.total_trades:>+7}")
+        for lbl, n in a.entry_labels.items():
+            print(f"  {lbl:<20}{ent.get(lbl,0):>8}{n:>8}{ent.get(lbl,0)-n:>+7}")
+        if a.exit_labels:
+            # 引擎停損在 MC 報告裡併入 CS_SL
+            merged = dict(ext)
+            if "ENGINE_STOP" in merged and "CS_SL" in a.exit_labels:
+                merged["CS_SL"] = merged.get("CS_SL", 0) + merged.pop("ENGINE_STOP")
+            for lbl, n in a.exit_labels.items():
+                print(f"  {lbl:<20}{merged.get(lbl,0):>8}{n:>8}{merged.get(lbl,0)-n:>+7}")
+            extra = {k: v for k, v in merged.items() if k not in a.exit_labels}
+            if extra:
+                print(f"  {'我多出的出場標籤':<20}{str(extra)}")
+        w = check_window_effect(tl, a)
+        claim(f"  {key} 匯出日之後的交易", len(w), 0)
+    claim("  L4 總筆數差", len(t4) - ANCHORS["L4"].total_trades, 1)
+    claim("  L2 總筆數差", len(t2) - ANCHORS["L2"].total_trades, 3)
+
+    # ---------------------------------------------------------------
+    hdr(5, "成交假設掃描（L2 全期）")
     print("  ★ 七組全部 92 筆 —— **沒有任何成交開關改變 L2 的交易筆數**")
     print("     所以 80 vs 77–78 不可能是成交假設造成的。H3 對筆數完全排除。")
     counts = set()
@@ -155,7 +211,7 @@ def main() -> int:
     claim("  七組的筆數是否全部相同", "是" if len(counts) == 1 else "否", "是")
 
     # ---------------------------------------------------------------
-    hdr(4, "換月跳空")
+    hdr(6, "換月跳空")
     roll = [b.open - a.close for a, b in zip(m60, m60[1:])
             if a.mc_time == SETTLEMENT_CLOSE and a.mc_date in SETTLEMENT_SET]
     norm = [b.open - a.close for a, b in zip(m60, m60[1:]) if a.mc_time == 1345]
@@ -172,7 +228,7 @@ def main() -> int:
         claim(f"  {nm} 跨越換月點", cr, 0)
 
     # ---------------------------------------------------------------
-    hdr(5, "同根出場（2026-09-06 修正的結構缺口）")
+    hdr(7, "同根出場（2026-09-06 修正的結構缺口）")
     print("  MC 允許進場那根立刻被停損打掉（L1 的 V2.9 取證記錄 12 筆 same-bar deaths）")
     print("  我原本的 runner 讓它結構上不可能。已修正，但**不解釋筆數差異**。")
     from txfcore.engine.fill_mc12 import FillPolicy
@@ -215,7 +271,7 @@ def main() -> int:
         claim(f"  policy.{field} 被讀取", "是" if used else "否（死設定）", "是")
 
     # ---------------------------------------------------------------
-    hdr(6, "H5 對齊規則（2026-09-07）")
+    hdr(8, "H5 對齊規則（2026-09-07）")
     from txfcore.quotes.align import AlignPolicy
     print("  MC 的 of Data2 對齊規則沒有文件。做成可切換的假設，用筆數判定。")
     for pol in (AlignPolicy.CLOSED_ONLY, AlignPolicy.INCLUDE_FORMING):
@@ -234,7 +290,7 @@ def main() -> int:
     print("  → H5 排除。保守對齊（只暴露已收盤）遠比寬鬆對齊接近 MC。")
 
     # ---------------------------------------------------------------
-    hdr(7, "H6 排除四天異常資料")
+    hdr(9, "H6 排除四天異常資料")
     from datetime import date as _d
     BAD = {_d(2019, 4, 2), _d(2021, 9, 1), _d(2021, 9, 2), _d(2021, 9, 3)}
     kp = lambda bars: [b for b in bars
@@ -255,7 +311,7 @@ def main() -> int:
     print("  → H6 排除。異常日不解釋筆數差異。")
 
     # ---------------------------------------------------------------
-    hdr(8, "風險輪廓（全期）")
+    hdr(10, "風險輪廓（全期）")
     for nm, r in (("L2", r2), ("L4", r4)):
         p = profile(compute(r.ledger.equity()))
         print(f"  {nm}  " + p.summary().replace("\n", f"\n  {' '*4}"))
@@ -263,7 +319,7 @@ def main() -> int:
     print("          L4 max_dd 14.65% Ulcer 3.80% 水下 77.9%")
 
     # ---------------------------------------------------------------
-    hdr(9, "窗口敏感度（L2）")
+    hdr(11, "窗口敏感度（L2）")
     print("  我說過：窗口移動 2.5 個月就差 4 筆")
     for start in (1190101, 1191216, 1200301):
         ts = [t for t in r2.trades if t.entry_date >= start]

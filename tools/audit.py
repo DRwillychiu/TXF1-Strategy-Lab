@@ -129,6 +129,10 @@ def main() -> int:
     args = ap.parse_args()
     cd = Path(args.cache_dir)
 
+    # 資料版本守門。不一致立刻停 —— 結算日曆是從特定版本反推的。
+    from txfcore.quotes.guard import banner, check
+    print(banner(args.data))
+    check(args.data)
     print("讀取與聚合…")
     mins = list(MC12MinuteSource(args.data).stream())
     m15 = _cache(cd, "15m", lambda: list(aggregate_bars(mins, 15)))

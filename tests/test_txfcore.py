@@ -285,7 +285,8 @@ def _flat_market(n: int = 60, close: float = 20000.0) -> BarSeries:
 
 def test_l2_registers_expected_trigger_range():
     """判官 (4)：預期觸發次數必須事前登記。"""
-    assert L2TrendShort().expected_trigger_range() == (77, 78)
+    # 2026-09-07 修正：anchor 文件給的是 77，標頭的 78 是另一次量測
+    assert L2TrendShort().expected_trigger_range() == (77, 77)
 
 
 def test_l2_holiday_flat_time_is_300_not_415():
@@ -504,3 +505,57 @@ def test_l2_config_matches_its_porting_target():
     from txfcore.strategies.versions import BY_KEY
     assert BY_KEY["L2"].research_version == "v5.4"
     assert L2TrendShort().config.holiday_flat_time == 300   # L2 專屬，非 415
+
+
+# ====================================================================
+# 出場口數是策略決策 —— 2026-09-07 修正
+# ====================================================================
+
+def test_exit_quantity_is_a_strategy_decision():
+    """**「口數由風險層決定」那個裁決只適用於進場。**
+
+        進場口數   風險決策 —— 要下多大
+        出場口數   策略決策 —— 要平掉部位的多少
+
+    L5 的 40% 分批是策略的結構決定。把兩者合成一件事的後果：
+    `FixedLotRiskGate` 把分批的 1 口覆寫成 2 口，於是每次分批都變成全平，
+    **Stage 2/3 的 MFE 三階追蹤從未執行**——而那正是 L5 賺錢的機制。
+
+    實測：修正前持倉 6008 根，Stage 2/3 = 0 根、分批 0 組。
+    """
+    o = OrderIntent(strategy="L5", label="BL_TP_Bot", side=Side.SELL,
+                    order_type=OrderType.MARKET, from_entry="BL_Entry_Bot",
+                    exit_quantity=1)
+    assert o.exit_quantity == 1
+
+
+def test_entry_intent_cannot_carry_exit_quantity():
+    """進場單不得指定 exit_quantity —— 那是風險層的職責。"""
+    with pytest.raises(ValueError, match="風險決策"):
+        OrderIntent(strategy="X", label="E", side=Side.BUY,
+                    order_type=OrderType.MARKET, exit_quantity=2)
+
+
+def test_risk_gate_honours_strategy_exit_quantity():
+    from txfcore.runtime.backtest import FixedLotRiskGate
+    g = FixedLotRiskGate(2)
+    entry = OrderIntent(strategy="X", label="E", side=Side.BUY,
+                        order_type=OrderType.MARKET)
+    partial = OrderIntent(strategy="X", label="TP", side=Side.SELL,
+                          order_type=OrderType.MARKET, exit_quantity=1)
+    assert g.size(entry).quantity == 2 and g.size(entry).sized_by == "fixed_lot"
+    assert g.size(partial).quantity == 1
+    assert g.size(partial).sized_by == "strategy_exit"
+
+
+def test_orphaned_leg_order_must_not_block_siblings():
+    """綁到不存在的腿時該單作廢，**不能中止整批**。
+
+    2026-09-07 由 tools/signals.py 抓到：L5 的部位掛了 3416 根，
+    而 Time_Stop_Bars 是 31——因為 BL_TimeExit_Bot 綁在不存在的 Bot 腿上，
+    處理它之後就 break，Mid 那筆永遠處理不到。
+    """
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "signals.py"
+           ).read_text(encoding="utf-8")
+    assert "if leg is None:" in src and "continue" in src

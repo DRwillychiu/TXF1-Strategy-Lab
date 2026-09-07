@@ -128,12 +128,21 @@ class L4ConsolShort(Strategy[L4PerTrade, L4PerSession]):
         return StrategyState(per_trade=L4PerTrade(), per_session=L4PerSession())
 
     def expected_trigger_range(self) -> tuple[int, int]:
-        """事前登記：完整回測 79 筆。
+        """事前登記（判官 4）。**來源是 anchor 文件，不是標頭。**
+
+        `docs/research/L4_v14.7_anchor_result_20260826.md`：
+        **總筆數 82** = CS_Entry 79 + CS_ReEntry 3。
+        淨利 800,000 / PF 1.4150 / 勝率 42.6829%。
+
+        > **2026-09-07 修正**：我先前寫 79，那是 `CS_Entry` 的數量不是總筆數。
+        > 拿它當總數比，於是「多 4 筆」——實際只多 1 筆。
+
+        出場標籤 CS_SL 38 / CS_BreakExit 30 / CS_TimeExit 14。
 
         標頭明載「L4 的 alpha 只存在於空頭/中性陷阱訊號。
         **多頭市場零交易 = 正確行為。**」
         """
-        return (79, 79)
+        return (82, 82)
 
     # ------------------------------------------------------------------
     def on_bar(
