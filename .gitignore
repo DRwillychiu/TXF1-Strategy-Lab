@@ -39,3 +39,6 @@ config/*_credentials.*
 .env.broker
 *.pfx
 *.p12
+
+# 命名重構時隔離的舊檔，確認無用後手動刪除
+_quarantine/

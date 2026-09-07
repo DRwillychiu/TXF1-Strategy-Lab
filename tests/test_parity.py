@@ -143,3 +143,48 @@ def test_field_diff_names_the_offending_fields():
     r = compare(ours, theirs, Tier.DECISION, ZERO)
     _, _, bad = r.field_diffs[0]
     assert set(bad) == {"exit_time", "quantity"}
+
+
+# ==================================================================
+# 不變量 —— 判官 (2)。唯一不需要對照組就能抓錯的判官
+# ==================================================================
+
+def test_iron_rule_assertion_checks_close_not_trigger():
+    """**這條斷言我第一次寫錯了。**
+
+    .pla：「03:00 觸發，03:00 成交，04:00 重試，always flat before the
+    05:00 close」——訂單在 03:00 掛出，**下一根才成交**。
+
+    斷言若寫成 `Time >= 300 不得持倉`，會誤報（2026-09-06 實測誤報 2 次）。
+    正確的是檢查 05:00 收盤。
+    """
+    import inspect
+    from txfcore.parity import invariants
+    src = inspect.getsource(invariants.L2Invariants.check)
+    assert "t >= 500" in src, "Iron Rule 必須檢查 05:00 收盤，不是觸發時刻"
+    assert "t >= 300" not in src
+
+
+def test_known_defects_are_not_counted_as_failures():
+    """規格表已記錄的落差（照抄的）標為 KNOWN，不混進 FAIL。
+
+    否則每次跑都有一堆紅字，真正的新問題會被淹沒。
+    """
+    from txfcore.parity.invariants import InvariantLog, Severity
+    log = InvariantLog()
+    log.record("L2-3 追蹤停損放鬆", 1190806, 100, "known", Severity.KNOWN)
+    log.record("新問題", 1190806, 100, "unexpected", Severity.FAIL)
+    assert len(log.violations) == 2
+    assert len(log.failures()) == 1
+
+
+def test_invariant_log_reports_first_occurrence():
+    """報告要指出首例的日期時間，才查得下去。"""
+    from txfcore.parity.invariants import InvariantLog
+    log = InvariantLog()
+    log.checks_run = 100
+    log.record("X", 1190806, 100, "detail-a")
+    log.record("X", 1190807, 200, "detail-b")
+    r = log.report()
+    assert "1190806" in r and "detail-a" in r
+    assert "2 次" in r or "    2" in r

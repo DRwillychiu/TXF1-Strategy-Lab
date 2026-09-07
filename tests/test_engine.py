@@ -127,14 +127,51 @@ def test_stop_and_limit_both_hit_order_depends_on_policy():
     assert worst[0].order.intent.label != best[0].order.intent.label
 
 
-def test_all_candidate_policies_produce_a_result():
-    """對帳時逐組試，每一組都要能跑，才比得出哪一組對得上。"""
+def test_all_candidate_policies_have_distinct_names():
+    """對帳時逐組試，每一組都要能跑，且名稱可區分。
+
+    名稱包含四個開關（intrabar|gap|sb|ef），因為報告會印出它——
+    2026-09-06 發現 sb 曾出現在名稱裡但沒有作用，等於報告在說謊。
+    """
+    names = {p.name for p in CANDIDATE_POLICIES}
+    assert len(names) == len(CANDIDATE_POLICIES)
     orders = [
         _order("TP", Side.SELL, OrderType.LIMIT, 20100),
         _order("SL", Side.SELL, OrderType.STOP, 19900),
     ]
-    names = {MC12FillModel(p).fill(orders, _bar())[0].policy for p in CANDIDATE_POLICIES}
-    assert len(names) == len(CANDIDATE_POLICIES)   # 每組的名稱都不同
+    for p in CANDIDATE_POLICIES:
+        assert MC12FillModel(p).fill(orders, _bar())
+
+
+def test_no_dead_switches_in_fill_policy():
+    """**policy 的每個欄位都必須真的被讀取。**
+
+    2026-09-06 發現 allow_same_bar_exit 與 engine_stop_first 都是死設定：
+    宣告了卻沒有任何地方讀，而前者還出現在 policy 名稱裡（sb=1），
+    等於每一份報告都在宣稱一個沒有作用的設定。
+    """
+    import inspect
+    from dataclasses import fields
+    from txfcore.engine import fill_mc12
+    from txfcore.runtime import backtest as bt, multi as mu
+    src = (inspect.getsource(fill_mc12) + inspect.getsource(bt)
+           + inspect.getsource(mu))
+    for f in fields(FillPolicy):
+        assert f"policy.{f.name}" in src, f"policy.{f.name} 是死設定"
+
+
+def test_evidence_backed_defaults():
+    """預設值來自 L2 全歷史的 2x2 標籤比對，不是猜的。
+
+        sb     ef      InitSL_D InitSL_N ENGINE TSL_N  距離
+        False  False      23       19       5     1     3   ← 最佳
+        True   False      21       17       9     1     7
+        False  True       21       13      13     1    15
+        MC                22       18       4     1     0
+    """
+    from txfcore.engine.fill_mc12 import DEFAULT_POLICY
+    assert DEFAULT_POLICY.allow_same_bar_exit is False
+    assert DEFAULT_POLICY.engine_stop_first is False
 
 
 def test_gap_policy_changes_fill_price():
@@ -514,3 +551,195 @@ def test_settlement_source_hash_recorded():
     assert len(SOURCE_SHA256) == 64
     assert SOURCE_ROWS == 2_098_922
     assert VERIFIED_UNTIL == 1260905
+
+
+# ==================================================================
+# 多資料流對齊 —— of Data2 / of Data3 語意
+# ==================================================================
+
+def test_slow_stream_only_exposes_closed_bars():
+    """Data2 只暴露已收盤的 K 棒。
+
+    在 15M 的 09:00，60M 的 09:45 那根還在形成中，策略讀不到它。
+    任何比這更寬鬆的規則都會讀到未來資料。
+    """
+    from txfcore.quotes.align import MultiStream
+    ms = MultiStream()
+    ms.feed_slow("data2", Bar(1260602, 945, 20000, 20050, 19950, 20010))
+    ms.feed_slow("data2", Bar(1260602, 1045, 20010, 20060, 19960, 20020))
+
+    ms.push_driver(Bar(1260602, 900, 20000, 20010, 19990, 20005))
+    assert len(ms.slow("data2")) == 0          # 09:45 尚未收盤
+    assert ms.slow("data2").forming is not None
+
+    ms.push_driver(Bar(1260602, 945, 20005, 20050, 19950, 20010))
+    assert len(ms.slow("data2")) == 1          # 同時收盤，放行
+    assert ms.slow("data2").series.close[0] == 20010
+
+
+def test_slow_stream_offset_one_is_previous_closed_bar():
+    """MC 的 [1] of Data2 = 前一根已收盤的。"""
+    from txfcore.quotes.align import MultiStream
+    ms = MultiStream()
+    for t, c in ((945, 20010), (1045, 20020), (1145, 20030)):
+        ms.feed_slow("data2", Bar(1260602, t, c - 10, c + 5, c - 15, c))
+    for t in (945, 1045, 1145):
+        ms.push_driver(Bar(1260602, t, 20000, 20010, 19990, 20005))
+    d2 = ms.slow("data2").series
+    assert d2.close[0] == 20030 and d2.close[1] == 20020
+
+
+def test_all_ready_gates_warmup():
+    from txfcore.quotes.align import MultiStream
+    ms = MultiStream()
+    ms.feed_slow("data2", Bar(1260602, 945, 1, 2, 0, 1))
+    assert not ms.all_ready("data2", "data3")
+    ms.push_driver(Bar(1260602, 945, 1, 2, 0, 1))
+    assert not ms.all_ready("data2", "data3")   # data3 還是空的
+
+
+# ==================================================================
+# L4
+# ==================================================================
+
+def test_l4_registers_79_trades():
+    """標頭：完整回測 79 筆。多頭市場零交易 = 正確行為。"""
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    assert L4ConsolShort().expected_trigger_range() == (79, 79)
+
+
+def test_l4_holiday_flat_time_is_415():
+    """L1=345 L2=300 L3/L4/L5=415。跟著各自的 K 棒網格走。"""
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    assert L4ConsolShort().config.holiday_flat_time == 415
+
+
+def test_l4_needs_three_streams():
+    """缺 Data2 / Data3 時不動作，不猜。"""
+    from txfcore.strategies.base import MarketView, PositionView
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    from txfcore.tradecal.gates import evaluate
+    from txfcore.types.bar import BarSeries
+    s = L4ConsolShort(); st = s.initial_state()
+    bs = BarSeries("d1")
+    for _ in range(300):
+        bs.push(Bar(1260602, 945, 20000, 20010, 19990, 20000, 10.0))
+    v = MarketView(data1=bs, position=PositionView(),
+                   calendar=evaluate(1260602, 945), mc_date=1260602, mc_time=945)
+    _, dec = s.on_bar(v, st)
+    assert dec.orders == [] and dec.protective is None
+
+
+def test_l4_per_trade_state_resets():
+    from txfcore.strategies.l4_consolshort import L4PerTrade
+    pt = L4PerTrade()
+    pt.trail_active = True; pt.stop_level = 20500.0; pt.sl_locked = True
+    pt.reset()
+    pt.assert_clean()
+
+
+def test_l4_night_block_window_differs_from_l5():
+    """L4 是 200–500，L5 是 400–500。
+
+    而且方向相反：L4 夜盤淨 −120,800、L5 淨 +87,800。
+    """
+    from txfcore.strategies.l4_consolshort import NIGHT_BLOCK_END, NIGHT_BLOCK_START
+    assert (NIGHT_BLOCK_START, NIGHT_BLOCK_END) == (200, 500)
+
+
+# ==================================================================
+# 換月標記 —— 假設已排除，但仍需標記
+# ==================================================================
+
+def test_rollover_point_is_after_settlement_close():
+    """結算日 13:30 近月停止交易，之後序列切換到次月。"""
+    from txfcore.quotes.continuous import is_rollover_point
+    assert is_rollover_point(1260617, 1600) is True    # 結算日夜盤
+    assert is_rollover_point(1260617, 1245) is False   # 結算日 13:30 之前
+    assert is_rollover_point(1260602, 1600) is False   # 非結算日
+
+
+def test_spans_rollover_requires_crossing_1330_not_merely_nearby():
+    """**這條斷言我第一次寫錯了。**
+
+    原本用 span_days=1 的鄰近窗口，把「結算日的隔一天」也算成跨越換月，
+    誤標了兩筆與換月無關的交易。
+
+    真正跨越 = 進場在結算日 13:30 之前、出場在之後。
+    """
+    from txfcore.quotes.continuous import spans_rollover
+    assert spans_rollover(1260617, 945, 1260617, 1600) is True   # 真的跨越
+    assert spans_rollover(1260617, 1600, 1260618, 945) is False  # 換月後才進場
+    assert spans_rollover(1260618, 945, 1260618, 1600) is False  # 結算日隔天
+    assert spans_rollover(1260602, 945, 1260602, 1600) is False  # 一般日
+
+
+def test_five_strategies_structurally_cannot_span_rollover():
+    """Settlement_Flat_Time = 1230 早於換月點 1330，且整個結算日封鎖進場。
+
+    2026-09-06 用戶指出後實測確認：L2 / L4 全歷史各 0 筆跨越。
+    **這不是「觀察不到」，是「結構上不可能」。**
+
+    保留這個檢查的理由：它可能失敗而沒失敗。
+    """
+    from txfcore.quotes.continuous import SETTLEMENT_CLOSE, spans_rollover
+    from txfcore.strategies.l2_trendshort import L2TrendShort
+    from txfcore.strategies.l4_consolshort import L4ConsolShort
+    for s in (L2TrendShort(), L4ConsolShort()):
+        assert s.config.settlement_flat_time < SETTLEMENT_CLOSE
+    # 強制平倉時刻進場、當日出場 → 不可能跨越
+    assert spans_rollover(1260617, 1230, 1260617, 1245) is False
+
+
+def test_rollover_gap_is_much_larger_than_normal():
+    """實測 92 個換月點：中位數是一般隔夜跳空的 5.5 倍。"""
+    from txfcore.quotes.continuous import (
+        NORMAL_GAP_MEDIAN_ABS, ROLLOVER_GAP_MEDIAN_ABS,
+    )
+    assert ROLLOVER_GAP_MEDIAN_ABS / NORMAL_GAP_MEDIAN_ABS > 5
+
+
+# ==================================================================
+# 對齊規則 —— H5，2026-09-07 排除
+# ==================================================================
+
+def test_include_forming_exposes_the_unclosed_bar():
+    """`INCLUDE_FORMING` 讓策略讀到尚未收盤的較慢流 K 棒。
+
+    **實測顯示這是錯的規則**：L4 從 83 筆掉到 44 筆，而 MC 是 79 筆。
+    保留它作為可切換的假設，因為 MC 的實際規則沒有文件。
+    """
+    from txfcore.quotes.align import AlignPolicy, MultiStream
+    for pol, expect in ((AlignPolicy.CLOSED_ONLY, 0),
+                        (AlignPolicy.INCLUDE_FORMING, 1)):
+        ms = MultiStream(pol)
+        ms.feed_slow("d2", Bar(1260602, 945, 20000, 20050, 19950, 20010))
+        ms.push_driver(Bar(1260602, 900, 20000, 20010, 19990, 20005))
+        assert len(ms.slow("d2")) == expect
+
+
+def test_forming_bar_is_withdrawn_not_duplicated():
+    """形成中的 K 棒被暫時推入，下一次推進時必須撤回再重推。
+
+    沒撤回就會重複——那會讓 [1] 指到自己。
+    """
+    from txfcore.quotes.align import AlignPolicy, MultiStream
+    ms = MultiStream(AlignPolicy.INCLUDE_FORMING)
+    ms.feed_slow("d2", Bar(1260602, 945, 20000, 20050, 19950, 20010))
+    ms.feed_slow("d2", Bar(1260602, 1045, 20010, 20060, 19960, 20020))
+    ms.push_driver(Bar(1260602, 900, 20000, 20010, 19990, 20005))
+    ms.push_driver(Bar(1260602, 915, 20000, 20010, 19990, 20005))
+    assert len(ms.slow("d2")) == 1        # 只有形成中的那一根，不是兩根
+    ms.push_driver(Bar(1260602, 945, 20000, 20010, 19990, 20005))
+    assert len(ms.slow("d2")) == 2        # 09:45 收盤 + 10:45 形成中
+
+
+def test_bar_series_pop_is_for_alignment_only():
+    """`pop()` 只給對齊層撤回暫定 K 棒用。策略層不該呼叫。"""
+    from txfcore.types.bar import BarSeries
+    bs = BarSeries("x")
+    bs.push(Bar(1260602, 945, 1, 2, 0, 1.5))
+    bs.push(Bar(1260602, 1045, 2, 3, 1, 2.5))
+    assert len(bs) == 2 and bs.close[0] == 2.5
+    bs.pop()
+    assert len(bs) == 1 and bs.close[0] == 1.5

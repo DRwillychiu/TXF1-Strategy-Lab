@@ -451,3 +451,56 @@ def test_varbook_snapshot_roundtrip():
     b2 = vb2.declare("b", False)
     vb2.restore(snap)
     assert a2.value == 1.5 and b2.value is True
+
+
+# ====================================================================
+# 移植版本對照 —— 裁決 2026-09-06：全部只移植 research 版
+# ====================================================================
+
+def test_all_five_targets_are_research_versions():
+    """五支的 research 版正好都是 live 版加一層可觀測性。"""
+    from txfcore.strategies.versions import PORTING_TARGETS
+    assert len(PORTING_TARGETS) == 5
+    expected = {
+        "L1": ("V3.1", "v3.2"), "L2": ("5.3", "v5.4"), "L3": ("v15.0", "v15.1"),
+        "L4": ("v14.6", "v14.7"), "L5": ("v19.9", "v19.9-R1"),
+    }
+    for v in PORTING_TARGETS:
+        live_prefix, research = expected[v.key]
+        assert v.live_version.startswith(live_prefix), v.key
+        assert v.research_version == research, v.key
+
+
+def test_baseline_hashes_are_pinned():
+    """雜湊變了 → 該支對帳作廢重跑。防 L3 基準線事故的唯一機制。"""
+    from txfcore.strategies.versions import PORTING_TARGETS
+    for v in PORTING_TARGETS:
+        assert len(v.live_sha256) == 64
+        assert v.live_sha256 == v.live_sha256.upper()
+
+
+def test_porting_order_matches_measured_complexity():
+    """L2 最單純，L1 最難。執行層能力按這個順序疊加。"""
+    from txfcore.strategies.versions import BY_KEY, PORTING_ORDER
+    assert PORTING_ORDER == ("L2", "L4", "L3", "L5", "L1")
+    assert set(PORTING_ORDER) == set(BY_KEY)
+
+
+def test_failed_branches_are_recorded_not_forgotten():
+    """L4 的 v15/v16 研究線已關閉，v18 是零觸發事故的原型。
+
+    記錄「不採用的」與「採用的」同等重要——否則六個月後會有人重試一次。
+    """
+    from txfcore.strategies.versions import REJECTED_BRANCHES
+    assert "L4_v18.0" in REJECTED_BRANCHES
+    assert all("FAILED" in REJECTED_BRANCHES[k] or "前代" in REJECTED_BRANCHES[k]
+               or "非 production" in REJECTED_BRANCHES[k] or "事故" in REJECTED_BRANCHES[k]
+               for k in REJECTED_BRANCHES)
+
+
+def test_l2_config_matches_its_porting_target():
+    """已完成移植的 L2，其設定必須對得上版本表。"""
+    from txfcore.strategies.l2_trendshort import L2TrendShort
+    from txfcore.strategies.versions import BY_KEY
+    assert BY_KEY["L2"].research_version == "v5.4"
+    assert L2TrendShort().config.holiday_flat_time == 300   # L2 專屬，非 415

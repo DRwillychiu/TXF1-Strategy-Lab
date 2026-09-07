@@ -57,6 +57,10 @@ class Series:
     def push(self, value: float) -> None:
         self._data.append(value)
 
+    def pop(self) -> float:
+        """移除最新一個值。只給對齊層撤回暫定資料用。"""
+        return self._data.pop()
+
     def __len__(self) -> int:
         return len(self._data)
 
@@ -105,6 +109,15 @@ class BarSeries:
         self.high.push(bar.high)
         self.low.push(bar.low)
         self.close.push(bar.close)
+
+    def pop(self) -> Bar:
+        """移除最新一根。**只給對齊層撤回暫定的形成中 K 棒用。**
+
+        策略層永遠不該呼叫它——K 棒一旦被策略看過就不能收回。
+        """
+        for ser in (self.open, self.high, self.low, self.close):
+            ser.pop()
+        return self.bars.pop()
 
     def __len__(self) -> int:
         return len(self.bars)

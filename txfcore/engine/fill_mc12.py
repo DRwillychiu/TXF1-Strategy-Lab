@@ -63,14 +63,42 @@ class FillPolicy:
     intrabar: IntrabarPolicy = IntrabarPolicy.WORST_FIRST
     gap: GapPolicy = GapPolicy.AT_OPEN
     # 進場那根是否可以立即被停損打掉。
-    # L1 的 V2.9 取證記錄了 12 筆 same-bar deaths，所以 MC 顯然允許。
-    allow_same_bar_exit: bool = True
+    #
+    # 2026-09-06 發現：這個欄位原本是**死設定**，宣告了卻沒有任何地方讀它，
+    # 而且它出現在 policy 名稱裡（sb=1），等於報告一直在宣稱一個沒有作用的設定。
+    # 更嚴重的是 runner 的順序讓同根出場**結構上不可能**——
+    # 引擎停損檢查發生在進場填入之前。已接上並修正 runner。
+    #
+    # **但 L2 的證據指向 False。** 見下方 ef 的 2x2 表。
+    # **L1 的 V2.9 取證記錄了 12 筆 same-bar deaths**，所以 L1 可能需要 True——
+    # 移植 L1 時要重跑這個 2x2。
+    allow_same_bar_exit: bool = False
     # 引擎停損（SetStopLoss）與自訂停損同根觸發時，誰先。
-    engine_stop_first: bool = True
+    #
+    # 原本是死設定，runner 硬寫成「自訂出場優先」。接上開關後立刻產生對帳證據：
+    #
+    # L2 全歷史 2x2（虧損出場標籤向量對 MC 的 L1 距離）：
+    #
+    #     sb     ef      InitSL_D  InitSL_N  ENGINE  TSL_N   距離
+    #     False  False       23        19        5      1      3   ← 最佳
+    #     True   False       21        17        9      1      7
+    #     False  True        21        13       13      1     15
+    #     True   True        21        13       13      1     15
+    #     MC                 22        18        4      1      0
+    #
+    # **兩者皆 False 最接近，每個標籤各差 +1。**
+    # 引擎停損在 MC 裡是罕見路徑（45 筆虧損出場中只有 4 筆），
+    # ef=True 會讓它變成 13 筆。
+    #
+    # 這是逐筆對帳之外，第一個能判定成交假設的訊號 ——
+    # 而它來自一個我原本以為只是死碼的欄位。
+    engine_stop_first: bool = False
 
     @property
     def name(self) -> str:
-        return f"{self.intrabar.value}|{self.gap.value}|sb={int(self.allow_same_bar_exit)}"
+        return (f"{self.intrabar.value}|{self.gap.value}"
+                f"|sb={int(self.allow_same_bar_exit)}"
+                f"|ef={int(self.engine_stop_first)}")
 
 
 DEFAULT_POLICY = FillPolicy()
@@ -81,6 +109,15 @@ CANDIDATE_POLICIES: tuple[FillPolicy, ...] = (
     FillPolicy(IntrabarPolicy.BEST_FIRST, GapPolicy.AT_OPEN),
     FillPolicy(IntrabarPolicy.WORST_FIRST, GapPolicy.AT_TRIGGER),
     FillPolicy(IntrabarPolicy.OPEN_PROXIMITY, GapPolicy.AT_OPEN),
+    # 同根出場。L1 的 V2.9 取證記錄 12 筆 same-bar deaths，
+    # 所以移植 L1 時要重跑這一組。L2 的證據指向 False。
+    FillPolicy(IntrabarPolicy.WORST_FIRST, GapPolicy.AT_OPEN,
+               allow_same_bar_exit=True),
+    # 引擎停損優先。L2 的證據指向 False（ef=True 讓 ENGINE_STOP 從 5 變 13）。
+    FillPolicy(IntrabarPolicy.WORST_FIRST, GapPolicy.AT_OPEN,
+               engine_stop_first=True),
+    FillPolicy(IntrabarPolicy.WORST_FIRST, GapPolicy.AT_OPEN,
+               allow_same_bar_exit=True, engine_stop_first=True),
 )
 
 
