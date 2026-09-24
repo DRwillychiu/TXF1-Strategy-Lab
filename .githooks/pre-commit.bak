@@ -105,22 +105,4 @@ fi
 echo " ALL CHECKS PASSED -- commit allowed."
 echo "=============================================================="
 echo ""
-echo ""
-echo "  --- G0  docs check (CLAUDE.md / PROGRESS.md) ---"
-python tools/verify_docs.py . --soft-links
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "  G0 FAILED - commit blocked."
-  exit 1
-fi
-
-echo ""
-echo "  --- G1  static check (strategies/live) ---"
-python tools/verify_static.py strategies/live
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "  G1 FAILED - commit blocked."
-  exit 1
-fi
-
 exit 0

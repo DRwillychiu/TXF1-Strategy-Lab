@@ -25,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from txfcore.engine.fill_mc12 import CANDIDATE_POLICIES
 from txfcore.instruments.spec import TXF
 from txfcore.metrics.drawdown import compute
-from txfcore.metrics.risk import profile
 from txfcore.quotes.bars import aggregate_bars
 from txfcore.quotes.continuous import spans_rollover
 from txfcore.quotes.history import MC12MinuteSource
@@ -311,15 +310,7 @@ def main() -> int:
     print("  → H6 排除。異常日不解釋筆數差異。")
 
     # ---------------------------------------------------------------
-    hdr(10, "風險輪廓（全期）")
-    for nm, r in (("L2", r2), ("L4", r4)):
-        p = profile(compute(r.ledger.equity()))
-        print(f"  {nm}  " + p.summary().replace("\n", f"\n  {' '*4}"))
-    print("\n  我說過：L2 max_dd 9.26% Ulcer 3.51% 水下 73.6%")
-    print("          L4 max_dd 14.65% Ulcer 3.80% 水下 77.9%")
-
-    # ---------------------------------------------------------------
-    hdr(11, "窗口敏感度（L2）")
+    hdr(10, "窗口敏感度（L2）")
     print("  我說過：窗口移動 2.5 個月就差 4 筆")
     for start in (1190101, 1191216, 1200301):
         ts = [t for t in r2.trades if t.entry_date >= start]

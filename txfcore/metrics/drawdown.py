@@ -4,6 +4,16 @@
 MDD           每日動態回撤曲線中的最高點
 組合 MDD      五支每日損益逐日相加，合成一條組合損益曲線，再做一次 MDD 計算
 
+## 金額跟著百分比走（裁決 2026-09-08）
+
+`max_drawdown_amount` 是**最大百分比那一點的金額**，不是最大絕對金額。
+
+理由：MDD 的定義是「每日動態回撤曲線中的最高點」——那是**一個時點**，
+而那個時點的金額只有一個。兩個獨立的最大值並列時極易誤讀。
+
+最大絕對金額仍然保留為 `peak_to_valley_amount`，**但它衡量的是規模不是風險**：
+固定口數下，權益成長後晚期的絕對金額必然更大。
+
 分母一律是**當下的滾動峰值**，不是期初資金 —— 用期初資金會讓百分比
 突破 100%（原本那個 106.3% 就是這樣來的）。
 """
@@ -19,11 +29,19 @@ class DrawdownResult:
     equity: list[float]
     peak: list[float]
     drawdown: list[float]        # 每日動態回撤，值域 0-1
-    max_drawdown: float          # 百分比
-    max_drawdown_amount: float   # 金額
-    max_drawdown_index: int
+    max_drawdown: float          # 百分比。**MDD 的定義**
+    max_drawdown_amount: float   # **最大百分比那一點的金額**
+    max_drawdown_index: int      # 最大百分比發生的索引
     drawdown_duration: int       # 峰值到回復峰值的最長期數
     underwater_ratio: float      # 處於回撤中的期數 / 總期數
+    # 最大絕對金額。**可能發生在完全不同的時點**——固定口數下，
+    # 權益成長後晚期的絕對金額必然更大，所以它衡量的是規模不是風險。
+    # 2026-09-08 實測（組合 ③ 曲線）：
+    #   最大百分比 14.84% 於 2021-03-10，金額 704,970
+    #   最大金額 1,290,274 於 2026-06-12，佔比僅 7.06%
+    #   相差 1,920 天、585,304 元
+    peak_to_valley_amount: float = 0.0
+    peak_to_valley_index: int = 0
 
 
 def equity_curve(initial_capital: float, pnl: Iterable[float]) -> list[float]:
@@ -46,6 +64,8 @@ def compute(equity: Sequence[float]) -> DrawdownResult:
     max_dd = 0.0
     max_amt = 0.0
     max_idx = 0
+    ptv_amt = 0.0
+    ptv_idx = 0
 
     longest = 0
     current = 0
@@ -63,8 +83,13 @@ def compute(equity: Sequence[float]) -> DrawdownResult:
         if ratio > max_dd:
             max_dd = ratio
             max_idx = i
-        if amount > max_amt:
+            # **金額跟著百分比走**（裁決 2026-09-08，選項 A）。
+            # MDD 的定義是「每日動態回撤曲線中的最高點」——那是一個時點，
+            # 而那個時點的金額只有一個。
             max_amt = amount
+        if amount > ptv_amt:
+            ptv_amt = amount
+            ptv_idx = i
 
         if ratio > 0:
             current += 1
@@ -82,6 +107,8 @@ def compute(equity: Sequence[float]) -> DrawdownResult:
         max_drawdown_index=max_idx,
         drawdown_duration=longest,
         underwater_ratio=underwater / len(equity),
+        peak_to_valley_amount=ptv_amt,
+        peak_to_valley_index=ptv_idx,
     )
 
 

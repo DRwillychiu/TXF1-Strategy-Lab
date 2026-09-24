@@ -15,5 +15,5 @@
 |---|---|
 | 文件維護 | `docs/policies/DOC_MAINTENANCE.md` |
 | 溝通規範 | `docs/policies/CONVERSATION_PROTOCOL.md` |
-| 問題登記簿 | `docs/registers/現有問題.md`、`docs/registers/質疑問題.md` |
+| 問題登記簿 | `docs/registers/issues_open.md`（待處理）、`docs/registers/issues_decided.md`（已裁決） |
 | 工程系統 | `docs/methodology/ENGINEERING_SYSTEM.md` |

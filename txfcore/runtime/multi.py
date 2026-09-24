@@ -13,7 +13,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from txfcore.engine.accounting import ClosedTrade, Ledger, trade_cost
+from txfcore.costs.slippage import OFF, SlippageModel
 from txfcore.engine.fill_mc12 import DEFAULT_POLICY, FillPolicy, MC12FillModel
+from txfcore.engine.fill_slippage import SlippageFill
 from txfcore.engine.position import PositionBook
 from txfcore.instruments.spec import Instrument
 from txfcore.lineage.stamp import Lineage
@@ -34,13 +36,17 @@ class MultiStreamRunner:
         strategy: Strategy,
         instrument: Instrument,
         policy: FillPolicy = DEFAULT_POLICY,
+        slippage: SlippageModel = OFF,
         lineage: Lineage | None = None,
         warmup_bars: int = 100,
         align_policy: str = AlignPolicy.CLOSED_ONLY,
     ) -> None:
         self.strategy = strategy
         self.instrument = instrument
-        self.fill_model = MC12FillModel(policy)
+        # **滑價是套在 fill_mc12 外面的一層**，不是塞進去。
+        # fill_mc12 的身分是「MC 的樂觀假設」，污染它就沒有對帳基準了。
+        self.fill_model = SlippageFill(MC12FillModel(policy), instrument, slippage)
+        self.slippage = slippage
         self.risk = FixedLotRiskGate(instrument.default_lots)
         self.lineage = lineage
         self.warmup_bars = warmup_bars

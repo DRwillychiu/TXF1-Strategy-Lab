@@ -26,7 +26,7 @@
 - [x] Task 2.2：G3 回測基準比對 `tools/verify_baseline.py` ＋ L1–L5 基準檔
 - [x] Task 2.3：`verify.bat` ＋ SOP 文件
 - [x] Task 2.4：G0 文件檢查 `tools/verify_docs.py`（CLAUDE.md 行數上限、必要段落、連結；PROGRESS Task 格式與編號）
-- [ ] Task 2.5：`verify.bat` 掛進 `.githooks`（待 Willy 決定）
+- [x] Task 2.5：G0＋G1 掛進 .githooks/pre-commit（實測通過：G0 PASS、G1 5/5）
 - [ ] Task 2.6：G2 單元測試（待 Python 規則層）
 
 ## Phase 3：R1 策略層損失規則（V1）【Tier 1】

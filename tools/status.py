@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import argparse
 import collections
-import io
+import os
 import pickle
 import subprocess
 import sys
@@ -32,7 +32,6 @@ sys.path.insert(0, str(ROOT))
 
 from txfcore.instruments.spec import TXF
 from txfcore.metrics.drawdown import compute
-from txfcore.metrics.risk import profile
 from txfcore.parity.completeness import (
     CAPABILITIES, MISSING_MODULES, ORPHANS, summary,
 )
@@ -149,8 +148,13 @@ def main() -> int:
     say("\n【2】移植稽核　.pla vs Python 逐項比對")
     rule()
     try:
+        # **必須指定 utf-8**。Windows 的 subprocess 預設用 cp950 解碼，
+        # 吃不下 ✓ / ✗ / 中文，會在讀取時就拋 UnicodeDecodeError——
+        # 而錯誤訊息看起來像「工具壞了」，其實工具是好的。
         p = subprocess.run([sys.executable, str(ROOT / "tools" / "audit_port.py")],
-                           capture_output=True, text=True, timeout=120)
+                           capture_output=True, text=True, timeout=120,
+                           encoding="utf-8", errors="replace",
+                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         # **2026-09-07：原本用 startswith 過濾，把所有輸出都濾掉了，
         # 這一段在你的機器上印出來是空的。** 改成排除法：只去掉分隔線與標題。
         skip = ("=" * 10, "移植稽核 ——", "★ ✗ 是確定的落差")

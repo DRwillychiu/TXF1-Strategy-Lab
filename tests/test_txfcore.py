@@ -165,11 +165,29 @@ def test_drawdown_denominator_is_rolling_peak():
 
 
 def test_mdd_picks_largest_percentage_not_largest_amount():
-    """金額最大與百分比最大不是同一對峰谷。MDD 取百分比。"""
+    """金額最大與百分比最大不是同一對峰谷。**MDD 取百分比。**
+
+    **裁決 2026-09-08（選項 A）：金額跟著百分比走。**
+
+    `max_drawdown_amount` 改為「最大百分比那一點的金額」，
+    不再是獨立追蹤的最大絕對金額。理由：MDD 的定義是
+    「每日動態回撤曲線中的最高點」——那是一個時點，
+    而那個時點的金額只有一個。
+
+    最大絕對金額保留為 `peak_to_valley_amount`，
+    **但它衡量的是規模不是風險**——固定口數下，
+    權益成長後晚期的絕對金額必然更大。
+    """
     eq = [100.0, 50.0, 500.0, 440.0]
     r = compute(eq)
-    assert r.max_drawdown == pytest.approx(0.5)       # 100 -> 50
-    assert r.max_drawdown_amount == pytest.approx(60.0)  # 500 -> 440
+    assert r.max_drawdown == pytest.approx(0.5)           # 100 -> 50
+    assert r.max_drawdown_index == 1
+    assert r.max_drawdown_amount == pytest.approx(50.0)   # **該點的金額**
+    assert r.peak_to_valley_amount == pytest.approx(60.0)  # 500 -> 440
+    assert r.peak_to_valley_index == 3
+    # 一致性：金額必須等於該點的 峰值 − 權益
+    i = r.max_drawdown_index
+    assert r.max_drawdown_amount == pytest.approx(r.peak[i] - r.equity[i])
 
 
 def test_mdd_equals_peak_of_daily_drawdown_curve():
@@ -235,13 +253,23 @@ def test_sized_order_requires_positive_quantity():
     assert SizedOrder(intent=intent, quantity=2).idem_key == intent.idem_key
 
 
-def test_instrument_backtest_capital_matches_ruling():
-    """裁決：微台 2 口 30 萬、大台 2 口 200 萬。"""
-    assert get("TMF").backtest_capital == 300_000
-    assert get("TMF").default_lots == 2
-    assert get("TXF").backtest_capital == 2_000_000
-    assert get("TXF").default_lots == 2
+def test_instrument_has_no_capital_field():
+    """**資金不在 Instrument 上。** 單一來源是 capital.py。
 
+    2026-09-10 移除 backtest_capital：它是 9/6 的舊裁決，與 capital.py 並存
+    導致同一份資料跑不同工具會得到不同的百分比。
+    """
+    from dataclasses import fields
+    from txfcore.instruments.spec import Instrument
+    assert "backtest_capital" not in {f.name for f in fields(Instrument)}
+
+
+def test_fees_are_the_confirmed_broker_rates():
+    """券商實際費率，2026-09-10 確認：TXF 32 · MXF 15 · TMF 12 元/口/邊。"""
+    from txfcore.instruments.spec import get
+    assert get("TXF").fee_per_side == 32.0
+    assert get("MXF").fee_per_side == 15.0
+    assert get("TMF").fee_per_side == 12.0
 
 def test_instrument_tick_size():
     """L5 的 v_TickSize = MinMove / PriceScale。"""
@@ -559,3 +587,211 @@ def test_orphaned_leg_order_must_not_block_siblings():
     src = (Path(__file__).resolve().parent.parent / "tools" / "signals.py"
            ).read_text(encoding="utf-8")
     assert "if leg is None:" in src and "continue" in src
+
+
+# ====================================================================
+# 結算日曆接上 —— 2026-09-08，孤兒模組修正
+# ====================================================================
+
+def test_gates_use_the_data_derived_settlement_calendar():
+    """**我建了更準的日曆，然後從來沒接上去。**
+
+    `gates.evaluate()` 一直用靜態規則，而那條規則漏標 2 天
+    （2023-01-30 · 2026-02-23，農曆年後遞延）。
+    **那兩天策略不知道是結算日，實盤上不會強制平倉。**
+
+    典型的孤兒模組：寫好了、更準、沒人用。
+    """
+    from txfcore.tradecal.gates import evaluate, static_settlement_rule
+    for d in (1230130, 1260223):
+        assert evaluate(d, 1245).settlement_day is True
+        assert static_settlement_rule(d) is False       # 靜態規則漏掉
+
+
+def test_static_rule_still_available_for_mc12_mode():
+    """mc12 模式要重現 MC 的行為，所以靜態規則必須保留。"""
+    from txfcore.tradecal.gates import evaluate
+    assert evaluate(1230130, 1245, use_data_settlement=False).settlement_day is False
+
+
+# ====================================================================
+# 期交所保證金　資料資產 —— 2026-09-08
+# ====================================================================
+
+def test_margin_chain_has_no_break():
+    """**每筆的「調整前」必須等於前一筆的「調整後」。**
+
+    斷鏈代表漏了一則公告。漏了就會用錯保證金，
+    **而數字看起來仍然合理**——那是最危險的一類錯。
+    """
+    from txfcore.instruments.margin import verify_chain
+    assert verify_chain() == []
+
+
+def test_margin_ratio_equals_point_value_ratio():
+    """**保證金比例恆等於點值比例 TX : MTX : TMF = 20 : 5 : 1。**
+
+    六個時點全部成立。打破它代表期交所改了計算方式，或資料抄錯。
+    """
+    from txfcore.instruments.margin import POINT_VALUE, verify_ratio
+    assert verify_ratio() == []
+    assert POINT_VALUE["TX"] // POINT_VALUE["TMF"] == 20
+    assert POINT_VALUE["MTX"] // POINT_VALUE["TMF"] == 5
+
+
+def test_margin_refuses_dates_before_verified_range():
+    """**超出已驗證範圍就拒絕，不外插也不猜。**
+
+    與結算日曆同一個原則。
+    """
+    from datetime import date
+    from txfcore.instruments.margin import MarginOutOfRange, as_of
+    with pytest.raises(MarginOutOfRange):
+        as_of(date(2020, 1, 1))
+    assert as_of(date(2026, 5, 1)).initial == 26300      # 4/22 生效那筆
+    assert as_of(date(2026, 9, 8)).initial == 35050      # 8/12 生效那筆
+
+
+def test_backtest_uses_current_margin():
+    """裁決 2026-09-08：**回測用當前最新保證金，不做歷史查表。**
+
+    理由：回測是為了實戰，而實戰用的是現在的保證金。
+    歷史序列留給 M6 的組合監控與事後歸因。
+    """
+    from txfcore.instruments.margin import ANNOUNCEMENTS, current
+    assert current("TMF").initial == 35050
+    assert current("TMF") == ANNOUNCEMENTS[-1].after["TMF"]
+
+
+def test_short_account_cannot_hold_four_lots_at_current_margin():
+    """空單帳戶 10 萬，4 口需 140,200 = 140%。
+
+    **但 L2 是趨勢空頭，只在週 K 20MA 之下啟動**，
+    多頭週期本來就不觸發，所以 4 口同時開倉是罕見情況。
+    這個事實登記在此，供 M6 的組合監控使用。
+    """
+    from txfcore.instruments.margin import current, max_lots
+    assert max_lots(100_000) == 2
+    assert current().initial * 4 > 100_000
+
+
+def test_margin_source_hash_pins_the_data():
+    """改了資料而沒改雜湊，就是有人偷改。"""
+    from txfcore.instruments.margin import source_hash
+    h = source_hash()
+    assert len(h) == 64 and h == h.upper()
+
+
+def test_no_non_ascii_filenames_in_repo():
+    """**Windows 的 tar 解不開中文檔名。**
+
+    2026-09-08 實測：六份保證金 PDF 全部 "Invalid empty pathname"，
+    而**解壓縮失敗時前面的檔案已經解好了，所以工具照樣能跑，
+    只是資料不完整**——那是最難察覺的一種。
+    """
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    bad = []
+    for d in ("txfcore", "tools", "tests", "docs"):
+        p = root / d
+        if not p.exists():
+            continue
+        for f in p.rglob("*"):
+            if "__pycache__" in str(f):
+                continue
+            if not f.name.isascii():
+                bad.append(str(f.relative_to(root)))
+    assert not bad, f"非 ASCII 檔名，Windows tar 會失敗：{bad}"
+
+
+def test_margin_pdf_hashes_are_pinned():
+    """PDF 改名不改內容，雜湊可據此驗證安裝完整。"""
+    from txfcore.instruments.margin import ANNOUNCEMENTS, PDF_SHA256
+    assert len(PDF_SHA256) == 6
+    for a in ANNOUNCEMENTS:
+        assert a.source in PDF_SHA256, a.source
+    for h in PDF_SHA256.values():
+        assert len(h) == 64 and h == h.upper()
+
+
+def test_drawdown_amount_always_matches_its_percentage_point():
+    """**金額與百分比永遠指向同一個時點。**
+
+    2026-09-08 實測（組合 ③ 曲線）曾出現：
+      最大百分比 14.84% 於 2021-03-10，金額 704,970
+      最大金額 1,290,274 於 2026-06-12，佔比僅 7.06%
+    相差 1,920 天、585,304 元——**並列時極易誤讀**。
+    """
+    for eq in ([100, 120, 60, 200, 150],
+               [1000, 900, 1100, 700, 1200, 1150],
+               [50, 100, 25, 300, 290]):
+        r = compute([float(x) for x in eq])
+        i = r.max_drawdown_index
+        assert r.max_drawdown_amount == pytest.approx(r.peak[i] - r.equity[i])
+        assert r.peak_to_valley_amount >= r.max_drawdown_amount
+
+
+# ====================================================================
+# 資金配置　雙帳戶 —— 2026-09-08 定案
+# ====================================================================
+
+def test_capital_scales_by_point_value_ratio():
+    """**點值比 = 資金比**，三商品的「可承受點數」必須相同。
+
+    2026-09-08 修正：原規劃小台 240,000，比例是 1:4:20，
+    可承受點數只有 2,400，**比另外兩個少 20%**。
+    """
+    from txfcore.instruments.capital import allocation
+    a = [allocation(x) for x in ("TMF", "MXF", "TXF")]
+    cushions = {round(x.points_of_cushion) for x in a}
+    assert cushions == {3000}, cushions
+    assert [x.per_strategy_nominal for x in a] == [60_000, 300_000, 1_200_000]
+    assert [x.total for x in a] == [300_000, 1_500_000, 6_000_000]
+
+
+def test_two_accounts_not_one_pool():
+    """**多單與空單是兩個帳號。**
+
+    2026-09-08 得知，先前全部按單帳戶做，已重寫。
+    """
+    from txfcore.instruments.capital import (
+        LONG_ACCOUNT, SHORT_ACCOUNT, account_of, allocation, max_lots)
+    a = allocation("TMF")
+    assert a.long_account == 200_000 and a.short_account == 100_000
+    assert a.long_account + a.short_account == a.total
+    for k in ("L1", "L3", "L5"):
+        assert account_of(k) == LONG_ACCOUNT
+    for k in ("L2", "L4"):
+        assert account_of(k) == SHORT_ACCOUNT
+    assert max_lots(LONG_ACCOUNT) == 6 and max_lots(SHORT_ACCOUNT) == 4
+
+
+def test_nominal_per_strategy_differs_from_account_split():
+    """**名目分攤與帳戶配置刻意不一致。**
+
+    帳戶 A 有 3 支但配 200,000（名目應為 180,000），
+    帳戶 B 有 2 支卻只配 100,000（名目應為 120,000）。
+    理由：多單出手機率高，所以多分配給多單帳戶。
+    """
+    from txfcore.instruments.capital import allocation
+    a = allocation("TMF")
+    assert a.per_strategy_nominal * 3 != a.long_account
+    assert a.per_strategy_nominal * 2 != a.short_account
+    assert a.per_strategy_nominal * 5 == a.total
+
+
+def test_mc_capital_is_separate_from_our_allocation():
+    """MC12 的 2,000,000 / 2 口大台是**它的設定**，只用於 anchor 對帳。
+
+    我們的等比例配置是大台每支 1,200,000。**兩者不可混用。**
+    """
+    from txfcore.instruments.capital import MC_BACKTEST_CAPITAL, allocation
+    assert MC_BACKTEST_CAPITAL == 2_000_000
+    assert allocation("TXF").per_strategy_nominal == 1_200_000
+    assert MC_BACKTEST_CAPITAL != allocation("TXF").per_strategy_nominal
+
+
+def test_unknown_instrument_is_refused():
+    from txfcore.instruments.capital import allocation
+    with pytest.raises(ValueError, match="未知商品"):
+        allocation("TXO")

@@ -58,7 +58,9 @@ class Ledger:
     def __post_init__(self) -> None:
         if self.initial_capital == 0.0:
             # 裁決：微台 2 口 30 萬、大台 2 口 200 萬
-            self.initial_capital = self.instrument.backtest_capital
+            # **資金走 capital.py，單一來源。** 預設為該商品的名目每支。
+            from txfcore.instruments.capital import allocation
+            self.initial_capital = allocation(self.instrument.code).per_strategy_nominal
 
     def record(self, t: ClosedTrade) -> None:
         self.trades.append(t)

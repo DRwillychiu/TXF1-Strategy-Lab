@@ -22,5 +22,5 @@
 |---|---|
 | SOP 全文 | `docs/policies/VERIFICATION_SOP.md` |
 | 檢查腳本 | `tools/verify_docs.py`、`verify_static.py`、`verify_baseline.py`、`mc_report.py` |
-| 基準檔 | `tools/baselines/L1–L5.json` |
+| 基準檔 | `tools/baselines/L1.json` ~ `L5.json` |
 | 五件套 | `docs/methodology/non_WFA_validation_SOP_20260630.md` |

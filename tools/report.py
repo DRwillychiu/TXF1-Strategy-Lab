@@ -28,7 +28,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from txfcore.instruments.spec import TXF
 from txfcore.metrics.drawdown import compute
-from txfcore.metrics.risk import profile
 from txfcore.parity.anchors import ANCHORS, window
 from txfcore.parity.windows import IN_SAMPLE, OUT_SAMPLE, split
 from txfcore.quotes.bars import aggregate_bars
@@ -208,10 +207,9 @@ def main() -> int:
         wr = csv.writer(f)
         wr.writerow(["策略", "版本", "視窗起", "視窗迄", "筆數", "MC筆數", "差",
                      "淨利", "MC淨利", "PF", "MC PF", "勝率", "MC勝率",
-                     "最大回撤%", "最大回撤金額", "Ulcer", "水下比例%"])
+                     "最大回撤%", "最大回撤金額", "最長回撤期數", "水下比例%"])
         for key, a, r, tl, s, ins, outs in runs:
             dd = compute(r.ledger.equity())
-            p = profile(dd)
             wr.writerow([
                 a.strategy, a.version,
                 a.backtest_start or "—", a.backtest_end or a.export_date,
@@ -219,8 +217,8 @@ def main() -> int:
                 f"{s['net']:.0f}", f"{a.net_profit:.0f}",
                 f"{s['pf']:.4f}", f"{a.profit_factor:.4f}",
                 f"{s['wr']:.2f}", f"{a.win_rate:.2f}" if a.win_rate else "—",
-                f"{p.max_drawdown*100:.2f}", f"{dd.max_drawdown_amount:.0f}",
-                f"{p.ulcer_index*100:.2f}", f"{p.underwater_ratio*100:.1f}",
+                f"{dd.max_drawdown*100:.2f}", f"{dd.max_drawdown_amount:.0f}",
+                f"{dd.drawdown_duration}", f"{dd.underwater_ratio*100:.1f}",
             ])
 
     # ---- HTML ----
@@ -306,11 +304,10 @@ color:{C['mu']};font-size:13px}}
 
     for key, a, r, tl, s, ins, outs in runs:
         dd = compute(r.ledger.equity())
-        p = profile(dd)
         ex = collections.Counter(t.exit_label for t in tl)
         en = collections.Counter(t.entry_label for t in tl)
         h.append(f'<h2>{key} {a.strategy} {a.version}</h2><div class="card">'
-                 f'<h3>權益曲線（期初 {TXF.backtest_capital:,.0f}）</h3><div class="b">')
+                 f'<h3>權益曲線（期初 {MC_BACKTEST_CAPITAL:,.0f}，MC 對帳基準）</h3><div class="b">')
         h.append(equity_svg(r.ledger.equity()))
         h.append(f"""</div></div>
 <table><tbody>
@@ -320,10 +317,10 @@ color:{C['mu']};font-size:13px}}
 <td>平均虧損</td><td class="m dn">{s['avg_loss']:,.0f}</td>
 <td>最大單筆</td><td class="m up">{s['best']:,.0f}</td>
 <td>最差單筆</td><td class="m dn">{s['worst']:,.0f}</td></tr>
-<tr><td>最大回撤</td><td class="m">{p.max_drawdown*100:.2f}%</td>
+<tr><td>最大回撤</td><td class="m">{dd.max_drawdown*100:.2f}%</td>
 <td>金額</td><td class="m">{dd.max_drawdown_amount:,.0f}</td>
-<td>Ulcer</td><td class="m">{p.ulcer_index*100:.2f}%</td>
-<td>水下比例</td><td class="m">{p.underwater_ratio*100:.1f}%</td></tr>
+<td>最長回撤</td><td class="m">{dd.drawdown_duration} 期</td>
+<td>水下比例</td><td class="m">{dd.underwater_ratio*100:.1f}%</td></tr>
 </tbody></table>
 <table><thead><tr><th>進場標籤</th><th>筆數</th><th>出場標籤</th><th>筆數</th>
 <th>勝率</th><th>淨損益</th></tr></thead><tbody>""")

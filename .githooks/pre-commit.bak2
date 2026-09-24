@@ -105,6 +105,14 @@ fi
 echo " ALL CHECKS PASSED -- commit allowed."
 echo "=============================================================="
 echo ""
+exit 0
+
+
+# ================================================================
+#  加在現有 .githooks/pre-commit 的最後面（原有 Rule #11 / #15 檢查不要動）
+#  新增：G0 文件檢查 + G1 靜態檢查
+# ================================================================
+
 echo ""
 echo "  --- G0  docs check (CLAUDE.md / PROGRESS.md) ---"
 python tools/verify_docs.py . --soft-links
@@ -122,5 +130,3 @@ if [ $? -ne 0 ]; then
   echo "  G1 FAILED - commit blocked."
   exit 1
 fi
-
-exit 0

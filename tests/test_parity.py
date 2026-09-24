@@ -336,3 +336,18 @@ def test_orphan_modules_are_registered():
     names = {f for f, _ in ORPHANS}
     assert "risk/protections.py" in names
     assert "timing/latency.py" in names
+
+
+# ==================================================================
+# 組合層保護器　**尚未討論定案，僅保留最小測試**
+# ==================================================================
+
+def test_protection_stack_exists_but_has_no_caller():
+    """**寫好但沒有呼叫者，比沒寫更危險——它看起來像有。**
+
+    2026-09-08：組合層的帳戶結構（雙帳戶）尚未定案，
+    所以保護器的門檻與介入時機都還不能決定。
+    """
+    from txfcore.risk.protections import ProtectionStack
+    s = ProtectionStack.default()
+    assert len(s.protections) == 3

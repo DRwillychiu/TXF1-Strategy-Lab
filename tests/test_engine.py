@@ -266,11 +266,11 @@ def _trade(entry, exit_, d_exit=1260907, t_exit=1345, qty=2, inst=TMF):
     )
 
 
-def test_ledger_uses_instrument_backtest_capital():
-    """裁決：微台 2 口 30 萬、大台 2 口 200 萬。"""
-    assert Ledger(TMF).initial_capital == 300_000
-    assert Ledger(TXF).initial_capital == 2_000_000
-
+def test_ledger_defaults_to_nominal_per_strategy_capital():
+    """Ledger 沒給資金時，走 capital.py 的名目每支——**不是 Instrument 上的欄位**。"""
+    from txfcore.instruments.capital import allocation
+    assert Ledger(TMF).initial_capital == allocation("TMF").per_strategy_nominal == 60_000
+    assert Ledger(TXF).initial_capital == allocation("TXF").per_strategy_nominal == 1_200_000
 
 def test_net_deducts_fee_and_tax_separately():
     t = _trade(22000, 22100)
@@ -299,7 +299,7 @@ def test_fill_to_equity_to_drawdown_is_connected():
                     (21900, 22200, 1260909)):
         lg.record(_trade(e, x, d_exit=d))
     eq = lg.equity()
-    assert len(eq) == 4 and eq[0] == 300_000
+    assert len(eq) == 4 and eq[0] == 60_000    # 名目每支，不是舊的總本金
     r = compute(eq)
     assert 0.0 <= r.max_drawdown <= 1.0
 
@@ -1158,3 +1158,173 @@ def test_night_first_matches_taifex_official_definition():
     from txfcore.quotes import daily
     assert "TAIFEX" in daily.__doc__
     assert "補償性誤差" in daily.__doc__
+
+
+# ==================================================================
+# M1　每日權益含未平倉 —— 2026-09-08 定案
+# ==================================================================
+
+def test_accounting_mark_time_normal_and_settlement():
+    """一般日 1345、結算日 1330。**1,863 個交易日實測零例外。**"""
+    from datetime import date
+    from txfcore.tradecal.accounting import (
+        NORMAL_MARK_TIME, SETTLEMENT_MARK_TIME, mark_time)
+    assert mark_time(date(2026, 6, 17)) == SETTLEMENT_MARK_TIME == 1330
+    assert mark_time(date(2026, 6, 18)) == NORMAL_MARK_TIME == 1345
+
+
+def test_accounting_mark_is_not_night_close():
+    """**夜盤末 05:00 不是結算點。**
+
+    TAIFEX 的每日結算在日盤 13:45，夜盤屬於次一交易日。
+    實測：用 05:00 取樣，組合 MDD 6,052 點；用 13:45 是 6,416 點，
+    **低估 5.7%**。
+    """
+    from txfcore.tradecal.accounting import is_mark_bar
+    assert is_mark_bar(1260618, 1345) is True
+    assert is_mark_bar(1260619, 500) is False      # 夜盤末，不是結算點
+    assert is_mark_bar(1260617, 1330) is True      # 結算日
+    assert is_mark_bar(1260617, 1345) is False     # 結算日沒有 1345
+
+
+def test_intraday_mdd_peak_uses_favourable_extreme():
+    """**兩邊都用不利極值是錯的。**
+
+    那會把峰值也壓低，回撤反而變小。2026-09-08 第一版就犯了這個錯，
+    實測 ⑤ 比 ③ 小——而那不可能。
+
+    正確：峰值取有利極值、谷底取不利極值（MC12 的 Intraday Peak to Valley）。
+    """
+    from txfcore.engine.daily_equity import DailyEquity, EquityCurves
+    from datetime import date
+    c = EquityCurves()
+    # 收盤持平，但盤中先衝高再殺低
+    for i, (cl, bs, ws) in enumerate([(100, 100, 100), (100, 130, 70),
+                                      (100, 100, 100)]):
+        c.days.append(date(2026, 1, i + 1))
+        c.close.append(cl); c.best.append(bs); c.worst.append(ws)
+    pct, amt, at = c.intraday_mdd()
+    assert amt == 60 and at == 1                  # 峰值 130 − 谷底 70
+    from txfcore.metrics.drawdown import compute
+    assert compute(c.close).max_drawdown == 0.0   # 收盤看不到任何回撤
+    assert pct > 0                                 # ⑤ 必然 >= ③
+
+
+def test_daily_equity_records_both_floating_gain_and_loss():
+    """**浮虧與浮盈都要記，不是只記浮虧。**"""
+    from dataclasses import fields
+    from txfcore.engine.daily_equity import DailyEquity
+    names = {f.name for f in fields(DailyEquity)}
+    assert {"unrealized_close", "unrealized_best", "unrealized_worst"} <= names
+    assert {"equity_close", "equity_best", "equity_worst"} <= names
+
+
+def test_combine_does_not_double_count_initial_capital():
+    """**逐日相加變化量，不是各支曲線相加。**
+
+    直接相加會把期初資金重複計算 N 次。
+    """
+    import inspect
+    from txfcore.engine import daily_equity
+    src = inspect.getsource(daily_equity.combine)
+    assert "initial_capital + cum_real" in src
+    assert "把期初重複計算" in src
+
+
+def test_intraday_mdd_percent_and_amount_can_diverge():
+    """**⑤ 的百分比較大但金額較小是可能的，不是 bug。**
+
+    兩者發生在不同時點：⑤ 的峰值較低，所以同樣的金額佔比更高。
+    **定義以百分比為準**（每日動態回撤 = (M−V)/M）。
+    """
+    from datetime import date
+    from txfcore.engine.daily_equity import EquityCurves
+    c = EquityCurves()
+    # t0 峰值低、跌幅小但佔比大；t2 峰值高、跌幅大但佔比小
+    for i, (cl, bs, ws) in enumerate([(100, 100, 100), (100, 100, 50),
+                                      (1000, 1000, 1000), (1000, 1000, 700)]):
+        c.days.append(date(2026, 1, i + 1))
+        c.close.append(cl); c.best.append(bs); c.worst.append(ws)
+    pct, amt, at = c.intraday_mdd()
+    assert at == 1                       # 峰值 100 → 谷底 50
+    assert abs(pct - 0.5) < 1e-9         # 50%
+    assert amt == 50                     # 金額只有 50
+    # 而 t3 的金額是 300，遠大於 50，但佔比只有 30%
+
+
+def test_equity_tool_has_no_hardcoded_ratio():
+    """**數字寫在文字裡，資料變了它不會跟著變。**
+
+    2026-09-08：`equity.py` 的結語原本硬編碼「L2 差 2.2 倍」，
+    那是大台 200 萬時的數字；換成微台後表格變成 1.92 倍，
+    **而結語沒跟著變**——與死設定同一類缺陷。
+    """
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "equity.py"
+           ).read_text(encoding="utf-8")
+    assert "2.2 倍" not in src
+    assert "worst_r:.2f} 倍" in src          # 從資料算出來
+
+
+def test_equity_tool_reports_contribution_not_sum_of_mdd():
+    """**「各支 MDD 相加 vs 組合 MDD」是誤導的比較。**
+
+    各支的 MDD 各自發生在不同日子，把五個不同日子的最壞值相加，
+    本來就不會等於任何一天的值——那個差距大部分來自**時點不同**，
+    不是分散效果。
+
+    真正的證據：在總體 MDD 那一天，五支各自貢獻了多少。
+    2026-09-08 實測 2021-03-10：L1 −12,502 · L3 −15,827 · L5 −7,959 ·
+    L2/L4 各 0（空手），合計 −36,288，**與總體回撤逐分吻合**。
+    """
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "equity.py"
+           ).read_text(encoding="utf-8")
+    assert "相加高估" not in src
+    assert "總體 MDD 當日的各支貢獻" in src
+
+
+def test_account_size_required_primary_is_D_reference_is_A():
+    """**裁決 2026-09-09：主指標 D，對照 A，差距獨立標出。**
+
+    四個選項實測（微台總體 300,000）：
+      A ③×百分比點 36,288    B ③×最大絕對 65,179
+      C ⑤×百分比點 36,628    D ⑤×最大絕對 67,139
+    A≈C、B≈D。**真正的分歧在「百分比點 vs 最大絕對」，差了 3 萬。**
+
+    「準備多少錢」問的是絕對值，而且要防斷頭 → D。
+    A 與 MDD 定義一致，可與其他報告對帳 → 對照。
+    """
+    from datetime import date
+    from txfcore.engine.daily_equity import EquityCurves
+    c = EquityCurves()
+    # 早期：峰 100 → 谷 50（相對 50%，絕對 50）
+    # 晚期：峰 1000 → 谷 800（相對 20%，絕對 200）
+    # **收盤與盤中都要有這兩段**，否則 A 看不到早期那段
+    for i, (cl, bs, ws) in enumerate([(100, 100, 100), (50, 100, 50),
+                                      (1000, 1000, 1000), (800, 1000, 800)]):
+        c.days.append(date(2026, 1, i + 1))
+        c.close.append(cl); c.best.append(bs); c.worst.append(ws)
+    r = c.account_size_required(initial_capital=100)
+    assert r["primary_D_mdd_amount"] == 200        # 最大絕對
+    assert r["reference_A_mdd_amount"] == 50       # 百分比那一點
+    assert r["primary_D"] == 300 and r["reference_A"] == 150
+    assert r["gap"] == 150                         # 差距獨立標出
+    assert r["primary_D_at"] != r["reference_A_at"]   # 不同時期
+
+
+def test_single_strategy_mdd_denominator_is_nominal():
+    """**裁決 2026-09-09：單支 MDD 主分母 = 名目每支（微台 6 萬）。**
+
+    單支的 MDD 是要回答「這支策略本身多危險」。
+    用帳戶或總體當分母，會讓同一支策略在不同組合下有不同的數字——
+    那就不是策略的屬性了。
+    """
+    from txfcore.instruments.capital import allocation
+    a = allocation("TMF")
+    assert a.per_strategy_nominal == 60_000
+    # equity.py 的單支表用的正是這個值
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools" / "equity.py"
+           ).read_text(encoding="utf-8")
+    assert "cap = alloc.per_strategy_nominal" in src

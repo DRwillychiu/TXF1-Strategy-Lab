@@ -31,9 +31,20 @@ ALLOWED: dict[str, set[str]] = {}
 for pkg in LAYER0:
     ALLOWED[pkg] = set(LAYER0_CORE) - {pkg}                # 層 0 只准依賴 types
 ALLOWED["types"] = set()                                   # 最內圈，誰都不依賴
-ALLOWED["costs"] = {"instruments", "types"}                # 成本需要商品規格
+ALLOWED["costs"] = {"instruments", "types"}      # 成本需要商品規格
+# metrics 的損益指標要把點數換算成金額，同樣需要商品規格。
+# 2026-09-08 由本檢查抓出。instruments 不依賴 metrics，無環。
+# 2026-09-10 再加 costs：M2 的「手續費總額 / 期交稅總額」要拆兩項，需要費率表。
+# costs 不依賴 metrics，無環。與上面 instruments 那條同型。
+ALLOWED["metrics"] = {"instruments", "costs", "types"}
 for pkg in SUPPORT:
     ALLOWED[pkg] = set(LAYER0)
+# engine -> tradecal 是**具體的一條邊**。
+# 理由：帳務層要知道「每日結算在哪一刻」——一般日 1345、結算日 1330。
+# 那是行事曆的事實，不是引擎的假設。tradecal 不依賴 engine，無環。
+# 2026-09-08 由本檢查抓出，與下面 quotes 那條同型。
+ALLOWED["engine"] = ALLOWED["engine"] | {"tradecal"}
+
 # quotes -> tradecal 是**具體的一條邊**，不是放寬整層。
 # 理由：網格切分需要知道結算日（日盤 285 分而非 300 分），
 # 而結算行事曆是市場的參考資料。tradecal 不依賴 quotes，無環。
