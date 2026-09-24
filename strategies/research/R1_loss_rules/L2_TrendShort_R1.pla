@@ -1,0 +1,833 @@
+{ ============================================================
+  ADAPTIVE FARMER - TREND BEARISH STRATEGY
+  Signal Name : Trendbearish_V1
+  MC Load Name: Trendbearish_V1
+  Description : Trend Short - weekly SMA13 bear filter + Donchian30 breakdown
+                + ZLEMA momentum. Short only.
+  Version     : 5.3 + SetStopContract + SL_Pct (v5.2 base)
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 9.0 PowerLanguage x64
+  Timeframe   : 60-Minute (Day + Night Sessions, grid verified
+                vs Excel timestamps: day 09:45-13:45, night
+                16:00-05:00 hourly close stamps)
+
+  CHANGELOG:
+    5.1  Label unification (TS_ prefix). No logic changes.
+    5.2  (2026-06-12) Holiday Flat Rule v3 + safety rails:
+         - Iron Rule: flat (0 position) BEFORE the 05:00 close of
+           the last night session preceding every market closure.
+           Audit found 1 historical violation: short held across
+           the 2025 Dragon Boat closure (-33,000, exited only
+           after the gap via TS_StructureTP).
+         - Holiday_Tail registry (63 dates, TAIFEX-verified, same
+           registry as L1 V2.4+). Tail bars (00:00-05:00, stamped
+           with the first closed date): entries blocked; forced
+           BuyToCover from Holiday_Flat_Time (03:00 on the 60M
+           grid -> fill 03:00, retry 04:00, flat before 05:00).
+         - Registry_Valid_Until fail-safe: beyond the verified
+           horizon block entries + flatten (TS_RegistryEnd) +
+           30-day red chart warning.
+         - Manual_Kill_Switch added (TS_Kill) for typhoon-class
+           unscheduled closures.
+         - Inserted as Priority 0 in the SECTION 13 exit chain
+           (above TS_WeeklyExit). Entry gate added in SECTION 7.
+         - Header performance reflects the OLD module set;
+           re-backtest after deployment. Deploy only when flat
+           (changes history for holiday-crossing trades).
+    5.2+ (2026-06-18) P3b Immediate Stop Guard:
+         - SetStopLoss = MC engine-level stop, active on entry
+           bar (no IOG dependency). Closes the structural 60-min
+           unprotected window between fill and first custom stop.
+         - Distance = AbsValue((DC_Lower + ATR*SL_ATR_Ratio) -
+           Close) * BigPointValue. Same anchor as Section 8 SL.
+         - Called only when not short (MP>=0) -> freezes when
+           short position opens (same principle as SL_Locked).
+         - Does NOT replace Section 8-13 exit logic. Dormant
+           backup once custom stops tighten.
+         - Deploy only when flat.
+    5.3  (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+         BUG FIX - SetStopContract MISSING (same issue as L4 v14.6, L5 v19.9):
+           SetStopLoss without SetStopContract = stop dollar amount
+           is for the TOTAL POSITION, not per contract.
+           L2 trades 2 contracts -> engine stop was 2x tighter than
+           designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+         NEW - SL_Pct Percentage Stop Cap (SHORT mirror of L1/L3/L4/L5):
+           ATR can spike in volatile regimes, causing the ATR-based
+           stop (DC_Lower + ATR*1.1) to exceed any reasonable risk budget.
+           SL_Pct caps max stop distance as pct of entry price.
+           For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+           Applied to BOTH engine stop (P3b) and custom stop (Section 8).
+           MC sweep 0.00-5.00 step 0.25: converge at SL_Pct=1.25.
+           1.25 is tightest non-degrading value (rows 6-21 identical
+           to baseline). Below 1.00 degrades significantly
+           (0.25 = -50% net, stops binding too tight on ATR spikes).
+
+  PERFORMANCE (Excel Report 2026/07/26, Initial Capital 1M, SL_Pct=1.25):
+    Net Profit    : 2,882,400 TWD
+    Profit Factor : 2.88
+    Win Rate      : 42.31%
+    MDD           : -484,400 (-14.99%)
+    Total Trades  : 78
+    Avg Trade     : 44,345 TWD
+    Sharpe (ann.) : 0.847
+    Sortino       : 1.233
+
+    PERFORMANCE CAVEATS (added 2026-08-25 audit):
+      - The source Excel is NOT in the repo. These numbers cannot be
+        reproduced from anything under version control. Treat as
+        UNVERIFIED until the report is archived alongside the .pla.
+      - "Initial Capital 1M" contradicts CLAUDE.md, which fixes the
+        account basis at 2,000,000 for percent and MDD-percent. Note
+        also that -484,400 / 1,000,000 = -48.4%, not the -14.99%
+        printed above. One of the three figures is wrong. UNRESOLVED
+        - do not rely on the percentages until this is settled.
+      - Contracts, slippage and backtest window are not stated here.
+        CLAUDE.md standard is 2 contracts, 1,000 NTD per side per lot.
+
+    STATUS (as of 2026-08-25):
+      Last closed trade 2025-06-03. 443 days (14.6 months) with zero
+      trades; 2026 year-to-date = 0 trades. Rule #13 (minimum two
+      trades per month) heavily breached.
+      Probable cause, INFERRED and NOT MEASURED: FilterOK requires the
+      weekly close below SMA(13) while the index ran 21,000 -> 47,000.
+      A short-only strategy idling through a bull regime is expected
+      behaviour, but the duration warrants a review.
+      Source: docs/research/L2_reentry_L28_check_20260824.md
+  ============================================================ }
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  ============================================================ }
+
+Inputs:
+   { Weekly trend filter - one quarter = 13 weeks }
+   WkSMA_Len            ( 13   ),
+
+   { Entry: Donchian channel }
+   DC_Len               ( 30   ),
+
+   { Entry: ZLEMA - fixed by formula, do not optimize }
+   ZLEMA_Len            ( 20   ),
+   ZLEMA_Lag            ( 9    ),
+
+   { ATR period - shared by all modules }
+   ATR_Len              ( 21   ),
+
+   { C0 breakout confirmation: Close < DC_Lower - ATR * filter }
+   C0_ATR_Filter        ( 0.45 ),
+
+   { Initial SL buffer: SL_Trig = DC_Lower + ATR * ratio }
+   SL_ATR_Ratio         ( 1.1  ),
+
+   { TSL activation }
+   Accel_M              ( 0.5  ),
+   NLow_N               ( 15   ),
+   MinBars              ( 3    ),
+
+   { TSL tracking }
+   TSL_K                ( 9    ),
+   TSL_M                ( 1.0  ),
+
+   { Structure reversal take profit }
+   TP_N                 ( 30   ),
+
+   { Trailing take profit }
+   TTP_MinAtr           ( 4.0  ),
+   TTP_RebPct           ( 1.5  ),
+
+   { Stop profit: activate when profit >= stopProfitPoints_Shrt }
+   { Allow drawback up to profitReturnPrcnt_Shrt % of peak profit }
+   stopProfitPoints_Shrt  ( 250 ),
+   profitReturnPrcnt_Shrt ( 55  ),
+
+   { Holiday Flat Rule v3 (Iron Rule 2026-06-12) }
+   Holiday_Flat_Time      ( 300 ),     { 03:00 trigger on 60M grid -> fill 03:00, retry 04:00 }
+   Registry_Valid_Until   ( 1270101 ), { verified holiday-registry horizon; bump each Q4 }
+   Manual_Kill_Switch     ( False ),
+
+   { Monthly Settlement Flat (2026-06-17 added)
+     TXF1 settles every 3rd Wed of month at 13:30.
+     Detection: DayOfWeek=3 AND DayOfMonth in [15,21].
+     Flat at 12:30 (1hr buffer before 13:30 settlement). }
+   Settlement_Flat_Time   ( 1230 ),
+
+   { v5.3: SetStopContract + SL_Pct (2026-07-26) }
+   SL_Pct                 ( 1.25 ),
+
+    { --- R1 loss rules (2026-09-23) --- }
+    Rule_On(true), Rule_Lots(2), Daily_Cap_Pts(300), Weekly_Cap_Pts(750), Streak_N(0), Halt_DD_Pts(0);    { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. MC sweep converge = 1.25. }
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+Variables:
+   { Session }
+   IsDay                ( False ),
+   IsNight              ( False ),
+
+   { Weekly filter }
+   WkBarCount           ( 0     ),
+   WkSMASum             ( 0     ),
+   IsNewWeek            ( False ),
+   FilterOK             ( False ),
+
+   { Indicators }
+   CompPrice            ( 0     ),
+   ZLEMA_Val            ( 0     ),
+   EMA20_Val            ( 0     ),
+   DC_Lower             ( 0     ),
+   ATR_Val              ( 0     ),
+
+   { Entry flags }
+   C0                   ( False ),
+   C_A                  ( False ),
+   C_B                  ( False ),
+
+   { Initial stop loss }
+   SL_Line              ( 0     ),
+   SL_Trig              ( 0     ),
+   SL_Locked            ( False ),
+
+   { TSL activation }
+   Accel                ( False ),
+   NLow                 ( False ),
+   C1_Bar               ( False ),
+   TSL_Armed            ( False ),
+
+   { TSL tracking }
+   New_TSL              ( 0     ),
+   TSL_Line             ( 0     ),
+   Active_TSL           ( 0     ),
+   Active_SL            ( 0     ),
+   v_SL_Src             ( 0     ),   { 0=flat 1=trailing 2=frozen initial. Mirrors
+                                       whatever set Active_SL, for label routing. }
+
+   { Trailing take profit }
+   LowestClose          ( 0     ),
+   WaveProfit           ( 0     ),
+   MinProfitPts         ( 0     ),
+   TTP_Line             ( 0     ),
+   TTP_Gate             ( False ),
+   TTP_Fire             ( False ),
+
+   { Stop profit }
+   posbleProfit_Short   ( 0     ),
+   stopProfitPrice      ( 0     ),
+
+   { Loop counter and exit control }
+   LoopIdx              ( 0     ),
+   ExitFired            ( 0     ),
+
+   { Holiday Flat Rule v3 }
+   v_Holiday_Block      ( False ),
+   v_Registry_Expired   ( False ),
+   Registry_Warn_ID     ( -1    ),
+   hidx                 ( 0     ),
+
+   { Monthly Settlement Flat }
+   v_Settlement_Day     ( False ),
+
+   { v5.3 SL_Pct }
+   v_Guard_Distance     ( 0 ),
+    { R1 loss rules } v_Rule_Allow(true), v_Skip_Next(false), v_R_LastDate(0), v_R_DayNP(0), v_R_WeekNP(0), v_R_LastTT(0), v_R_LastNP(0), v_R_Streak(0), v_R_Peak(0), v_R_Unit(1), v_R_Halt(false), v_R_Shadow(0);
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  WkCloses stores last WkSMA_Len completed weekly closes.
+  Size 21 covers indices 0 to 20. Only indices 1 to 20 used.
+  WkSMA_Len = 13, so indices 1 to 13 are actively used.
+  ============================================================ }
+
+Array: WkCloses[ 21 ] ( 0 ), Holiday_Tail[ 80 ] ( 0 );
+{ ==========================================================
+  LOSS RULES R1 (2026-09-23): daily/weekly loss cap, streak pause,
+  drawdown halt. Amounts are POINTS per Rule_Lots contracts, so the
+  same inputs work on TXF (200/pt) and TMF (10/pt).
+  Rule_On = false must reproduce the pre-R1 strategy exactly.
+  ========================================================== }
+if Date <> v_R_LastDate then begin
+    if v_R_LastDate = 0 then
+        v_R_WeekNP = NetProfit
+    else if DayOfWeek(Date) < DayOfWeek(v_R_LastDate) or DateToJulian(Date) - DateToJulian(v_R_LastDate) >= 7 then
+        v_R_WeekNP = NetProfit;
+    v_R_DayNP = NetProfit;
+    v_R_LastDate = Date;
+end;
+v_R_Unit = BigPointValue * Rule_Lots;
+if TotalTrades > v_R_LastTT then begin
+    if NetProfit - v_R_LastNP < 0 then
+        v_R_Streak = v_R_Streak + 1
+    else
+        v_R_Streak = 0;
+    if Streak_N > 0 and v_R_Streak >= Streak_N then begin
+        v_Skip_Next = true;
+        v_R_Streak = 0;
+    end;
+    v_R_LastNP = NetProfit;
+    v_R_LastTT = TotalTrades;
+end;
+if NetProfit > v_R_Peak then v_R_Peak = NetProfit;
+if Halt_DD_Pts > 0 and v_R_Unit > 0 then begin
+    if (v_R_Peak - NetProfit) / v_R_Unit > Halt_DD_Pts then v_R_Halt = true;
+end;
+if v_R_Shadow > 0 then begin
+    if High >= v_R_Shadow then v_Skip_Next = false;
+    v_R_Shadow = 0;
+end;
+v_Rule_Allow = true;
+if Rule_On = false then
+    v_Skip_Next = false
+else begin
+    if Daily_Cap_Pts > 0 and (NetProfit - v_R_DayNP) / v_R_Unit <= -Daily_Cap_Pts then v_Rule_Allow = false;
+    if Weekly_Cap_Pts > 0 and (NetProfit - v_R_WeekNP) / v_R_Unit <= -Weekly_Cap_Pts then v_Rule_Allow = false;
+    if v_R_Halt then v_Rule_Allow = false;
+end;
+
+
+
+{ ============================================================
+  SECTION 4 - SESSION DETECTION
+  IsDay   : 60M CLOSE stamps 09:45 to 12:45 (Time 945..1245).
+            The 845 lower bound never binds - no bar carries a
+            stamp in 845..944. NOTE the 13:45 day-session close
+            bar is NOT included and falls into IsNight.
+  IsNight : every other bar = night close stamps 16:00 to 05:00,
+            PLUS the 13:45 day-session close bar.
+  ============================================================ }
+
+If ( Time >= 845 ) And ( Time <= 1245 ) Then
+   IsDay = True
+Else
+   IsDay = False;
+
+If IsDay = True Then
+   IsNight = False
+Else
+   IsNight = True;
+
+
+{ ============================================================
+  SECTION 4B - HOLIDAY FLAT RULE v3 (Iron Rule 2026-06-12)
+
+  Holiday_Tail = last trading day + 1 calendar day = the date
+  stamped on the 00:00-05:00 tail bars of the final night
+  session before each market closure.
+
+  Tail bars: block new entries; force BuyToCover from
+  Holiday_Flat_Time (60M grid: trigger on the 03:00 bar, fill
+  03:00, retry 04:00, always flat before the 05:00 close).
+  Beyond Registry_Valid_Until the strategy fails safe.
+
+  Dates: TAIFEX official calendars. 2026 verified 2026-06-12.
+  Entries marked * reconstructed (Labor Days; 2025 new
+  statutory holidays) - verify vs archived TAIFEX PDFs before
+  trusting re-backtest stats on those windows.
+  ============================================================ }
+
+If CurrentBar = 1 Then Begin
+
+   { --- 2019 --- }
+   Holiday_Tail[1]  = 1190913;
+   Holiday_Tail[2]  = 1191010;
+   Holiday_Tail[3]  = 1200101;
+
+   { --- 2020 --- }
+   Holiday_Tail[4]  = 1200121;  { CNY }
+   Holiday_Tail[5]  = 1200228;  { 228 }
+   Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+   Holiday_Tail[7]  = 1200501;  { * Labor Day }
+   Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+   Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+   Holiday_Tail[10] = 1201009;  { National Day }
+   Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+   { --- 2021 --- }
+   Holiday_Tail[12] = 1210206;  { CNY }
+   Holiday_Tail[13] = 1210227;  { 228 }
+   Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+   Holiday_Tail[15] = 1210612;  { Dragon Boat }
+   Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+   Holiday_Tail[17] = 1211009;  { National Day }
+   Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+   { --- 2022 --- }
+   Holiday_Tail[19] = 1220127;  { CNY }
+   Holiday_Tail[20] = 1220226;  { 228 }
+   Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+   Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+   Holiday_Tail[23] = 1220603;  { Dragon Boat }
+   Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+   Holiday_Tail[25] = 1221008;  { National Day }
+   Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+   { --- 2023 --- }
+   Holiday_Tail[27] = 1230118;  { CNY }
+   Holiday_Tail[28] = 1230225;  { 228 }
+   Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+   Holiday_Tail[30] = 1230429;  { * Labor Day }
+   Holiday_Tail[31] = 1230622;  { Dragon Boat }
+   Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+   Holiday_Tail[33] = 1231007;  { National Day }
+   Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+   { --- 2024 --- }
+   Holiday_Tail[35] = 1240206;  { CNY }
+   Holiday_Tail[36] = 1240228;  { 228 }
+   Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+   Holiday_Tail[38] = 1240501;  { * Labor Day }
+   Holiday_Tail[39] = 1240608;  { Dragon Boat }
+   Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+   Holiday_Tail[41] = 1241010;  { National Day }
+   Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+   { --- 2025 (* rows pending check vs 114-yr TAIFEX PDF) --- }
+   Holiday_Tail[43] = 1250123;  { CNY }
+   Holiday_Tail[44] = 1250228;  { 228 }
+   Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+   Holiday_Tail[46] = 1250501;  { * Labor Day }
+   Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+   Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+   Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+   Holiday_Tail[50] = 1251010;  { * National Day }
+   Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+   Holiday_Tail[52] = 1251225;  { * Constitution Day }
+   Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+   { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+   Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+   Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+   Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+   Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+   Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+   Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+   Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+   Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+   Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+   Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+   { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+
+End;
+
+v_Holiday_Block = False;
+
+If Time <= 500 Then Begin
+   For hidx = 1 To 80 Begin
+      If Date = Holiday_Tail[ hidx ] Then
+         v_Holiday_Block = True;
+   End;
+End;
+
+v_Registry_Expired = False;
+
+If Date > Registry_Valid_Until Then Begin
+   v_Registry_Expired = True;
+   v_Holiday_Block    = True;
+End;
+
+{ Monthly Settlement Day detection (3rd Wed) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+If LastBarOnChart And
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 Then Begin
+   If Registry_Warn_ID < 0 Then Begin
+      Registry_Warn_ID = Text_New( Date, Time, High + 400,
+         "HOLIDAY REGISTRY EXPIRES " +
+         NumToStr( Registry_Valid_Until, 0 ) +
+         " - REBUILD FROM TAIFEX CALENDAR" );
+      Text_SetColor( Registry_Warn_ID, Red );
+      Text_SetSize( Registry_Warn_ID, 14 );
+      Text_SetAttribute( Registry_Warn_ID, 1, True );
+   End;
+End;
+
+
+{ ============================================================
+  SECTION 5 - WEEKLY TREND FILTER
+
+  FilterOK = True when prior completed weekly close is
+  strictly below the 13-week (one quarter) SMA.
+
+  Definition: weekly period = Friday 15:00 open to
+  Friday 13:45 close. IsNewWeek fires when the prior bar
+  is the Friday 12:45 bar (last completed day session bar).
+
+  WkSMA_Len = 13 represents one full calendar quarter.
+  FilterOK = True means the market has been below its
+  quarterly average, confirming a bearish environment.
+  ============================================================ }
+
+If ( Time[1] = 1245 ) And
+   ( DayOfWeek( Date[1] ) = 5 ) Then
+   IsNewWeek = True
+Else
+   IsNewWeek = False;
+
+If IsNewWeek = True Then Begin
+
+   { STEP 1 - Shift array rightward }
+   LoopIdx = WkSMA_Len;
+   While LoopIdx > 1 Begin
+      WkCloses[ LoopIdx ] = WkCloses[ LoopIdx - 1 ];
+      LoopIdx = LoopIdx - 1;
+   End;
+
+   { STEP 2 - Insert just-completed week close at index 1 }
+   WkCloses[1] = Close[1];
+
+   { STEP 3 - Increment stored week count }
+   If WkBarCount < WkSMA_Len Then
+      WkBarCount = WkBarCount + 1;
+
+   { STEP 4 - Recompute rolling SMA sum }
+   WkSMASum = 0;
+   LoopIdx  = 1;
+   While LoopIdx <= WkBarCount Begin
+      WkSMASum = WkSMASum + WkCloses[ LoopIdx ];
+      LoopIdx  = LoopIdx + 1;
+   End;
+
+   { STEP 5 - Update FilterOK with warm-up guard }
+   If WkBarCount >= WkSMA_Len Then Begin
+      If WkCloses[1] < ( WkSMASum / WkSMA_Len ) Then
+         FilterOK = True
+      Else
+         FilterOK = False;
+   End Else
+      FilterOK = False;
+
+End;
+
+
+{ ============================================================
+  SECTION 6 - INDICATOR CALCULATIONS
+  ============================================================ }
+
+ATR_Val   = AvgTrueRange( ATR_Len );
+DC_Lower  = Lowest( Low[1], DC_Len );
+CompPrice = ( 2.0 * Close ) - Close[ ZLEMA_Lag ];
+ZLEMA_Val = XAverage( CompPrice, ZLEMA_Len );
+EMA20_Val = XAverage( Close, ZLEMA_Len );
+
+
+{ ============================================================
+  SECTION 7 - ENTRY CONDITIONS
+  ============================================================ }
+
+If Close < ( DC_Lower - ( ATR_Val * C0_ATR_Filter ) ) Then
+   C0 = True
+Else
+   C0 = False;
+
+If ZLEMA_Val < ZLEMA_Val[1] Then
+   C_A = True
+Else
+   C_A = False;
+
+If ZLEMA_Val < EMA20_Val Then
+   C_B = True
+Else
+   C_B = False;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when not short -> freezes at signal-bar values once position opens.
+  v5.3: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close.
+    Close is used here because EntryPrice does not exist before the
+    fill; the custom stop in Section 8 anchors on EntryPrice instead. }
+If MarketPosition >= 0 Then Begin
+   v_Guard_Distance = AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close );
+   If SL_Pct > 0 Then
+      v_Guard_Distance = MinList( v_Guard_Distance, Close * SL_Pct / 100 );
+   SetStopContract;
+   SetStopLoss( v_Guard_Distance * BigPointValue );
+End;
+
+If FilterOK = True And
+   C0       = True And
+   C_A      = True And
+   C_B      = True And
+   ( v_Holiday_Block = False ) And
+   ( v_Settlement_Day = False ) And
+   ( MarketPosition = 0 ) Then
+   if v_Rule_Allow then begin
+        if v_Skip_Next then v_Skip_Next = false
+        else SellShort( "TS_Entry" ) Next Bar at Market;
+    end;
+
+
+{ ============================================================
+  SECTION 8 - INITIAL STOP LOSS
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( BarsSinceEntry = 0 ) And
+      ( SL_Locked = False ) Then Begin
+      SL_Line = DC_Lower;
+      SL_Trig = SL_Line + ( ATR_Val * SL_ATR_Ratio );
+      { v5.3: SL_Pct percentage stop cap (SHORT: ceiling above entry) }
+      If SL_Pct > 0 Then
+         SL_Trig = MinList( SL_Trig, EntryPrice + ( EntryPrice * SL_Pct / 100 ) );
+      SL_Locked = True;
+   End;
+
+End Else Begin
+   SL_Line   = 0;
+   SL_Trig   = 0;
+   SL_Locked = False;
+End;
+
+
+{ ============================================================
+  SECTION 9 - TSL ACTIVATION
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( ( Open - Close ) > ( ATR_Val * Accel_M ) ) And
+      ( Close < Open ) Then
+      Accel = True
+   Else
+      Accel = False;
+
+   If Close < Lowest( Close[1], NLow_N ) Then
+      NLow = True
+   Else
+      NLow = False;
+
+   If Accel = True And NLow = True Then
+      C1_Bar = True
+   Else
+      C1_Bar = False;
+
+   If ( TSL_Armed = False ) And
+      ( C1_Bar    = True  ) And
+      ( C1_Bar[1] = True  ) And
+      ( BarsSinceEntry >= MinBars ) Then
+      TSL_Armed = True;
+
+End Else Begin
+   Accel     = False;
+   NLow      = False;
+   C1_Bar    = False;
+   TSL_Armed = False;
+End;
+
+
+{ ============================================================
+  SECTION 10 - TSL TRACKING
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If TSL_Armed = True Then Begin
+
+      New_TSL = Lowest( Close[1], TSL_K ) +
+                ( ATR_Val * TSL_M );
+
+      If TSL_Line = 0 Then
+         TSL_Line = New_TSL
+      Else
+         TSL_Line = MinList( TSL_Line, New_TSL );
+
+      Active_TSL = TSL_Line + ( ATR_Val * SL_ATR_Ratio );
+
+      If TSL_Line < SL_Trig Then Begin
+         Active_SL = Active_TSL;
+         v_SL_Src  = 1;
+      End Else Begin
+         Active_SL = SL_Trig;
+         v_SL_Src  = 2;
+      End;
+
+   End Else Begin
+      New_TSL    = 0;
+      TSL_Line   = 0;
+      Active_TSL = 0;
+      Active_SL  = SL_Trig;
+      v_SL_Src   = 2;
+   End;
+
+End Else Begin
+   New_TSL    = 0;
+   TSL_Line   = 0;
+   Active_TSL = 0;
+   Active_SL  = 0;
+   v_SL_Src   = 0;
+End;
+
+
+{ ============================================================
+  SECTION 11 - TRAILING TAKE PROFIT (TTP)
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If BarsSinceEntry = 0 Then
+      LowestClose = Close
+   Else
+      LowestClose = MinList( LowestClose, Close );
+
+   WaveProfit   = EntryPrice - LowestClose;
+   MinProfitPts = ATR_Val * TTP_MinAtr;
+   TTP_Line     = LowestClose * ( 1.0 + TTP_RebPct / 100.0 );
+
+   If WaveProfit >= MinProfitPts Then
+      TTP_Gate = True
+   Else
+      TTP_Gate = False;
+
+   If TTP_Gate = True And
+      Close > TTP_Line Then
+      TTP_Fire = True
+   Else
+      TTP_Fire = False;
+
+End Else Begin
+   LowestClose  = 0;
+   WaveProfit   = 0;
+   MinProfitPts = 0;
+   TTP_Line     = 0;
+   TTP_Gate     = False;
+   TTP_Fire     = False;
+End;
+
+
+{ ============================================================
+  SECTION 12 - STOP PROFIT MODULE
+  ============================================================ }
+
+If MarketPosition = 0 Then Begin
+   posbleProfit_Short = 0;
+   stopProfitPrice    = 0;
+End;
+
+If MarketPosition = -1 Then Begin
+   If ( EntryPrice - Close ) >= stopProfitPoints_Shrt Then Begin
+      If ( EntryPrice - Close ) > posbleProfit_Short Then
+         posbleProfit_Short = EntryPrice - Close;
+      stopProfitPrice = EntryPrice -
+         ( posbleProfit_Short * ( 1.0 - profitReturnPrcnt_Shrt / 100.0 ) );
+   End;
+End;
+
+
+{ ============================================================
+  SECTION 13 - EXIT CONDITIONS
+
+  LABEL REFERENCE:
+    TS_Entry       : short entry signal
+    TS_Kill        : manual kill switch (typhoon / emergency)
+    TS_RegistryEnd : holiday-registry horizon fail-safe exit
+    TS_Holiday     : pre-holiday forced flat (iron rule)
+    TS_Settlement  : monthly settlement forced flat (12:30)
+    TS_WeeklyExit  : weekly filter forced exit (trend reversal)
+    TS_StructureTP : structure reversal take profit
+    TS_TTP         : trailing take profit
+    TS_StopProfit  : stop profit protection module
+    TS_TSL_D       : trailing stop loss day session
+    TS_TSL_N       : trailing stop loss night session
+    TS_InitSL_D    : initial stop loss day session
+    TS_InitSL_N    : initial stop loss night session
+
+  PRIORITY ORDER:
+    0. TS_Kill / TS_RegistryEnd / TS_Holiday / TS_Settlement
+       (Next Bar at Market)
+    1. TS_WeeklyExit   (Next Bar at Market)
+    2. TS_StructureTP  (Next Bar at Market)
+    3. TS_TTP          (Next Bar at Market)
+    4. TS_StopProfit   (Next Bar at Stop)
+    5. TS_InitSL_D / TS_TSL_D  (Next Bar at Stop, day)
+    6. TS_InitSL_N / TS_TSL_N  (Next Bar at Market, night)
+  ============================================================ }
+
+ExitFired = 0;
+
+If MarketPosition = -1 Then Begin
+
+   { Priority 0 - Manual kill / registry fail-safe / holiday iron rule }
+   If ( ExitFired = 0 ) And ( Manual_Kill_Switch = True ) Then Begin
+      BuyToCover( "TS_Kill" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Registry_Expired = True ) Then Begin
+      BuyToCover( "TS_RegistryEnd" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Holiday_Block = True ) And
+      ( Time >= Holiday_Flat_Time ) Then Begin
+      BuyToCover( "TS_Holiday" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Settlement_Day = True ) And
+      ( Time >= Settlement_Flat_Time ) Then Begin
+      BuyToCover( "TS_Settlement" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 1 - Weekly filter forced exit }
+   If ( ExitFired = 0 ) And
+      ( DayOfWeek( Date ) = 5 ) And
+      ( Time = 1245 ) And
+      ( WkBarCount >= WkSMA_Len ) And
+      ( Close > ( WkSMASum / WkSMA_Len ) ) Then Begin
+      BuyToCover( "TS_WeeklyExit" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 2 - Structure reversal take profit }
+   If ( ExitFired = 0 ) And
+      ( Close > Highest( Close[1], TP_N ) ) Then Begin
+      BuyToCover( "TS_StructureTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 3 - Trailing take profit }
+   If ( ExitFired = 0 ) And
+      ( TTP_Fire = True ) Then Begin
+      BuyToCover( "TS_TTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 4 - Stop profit }
+   If ( ExitFired = 0 ) And
+      ( stopProfitPrice > 0 ) Then Begin
+      BuyToCover( "TS_StopProfit" ) Next Bar at stopProfitPrice Stop;
+      ExitFired = 1;
+   End;
+
+   { Priority 5 - Day session stop order }
+   If ( ExitFired = 0 ) And
+      ( IsDay = True ) And
+      ( Active_SL > 0 ) Then Begin
+      If v_SL_Src = 1 Then
+         BuyToCover( "TS_TSL_D" ) Next Bar at Active_SL Stop
+      Else
+         BuyToCover( "TS_InitSL_D" ) Next Bar at Active_SL Stop;
+      ExitFired = 1;
+   End;
+
+   { Priority 6 - Night session close confirmed exit }
+   If ( ExitFired = 0 ) And
+      ( IsNight = True ) And
+      ( Active_SL > 0 ) And
+      ( Close > Active_SL ) Then Begin
+      If v_SL_Src = 1 Then
+         BuyToCover( "TS_TSL_N" ) Next Bar at Market
+      Else
+         BuyToCover( "TS_InitSL_N" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+End;

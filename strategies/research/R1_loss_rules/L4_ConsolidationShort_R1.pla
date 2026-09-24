@@ -1,0 +1,785 @@
+{================================================================================
+ Script Name : _Live_Adaptive_Farmer_v14.6_SpringOnly
+ MC Load Name: STRATEGY_WILLY_SHORT_CTEST2
+ Description : Consolidation Short - S_Spring (PRODUCTION = Variant B: Path A on, Path B off)
+ Version     : v14.6 + SetStopContract + SL_Pct (PRODUCTION; v14.5 fully removed after A/B failure)
+               v14.3/v14.3.1 RangeForceExit was rolled back 2026-06-17;
+               see docs/range_force_exit_rollback_20260617.md for rationale.
+ Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+ Platform    : MultiCharts 9.0 PowerLanguage x64
+ Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+
+ CHANGELOG:
+   v14.0  Initial S_Spring (False Breakout) live release with CS_Labels.
+
+   v14.1  (2026-06-13) Holiday Flat Rule v3 + Frozen Initial SL.
+          Net +12,000 / PF 1.602 -> 1.622 / MDD improved 6,600.
+          CS_BreakExit 28/0pct/-545,200 left UNTOUCHED, flagged for v14.2.
+
+   v14.2B (2026-06-13) PRODUCTION: Variant B sealed (Path A on, Path B off).
+          A/B trial complete (variants A-G all backtested in MC9).
+          See docs/L4_v14.2_variant_results.md for full data.
+
+          WINNER: Variant B (Night_Block_On=true, BE=0, SP=0)
+            Net  : 581,200 -> 687,200  (+106,000, +18.2 pct)
+            PF   : 1.62 -> 1.83
+            MDD  : -328,000 -> -239,800  (improved 88,200, -27 pct)
+            Top-10 winner retention: 100 pct (no winners killed)
+            Path A removes 9 night entries (net -120,800 in A)
+            with ZERO BR cases; one bar leaks through at 02:00
+            (signal fires at 01:45 = Time 145, outside 200-500
+            block window) - net positive trade, acceptable.
+
+          REJECTED variants:
+            C (BE +60/+5): net -345K. CS_BE 25 trades 0 pct WR.
+              Killed Top-10 winners: 4 of 10 became CS_BE.
+              Worst kills: 2025-04-08 (+164K -> -1K),
+              2020-03-13 (+140K -> -1K), 2022-07-01 (+68K -> -1K),
+              2022-04-26 (+59K -> -1K). Total -435,800 stolen
+              from top winners alone. L3 variant D pattern
+              repeated: BE catches first retrace from MFE peak,
+              missing multi-stage continuation.
+            D (SP +80/50pct): net -212K. CS_SP 22 trades 100 pct
+              WR (+235,200) - looked perfect in isolation. But
+              CS_SL dropped from 45/+1,019,200 to 36/+618,600
+              (-401K). SP truncates the multi-stage winners that
+              eventually reach trail exit. Net winner.
+            E (A+C), F (A+D), G (A+SP 100/50pct): A's gain
+              cancelled by C/D/G's loss. All net negative vs A.
+
+          KEY LESSON - L3 trap reborn in different clothing:
+            L3 v13.2D failed because BE +50pts was below the
+            normal range oscillation envelope.
+            L4 v14.2 C/D fail because BE/SP at ANY threshold
+            cuts the first retrace, and L4 big winners have
+            multi-stage profit patterns (e.g. +60 -> +30 -> +200
+            -> trail catches at +180). Both BE and SP catch the
+            first retracement, losing the eventual big win.
+            SP looks good because it has 100 pct WR on its own
+            fires, but the systemic cost is killing CS_SL big
+            winners that would have run further.
+
+          PATH B CODE PRESERVED but inputs default to 0 (off).
+          Future research could try SP with much higher trigger
+          (+200pt) or post-trail-activation only - but for now
+          BE/SP DISABLED is the empirical winner.
+
+   v14.2  (2026-06-13) PATH A + PATH B A/B ENGINE (input-switched):
+
+          THE PROBLEM ADDRESSED:
+            v14.1 baseline has CS_BreakExit = 28 trades, 0 pct WR,
+            -545,200 = ~94 pct of total net profit. The "false
+            breakout" thesis failed in 28 cases; in 10 of those
+            (avg MFE +97.5 pts, final -106.5 pts) the trade was
+            briefly profitable before crashing - representing
+            408,000 of recoverable wasted MFE.
+
+          PATH A - Entry Quality Filter (diagnostic verified):
+            Diagnostic finding: 02:00-04:59 entries = 9 trades,
+            NET -120,800 (3 wins, 6 losses, ZERO CS_BreakExit).
+            These are low-liquidity dead-of-night entries that
+            simply lose money - none of them are BR cases.
+            Filter cost: zero winner sacrificed.
+            Filter benefit: +120,800 net (+20.8 pct vs v14.1).
+
+          PATH B - Holding Period Protection (A/B trial):
+            Diagnostic finding: of trades reaching MFE >= +60 pts,
+            CS_SL avg final +198 pts (real winners, lots of room),
+            CS_TimeExit avg +59 pts (modest winners),
+            CS_BreakExit avg -108 pts (the failures).
+            Only 8/50 (16 pct) of MFE>=60 trades end as BR.
+            So a BE / SP floor at +60 pts threshold has a low
+            risk of amputating real winners (their final is
+            way above the floor).
+
+          PATH B - Why this is NOT L3 variant D:
+            L3 variant D failed at BE +50 pts because boxes
+            oscillate +50 pts as normal noise. 100 CL_BE trades
+            ended at 0 pct WR (96 amputated target hits).
+            L4 v14.2 is structurally different:
+              (1) +60 pts on TXF1 = ~3x ATR, well above noise.
+              (2) MFE >= 60 trades resolve up (CS_SL +198)
+                  or down (CS_BreakExit -108), not back to
+                  range middle.
+              (3) Reversal strategy has no "in-box target"
+                  to amputate - the only outcomes are trend
+                  continuation or break failure.
+
+          INPUT SWITCHES (all default OFF = v14.1 behavior):
+            Night_Block_On(false): blocks 02:00-04:59 entries
+            BE_Trigger_Pts(0):    0 = off. Try 60/80/100.
+            BE_Offset_Pts(5):     BE floor offset from entry
+            SP_Trigger_Pts(0):    0 = off. Try 60/80/100.
+            SP_Retain_Pct(50):    SP retention pct (0-100)
+
+          NAMED VARIANTS FOR MC9 A/B TESTING:
+            A baseline   : all off (= v14.1, regression check)
+            B PathA only : Night=true, BE=0, SP=0
+            C PathB BE   : Night=false, BE=60, SP=0
+            D PathB SP   : Night=false, BE=0, SP=80/50
+            E A+C        : Night=true, BE=60, SP=0
+            F A+D        : Night=true, BE=0, SP=80/50  (expected best)
+            G A+SP-conv  : Night=true, BE=0, SP=100/50 (safest)
+
+          NEW EXIT LABELS:
+            CS_BE  - stop hit at BE floor (Entry + Offset profit lock)
+            CS_SP  - stop hit at SP floor (Entry + Peak*(1-Retain))
+            CS_SL  - stop hit at original v_Stop_Level (when no
+                     BE/SP floor was tighter)
+            Floors apply by replacing the labeled Stop order, NOT
+            by adding parallel orders. One Stop per bar, mutually
+            exclusive priority: SP > BE > SL (tightest first).
+
+          ACCEPTANCE CRITERIA (per variant):
+            PASS: net+100K AND MDD <=v14.1 AND CS_BE/SP WR >=50 pct
+                  AND Top-10 winner retention >=80 pct
+            FAIL: CS_BE or CS_SP WR <30 pct (L3 trap), OR Top-10
+                  retention <70 pct, OR MDD worse by >10 pct
+
+          REFERENCES:
+            docs/L4_v14.2_pathA_entry_diagnostic.md - 28 BR analysis
+            docs/L4_v14.2_pathB_variant_matrix.md   - variant design
+
+          DEPLOY ONLY WHEN FLAT (changes historical stop fills).
+          Production defaults = all off = v14.1 (regression-safe).
+
+ PERFORMANCE (v14.6, re-measured 2026-08-24):
+   Net Profit    : 877,200 TWD
+   Profit Factor : 1.4902  (Adjusted PF 1.0726)
+   Win Rate      : 41.7722%
+   MDD           : -789,200  (-23.5470%)
+   Total Trades  : 79
+   Source        : docs/research/L4_v18.0_anchor_result_and_analysis_20260824.md
+   Confirmed three times over - live v14.6, the v17 anchor and the
+   v18 anchor all produced the same 24 figures to four decimals.
+
+ SUPERSEDED PERFORMANCE - kept for the audit trail, DO NOT cite.
+ The block below was headed "sealed 2026-07-26". It cannot be
+ reconciled with the figures above: both claim 79 trades, so if no
+ trade occurred between 2026-07-26 and 2026-08-20 the net profit
+ must match, and 894,400 does not equal 877,200. The provenance of
+ the older measurement could not be recovered.
+   Net Profit    : 894,400 TWD
+   Profit Factor : 1.54
+   Win Rate      : 43.04%
+   MDD           : -525,600
+   Total Trades  : 79
+   SL_Pct        : 1.50 (converge point; MC sweep 0-5.0 step 0.25)
+   SetStopContract: YES (per-contract engine stop)
+
+   vs v14.2B (pre-SetStopContract): Net +207K (+30%), MDD worsened
+   (engine stop now correct width -> losing trades run further, but
+    more trades recover -> net gain). PF drop 1.83->1.54 = higher
+    gross loss offset by higher gross profit.
+
+   v14.2 A-G variant matrix complete; B sealed as production.
+
+   v14.4+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue((Box_Top + ATR*2.0) - Close) *
+            BigPointValue. Same anchor as Frozen SL.
+          - Called only when not short (MP>=0) inside consolidation
+            block -> freezes when short position opens.
+          - Dormant backup once custom stops tighten.
+
+   v14.5  (2026-06-18) [TRIED + FULLY REMOVED]
+          Two filters were added to address CS_BreakExit -378K leak:
+            A. Strong Long Block (Daily MA gap% > 1.0 = no short entry)
+            B. Fast BreakExit (15M Close > Locked_Top + 0.5 ATR)
+
+          A/B test (4 configs MC12 same day) result:
+            Config 1 v14.4 replica  : 81 trades / +238,600 / PF 1.414
+            Config 2 A only         : 81 trades / +238,600 / PF 1.414
+            Config 3 B only         : 85 trades / +220,600 / PF 1.372
+            Config 4 v14.5 full     : 85 trades / +220,600 / PF 1.372
+
+          Root cause of failure:
+            A is a STRICT SUBSET of existing v_Macro_Block condition
+              (Macro_Block already blocks when Fast > Slow; A's "gap>1%"
+              is a subset). 100% redundant -> zero effect.
+            B's 0.5 ATR buffer (~30-50pt) is too tight for consolidation
+              noise. 27 false-trigger FastBreakExit cost -437K, only
+              5 real BreakExit -98K. Combined -535K vs v14.4's -378K.
+              Also shortened cooldown allowed 4 extra bad entries.
+
+          User decision 2026-06-18: B selected = accept L4 v14.4 as
+          final, stop optimizing, fully remove v14.5 code.
+
+          See: docs/L4_v14.5_ab_results_20260618.md for full analysis.
+          See: memory feedback_filter_redundancy_check.md for rule.
+
+   v14.4+ (2026-06-18) P3b Immediate Stop Guard:
+          - SetStopLoss = MC engine-level stop, active on entry
+            bar (no IOG dependency). Closes the unprotected window.
+          - Distance = AbsValue((Box_Top + ATR*2.0) - Close) *
+            BigPointValue. Same anchor as Frozen SL.
+          - Called only when not short (MP>=0) inside consolidation
+            block -> freezes when short position opens.
+          - Dormant backup once custom stops tighten.
+
+   v14.6  (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+
+          BUG FIX - SetStopContract MISSING (same issue as L5 v19.9):
+            SetStopLoss without SetStopContract = stop dollar amount
+            is for the TOTAL POSITION, not per contract.
+            L4 trades 2 contracts -> engine stop was 2x tighter than
+            designed. 12 "Stop Loss" exits had avg distance 0.26%
+            (designed ~1.5%), totaling -266,800.
+            SetStopContract makes SetStopLoss PER-CONTRACT (lot-invariant).
+
+          NEW - SL_Pct Percentage Stop Cap (SHORT mirror of L1/L3/L5):
+            ATR can spike in volatile regimes, causing the ATR-based
+            stop (Box_Top + ATR*2) to exceed any reasonable risk budget.
+            SL_Pct caps max stop distance as pct of entry price.
+            For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+            Applied to BOTH engine stop (P3b) and custom stop (Phase 3).
+            MC sweep 0-5.0 step 0.25: converge at 1.50% (SL_Pct < 1.50 degrades).
+            SL_Pct = 1.50 = tightest non-degrading value (+2K net vs baseline).
+            L4 SHORT wider than LONG strategies (L1=0.5%, L3=0.55%, L5=1.0%).
+
+          v15-v16 research line CLOSED (2026-07-26):
+            v15.0/v15.1/v15.1_opt/v16.0 all FAILED. L4 alpha = bear/neutral
+            trap signal only. Bull market zero trades = correct behavior.
+            See strategies/research/L4_v15.1/ and L4_v16.0/ for full postmortem.
+
+   STATUS: v14.6 + SetStopContract + SL_Pct is the PRODUCTION version.
+   Do NOT re-add Strong_Long_Filter or Fast_BreakExit without
+   the redundancy+pass-rate analysis required by Constitution
+   (memory: feedback_filter_redundancy_check.md).
+================================================================================}
+
+[IntrabarOrderGeneration = false]
+
+inputs:
+    { --- 0. Master Environment Filter (Data3 - Daily) --- }
+    Daily_FastMA_Len(20),
+    Daily_SlowMA_Len(60),
+
+    { --- 1. Commander Logic Parameters (Data2 - 60M) --- }
+    Lookback_Bars(15),
+    Range_Shrink_Rate(0.7),
+    Weekly_MA_Len(48),
+
+    { --- 2. Risk & Volatility Parameters (Data1 - 15M) --- }
+    ATR_Length(60),
+    ATR_Stop_Mult(2),
+
+    { --- 3. Tactical Entry Parameters (S_Spring only) --- }
+    i_Buffer_ATR_Mult(0.4),
+    Time_Limit_Bars(6),
+
+    { --- 4. Advanced Management --- }
+    Cooldown_Bars(8),
+    Time_Stop_Bars(60),
+    Trail_ATR_Mult(1.0),
+
+    { --- 5. v14.1 Frozen Initial SL --- }
+    Freeze_SL_On(true),            { PRODUCTION: lock ATR + LockedTop at entry; false = v14.0 dynamic }
+
+    { --- 6. Holiday Flat Rule v3 (Iron Rule 2026-06-13) --- }
+    Holiday_Flat_Time(415),        { 15M grid: 04:15 trigger, retries 04:30/04:45 }
+    Registry_Valid_Until(1270101), { verified holiday-registry horizon; bump each Q4 }
+    Manual_Kill_Switch(false),
+
+    { --- 6b. Monthly Settlement Flat (2026-06-17 added) --- }
+    Settlement_Flat_Time(1230),    { 12:30 trigger before 13:30 settlement on 3rd Wed }
+
+    { --- 7. v14.2 Path A - Night entry block --- }
+    Night_Block_On(true),          { PRODUCTION (v14.2B Variant B): block 02:00-04:59 entries.
+                                     Validated: 9 night entries net -120,800 in baseline, 0 CS_BR.
+                                     Removing them: +106K net / MDD improved 27 pct / Top-10 100 pct kept. }
+
+    { --- 8. v14.2 Path B - Breakeven (REJECTED in A/B trial, kept code for research) --- }
+    BE_Trigger_Pts(0),             { PRODUCTION 0 = off. A/B trial (variant C/E) verdict:
+                                     L3 trap repeated. CS_BE 25 trades 0pct WR, killed 4 of
+                                     Top-10 winners for -435,800. DO NOT enable without
+                                     redesign (e.g. post-trail-only, or +200pt threshold). }
+    BE_Offset_Pts(5),              { Lock floor = Entry - Offset (inert while BE_Trigger = 0) }
+
+    { --- 9. v14.2 Path B - StopProfit (REJECTED in A/B trial, kept code for research) --- }
+    SP_Trigger_Pts(0),             { PRODUCTION 0 = off. A/B trial (variant D/F/G) verdict:
+                                     CS_SP 100pct WR but net loser. Truncates CS_SL big
+                                     winners (45/+1,019K to 36/+619K). DO NOT enable without
+                                     redesign. }
+    SP_Retain_Pct(50),             { 0-100. Floor = Entry - Peak*(1-Retain/100) (inert while SP_Trigger = 0) }
+
+    { --- 10. v14.6 SetStopContract + SL_Pct --- }
+    SL_Pct(1.50),
+
+    { --- R1 loss rules (2026-09-23) --- }
+    Rule_On(true), Rule_Lots(2), Daily_Cap_Pts(0), Weekly_Cap_Pts(0), Streak_N(3), Halt_DD_Pts(923);                  { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. Converge=1.50 (MC sweep 0-5.0) }
+
+variables:
+    { Phase 0: Macro filter }
+    v_Daily_FastMA(0),
+    v_Daily_SlowMA(0),
+    v_Macro_Block(false),
+
+    { Phase 1: Box definition }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+    v_Weekly_MA(0),
+    v_Trend_Dir(0),
+
+    { Phase 2: Execution variables }
+    v_Current_ATR(0),
+    v_Trigger_Price(0),
+    v_Stop_Level(0),
+    v_In_Trap_Zone(false),
+    v_Trap_Counter(0),
+    v_Night_Block(false),
+
+    { Phase 3: Advanced Management Variables }
+    v_Locked_Top(0),
+    v_Locked_Btm(0),
+    v_BarsSinceExit(999),
+    v_Lowest_Low(999999),
+    v_Trail_Active(false),
+
+    { v14.1 Frozen Initial SL }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_LockedTop(0),
+
+    { Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0),
+
+    { Settlement Day }
+    v_Settlement_Day(false),
+
+    { v14.6 SL_Pct }
+    v_Guard_Distance(0),           { P3b engine stop distance (for SL_Pct cap) }
+    v_SL_Pct_Ceil(0),             { percentage stop ceiling price }
+
+    { v14.2 Path B - close-based MFE peak (in points) }
+    v_Peak_Profit_Pts(0),
+    v_BE_Armed(false),
+    v_SP_Armed(false),
+    v_BE_Floor(0),
+    v_SP_Floor(0),
+    v_Effective_Stop(0),
+
+    { Exit chain }
+    ExitFired(0),
+    { R1 loss rules } v_Rule_Allow(true), v_Skip_Next(false), v_R_LastDate(0), v_R_DayNP(0), v_R_WeekNP(0), v_R_LastTT(0), v_R_LastNP(0), v_R_Streak(0), v_R_Peak(0), v_R_Unit(1), v_R_Halt(false), v_R_Shadow(0);
+
+arrays:
+    Holiday_Tail[80](0);
+{ ==========================================================
+  LOSS RULES R1 (2026-09-23): daily/weekly loss cap, streak pause,
+  drawdown halt. Amounts are POINTS per Rule_Lots contracts, so the
+  same inputs work on TXF (200/pt) and TMF (10/pt).
+  Rule_On = false must reproduce the pre-R1 strategy exactly.
+  ========================================================== }
+if Date <> v_R_LastDate then begin
+    if v_R_LastDate = 0 then
+        v_R_WeekNP = NetProfit
+    else if DayOfWeek(Date) < DayOfWeek(v_R_LastDate) or DateToJulian(Date) - DateToJulian(v_R_LastDate) >= 7 then
+        v_R_WeekNP = NetProfit;
+    v_R_DayNP = NetProfit;
+    v_R_LastDate = Date;
+end;
+v_R_Unit = BigPointValue * Rule_Lots;
+if TotalTrades > v_R_LastTT then begin
+    if NetProfit - v_R_LastNP < 0 then
+        v_R_Streak = v_R_Streak + 1
+    else
+        v_R_Streak = 0;
+    if Streak_N > 0 and v_R_Streak >= Streak_N then begin
+        v_Skip_Next = true;
+        v_R_Streak = 0;
+    end;
+    v_R_LastNP = NetProfit;
+    v_R_LastTT = TotalTrades;
+end;
+if NetProfit > v_R_Peak then v_R_Peak = NetProfit;
+if Halt_DD_Pts > 0 and v_R_Unit > 0 then begin
+    if (v_R_Peak - NetProfit) / v_R_Unit > Halt_DD_Pts then v_R_Halt = true;
+end;
+if v_R_Shadow > 0 then begin
+    if High >= v_R_Shadow then v_Skip_Next = false;
+    v_R_Shadow = 0;
+end;
+v_Rule_Allow = true;
+if Rule_On = false then
+    v_Skip_Next = false
+else begin
+    if Daily_Cap_Pts > 0 and (NetProfit - v_R_DayNP) / v_R_Unit <= -Daily_Cap_Pts then v_Rule_Allow = false;
+    if Weekly_Cap_Pts > 0 and (NetProfit - v_R_WeekNP) / v_R_Unit <= -Weekly_Cap_Pts then v_Rule_Allow = false;
+    if v_R_Halt then v_Rule_Allow = false;
+end;
+
+
+{ ==========================================
+  Phase -1: Holiday Tail Registry (TAIFEX-verified, shared
+  with L1/L2/L3). Holiday_Tail = last trading day + 1 calendar
+  day = the date stamped on the 00:00-05:00 tail bars of the
+  final night session before each closure. * = reconstructed.
+  ========================================== }
+
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    { 2026 (verified: TAIFEX official 115-yr calendar) }
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+end;
+
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+{ Monthly Settlement Day detection (3rd Wed of month) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ==========================================
+  v14.2 Path A: Night entry block (02:00-04:59)
+  TXF1 dead-of-night session has thin liquidity. Diagnostic
+  found 9 entries at this window, all losers (net -120,800),
+  ZERO of them being CS_BreakExit cases. Pure noise.
+  ========================================== }
+
+v_Night_Block = false;
+if Night_Block_On = true and Time >= 200 and Time < 500 then
+    v_Night_Block = true;
+
+{ ==========================================
+  Phase 0: Master Environment Filter (Data3 - Daily)
+  Condition A: Close > SlowMA AND SlowMA sloping up (strong bull)
+  Condition B: FastMA > SlowMA (golden cross, bull alignment)
+  Either condition true = block all short entries
+  ========================================== }
+
+v_Daily_FastMA = Average(Close, Daily_FastMA_Len) of Data3;
+v_Daily_SlowMA = Average(Close, Daily_SlowMA_Len) of Data3;
+
+if ((Close of Data3 > v_Daily_SlowMA) and
+    (v_Daily_SlowMA >= v_Daily_SlowMA[1]))
+   or (v_Daily_FastMA > v_Daily_SlowMA) then begin
+    v_Macro_Block = true;
+end else begin
+    v_Macro_Block = false;
+end;
+
+{ ==========================================
+  Phase 1: Macro Commander Logic (Data2 - 60M)
+  ========================================== }
+
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+
+v_Weekly_MA = Average(Close, Weekly_MA_Len) of Data2;
+
+if Close of Data2 < v_Weekly_MA then
+    v_Trend_Dir = -1
+else
+    v_Trend_Dir = 1;
+
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and
+       (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+if v_is_in_consolidation then begin
+    if (Close of Data2 > v_Box_Top) or
+       (Close of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ==========================================
+  Phase 2: Tactical Execution Engine (Data1 - 15M)
+  ========================================== }
+
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+{ v14.6: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+  Without this, SetStopLoss dollar amount is for the TOTAL position,
+  causing engine stop to be Nx tighter than designed for N-contract entries. }
+SetStopContract;
+
+{ Cooldown Counter Management }
+if MarketPosition <> 0 then
+    v_BarsSinceExit = 0
+else if MarketPosition = 0 and MarketPosition[1] <> 0 then
+    v_BarsSinceExit = 1
+else if MarketPosition = 0 then
+    v_BarsSinceExit = v_BarsSinceExit + 1;
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    { Sub-Phase A: False Breakout (Trap) Detection }
+    if High > v_Box_Top then begin
+        v_In_Trap_Zone = true;
+        v_Trap_Counter = 0;
+    end;
+
+    { Time decay: trap zone expires after Time_Limit_Bars }
+    if v_In_Trap_Zone then begin
+        v_Trap_Counter = v_Trap_Counter + 1;
+        if v_Trap_Counter > Time_Limit_Bars then
+            v_In_Trap_Zone = false;
+    end;
+
+    { P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+      SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+      Only called when not short -> freezes at signal-bar box snapshot.
+      v14.6: SL_Pct caps engine stop distance as pct of Close. }
+    if MarketPosition >= 0 then begin
+        v_Guard_Distance = AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close);
+        if SL_Pct > 0 then
+            v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+        SetStopLoss(v_Guard_Distance * BigPointValue);
+    end;
+
+    { Sub-Phase B: CS_Entry Execution (gated by Holiday Tail + Night Block) }
+    v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
+
+    if MarketPosition    =  0             and
+       v_BarsSinceExit  >= Cooldown_Bars  and
+       v_Trend_Dir       = -1             and
+       v_Macro_Block     = false          and
+       v_In_Trap_Zone    = true           and
+       Close             < v_Trigger_Price and
+       v_Holiday_Block   = false          and
+       v_Night_Block     = false          and
+       v_Settlement_Day  = false          then begin
+
+        if v_Rule_Allow then begin
+        if v_Skip_Next then v_Skip_Next = false
+        else SellShort ("CS_Entry") next bar at Market;
+    end;
+        v_In_Trap_Zone = false;
+
+    end;
+
+end;
+
+{ ==========================================
+  Phase 3: Exit Logic and State Lock Defense
+  ========================================== }
+
+{ Snapshot box and reset tracking when flat }
+if MarketPosition = 0 then begin
+    if v_is_in_consolidation then begin
+        v_Locked_Top = v_Box_Top;
+        v_Locked_Btm = v_Box_Btm;
+    end;
+    v_Lowest_Low       = 999999;
+    v_Trail_Active     = false;
+    v_SL_Locked        = false;
+    v_Frozen_ATR       = 0;
+    v_Frozen_LockedTop = 0;
+    v_Peak_Profit_Pts  = 0;
+    v_BE_Armed         = false;
+    v_SP_Armed         = false;
+    v_BE_Floor         = 0;
+    v_SP_Floor         = 0;
+    v_SL_Pct_Ceil      = 0;
+end;
+
+if MarketPosition = -1 then begin
+
+    { 1. Record Maximum Favorable Excursion }
+    if Low < v_Lowest_Low then
+        v_Lowest_Low = Low;
+
+    { 2. Trailing Stop Activation }
+    if v_Lowest_Low <= v_Locked_Btm then
+        v_Trail_Active = true;
+
+    { 3. v14.1 Freeze: lock ATR + LockedTop ONCE on entry bar }
+    if Freeze_SL_On and v_SL_Locked = false then begin
+        v_Frozen_ATR       = v_Current_ATR;
+        v_Frozen_LockedTop = v_Locked_Top;
+        v_SL_Locked        = true;
+    end;
+
+    { 4. Stop Level Calculation (v14.1 logic + v14.6 SL_Pct cap) }
+    if v_Trail_Active then begin
+        { Trail layer: by design uses CURRENT ATR to track volatility }
+        v_Stop_Level = MinList(v_Stop_Level[1],
+            v_Lowest_Low + (Trail_ATR_Mult * v_Current_ATR));
+    end else begin
+        if Freeze_SL_On then begin
+            { Frozen path: ATR + Top locked at entry; no drift on reload }
+            v_Stop_Level = v_Frozen_LockedTop + (ATR_Stop_Mult * v_Frozen_ATR);
+        end else begin
+            { v14.0 dynamic path: ATR floats, Top ratchets down }
+            v_Stop_Level = v_Locked_Top + (ATR_Stop_Mult * v_Current_ATR);
+            if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
+                v_Locked_Top = v_Box_Top;
+        end;
+    end;
+
+    { v14.6: SL_Pct percentage stop cap (SHORT: ceiling above entry).
+      Caps v_Stop_Level so max loss per trade never exceeds Entry x SL_Pct%.
+      Applied after all stop paths (frozen/dynamic/trail) as universal safety net. }
+    if SL_Pct > 0 then begin
+        v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+        v_Stop_Level = MinList(v_Stop_Level, v_SL_Pct_Ceil);
+    end;
+
+    { 5. v14.2 Path B: BE / SP arming + floor computation
+         For SHORT positions:
+           Profit = EntryPrice - Close (positive when price drops)
+           BE floor = EntryPrice - BE_Offset_Pts (lock X pts profit)
+           SP floor = EntryPrice - Peak * (1 - Retain/100)
+         Both floors are LOWER than initial v_Stop_Level (which
+         starts above entry). When applied via MinList, they
+         tighten the buy-back price downward.
+
+         Close-based arming (matches L1 StopProfit pattern).
+         Once armed, never disarms until flat. }
+
+    if EntryPrice - Close > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Close;
+
+    if BE_Trigger_Pts > 0 and v_Peak_Profit_Pts >= BE_Trigger_Pts then
+        v_BE_Armed = true;
+    if SP_Trigger_Pts > 0 and v_Peak_Profit_Pts >= SP_Trigger_Pts then
+        v_SP_Armed = true;
+
+    if v_BE_Armed then
+        v_BE_Floor = EntryPrice - BE_Offset_Pts;
+    if v_SP_Armed then
+        v_SP_Floor = EntryPrice -
+            (v_Peak_Profit_Pts * (1 - SP_Retain_Pct / 100));
+
+    { 6. Exit Chain with Priority Gates }
+    ExitFired = 0;
+
+    { Priority 0 - Manual Kill }
+    if (ExitFired = 0) and Manual_Kill_Switch then begin
+        BuyToCover ("CS_Kill") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Registry Fail-Safe }
+    if (ExitFired = 0) and v_Registry_Expired then begin
+        BuyToCover ("CS_RegistryEnd") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Holiday Iron Rule }
+    if (ExitFired = 0) and v_Holiday_Block and
+       (Time >= Holiday_Flat_Time) then begin
+        BuyToCover ("CS_Holiday") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Monthly Settlement Flat }
+    if (ExitFired = 0) and v_Settlement_Day and
+       (Time >= Settlement_Flat_Time) then begin
+        BuyToCover ("CS_Settlement") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 1 - Disaster Control: box failed + upward break }
+    if (ExitFired = 0) and
+       (v_is_in_consolidation = false) and
+       (Close of Data2 > v_Locked_Top) then begin
+        BuyToCover ("CS_BreakExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 2 - Time stop (only if trail not yet active) }
+    if (ExitFired = 0) and
+       (v_Trail_Active = false) and
+       (BarsSinceEntry >= Time_Stop_Bars) then begin
+        BuyToCover ("CS_TimeExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 3 - Labeled Stop order (CS_SP > CS_BE > CS_SL).
+      Mutually exclusive: tightest binding floor wins the label.
+      SP_Floor / BE_Floor only "bind" when they are lower than
+      the original v_Stop_Level (lower = tighter for shorts). }
+
+    v_Effective_Stop = v_Stop_Level;
+
+    if v_SP_Armed = true and
+       v_SP_Floor > 0 and v_SP_Floor < v_Effective_Stop then begin
+        v_Effective_Stop = v_SP_Floor;
+        BuyToCover ("CS_SP") next bar at v_Effective_Stop Stop;
+    end else if v_BE_Armed = true and
+                v_BE_Floor > 0 and v_BE_Floor < v_Effective_Stop then begin
+        v_Effective_Stop = v_BE_Floor;
+        BuyToCover ("CS_BE") next bar at v_Effective_Stop Stop;
+    end else begin
+        BuyToCover ("CS_SL") next bar at v_Effective_Stop Stop;
+    end;
+
+end;
