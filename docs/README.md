@@ -5,10 +5,19 @@
 
 ---
 
-## 一、五大資料夾
+## 一、資料夾
+
+> 2026-09-29 更新：原本只列五大資料夾，補上 9/23 之後實際在用的 decisions、ops、registers、departments、specs、reports。
+> 版本以 [`LIVE_VERSIONS.md`](LIVE_VERSIONS.md) 為準；目錄樹見 [`REPO_STRUCTURE.md`](REPO_STRUCTURE.md)。
 
 | 資料夾 | 用途 | 變更頻率 | 引用對象 |
 |--------|------|---------|---------|
+| **`departments/`** | 部門檔 `DEPT_*.md`：重點＋團隊清單（CLAUDE.md 的第二層） | 中 | CLAUDE.md |
+| **`decisions/`** | 逐條決定紀錄：時間、決定人、內容、依據的報表；只增不改 | 高（每個版本／參數／上線決定） | PROGRESS.md、部門檔、LIVE_VERSIONS |
+| **`ops/`** | 上線操作：空跑步驟、閘門表、上線前驗證報告 | 高（上線前後） | DEPT_OPS、PROGRESS.md |
+| **`registers/`** | 問題登記簿：`issues_open.md`（待處理）、`issues_decided.md`（已裁決） | 中 | 部門檔 |
+| **`specs/`** | 設計規格（`spec_*.md`、各策略規格） | 中 | PROGRESS.md 各 Phase |
+| **`reports/`** | 報告，放 `<季度>_<主題>/` | 偶 | 報告部 |
 | **`policies/`** | 強制規範、憲法、排程鎖定 | 罕（重大決策後） | CLAUDE.md / 所有新策略 |
 | **`methodology/`** | 流程 SOP、工作方法論 | 偶（流程改進後） | 每次策略開發 |
 | **`research/`** | 主題研究、theses、機會分析 | 中（新發現後） | 策略設計階段 |
@@ -58,6 +67,12 @@
 | [`index_level_thesis.md`](research/index_level_thesis.md) | 指數位階論基礎 thesis |
 | [`structural_issues_review_20260618.md`](research/structural_issues_review_20260618.md) | 跨策略 5 個結構性議題審查（A-E） |
 | [`optimization_opportunities_2026Q2.md`](research/optimization_opportunities_2026Q2.md) | 2026 Q2 全策略優化機會清單 |
+| [`L3_MDD_scenarios_20260927.md`](research/L3_MDD_scenarios_20260927.md) | L3 MDD 與市場情境（9/27）；上架與回退版本已被取代，見檔頭 |
+| [`L3_v18_next_optimizations_20260928.md`](research/L3_v18_next_optimizations_20260928.md) | L3 v18 弱點與後續優化方案（A1 已完成、A8 已被取代、`Loser_Flat` 已否決） |
+| [`L3_v18_1_yearly_20260928.html`](research/L3_v18_1_yearly_20260928.html) | L3 v18.1 逐年績效 |
+| [`L3_day_session_plan_20260929.md`](research/L3_day_session_plan_20260929.md) | L3 日盤模組時程與 SOP（初稿，待 Willy 確認） |
+| [`L5_attribution_20260928.md`](research/L5_attribution_20260928.md) | L5 整份策略歸因（初版） |
+| [`L1_L5_attribution_20260929.md`](research/L1_L5_attribution_20260929.md) | L1、L5 停損／停利機制歸因（暫定） |
 
 ---
 

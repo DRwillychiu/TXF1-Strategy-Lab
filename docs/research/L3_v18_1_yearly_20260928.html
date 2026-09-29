@@ -1,0 +1,346 @@
+<title>L3 v18.1 逐年績效</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --surface-2:#eef1f4; --ink:#141a22; --ink-2:#4f5967; --ink-3:#7a8493;
+  --rule:#dbe0e6; --rule-2:#c7ced7; --accent:#1d5c8f;
+  --gain:#2a78d6; --loss:#e34948; --gain-ink:#1c5cab; --loss-ink:#b3302f; --mid:#e6e9ed;
+  --live:#8a6d1f;
+  --shadow:0 1px 2px rgba(20,26,34,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0f1216; --surface:#161a20; --surface-2:#1d222a; --ink:#edf1f5; --ink-2:#aeb7c3; --ink-3:#848e9b;
+    --rule:#2a313b; --rule-2:#39414d; --accent:#7fb3e6;
+    --gain:#3987e5; --loss:#e66767; --gain-ink:#8dbdf2; --loss-ink:#f19a9a; --mid:#262c35;
+    --live:#d6b55a; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1216; --surface:#161a20; --surface-2:#1d222a; --ink:#edf1f5; --ink-2:#aeb7c3; --ink-3:#848e9b;
+  --rule:#2a313b; --rule-2:#39414d; --accent:#7fb3e6;
+  --gain:#3987e5; --loss:#e66767; --gain-ink:#8dbdf2; --loss-ink:#f19a9a; --mid:#262c35;
+  --live:#d6b55a; --shadow:none;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-size:15px;line-height:1.6;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:flex;flex-direction:column;gap:28px}
+.mono,.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;text-wrap:balance}
+header{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--rule);padding-bottom:18px}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--ink-3);font-weight:500}
+h1{font-size:30px;font-weight:900;letter-spacing:.01em;margin-top:4px}
+.meta{color:var(--ink-2);font-size:13px;margin-top:6px}
+.unit{display:flex;gap:0;border:1px solid var(--rule-2);border-radius:8px;overflow:hidden;background:var(--surface)}
+.unit button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--ink-2);padding:7px 12px;cursor:pointer}
+.unit button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:700}
+.unit button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.kpi{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi .k{font-size:12px;color:var(--ink-3);letter-spacing:.04em}
+.kpi .v{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:22px;font-weight:600}
+.kpi .s{font-size:12px;color:var(--ink-2)}
+.neg{color:var(--loss-ink)} .pos{color:var(--gain-ink)}
+section{display:flex;flex-direction:column;gap:12px}
+section>h2{font-size:18px;font-weight:700}
+.sub{color:var(--ink-2);font-size:13px;margin:0;max-width:70ch}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 14px 10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-width:0}
+.panel h3{font-size:14px;font-weight:700}
+.panel .cap{font-size:12px;color:var(--ink-3)}
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px}
+svg .axis{stroke:var(--rule-2);stroke-width:1}
+svg .grid{stroke:var(--rule);stroke-width:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:980px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-weight:500;color:var(--ink-3);font-size:12px;letter-spacing:.03em;background:var(--surface-2);position:sticky;top:0}
+td:first-child,th:first-child{text-align:left}
+td{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+td.txt{font-family:inherit}
+tr:last-child td{border-bottom:0}
+tr.total td{font-weight:600;background:var(--surface-2)}
+.yr{font-weight:600}
+.partial{font-family:"Noto Sans TC",sans-serif;font-size:11px;color:var(--ink-3);margin-left:6px}
+.bar{display:inline-block;height:6px;border-radius:0 3px 3px 0;vertical-align:middle;margin-left:8px}
+.exitbar{display:inline-flex;width:120px;height:8px;border-radius:4px;overflow:hidden;gap:2px;vertical-align:middle;background:var(--surface)}
+.exitbar span{display:block;height:100%}
+.pill{display:inline-block;font-family:"Noto Sans TC",sans-serif;font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--rule-2);color:var(--ink-2)}
+.pill.bad{border-color:var(--loss);color:var(--loss-ink)}
+.pill.good{border-color:var(--gain);color:var(--gain-ink)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.note{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;font-size:13.5px;color:var(--ink-2)}
+.note b{color:var(--ink);display:block;font-size:14px;margin-bottom:4px}
+.hm{display:grid;gap:2px;font-size:11px;min-width:640px}
+.hm .h{color:var(--ink-3);text-align:center;font-family:"IBM Plex Mono",monospace}
+.hm .y{color:var(--ink-2);font-family:"IBM Plex Mono",monospace;padding-right:6px;text-align:right;align-self:center}
+.hm .c{height:26px;border-radius:3px;background:var(--mid)}
+.hm .c.empty{background:transparent;border:1px dashed var(--rule)}
+.hmbox{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:7px 9px;border-radius:6px;line-height:1.45;z-index:10;max-width:260px;font-family:"IBM Plex Mono","Noto Sans TC",monospace}
+footer{font-size:12px;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:14px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">TXF1 · L3 盤整多頭 · v18.1（交易邏輯 = v18）</div>
+      <h1>L3 v18.1 逐年績效</h1>
+      <div class="meta">MC 回測 2017-06-07 ～ 2026-09-24 · 2 口大台 · 滑價 1,000／口／邊 · 15 分鐘 K 棒 · 11 份 MC 報表整理</div>
+    </div>
+    <div class="unit" role="group" aria-label="金額單位">
+      <button id="u-tx" type="button" aria-pressed="true">MC 2 口大台</button>
+      <button id="u-mtx" type="button" aria-pressed="false">微台 2 口（÷20）</button>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>一眼看出哪幾年賺、哪幾年賠</h2>
+    <div class="grid2">
+      <div class="panel">
+        <h3>逐年淨利</h3>
+        <div class="cap">2017 自 6/7 起、2026 至 9/24 止，都是不完整年度</div>
+        <svg id="yearChart" viewBox="0 0 460 300" role="img" aria-label="逐年淨利長條圖"></svg>
+        <div class="legend"><span><i style="background:var(--gain)"></i>獲利年</span><span><i style="background:var(--loss)"></i>虧損年</span></div>
+      </div>
+      <div class="panel">
+        <h3>累積淨利（依出場時間）</h3>
+        <div class="cap">虛線 = 2026-06-17 實戰上架；灰底 = 最大平倉回撤區間</div>
+        <svg id="eqChart" viewBox="0 0 620 300" role="img" aria-label="累積淨利曲線"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>逐年明細</h2>
+    <p class="sub">以全期報表（527 筆）依進場年份切分。年內 MDD 與最大連虧只計算該年度內的平倉交易。</p>
+    <div class="tablebox"><table id="yearTable"></table></div>
+    <div class="legend"><span><i style="background:var(--gain)"></i>停利</span><span><i style="background:var(--ink-3)"></i>箱體破出場</span><span><i style="background:var(--loss)"></i>停損</span><span><i style="background:var(--rule-2)"></i>其他（假日、結算）</span></div>
+  </section>
+
+  <section>
+    <h2>月份熱圖</h2>
+    <p class="sub">每格是當月平倉交易的淨利合計；藍色越深賺越多，紅色越深賠越多，虛線框代表該月沒有交易。</p>
+    <div class="hmbox"><div class="hm" id="heat"></div></div>
+  </section>
+
+  <section>
+    <h2>三個區段</h2>
+    <p class="sub">起算前 = v18.0 讀週線、要到 2019-01-10 才開始算的那段；樣本內與樣本外沿用這次優化的判定區間。</p>
+    <div class="tablebox"><table id="segTable"></table></div>
+  </section>
+
+  <section>
+    <h2>讀這份報告要注意</h2>
+    <div class="notes" id="notes"></div>
+  </section>
+
+  <section>
+    <h2>附錄：10 份逐年報表核對</h2>
+    <p class="sub">逐年報表是分開跑的 MC。每份都要先暖機約 5 個月（日線 60 日均線等需要的歷史），所以實際只涵蓋 5、6 月到年底；逐筆比對全期報表，全部相同。</p>
+    <div class="tablebox"><table id="runTable"></table></div>
+  </section>
+
+  <footer>資料：MC 報表「策略分析」「交易明細」。金額預設為 MC 2 口大台；微台 2 口 = MC ÷ 20。本頁數字皆為回測，實戰滑價與成交可能不同（7/08 實戰停損出場價比 MC 差 581 點）。</footer>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const D = {"years":[{"y":2017,"first":"2017-06-07","last":"2017-11-29","n":37,"net":146000,"win":70.3,"pf":1.71,"avgW":13538,"avgL":-18727,"streak":-53200,"streakN":3,"longest":3,"mdd":-53200,"worst":-28000,"tp":13,"sl":2,"br":22,"ot":0,"lastEntry":"2017-11-28"},{"y":2018,"first":"2018-01-11","last":"2018-12-06","n":40,"net":-37200,"win":50.0,"pf":0.93,"avgW":23480,"avgL":-25340,"streak":-112000,"streakN":4,"longest":4,"mdd":-154800,"worst":-36400,"tp":16,"sl":14,"br":10,"ot":0,"lastEntry":"2018-12-05"},{"y":2019,"first":"2019-01-10","last":"2020-01-01","n":69,"net":171200,"win":60.9,"pf":1.29,"avgW":17905,"avgL":-21511,"streak":-101600,"streakN":4,"longest":4,"mdd":-143200,"worst":-28000,"tp":30,"sl":11,"br":26,"ot":2,"lastEntry":"2019-12-31"},{"y":2020,"first":"2020-01-03","last":"2020-12-28","n":69,"net":319200,"win":50.7,"pf":1.32,"avgW":37829,"avgL":-29553,"streak":-168000,"streakN":6,"longest":6,"mdd":-199200,"worst":-64000,"tp":26,"sl":33,"br":10,"ot":0,"lastEntry":"2020-12-25"},{"y":2021,"first":"2021-01-06","last":"2021-12-27","n":69,"net":72000,"win":42.0,"pf":1.06,"avgW":44290,"avgL":-30310,"streak":-288000,"streakN":9,"longest":9,"mdd":-359200,"worst":-53200,"tp":25,"sl":35,"br":7,"ot":2,"lastEntry":"2021-12-25"},{"y":2022,"first":"2022-01-03","last":"2022-12-28","n":38,"net":-108400,"win":36.8,"pf":0.85,"avgW":43486,"avgL":-29883,"streak":-136800,"streakN":4,"longest":4,"mdd":-198000,"worst":-40400,"tp":9,"sl":22,"br":6,"ot":1,"lastEntry":"2022-12-28"},{"y":2023,"first":"2023-01-13","last":"2023-12-20","n":58,"net":392400,"win":53.4,"pf":1.55,"avgW":35665,"avgL":-26415,"streak":-84000,"streakN":3,"longest":3,"mdd":-84000,"worst":-30800,"tp":24,"sl":24,"br":9,"ot":1,"lastEntry":"2023-12-19"},{"y":2024,"first":"2024-01-02","last":"2024-12-25","n":50,"net":-610000,"win":30.0,"pf":0.57,"avgW":53867,"avgL":-40514,"streak":-499200,"streakN":10,"longest":10,"mdd":-698000,"worst":-62400,"tp":13,"sl":33,"br":4,"ot":0,"lastEntry":"2024-12-24"},{"y":2025,"first":"2025-01-10","last":"2025-12-31","n":60,"net":1281200,"win":51.7,"pf":2.03,"avgW":81471,"avgL":-42910,"streak":-226000,"streakN":4,"longest":4,"mdd":-226000,"worst":-76400,"tp":24,"sl":28,"br":7,"ot":1,"lastEntry":"2025-12-30"},{"y":2026,"first":"2026-01-08","last":"2026-09-23","n":37,"net":1557600,"win":40.5,"pf":1.67,"avgW":259333,"avgL":-106018,"streak":-471600,"streakN":3,"longest":5,"mdd":-613200,"worst":-215200,"tp":10,"sl":21,"br":6,"ot":0,"lastEntry":"2026-09-23"}],"seg":[{"name":"2017-06 ～ 2019-01（v18.0 起算前）","n":77,"net":108800,"win":59.7,"pf":1.15,"avgW":17861,"avgL":-22994,"streak":-112000,"streakN":4,"mdd":-154800,"worst":-36400,"first":"2017-06-07","last":"2018-12-06"},{"name":"2019-12-19 ～ 2026-06-16（樣本內）","n":372,"net":3084800,"win":45.2,"pf":1.41,"avgW":62926,"avgL":-36700,"streak":-499200,"streakN":10,"mdd":-698000,"worst":-170400,"first":"2019-12-19","last":"2026-06-12"},{"name":"2026-06-17 ～ 09-24（上架後，樣本外）","n":13,"net":-189200,"win":30.8,"pf":0.84,"avgW":249700,"avgL":-132000,"streak":-471600,"streakN":3,"mdd":-613200,"worst":-215200,"first":"2026-06-24","last":"2026-09-23"},{"name":"全期","n":527,"net":3184000,"win":49.0,"pf":1.32,"avgW":50853,"avgL":-36937,"streak":-499200,"streakN":10,"mdd":-698000,"worst":-215200,"first":"2017-06-07","last":"2026-09-23"}],"curve":[["2017-06-08",1200],["2017-06-10",-11200],["2017-06-15",-39200],["2017-06-16",-36400],["2017-06-23",-41600],["2017-06-29",-16800],["2017-07-03",-8000],["2017-07-15",0],["2017-07-19",9600],["2017-07-20",-7200],["2017-07-24",9600],["2017-07-27",32800],["2017-08-01",50000],["2017-08-02",63200],["2017-08-09",35200],["2017-08-10",12000],["2017-08-24",30000],["2017-08-30",49600],["2017-09-05",53200],["2017-09-07",69200],["2017-09-08",87600],["2017-09-12",100400],["2017-09-15",113200],["2017-10-23",129600],["2017-10-30",148400],["2017-10-31",153600],["2017-11-03",136800],["2017-11-06",146000],["2017-11-07",163200],["2017-11-13",145200],["2017-11-14",132400],["2017-11-15",110000],["2017-11-16",135200],["2017-11-21",150400],["2017-11-24",156800],["2017-11-28",134400],["2017-11-29",146000],["2018-01-12",172800],["2018-01-19",196400],["2018-01-25",219200],["2018-01-26",191200],["2018-01-30",163200],["2018-02-02",135200],["2018-02-06",107200],["2018-03-08",133600],["2018-03-10",150000],["2018-03-14",122000],["2018-03-19",141200],["2018-03-22",160800],["2018-04-12",172400],["2018-04-16",153600],["2018-04-17",125600],["2018-04-19",146800],["2018-05-21",176000],["2018-05-28",226800],["2018-06-01",236400],["2018-06-12",208400],["2018-06-19",175600],["2018-07-17",156800],["2018-07-19",138000],["2018-07-24",151600],["2018-07-26",161600],["2018-08-03",195600],["2018-08-08",207600],["2018-09-03",223600],["2018-09-05",195600],["2018-09-07",167600],["2018-09-10",139600],["2018-09-27",126400],["2018-10-01",146800],["2018-10-04",129200],["2018-11-06",101200],["2018-11-07",124000],["2018-11-13",109600],["2018-11-30",81600],["2018-12-03",145200],["2018-12-06",108800],["2019-01-11",122000],["2019-01-15",151200],["2019-01-18",173600],["2019-01-22",156800],["2019-01-23",168400],["2019-02-15",144800],["2019-02-27",122800],["2019-03-05",103600],["2019-03-07",75600],["2019-03-11",96000],["2019-03-13",109200],["2019-03-15",128400],["2019-03-26",159600],["2019-04-03",178800],["2019-04-15",202800],["2019-04-19",222000],["2019-04-22",235600],["2019-04-23",247200],["2019-04-26",219200],["2019-04-30",200800],["2019-05-03",217600],["2019-05-07",246000],["2019-05-09",218000],["2019-06-05",192800],["2019-06-13",164800],["2019-06-14",144400],["2019-06-20",177600],["2019-06-24",191600],["2019-06-26",167600],["2019-07-01",213200],["2019-07-09",195600],["2019-07-10",211600],["2019-07-15",183600],["2019-07-18",184800],["2019-07-22",176400],["2019-07-29",164400],["2019-08-01",136400],["2019-08-02",108400],["2019-09-04",122400],["2019-09-10",104000],["2019-09-11",124400],["2019-09-13",120000],["2019-09-23",134400],["2019-09-24",147600],["2019-09-26",170800],["2019-09-28",142800],["2019-10-05",161600],["2019-10-22",173200],["2019-10-24",188800],["2019-10-25",200400],["2019-10-31",212400],["2019-11-01",230400],["2019-11-11",202400],["2019-11-12",215600],["2019-11-14",233600],["2019-11-15",249600],["2019-11-21",235200],["2019-11-25",256800],["2019-11-26",273200],["2019-11-29",245200],["2019-12-03",221600],["2019-12-04",236800],["2019-12-07",250800],["2019-12-11",268000],["2019-12-16",288400],["2019-12-20",260400],["2019-12-23",268000],["2019-12-26",284400],["2020-01-01",280000],["2020-01-06",252000],["2020-01-07",224000],["2020-01-08",160000],["2020-01-16",142000],["2020-02-14",168000],["2020-02-18",140000],["2020-02-22",112000],["2020-04-09",161600],["2020-04-14",186400],["2020-04-16",264400],["2020-04-20",236400],["2020-04-21",208400],["2020-04-23",236800],["2020-05-05",292400],["2020-05-09",318400],["2020-05-13",290400],["2020-05-21",311200],["2020-05-25",283200],["2020-05-27",305200],["2020-05-29",277200],["2020-06-01",336400],["2020-06-16",389600],["2020-06-18",344000],["2020-06-23",373200],["2020-07-08",404800],["2020-07-13",450000],["2020-07-15",500000],["2020-07-17",537200],["2020-07-20",509200],["2020-07-31",549600],["2020-08-04",570000],["2020-08-07",542000],["2020-08-10",514000],["2020-08-12",486000],["2020-08-14",457200],["2020-08-19",429200],["2020-08-21",486400],["2020-08-31",528000],["2020-09-01",586800],["2020-09-03",558800],["2020-09-04",530800],["2020-09-08",502800],["2020-09-12",474800],["2020-09-19",446800],["2020-09-22",418800],["2020-10-13",443600],["2020-10-15",415600],["2020-10-16",387600],["2020-10-19",432800],["2020-10-21",452400],["2020-10-22",417600],["2020-10-22",434000],["2020-10-28",406000],["2020-11-11",468400],["2020-11-18",504000],["2020-11-20",476000],["2020-11-23",512000],["2020-11-25",484000],["2020-11-26",522800],["2020-11-27",546000],["2020-12-02",601200],["2020-12-10",573200],["2020-12-15",543600],["2020-12-16",576800],["2020-12-17",548800],["2020-12-18",572400],["2020-12-21",544400],["2020-12-24",575200],["2020-12-28",599200],["2021-01-07",666000],["2021-01-13",700400],["2021-01-18",669200],["2021-01-21",731600],["2021-01-25",678400],["2021-01-27",642800],["2021-01-30",597200],["2021-02-04",563600],["2021-02-06",561600],["2021-02-19",528800],["2021-02-23",500800],["2021-02-23",477600],["2021-02-24",443600],["2021-02-25",506800],["2021-03-03",474000],["2021-03-05",435600],["2021-03-09",405600],["2021-03-16",455200],["2021-03-18",526000],["2021-03-22",486800],["2021-03-24",453200],["2021-03-25",425200],["2021-04-01",456000],["2021-04-07",428000],["2021-04-08",449600],["2021-04-12",478400],["2021-04-13",512400],["2021-04-14",484400],["2021-04-21",456400],["2021-04-23",428400],["2021-04-23",400400],["2021-05-04",372400],["2021-05-06",433200],["2021-06-01",471600],["2021-06-12",464000],["2021-06-23",509200],["2021-06-28",543600],["2021-06-30",573600],["2021-07-03",605600],["2021-07-09",577600],["2021-07-13",621600],["2021-07-14",593600],["2021-07-23",672400],["2021-07-26",635600],["2021-08-26",603600],["2021-08-27",571600],["2021-09-08",543600],["2021-09-16",515600],["2021-09-17",487600],["2021-09-28",454800],["2021-10-19",497200],["2021-10-21",518800],["2021-10-22",490800],["2021-10-22",460000],["2021-10-28",487600],["2021-11-01",542400],["2021-11-04",581600],["2021-11-05",640000],["2021-11-23",661600],["2021-11-23",633600],["2021-11-24",616000],["2021-11-25",641600],["2021-11-26",590400],["2021-12-01",560000],["2021-12-01",636400],["2021-12-09",608400],["2021-12-09",580400],["2021-12-21",652800],["2021-12-27",671200],["2022-01-04",702000],["2022-01-07",674000],["2022-01-08",633600],["2022-01-10",593200],["2022-01-14",565200],["2022-01-18",652800],["2022-01-20",622400],["2022-02-15",584800],["2022-03-29",640800],["2022-06-01",608000],["2022-06-03",635200],["2022-06-08",704400],["2022-06-10",676400],["2022-07-22",741600],["2022-07-28",712800],["2022-07-29",743200],["2022-08-03",715200],["2022-08-04",674800],["2022-08-10",704400],["2022-08-19",686400],["2022-08-24",658400],["2022-08-25",681600],["2022-09-13",700000],["2022-11-15",732000],["2022-11-21",704000],["2022-11-22",676000],["2022-11-22",648000],["2022-11-22",664400],["2022-11-29",636400],["2022-11-29",608400],["2022-12-02",573200],["2022-12-12",545200],["2022-12-13",617600],["2022-12-21",600000],["2022-12-23",568400],["2022-12-27",618800],["2022-12-27",590800],["2022-12-28",562800],["2023-01-16",616000],["2023-01-17",588000],["2023-02-08",618800],["2023-02-17",609600],["2023-02-20",644800],["2023-03-03",675600],["2023-03-09",706400],["2023-03-10",678400],["2023-03-11",656000],["2023-03-20",768000],["2023-03-28",740000],["2023-03-29",712000],["2023-04-01",729600],["2023-04-07",744800],["2023-04-10",756800],["2023-04-10",728800],["2023-04-10",724400],["2023-04-11",756400],["2023-04-19",728400],["2023-04-20",700400],["2023-05-30",726000],["2023-05-31",698000],["2023-06-06",719200],["2023-06-09",757600],["2023-06-15",791200],["2023-06-17",763200],["2023-06-20",735200],["2023-06-27",707200],["2023-06-29",756000],["2023-06-30",728000],["2023-06-30",751200],["2023-07-06",723200],["2023-07-08",777600],["2023-07-11",820000],["2023-07-18",842000],["2023-07-19",814000],["2023-07-21",786000],["2023-07-24",758000],["2023-07-25",796000],["2023-07-27",839200],["2023-08-02",811200],["2023-08-31",783200],["2023-09-04",815200],["2023-09-11",787200],["2023-10-13",759200],["2023-10-16",796400],["2023-11-14",841200],["2023-11-21",863200],["2023-11-23",832800],["2023-11-27",804800],["2023-11-28",854000],["2023-11-29",879600],["2023-11-30",848800],["2023-12-06",885600],["2023-12-07",857600],["2023-12-08",900400],["2023-12-14",930800],["2023-12-20",955200],["2024-01-02",927200],["2024-01-08",970000],["2024-01-10",942000],["2024-01-10",909200],["2024-01-12",884400],["2024-01-16",850400],["2024-01-29",876400],["2024-02-01",901600],["2024-02-05",873600],["2024-02-22",940000],["2024-02-26",911200],["2024-03-11",870400],["2024-03-18",928400],["2024-03-26",976400],["2024-03-26",948400],["2024-04-01",969600],["2024-04-11",941600],["2024-04-16",906400],["2024-04-25",844000],["2024-04-26",966800],["2024-05-02",938800],["2024-05-17",887200],["2024-05-17",918000],["2024-05-20",954800],["2024-05-31",908800],["2024-05-31",863200],["2024-06-25",814000],["2024-07-09",756000],["2024-07-12",706800],["2024-07-15",657600],["2024-07-16",609600],["2024-07-16",561600],["2024-07-18",508400],["2024-07-18",455600],["2024-08-28",536800],["2024-09-03",499200],["2024-10-01",446000],["2024-10-08",530400],["2024-10-30",477600],["2024-11-12",438400],["2024-11-13",399200],["2024-11-13",360000],["2024-11-15",306400],["2024-12-07",278400],["2024-12-09",346800],["2024-12-10",318800],["2024-12-13",382000],["2024-12-17",345200],["2024-12-19",312400],["2024-12-25",345200],["2025-01-10",290400],["2025-01-20",358400],["2025-02-11",432000],["2025-02-14",391600],["2025-02-15",471200],["2025-02-24",426400],["2025-02-25",398400],["2025-05-16",451600],["2025-05-29",546400],["2025-06-03",616000],["2025-06-09",660800],["2025-06-16",625600],["2025-06-16",597600],["2025-06-18",698800],["2025-06-24",652000],["2025-06-24",781600],["2025-06-27",753600],["2025-07-02",787200],["2025-07-07",734800],["2025-07-08",706800],["2025-07-09",673200],["2025-07-15",718800],["2025-07-17",777600],["2025-07-21",826400],["2025-07-22",798400],["2025-07-24",905200],["2025-07-29",877200],["2025-07-30",932000],["2025-08-14",896800],["2025-08-15",867600],["2025-08-21",946000],["2025-08-22",989600],["2025-08-29",951200],["2025-09-02",1018000],["2025-09-03",1145600],["2025-09-05",1208400],["2025-09-18",1162000],["2025-09-22",1208400],["2025-09-26",1151600],["2025-10-01",1236400],["2025-10-08",1348800],["2025-10-10",1290000],["2025-10-15",1406800],["2025-10-20",1566000],["2025-10-22",1524800],["2025-10-29",1600400],["2025-10-30",1541200],["2025-11-04",1621600],["2025-11-05",1578000],["2025-11-05",1534400],["2025-11-06",1639200],["2025-11-07",1589200],["2025-11-11",1549200],["2025-11-12",1678800],["2025-12-02",1790000],["2025-12-11",1752400],["2025-12-12",1714800],["2025-12-12",1638400],["2025-12-16",1564000],["2025-12-31",1626400],["2026-01-08",1596800],["2026-01-13",1568800],["2026-02-02",1727600],["2026-03-04",1640800],["2026-03-05",1794800],["2026-03-10",2198800],["2026-03-25",2562000],["2026-04-17",2710400],["2026-04-21",2849200],["2026-04-24",2752800],["2026-04-24",3134000],["2026-04-27",3046000],["2026-04-28",2972400],["2026-04-28",2899200],["2026-04-30",2799200],["2026-04-30",2699200],["2026-05-01",2863200],["2026-05-13",2774400],["2026-05-14",3097600],["2026-05-16",2979600],["2026-05-19",2888000],["2026-05-29",3166000],["2026-06-11",2995600],["2026-06-12",3373200],["2026-06-24",3177600],["2026-07-08",2962400],["2026-07-15",3231600],["2026-07-17",3017600],["2026-08-20",2876800],["2026-08-20",2760000],["2026-08-21",3053200],["2026-09-01",3258000],["2026-09-04",3489600],["2026-09-10",3411600],["2026-09-15",3339200],["2026-09-15",3255200],["2026-09-23",3184000]],"monthly":{"2017-06":-16800,"2017-07":49600,"2017-08":16800,"2017-09":63600,"2017-10":40400,"2017-11":-7600,"2018-01":17200,"2018-02":-56000,"2018-03":53600,"2018-04":-14000,"2018-05":80000,"2018-06":-51200,"2018-07":-14000,"2018-08":46000,"2018-09":-81200,"2018-10":2800,"2018-11":-47600,"2018-12":27200,"2019-01":59600,"2019-02":-45600,"2019-03":36800,"2019-04":41200,"2019-05":17200,"2019-06":-50400,"2019-07":-3200,"2019-08":-56000,"2019-09":34400,"2019-10":69600,"2019-11":32800,"2019-12":39200,"2020-01":-142400,"2020-02":-30000,"2020-04":124800,"2020-05":40400,"2020-06":96000,"2020-07":176400,"2020-08":-21600,"2020-09":-109200,"2020-10":-12800,"2020-11":140000,"2020-12":53200,"2021-01":-2000,"2021-02":-90400,"2021-03":-81600,"2021-04":-24800,"2021-05":32800,"2021-06":140400,"2021-07":62000,"2021-08":-64000,"2021-09":-116800,"2021-10":32800,"2021-11":102800,"2021-12":80800,"2022-01":-48800,"2022-02":-37600,"2022-03":56000,"2022-06":35600,"2022-07":66800,"2022-08":-61600,"2022-09":18400,"2022-11":-91600,"2022-12":-45600,"2023-01":25200,"2023-02":56800,"2023-03":67200,"2023-04":-11600,"2023-05":-2400,"2023-06":53200,"2023-07":88000,"2023-08":-56000,"2023-09":4000,"2023-10":9200,"2023-11":52400,"2023-12":106400,"2024-01":-78800,"2024-02":34800,"2024-03":37200,"2024-04":18400,"2024-05":-103600,"2024-06":-49200,"2024-07":-358400,"2024-08":81200,"2024-09":-37600,"2024-10":-21600,"2024-11":-171200,"2024-12":38800,"2025-01":13200,"2025-02":40000,"2025-05":148000,"2025-06":207200,"2025-07":178400,"2025-08":19200,"2025-09":200400,"2025-10":389600,"2025-11":137600,"2025-12":-52400,"2026-01":-57600,"2026-02":158800,"2026-03":834400,"2026-04":137200,"2026-05":466800,"2026-06":11600,"2026-07":-160000,"2026-08":35600,"2026-09":130800},"runs":[{"label":"2017-2018","start":"2017-06-07","end":"2017-12-30","n":37,"net":146000,"match":37},{"label":"2018-2019","start":"2018-05-17","end":"2018-12-29","n":24,"net":-38000,"match":24},{"label":"2019-2020","start":"2019-06-05","end":"2020-01-01","n":46,"net":62000,"match":46},{"label":"2020-2021","start":"2020-05-13","end":"2021-01-01","n":54,"net":280800,"match":54},{"label":"2021-2022","start":"2021-06-01","end":"2021-12-31","n":36,"net":238000,"match":36},{"label":"2022-2023","start":"2022-06-01","end":"2022-12-31","n":29,"net":-78000,"match":29},{"label":"2023-2024","start":"2023-05-29","end":"2023-12-30","n":38,"net":254800,"match":38},{"label":"2024-2025","start":"2024-05-16","end":"2025-01-01","n":29,"net":-593600,"match":29},{"label":"2025-2026","start":"2025-05-15","end":"2026-01-01","n":53,"net":1228000,"match":53},{"label":"2026-","start":"2026-05-28","end":"2026-09-24","n":16,"net":296000,"match":16}],"mc":{"淨利":3184000,"毛利":13120000,"毛損":-9936000,"獲利因子":1.320450885668277,"交易總次數":527,"%勝率":48.95635673624288,"最大策略虧損":-780400,"最大平倉交易虧損":-698000,"年報酬率":17.112360211889346,"年度夏普比率":0.6739507374423643,"滑價支付":1728000}};
+let div = 1; // 1 = MC 2 TX lots, 20 = micro
+try { if (localStorage.getItem('l3unit') === 'mtx') div = 20; } catch (e) {}
+const fmt = v => { const x = Math.round(v / div); const s = Math.abs(x).toLocaleString('en-US'); return (x < 0 ? '−' : '') + s; };
+const sgn = v => v < 0 ? 'neg' : (v > 0 ? 'pos' : '');
+const tip = document.getElementById('tip');
+function showTip(e, html){ tip.innerHTML = html; tip.hidden = false; const x = Math.min(e.clientX + 14, innerWidth - 270); tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px'; }
+function hideTip(){ tip.hidden = true; }
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){ const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function kpis(){
+  const all = D.seg.find(s => s.name === '全期'), mc = D.mc;
+  const k = [
+    ['全期淨利', fmt(mc['淨利']), '527 筆 · 年報酬 ' + mc['年報酬率'].toFixed(1) + '%', sgn(mc['淨利'])],
+    ['獲利因子', mc['獲利因子'].toFixed(2), '毛利 ' + fmt(mc['毛利']) + ' / 毛損 ' + fmt(mc['毛損']), ''],
+    ['勝率', mc['%勝率'].toFixed(1) + '%', '平均賺 ' + fmt(all.avgW) + ' · 平均虧 ' + fmt(all.avgL), ''],
+    ['最大連虧', fmt(all.streak), all.streakN + ' 筆連虧，2024-05-31 ～ 07-18', 'neg'],
+    ['最大平倉回撤', fmt(mc['最大平倉交易虧損']), '含未平倉的最大策略虧損 ' + fmt(mc['最大策略虧損']), 'neg'],
+    ['年度夏普', mc['年度夏普比率'].toFixed(2), '滑價成本合計 ' + fmt(mc['滑價支付']), '']
+  ];
+  document.getElementById('kpis').innerHTML = k.map(([a,b,c,cl]) => `<div class="kpi"><span class="k">${a}</span><span class="v ${cl}">${b}</span><span class="s">${c}</span></div>`).join('');
+}
+
+function yearChart(){
+  const svg = document.getElementById('yearChart'); svg.innerHTML = '';
+  const W = 460, H = 300, L = 62, R = 10, T = 16, B = 30;
+  const vals = D.years.map(y => y.net / div);
+  const max = Math.max(...vals, 0), min = Math.min(...vals, 0);
+  const step = niceStep((max - min) / 5);
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step;
+  const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  for (let v = lo; v <= hi + 1e-9; v += step){
+    el('line', {x1: L, x2: W - R, y1: y(v), y2: y(v), class: v === 0 ? 'axis' : 'grid'}, svg);
+    const t = el('text', {x: L - 6, y: y(v) + 4, 'text-anchor': 'end'}, svg); t.textContent = short(v);
+  }
+  const n = D.years.length, bw = (W - L - R) / n, gap = Math.max(4, bw * 0.28);
+  D.years.forEach((d, i) => {
+    const v = d.net / div, x = L + i * bw + gap / 2, w = bw - gap;
+    const y0 = y(0), y1 = y(v), top = Math.min(y0, y1), h = Math.max(1, Math.abs(y1 - y0));
+    const r = Math.min(4, w / 2, h);
+    const path = v >= 0
+      ? `M${x},${y0} V${top + r} Q${x},${top} ${x + r},${top} H${x + w - r} Q${x + w},${top} ${x + w},${top + r} V${y0} Z`
+      : `M${x},${y0} V${top + h - r} Q${x},${top + h} ${x + r},${top + h} H${x + w - r} Q${x + w},${top + h} ${x + w},${top + h - r} V${y0} Z`;
+    const p = el('path', {d: path, fill: v >= 0 ? css('--gain') : css('--loss')}, svg);
+    const t = el('text', {x: x + w / 2, y: H - 10, 'text-anchor': 'middle'}, svg); t.textContent = String(d.y).slice(2);
+    if (d.y === 2025 || d.y === 2024 || d.y === 2026){
+      const lab = el('text', {x: x + w / 2, y: v >= 0 ? top - 4 : top + h + 12, 'text-anchor': 'middle'}, svg); lab.textContent = short(v);
+    }
+    const hit = el('rect', {x: L + i * bw, y: T, width: bw, height: H - T - B, fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', e => showTip(e, `<b>${d.y}</b>${(d.y === 2017 || d.y === 2026) ? '（不完整年度）' : ''}<br>淨利 ${fmt(d.net)}<br>${d.n} 筆 · 勝率 ${d.win}%<br>獲利因子 ${d.pf ?? '—'}`));
+    hit.addEventListener('mouseleave', hideTip);
+  });
+}
+function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw))); const m = raw / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+function short(v){ const a = Math.abs(v); const s = a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : a >= 1e3 ? Math.round(a / 1e3) + 'k' : Math.round(a); return (v < 0 ? '−' : '') + s; }
+
+function eqChart(){
+  const svg = document.getElementById('eqChart'); svg.innerHTML = '';
+  const W = 620, H = 300, L = 62, R = 14, T = 16, B = 30;
+  const pts = D.curve.map(([d, v]) => [new Date(d + 'T00:00:00').getTime(), v / div]);
+  const x0 = new Date('2017-06-01').getTime(), x1 = new Date('2026-10-01').getTime();
+  const vmin = Math.min(0, ...pts.map(p => p[1])), vmax = Math.max(...pts.map(p => p[1]));
+  const step = niceStep((vmax - vmin) / 5), lo = Math.floor(vmin / step) * step, hi = Math.ceil(vmax / step) * step;
+  const X = t => L + (t - x0) / (x1 - x0) * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  // max closed-trade drawdown window
+  let pk = -Infinity, pkT = 0, best = 0, win = null;
+  pts.forEach(([t, v]) => { if (v > pk){ pk = v; pkT = t; } if (v - pk < best){ best = v - pk; win = [pkT, t]; } });
+  if (win) el('rect', {x: X(win[0]), y: T, width: Math.max(1, X(win[1]) - X(win[0])), height: H - T - B, fill: css('--surface-2')}, svg);
+  for (let v = lo; v <= hi + 1e-9; v += step){
+    el('line', {x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: v === 0 ? 'axis' : 'grid'}, svg);
+    const t = el('text', {x: L - 6, y: Y(v) + 4, 'text-anchor': 'end'}, svg); t.textContent = short(v);
+  }
+  for (let yr = 2018; yr <= 2026; yr++){
+    const t = new Date(yr + '-01-01').getTime();
+    el('line', {x1: X(t), x2: X(t), y1: H - B, y2: H - B + 4, class: 'axis'}, svg);
+    const tx = el('text', {x: X(t), y: H - 10, 'text-anchor': 'middle'}, svg); tx.textContent = String(yr).slice(2);
+  }
+  const live = new Date('2026-06-17').getTime();
+  el('line', {x1: X(live), x2: X(live), y1: T, y2: H - B, stroke: css('--live'), 'stroke-width': 1.5, 'stroke-dasharray': '4 3'}, svg);
+  const lt = el('text', {x: X(live) - 4, y: T + 10, 'text-anchor': 'end'}, svg); lt.textContent = '上架';
+  let d = `M${X(x0)},${Y(0)}`; pts.forEach(([t, v]) => { d += ` L${X(t).toFixed(1)},${Y(v).toFixed(1)}`; });
+  el('path', {d: d + ` L${X(pts[pts.length - 1][0])},${Y(0)} Z`, fill: css('--gain'), opacity: .10}, svg);
+  el('path', {d, fill: 'none', stroke: css('--gain'), 'stroke-width': 2, 'stroke-linejoin': 'round'}, svg);
+  const last = pts[pts.length - 1];
+  el('circle', {cx: X(last[0]), cy: Y(last[1]), r: 4, fill: css('--gain'), stroke: css('--surface'), 'stroke-width': 2}, svg);
+  const cross = el('line', {y1: T, y2: H - B, stroke: css('--ink-3'), 'stroke-width': 1, opacity: 0}, svg);
+  const dot = el('circle', {r: 4, fill: css('--gain'), stroke: css('--surface'), 'stroke-width': 2, opacity: 0}, svg);
+  const hit = el('rect', {x: L, y: T, width: W - L - R, height: H - T - B, fill: 'transparent'}, svg);
+  hit.addEventListener('mousemove', e => {
+    const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) / r.width * W;
+    const t = x0 + (sx - L) / (W - L - R) * (x1 - x0);
+    let i = 0; while (i < pts.length - 1 && pts[i + 1][0] <= t) i++;
+    const [pt, pv] = pts[i];
+    cross.setAttribute('x1', X(pt)); cross.setAttribute('x2', X(pt)); cross.setAttribute('opacity', .6);
+    dot.setAttribute('cx', X(pt)); dot.setAttribute('cy', Y(pv)); dot.setAttribute('opacity', 1);
+    showTip(e, `${D.curve[i][0]}<br>累積淨利 ${fmt(D.curve[i][1])}<br>第 ${i + 1} 筆出場`);
+  });
+  hit.addEventListener('mouseleave', () => { cross.setAttribute('opacity', 0); dot.setAttribute('opacity', 0); hideTip(); });
+}
+
+function exitBar(d){
+  const tot = d.tp + d.sl + d.br + d.ot || 1;
+  const seg = [[d.tp, 'var(--gain)', '停利'], [d.br, 'var(--ink-3)', '箱體破'], [d.sl, 'var(--loss)', '停損'], [d.ot, 'var(--rule-2)', '其他']];
+  return `<span class="exitbar" title="停利 ${d.tp} · 箱體破 ${d.br} · 停損 ${d.sl} · 其他 ${d.ot}">` + seg.filter(s => s[0] > 0).map(s => `<span style="width:${s[0] / tot * 100}%;background:${s[1]}"></span>`).join('') + '</span>';
+}
+function yearTable(){
+  const maxAbs = Math.max(...D.years.map(y => Math.abs(y.net)));
+  let h = '<thead><tr><th>年度</th><th>進場期間</th><th>筆數</th><th>淨利</th><th>勝率</th><th>獲利因子</th><th>平均賺</th><th>平均虧</th><th>最大連虧（筆）</th><th>年內 MDD</th><th>最大單筆虧損</th><th>出場組成</th></tr></thead><tbody>';
+  D.years.forEach(d => {
+    const part = (d.y === 2017 || d.y === 2026) ? '<span class="partial">不完整</span>' : '';
+    const bw = Math.round(Math.abs(d.net) / maxAbs * 70);
+    const flag = d.y === 2024 ? ' <span class="pill bad">最大連虧年</span>' : '';
+    h += `<tr><td class="yr">${d.y}${part}${flag}</td><td class="txt">${d.first.slice(5)} ～ ${d.lastEntry.slice(5)}</td><td>${d.n}</td>`
+      + `<td class="${sgn(d.net)}">${fmt(d.net)}<span class="bar" style="width:${bw}px;background:${d.net >= 0 ? 'var(--gain)' : 'var(--loss)'}"></span></td>`
+      + `<td>${d.win.toFixed(1)}%</td><td>${d.pf ?? '—'}</td><td>${fmt(d.avgW)}</td><td class="neg">${fmt(d.avgL)}</td>`
+      + `<td class="neg">${fmt(d.streak)}（${d.streakN}）</td><td class="neg">${fmt(d.mdd)}</td><td class="neg">${fmt(d.worst)}</td><td>${exitBar(d)}</td></tr>`;
+  });
+  const a = D.seg.find(s => s.name === '全期');
+  const t = D.years.reduce((o, d) => { o.tp += d.tp; o.sl += d.sl; o.br += d.br; o.ot += d.ot; return o; }, {tp: 0, sl: 0, br: 0, ot: 0});
+  h += `<tr class="total"><td>全期</td><td class="txt">2017-06-07 ～ 2026-09-24</td><td>${a.n}</td><td class="${sgn(a.net)}">${fmt(a.net)}</td><td>${a.win.toFixed(1)}%</td><td>${a.pf}</td><td>${fmt(a.avgW)}</td><td class="neg">${fmt(a.avgL)}</td><td class="neg">${fmt(a.streak)}（${a.streakN}）</td><td class="neg">${fmt(a.mdd)}</td><td class="neg">${fmt(a.worst)}</td><td>${exitBar(t)}</td></tr>`;
+  document.getElementById('yearTable').innerHTML = h + '</tbody>';
+}
+function segTable(){
+  let h = '<thead><tr><th>區段</th><th>筆數</th><th>淨利</th><th>勝率</th><th>獲利因子</th><th>平均賺</th><th>平均虧</th><th>最大連虧（筆）</th><th>MDD</th><th>最大單筆虧損</th></tr></thead><tbody>';
+  D.seg.forEach(s => {
+    h += `<tr class="${s.name === '全期' ? 'total' : ''}"><td class="txt">${s.name}</td><td>${s.n}</td><td class="${sgn(s.net)}">${fmt(s.net)}</td><td>${s.win.toFixed(1)}%</td><td>${s.pf}</td><td>${fmt(s.avgW)}</td><td class="neg">${fmt(s.avgL)}</td><td class="neg">${fmt(s.streak)}（${s.streakN}）</td><td class="neg">${fmt(s.mdd)}</td><td class="neg">${fmt(s.worst)}</td></tr>`;
+  });
+  document.getElementById('segTable').innerHTML = h + '</tbody>';
+}
+function runTable(){
+  let h = '<thead><tr><th>報表</th><th>實際第一筆</th><th>結束日期</th><th>筆數</th><th>淨利</th><th>和全期逐筆比對</th></tr></thead><tbody>';
+  D.runs.forEach(r => {
+    const ok = r.match === r.n;
+    h += `<tr><td class="txt">${r.label}</td><td>${r.start}</td><td>${r.end}</td><td>${r.n}</td><td class="${sgn(r.net)}">${fmt(r.net)}</td><td class="txt"><span class="pill ${ok ? 'good' : 'bad'}">${ok ? '✓ ' + r.match + '/' + r.n + ' 相同' : '✗ ' + r.match + '/' + r.n}</span></td></tr>`;
+  });
+  document.getElementById('runTable').innerHTML = h + '</tbody>';
+}
+function heat(){
+  const box = document.getElementById('heat');
+  const years = [...new Set(Object.keys(D.monthly).map(k => k.slice(0, 4)))].sort();
+  const vals = Object.values(D.monthly), max = Math.max(...vals.map(Math.abs));
+  box.style.gridTemplateColumns = `44px repeat(12, minmax(40px, 1fr))`;
+  let h = '<div></div>' + Array.from({length: 12}, (_, i) => `<div class="h">${i + 1}月</div>`).join('');
+  years.forEach(y => {
+    h += `<div class="y">${y}</div>`;
+    for (let m = 1; m <= 12; m++){
+      const k = y + '-' + String(m).padStart(2, '0');
+      if (!(k in D.monthly)) { h += `<div class="c empty" data-k="${k}"></div>`; continue; }
+      const v = D.monthly[k], a = Math.max(.14, Math.sqrt(Math.abs(v) / max));
+      const col = v >= 0 ? 'var(--gain)' : 'var(--loss)';
+      h += `<div class="c" data-k="${k}" style="background:color-mix(in srgb, ${col} ${Math.round(a * 100)}%, var(--mid))"></div>`;
+    }
+  });
+  box.innerHTML = h;
+  box.querySelectorAll('.c').forEach(c => {
+    c.addEventListener('mousemove', e => { const k = c.dataset.k; showTip(e, k in D.monthly ? `${k}<br>淨利 ${fmt(D.monthly[k])}` : `${k}<br>沒有平倉交易`); });
+    c.addEventListener('mouseleave', hideTip);
+  });
+}
+function notes(){
+  const y = Object.fromEntries(D.years.map(d => [d.y, d]));
+  const n = [
+    ['獲利集中在 2025、2026', `2025 年 ${fmt(y[2025].net)}、2026 年 ${fmt(y[2026].net)}，兩年合計佔全期淨利的 ${Math.round((y[2025].net + y[2026].net) / D.mc['淨利'] * 100)}%。2017–2024 八年合計 ${fmt(D.years.filter(d => d.y <= 2024).reduce((s, d) => s + d.net, 0))}。`],
+    ['2024 是最弱的一年', `勝率 ${y[2024].win}%、淨利 ${fmt(y[2024].net)}，全期最大連虧 ${fmt(y[2024].streak)}（${y[2024].streakN} 筆）和最大平倉回撤都在這一年，屬於長期震盪行情。`],
+    ['2026 要拆開看', `2026-06-17 之前 ${fmt(y[2026].net - D.seg[2].net)}，上架後（6/17 ～ 9/24）${fmt(D.seg[2].net)}；上架後 13 筆勝率只有 ${D.seg[2].win}%。v18 在 9/26 設計時已看過這段資料，所以它不是乾淨的樣本外。`],
+    ['停損沒有百分比上限', `最大單筆虧損 ${fmt(y[2026].worst)}（2026-07-08，停損 1.16%、528 點）。207 筆停損出場中有 27 筆寬於 0.55%。v18.1 的 SL_Pct 上限測試（0.55／0.8／1.0）正在進行。`],
+    ['2017–2018 是往前的檢查資料', `v18.0 要讀週線，到 2019-01-10 才開始算；v18.1 不需要週線，所以多出 77 筆（${fmt(D.seg[0].net)}）。這段沒有被 MC 調參數用過，但早期 Python 日線研究有涵蓋。`],
+    ['逐年報表只涵蓋下半年', '分開跑的逐年 MC 每份都先暖機約 5 個月，只有 5、6 月之後才有交易，所以本頁的年度數字一律從全期報表切分；10 份逐年報表都和全期逐筆相同。']
+  ];
+  document.getElementById('notes').innerHTML = n.map(([a, b]) => `<div class="note"><b>${a}</b>${b}</div>`).join('');
+}
+function renderAll(){ kpis(); yearChart(); eqChart(); yearTable(); segTable(); runTable(); heat(); notes(); }
+function setUnit(d){
+  div = d;
+  document.getElementById('u-tx').setAttribute('aria-pressed', d === 1);
+  document.getElementById('u-mtx').setAttribute('aria-pressed', d === 20);
+  try { localStorage.setItem('l3unit', d === 20 ? 'mtx' : 'tx'); } catch (e) {}
+  renderAll();
+}
+document.getElementById('u-tx').addEventListener('click', () => setUnit(1));
+document.getElementById('u-mtx').addEventListener('click', () => setUnit(20));
+setUnit(div);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderAll);
+new MutationObserver(renderAll).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+</script>

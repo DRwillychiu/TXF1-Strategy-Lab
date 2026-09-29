@@ -8,6 +8,8 @@
 - 同根 K 棒不可先用 `marketposition` 再引用；用 `v_Prev_MP` 追前根部位，腳本最末行更新
 - 每隻策略 < 150 行、進場條件 ≤ 5 個；策略名稱 `STRATEGY_GEN_` 前綴
 - 回看長度 ≤ 99（MaxBarsBack 100）
+- 研究版 MC Load Name 必須以 `_RESEARCH` 結尾，不得和上架同名；例外要登記在 `tools/version_exceptions.txt` 並寫理由（G0b 自動檢查）
+- 新增研究版資料夾，同一次 push 要登記到 `docs/LIVE_VERSIONS.md`，並在 `docs/decisions/` 寫下決定（G0b 自動檢查）
 - 開發排程照 `docs/policies/OFFICIAL_ROADMAP.md`：不發明新名稱、不跳號、不平行開發；雙向策略必拆 `Sx_L`／`Sx_S`，先 L 後 S
 - 三層晉升：research →（WFE > 50%、MC 95% MDD < 30%、OOS PF > 1.0）→ live_simulation →（≥ 30 筆、PF ≥ 1.2、偏離 ≤ 30%）→ live
 - 品質門檻：WFE > 50%、MC 95% MDD < 帳戶 30%、參數高原寬度 > 範圍 20%、OOS PF > 1.0、每月 ≥ 2 筆
@@ -22,7 +24,11 @@
 | 團隊 | 文件 |
 |---|---|
 | 排程 | `docs/policies/OFFICIAL_ROADMAP.md` |
-| L3 優化 | `docs/specs/spec_L3_R2.md` |
+| L3 上架決定 | `docs/decisions/L3_deploy_v18_20260928.md`（v18 → 9/29 定案 v18.2、v18.3 否決）、`docs/decisions/L3_ranking_rule_B_20260928.md`（排名規則 B） |
+| L3 設計 | `docs/specs/spec_L3_R2.md`（§0 是現行 v18 設計；9/23 的原設計已被取代） |
+| L3 後續優化 | `docs/research/L3_v18_next_optimizations_20260928.md`、`docs/research/L3_day_session_plan_20260929.md`（日盤模組，時程待 Willy 確認） |
+| L3 各研究版狀態 | `strategies/research/L3_ConsolidationLong/README.md` |
+| L1／L5 優化 | `docs/research/L1_L5_attribution_20260929.md`（暫定）、`docs/decisions/L1_L5_acceptance_rules_DRAFT_20260929.md`（驗收規則草案，待 Willy 鎖定） |
 | L4 優化 | `docs/specs/spec_L4_R2.md`（待寫） |
 | 實盤五支 | `strategies/live/`｜研究 `strategies/research/` |
 | 晉升檢查 | `docs/policies/PROMOTE_CHECKLIST.md` |

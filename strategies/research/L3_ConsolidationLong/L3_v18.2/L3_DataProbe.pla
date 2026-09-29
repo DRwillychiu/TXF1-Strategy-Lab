@@ -1,0 +1,62 @@
+{================================================================================
+ Indicator   : L3_DataProbe  (PRINT / FILE ONLY - places NO orders)
+ Version     : v1 2026-09-29
+ Purpose     : Measure what L3 v18.2 reads from Data2 (60M) and Data3 (daily) on
+               every 15M bar close, in REAL TIME and after a RECALCULATION.
+               The backtest (MC report L3_182) shows that (High of Data3)[1]
+               = the daily bar BEFORE the last closed one. If real time reads a
+               different bar, live stops differ from the backtest.
+ Chart       : a SEPARATE chart (do not add to the L3 trading chart), same
+               symbol TXF1, Data1 15M / Data2 60M / Data3 daily, same sessions
+               and time zone as the L3 chart.
+ How to use  : 1. Create folder C:\L3probe (FileAppend does not create folders).
+               2. Apply this indicator, keep it running through the night.
+                  Real-time lines are written with mode RT.
+               3. After 05:00: copy C:\L3probe\L3_probe.csv to a safe place,
+                  then reload the chart (recalculate). Every bar is written
+                  again with mode HIST.
+               4. Compare RT vs HIST rows for the same Date,Time.
+                  Any difference in columns 5-17 = real time differs from backtest.
+ Columns     : Date,Time,Mode,Close,
+               D2_Time,D2_High,D2_Low,D2_Close,D2_RefHigh16,D2_RefLow16,
+               D3_Date,D3_High,D3_Low,D3_Close,D3_High_1,D3_Low_1,D3_Close_1
+================================================================================}
+
+inputs:
+    File_Path("C:\L3probe\L3_probe.csv"),
+    Print_On(true);
+
+variables:
+    v_Mode(""), v_Line(""), v_RefH(0), v_RefL(0);
+
+{ series functions are evaluated on every bar, outside any condition }
+v_RefH = Highest(High, 16)[1] of Data2;
+v_RefL = Lowest(Low, 16)[1] of Data2;
+
+if BarStatus(1) = 2 then begin
+    if GetAppInfo(aiRealTimeCalc) = 1 then
+        v_Mode = "RT"
+    else
+        v_Mode = "HIST";
+
+    v_Line = NumToStr(Date, 0) + "," + NumToStr(Time, 0) + "," + v_Mode + "," +
+             NumToStr(Close, 0) + "," +
+             NumToStr(Time of Data2, 0) + "," +
+             NumToStr(High of Data2, 0) + "," +
+             NumToStr(Low of Data2, 0) + "," +
+             NumToStr(Close of Data2, 0) + "," +
+             NumToStr(v_RefH, 0) + "," +
+             NumToStr(v_RefL, 0) + "," +
+             NumToStr(Date of Data3, 0) + "," +
+             NumToStr(High of Data3, 0) + "," +
+             NumToStr(Low of Data3, 0) + "," +
+             NumToStr(Close of Data3, 0) + "," +
+             NumToStr((High of Data3)[1], 0) + "," +
+             NumToStr((Low of Data3)[1], 0) + "," +
+             NumToStr((Close of Data3)[1], 0);
+
+    FileAppend(File_Path, v_Line + NewLine);
+    if Print_On then Print("L3_PROBE,", v_Line);
+end;
+
+Plot1(Close, "Close");
