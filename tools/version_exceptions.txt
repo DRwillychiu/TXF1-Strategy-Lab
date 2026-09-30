@@ -7,6 +7,7 @@
 # ---- 10/1 上架檔 ----
 strategies/research/L3_ConsolidationLong/L3_v18.2/L3_ConsolidationLong_v18.2.pla  # deploy build for 10/1; do not import under this name before the flat switch
 strategies/research/L5_BreakoutLong/L5_v19.13/L5_BreakoutLong_v19.13.pla          # L5 candidate (2026-09-30); alias _V1913 for backtest / dry run, live name only at the flat switch
+strategies/research/L5_BreakoutLong/L5_v19.15/L5_BreakoutLong_v19.15.pla          # L5 candidate (2026-09-30 23:30); alias _V1915 for backtest / dry run, live name only at the flat switch
 
 # ---- L1／L3／L4／L5 研究版 ----
 strategies/research/L1_TrendLong/L1_v3.3/L1_TrendLong_v3.3.pla                           # legacy, rename in Q4 （現名 WILLY_ATR_LONG_60M）
