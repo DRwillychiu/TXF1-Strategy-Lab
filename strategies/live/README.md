@@ -8,15 +8,15 @@
 
 ---
 
-## 上架策略清單（版本欄以 LIVE_VERSIONS 為準，2026-09-29 校對；淨利欄是 2026-07-26 舊值，未隨版本更新）
+## 上架策略清單（版本欄以 LIVE_VERSIONS 為準，2026-10-31 校對；淨利欄停在 7/26 舊值，BOSS_VIEW 也還是舊版內容）
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 基準淨利（7/26 舊值） | BOSS_VIEW |
 |------|------|------|------|----------|--------------|----------|
-| **L1** TrendLong | 趨勢追蹤 | 純多 | **V3.1**（SL_Pct 0.5%） | `TL_` | +3,216,200（V2.6 時） | [📋](L1_TrendLong/L1_TrendLong_BOSS_VIEW.md) |
-| **L2** TrendShort | 趨勢追蹤 | 純空 | **v5.3 + SetStopContract + SL_Pct=1.25** | `TS_` | **+2,882,400** | [📋](L2_TrendShort/L2_TrendShort_BOSS_VIEW.md) |
-| **L3** ConsolidationLong | 盤整區間 | 純多 | **v15.0**；**10/1 空手時切換為 v18.2**（見 LIVE_VERSIONS §1.1） | `CL_` | +697,200（v13.4 時） | [📋](L3_ConsolidationLong/L3_ConsolidationLong_BOSS_VIEW.md)（內容停在 v14.1，待更新） |
-| **L4** ConsolidationShort | 盤整反轉 | 純空 | **v14.6 + SetStopContract + SL_Pct=1.50** | `CS_` | **+894,400** | [📋](L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md) |
-| **L5** BreakoutLong | 盤整突破 | 純多 | **v19.9 + SetStopContract + SL_Pct=1.0** | `BL_` | +1,361,400 | [📋](L5_BreakoutLong/L5_BreakoutLong_BOSS_VIEW.md) |
+| **L1** TrendLong | 趨勢追蹤 | 純多 | **V3.2**（本資料夾的檔案是 V3.1；10/28 圖上下單大師檔名為 v3.8，實際版本待確認） | `TL_` | +3,216,200（V2.6 時） | [📋](L1_TrendLong/L1_TrendLong_BOSS_VIEW.md)（舊版） |
+| **L2** TrendShort | 趨勢追蹤 | 純空 | **v5.11**（10/5 起） | `TS_` | 未更新 | [📋](L2_TrendShort/L2_TrendShort_BOSS_VIEW.md)（舊版） |
+| **L3** ConsolidationLong | 盤整區間 | 純多 | **v18.4**（10/5 起；交易與 v18.2 相同） | `CL_` | 未更新 | [📋](L3_ConsolidationLong/L3_ConsolidationLong_BOSS_VIEW.md)（舊版） |
+| **L4** ConsolidationShort | 盤整反轉 | 純空 | **v14.10**（10/5 起，T8） | `CS_` | 未更新 | [📋](L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md)（舊版） |
+| **L5** BreakoutLong | 盤整突破 | 純多 | **v19.20**（10/5 起） | `BL_` | 未更新 | [📋](L5_BreakoutLong/L5_BreakoutLong_BOSS_VIEW.md)（舊版） |
 
 📋 = **BOSS_VIEW**（老闆快速 view，每隻策略強制附，規範見 [`docs/methodology/BOSS_VIEW_TEMPLATE.md`](../../docs/methodology/BOSS_VIEW_TEMPLATE.md)）
 
@@ -31,12 +31,12 @@
 | Manual_Kill_Switch | 緊急停市 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Frozen Initial SL | 進場根鎖 ATR（防 reload 漂移） | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **SetStopContract** | 引擎停損 per-contract（非 total） | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **SL_Pct** | 停損距離趴數上限（極端保護） | 0.5% | 1.25% | 0.55%（v15.0）；10/1 起 0.7%（v18.2） | 1.50% | 1.0% |
+| **SL_Pct** | 停損距離趴數上限（極端保護） | 見各版 .pla | 見各版 .pla | 見各版 .pla | 見各版 .pla | 見各版 .pla |
 | 30 天紅字警告 | 登錄表過期前通知 | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Holiday_Flat_Time 依 K 棒網格分配**：L1=345（45M）/ L2=300（60M）/ L3=L4=L5=415（15M）
 
-**⚠ `Manual_Kill_Switch` 只會平倉，不擋新進場**：五支程式裡它都只出現在出場段（2026-09-29 查核）。開啟後可能「出場 → 又進場 → 又出場」。**要停用策略 ＝ 關閉圖表自動交易，再到券商確認沒有委託和部位。** 連虧暫停與停用線也不在任何上架程式裡，由人工盯（見 `docs/departments/DEPT_RISK.md`）。
+**⚠ `Manual_Kill_Switch`（2026-10-31 更正）**：L2–L5 的 10/5 版本平倉並擋新進場；L1 V3.2 只平倉、不擋新進場（V3.8 會擋，L1 版本待確認）。從未在 MC 實測。**要停用策略 ＝ 關閉圖表自動交易，並到券商確認沒有委託和部位。**
 
 ---
 
@@ -52,9 +52,9 @@
 - Night session: 15:00-05:00
 - 週線 13SMA 過濾（一個季度）
 
-### L3 — 10/1 前 v15.0；10/1 起 v18.2（v18 設計）
-- **10/1 前（v15.0）**：v14.1 整箱設計 ＋ SetStopContract ＋ `SL_Pct` 0.55% ＋ 開盤封鎖 ＋ 最低盈虧比
-- **10/1 起（v18.2）**，完整摘要見 `docs/LIVE_VERSIONS.md` §1.2：
+### L3 — 9/30 15:00 起 v18.2（v18 設計）；之前 v15.0
+- **9/30 前（v15.0）**：v14.1 整箱設計 ＋ SetStopContract ＋ `SL_Pct` 0.55% ＋ 開盤封鎖 ＋ 最低盈虧比
+- **9/30 15:00 起（v18.2）**，完整摘要見 `docs/LIVE_VERSIONS.md` §1.2：
   - 停損 ＝ 前一日振幅 % × 30%，下限 60 點，上限為進場價 0.7%
   - 停利 ＝ 進場價 ＋（箱頂 − 進場價）× 90%
   - 只在夜盤進場（成交在 15:30–05:00），部位可以留到日盤；不需要週線
@@ -77,8 +77,8 @@
 
 1. **空手確認**：MC9 該策略無持倉
 2. **載入新版 PLA**：覆蓋舊版檔案。前提（2026-09-29 起）：
-   - 只在排定的切換當下、確認空手之後才覆蓋（L3：10/1，見 `docs/LIVE_VERSIONS.md` §1.1）
-   - 切換前，新版不得用上架名稱匯入或編譯到 MC9：L3 v18.2 切換前不得用 `STRATEGY_WILLY_LONG_C`，否則會立刻蓋掉正在跑的 v15.0；空跑用別名 `STRATEGY_WILLY_LONG_C_V182`
+   - 只在排定的切換當下、確認空手之後才覆蓋（L3：已於 9/30 完成；L5：排定 10/5，見 `docs/LIVE_VERSIONS.md` §1.1）
+   - 切換前，新版不得用上架名稱匯入或編譯到 MC9：L5 v19.15 切換前不得用 `STRATEGY_WILLY_LONG_BREAKOUT_C`；空跑用別名 `STRATEGY_WILLY_LONG_BREAKOUT_C_V1915`
    - 回退 ＝ 換回舊版（L3：`research/L3_v15.0`，程式與上架檔相同）
 3. **確認 Inputs 預設值**：與 .pla 檔案一致（`tools/verify_settings.py`：報表參數 ＝ 程式預設值）
 4. **跑完整回測**：與前版對比 PF / MDD / 淨利 / Top-10 保留

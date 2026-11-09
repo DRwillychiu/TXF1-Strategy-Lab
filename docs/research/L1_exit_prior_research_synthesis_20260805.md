@@ -10,7 +10,7 @@ new_simulation: false
 read_only_note: 本文為唯讀彙整，不修改任何既有檔案；所有數字皆搬運自出處，不重新計算
 primary_sources:
   - docs/research/L1_*.md (18 份)
-  - docs/handoffs/HANDOFF_L1_*.md
+  - docs/archive/handoffs/HANDOFF_L1_*.md
   - docs/strategy_archive/L1_v2.6_20260622_gap_miss_case.md
   - strategies/live/L1_TrendLong/*.pla|*.md
   - docs/policies/lesson_L2*.md
@@ -27,7 +27,7 @@ primary_sources:
 > 1. `docs/research/L1-L5_structural_audit_20260721.md:149` —
 >    「Out-of-ideas on exit side (3 independent attempts failed, direction permanently closed
 >    per feedback_trend_let_profits_run.md).」
-> 2. `docs/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:31` —
+> 2. `docs/archive/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:31` —
 >    「已封死的路 (勿重開): 停損收緊 34 變體 / 固定點數 cap / 固定 % 0.4-1.0% /
 >    daily loss cap (V2.8) / P3b buffer / 窄域 reclaim / 廣義再進場 (Plan C)」
 > 3. `strategies/live/L1_TrendLong/L1_TrendLong_review.md:41` — TL_TP 25% 虧損出場，
@@ -119,12 +119,12 @@ per feedback_trend_let_profits_run.md).」
 | **P8 Daily Loss Cap（V2.8）** | `DailyLoss_Enable=True, MaxCount=3, MaxNTD=100000`，觸發後封鎖新進場 | 2026-07-22 | Net 2,292,800 → **2,125,800（−167,000）**；PF 1.383 → 1.357；**MDD −502,200 → −602,400（−100,200 惡化）**；Sharpe 0.263→0.257；Return/MDD 4.57x→3.53x `[MC12]` | ① L1 ATR 停損在正常高波動就產生 80-100K 虧損，NTD 門檻 100K = 一次正常停損就觸發；② 停損後再進場是 L1 最高 EV 型態（<6h 勝率 34.7% 最高）；③ Count 觸發在 6.5 年回測**從未觸發**（L1 每日僅 0.29 筆）；④ 擋掉 #121 虧損 −20,600 卻同時擋掉 #449 獲利 **+187,600** | `docs/research/L1_v2.8_backtest_verdict_20260722.md:5-7,13,19-34,36,44-59,60,67-73` |
 | **封鎖所有停損後第 2 筆進場**（假設性） | 極端版的冷卻機制 | 2026-07-22（PAUSED，數據不支持） | 避開損失 31 筆 +2,994 pts；錯失獲利 19 筆 **−8,038 pts**；淨 50 筆 **−5,044 pts / −1,008,800 NTD** `[MC12 明細 + 離線推算]` | 「Blocking 2nd trades would destroy **49.8%** of L1's total net profit」；2nd trade after stop-out 的 EV = **+100 pts/trade** | `docs/research/L1_daily_loss_cap_points_analysis_20260722.md:83-84,90-98,117-122` |
 | **Layer 1b 行為觸發收緊**（連三黑 / 大陰吞噬 → Primary SL 距離減半，觸發一次鎖定） | P3 架構的第 1b 層 | **2026-07-24 KILLED** | GATE1：TriggerA↔Family E k=5 = −1,726 pts；TriggerB↔Family C ungated = 殺 127 個贏家 / −5,370 pts `[離線-py]`。GATE2 Fire-Quality Proxy（81 fires）：**Saved rate 50.6%（上限 40%，超標 10.6pp）**、Killed rate 40.7%（僅壓線）、False-halving rate 46.9% `[離線-代理，Daily bar 代理 45M]` | 四個獨立原因：① 觸發偵測重複已否決變體 ② L33 系統性原則（45M K 棒訊號無法分辨贏家/輸家）③ GATE2 數據面否決 ④ 用戶 2026-07-24 裁示「今天不會做任何減碼」框架限制。原文：「Layer 1b as specified does not distinguish winners from losers with acceptable precision on daily data.」 | `docs/research/L1_Layer1b_kill_summary_20260724.md:6,31-38,53-75,77-83,111`；`docs/research/L1_P3_python_analysis_20260724.md:111-176,158-168,173,176`；`strategies/research/L1_TrendLong/L1_v3.1/L1_v3.1_spec_20260724.md:12,29,660` |
-| **L1_c 每日回撤停損**（10-day max close-to-close drawdown × ratio 取代 ATR 主停損） | P3 Layer 1 候選 | 2026-07-24 ABANDONED | Ratio=0.7 時 L1_c 僅約束 **8.7% of trades (41/469)**；index ≥ 20K 時 L1_c×0.7 比 ATR×1.5 **寬 2-8 倍** `[未標明——出處只寫 "Diagnostic log"]` | 「L1_c scales WITH volatility (same direction as ATR)」→ 沒解決問題，退回 V3.0 改採 SL_Pct | `docs/research/L1_v3.1_SL_Pct_optimization_summary_20260724.md:139-149`；`docs/handoffs/HANDOFF_L1_v3.1_20260724_EOD.md:17-20` |
+| **L1_c 每日回撤停損**（10-day max close-to-close drawdown × ratio 取代 ATR 主停損） | P3 Layer 1 候選 | 2026-07-24 ABANDONED | Ratio=0.7 時 L1_c 僅約束 **8.7% of trades (41/469)**；index ≥ 20K 時 L1_c×0.7 比 ATR×1.5 **寬 2-8 倍** `[未標明——出處只寫 "Diagnostic log"]` | 「L1_c scales WITH volatility (same direction as ATR)」→ 沒解決問題，退回 V3.0 改採 SL_Pct | `docs/research/L1_v3.1_SL_Pct_optimization_summary_20260724.md:139-149`；`docs/archive/handoffs/HANDOFF_L1_v3.1_20260724_EOD.md:17-20` |
 | **X4 Breakout Quality Filter（V3.2）** | 用 Data4(1M) 對每個突破訊號打分（Momentum / Flirtation / Ascending Lows），夜盤需 score=3、日盤 ≥2 — **進場端，非出場端，但示範了跨時框脆弱性** | **2026-07-25 KILLED** | V3.1 MC12：445 筆 / +1,772,600 / PF 1.359 / MDD −476,600；V3.2 MC12：371 筆 / **+1,536,800** / PF 1.323 → **−235,800（−13.3%）**；同期 **Python projection：283 筆 / +3,464,800 / PF 2.614**（≈ MC12 實測的 2.25 倍） `[MC12 兩欄 + 離線-py 一欄，文件自帶三欄對照]` | 「Flirtation cliff-edge」：Breakout_Level 在 MC12 原生 45M bar 與 Python `resample('45min')` 產生的 bar 邊界不同 →「This is structural and unfixable — the two platforms will never produce identical 45M bar boundaries.」 | `strategies/research/L1_TrendLong/L1_v3.1/L1_v3.2_X4_FINAL_VERDICT.md:3,5,9-19,23-30,37-40,49-50,64-69,83-96` |
 
 ### A-1-c. 只在 handoff 被列名、量化細節未在 repo 找到
 
-`docs/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:31` 的封死清單中，
+`docs/archive/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:31` 的封死清單中，
 「停損收緊 34 變體」是上表 19+8+若干變體的合稱；其餘各項均已在上表找到量化細節。
 **唯一沒找到獨立量化文件的是「廣義再進場 (Plan C)」的 2026-07-22 版本**——
 但 `L1_TrendLong.pla:72-79` 有 2026-07-02 的 Plan C MC9 A/B 數字（−920K），推測為同一件事。
@@ -277,7 +277,7 @@ per feedback_trend_let_profits_run.md).」
 判讀原文（`:113-119`）：「All 3 FAILs are structural L1 characteristics that exist equally in V3.0…
 V3.1 did not worsen any of these.」
 **⚠️ 帳戶分母落差**：使用者實際配置是「200 萬 / 2 口大台」
-（`docs/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:28`），
+（`docs/archive/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md:28`），
 而 Rule #18 的「% of account」是用 1,000,000 TWD 算的，文件未做換算 → 見 §F-6。
 
 ---

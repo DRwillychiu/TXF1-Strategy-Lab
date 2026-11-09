@@ -58,7 +58,7 @@ DOCS = (
     "docs/specs/CAPITAL_AND_MARGIN.md", "docs/specs/ZERO_TRIGGER_TRIAGE.md",
     "docs/specs/PORT_AUDIT_20260907.md", "docs/specs/BACKTEST_MODULE_DESIGN.md",
     "docs/specs/HYPOTHESIS_LOG.md", "docs/specs/strategy_baseline.md",
-    "docs/specs/M1_ACCOUNTING.md", "docs/specs/M2_TRADE_STATS.md", "docs/specs/SUMMARY_20260908.md",
+    "docs/specs/M1_ACCOUNTING.md", "docs/specs/M2_TRADE_STATS.md", "docs/archive/summaries/specs_SUMMARY_20260908.md",
     
 )
 PLA = (

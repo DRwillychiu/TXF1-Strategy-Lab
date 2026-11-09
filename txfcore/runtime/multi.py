@@ -25,7 +25,7 @@ from txfcore.strategies.base import MarketView, PositionView, Strategy
 from txfcore.timing.clock import BarClock
 from txfcore.tradecal.gates import evaluate
 from txfcore.types.bar import Bar
-from txfcore.types.orders import MarketPosition, Side, SizedOrder
+from txfcore.types.orders import MarketPosition, OrderType, Side, SizedOrder
 
 
 class MultiStreamRunner:
@@ -40,7 +40,15 @@ class MultiStreamRunner:
         lineage: Lineage | None = None,
         warmup_bars: int = 100,
         align_policy: str = AlignPolicy.CLOSED_ONLY,
+        mc_cost_per_lot_side: float | None = None,
+        allow_multi_exit_per_bar: bool = False,
     ) -> None:
+        # 對帳 MC 報表：成本口徑（見 backtest.py 同名參數）
+        self.mc_cost_per_lot_side = mc_cost_per_lot_side
+        self._entry_limit = False
+        # 2026-10-07 L4 v14.10：TP1（1 口限價）與停損可同根先後成交，
+        # MC 報表分兩列。開啟後，部分出場不觸發 OCO，剩餘部位的出場單仍可成交。
+        self.allow_multi_exit_per_bar = allow_multi_exit_per_bar
         self.strategy = strategy
         self.instrument = instrument
         # **滑價是套在 fill_mc12 外面的一層**，不是塞進去。
@@ -82,7 +90,8 @@ class MultiStreamRunner:
 
             if pending or protective:
                 fills = self.fill_model.fill(pending, bar)
-                if protective and not pos.is_flat:
+                if (protective and not pos.is_flat
+                        and not self.fill_model.policy.engine_stop_entry_bar_only):
                     side = (Side.SELL if pos.direction is MarketPosition.LONG
                             else Side.BUY_TO_COVER)
                     sign = -1 if pos.direction is MarketPosition.LONG else 1
@@ -116,6 +125,7 @@ class MultiStreamRunner:
                         same_bar = entry_bar == (bar.mc_date, bar.mc_time)
                         if not pos.is_flat and not same_bar:
                             continue
+                        self._entry_limit = f.order.intent.order_type is OrderType.LIMIT
                         pos.open_leg(f.order.intent.label, f.price, f.quantity,
                                      bar.mc_date, bar.mc_time, side)
                         if entry_leg is None or not same_bar:
@@ -140,13 +150,14 @@ class MultiStreamRunner:
                             entry_price=epx, exit_price=f.price,
                             entry_date=ed, entry_time=et,
                             exit_date=bar.mc_date, exit_time=bar.mc_time,
-                            cost=trade_cost(self.instrument, epx, f.price, qty),
+                            cost=self._cost(epx, f.price, qty, self._entry_limit,
+                                            f.order.intent.order_type is OrderType.LIMIT),
                         )
                         res.trades.append(t)
                         ledger.record(t)
                         pos.prev_position_profit = t.net_ntd(self.instrument)
                         res.oco_cancelled += len(fills) - 1 if len(fills) > 1 else 0
-                        closed_this_bar = True
+                        closed_this_bar = (pos.is_flat or not self.allow_multi_exit_per_bar)
                         if pos.is_flat:
                             entry_leg = None
                             entry_bar = None
@@ -170,6 +181,8 @@ class MultiStreamRunner:
                     prev_position_profit=pos.prev_position_profit,
                     current_contracts=pos.current_contracts,
                     max_contracts=pos.max_contracts,
+                    total_trades=len(res.trades),
+                    net_profit=sum(x.net_ntd(self.instrument) for x in res.trades),
                 ),
                 calendar=evaluate(bar.mc_date, bar.mc_time,
                                   s.config.registry_valid_until),
@@ -182,6 +195,14 @@ class MultiStreamRunner:
             res.orders_emitted += len(pending)
 
         return res
+
+    def _cost(self, entry_px: float, exit_px: float, qty: int,
+              entry_limit: bool = False, exit_limit: bool = False) -> float:
+        """MC 的滑價只加在市價單與停損單，限價單不加（L4 T8 報表 54 筆 TP1 限價實證）。"""
+        if self.mc_cost_per_lot_side is not None:
+            c = self.mc_cost_per_lot_side * qty
+            return (0 if entry_limit else c) + (0 if exit_limit else c)
+        return trade_cost(self.instrument, entry_px, exit_px, qty)
 
     def _same_bar_stop(self, bar, pos, entry_leg, protective, ledger, res, name):
         """進場那根立刻被停損打掉。
@@ -219,7 +240,7 @@ class MultiStreamRunner:
             entry_price=epx, exit_price=ef.price,
             entry_date=ed, entry_time=et,
             exit_date=bar.mc_date, exit_time=bar.mc_time,
-            cost=trade_cost(self.instrument, epx, ef.price, qty),
+            cost=self._cost(epx, ef.price, qty, self._entry_limit),
         )
         res.trades.append(t)
         ledger.record(t)

@@ -1,5 +1,7 @@
 # L3 ConsolidationLong — Boss View
 
+> ⚠ **本頁是舊版內容，未隨 2026-10-05 換版更新**；現行上架版本見 `docs/LIVE_VERSIONS.md` 第 1 節。
+
 **Version** V14.1 Matrix Range Capture + FrozenSL + HolidayFlat_v3 (OPTIMIZED) | **Status** DEPLOYED (MC9 2026-07-04)
 
 ---

@@ -170,7 +170,7 @@ strategies/research/S16_MACrossShort/
 
 ### S3_S 相關（明天可能延續 audit follow-up）
 - `docs/research/S3_S_v196_entry_gate_audit_20260707.md` (15 findings)
-- `docs/handoffs/handoff_20260707_s3s_entry_gate_audit.md`
+- `docs/archive/handoffs/handoff_20260707_s3s_entry_gate_audit.md`
 
 ---
 

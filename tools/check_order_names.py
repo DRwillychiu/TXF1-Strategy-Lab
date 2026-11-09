@@ -7,7 +7,8 @@ when two DIFFERENT order statements (Buy/Sell/SellShort/BuyToCover) carry the
 same name and both get executed during one backtest. The check below lists
 every order statement and fails when a name is used by more than one statement.
 
-usage: python tools/check_order_names.py file.pla [file.pla ...]
+usage: python tools/check_order_names.py <file.pla | folder> [...]
+       a folder is searched recursively for .pla files (cmd.exe does not expand *)
 exit code 1 if any name is shared by 2+ statements.
 """
 import re, sys, collections
@@ -27,8 +28,19 @@ def scan(path):
         uses[m.group(2)].append((m.group(1), line))
     return uses
 
+def expand(args):
+    import pathlib
+    out = []
+    for a in args:
+        p = pathlib.Path(a)
+        out += sorted(str(x) for x in p.rglob("*.pla")) if p.is_dir() else [a]
+    return out
+
 def main(paths):
     bad = 0
+    paths = expand(paths)
+    if not paths:
+        print("no .pla files given"); return 1
     for p in paths:
         uses = scan(p)
         dup = {k: v for k, v in uses.items() if len(v) > 1}

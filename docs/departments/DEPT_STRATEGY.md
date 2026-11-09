@@ -26,9 +26,9 @@
 | 排程 | `docs/policies/OFFICIAL_ROADMAP.md` |
 | L3 上架決定 | `docs/decisions/L3_deploy_v18_20260928.md`（v18 → 9/29 定案 v18.2、v18.3 否決）、`docs/decisions/L3_ranking_rule_B_20260928.md`（排名規則 B） |
 | L3 設計 | `docs/specs/spec_L3_R2.md`（§0 是現行 v18 設計；9/23 的原設計已被取代） |
-| L3 後續優化 | `docs/research/L3_v18_next_optimizations_20260928.md`、`docs/research/L3_day_session_plan_20260929.md`（日盤模組，時程待 Willy 確認） |
+| L3 後續優化 | `docs/research/L3_v18_next_optimizations_20260928.md`、`docs/research/L3_day_session_plan_20260929.md`（日盤模組暫停，9/30 Willy）；L3 進場端檢查排在 L5／L4／L1／L2 降連虧與 MDD 之後（10/1 Willy） |
 | L3 各研究版狀態 | `strategies/research/L3_ConsolidationLong/README.md` |
-| L1／L5 優化 | `docs/research/L1_L5_attribution_20260929.md`（暫定）、`docs/decisions/L1_L5_acceptance_rules_DRAFT_20260929.md`（驗收規則草案，待 Willy 鎖定） |
+| L1／L5 優化 | `docs/research/L1_L5_attribution_20260929.md`（暫定）、`docs/decisions/L1_L5_acceptance_rules_DRAFT_20260929.md`（L5 已鎖定 9/29，並於 9/30 改為「回落與連虧優先、淨利次要」；L1 待鎖定）；L5 結果 `strategies/research/L5_BreakoutLong/L5_v19.11/RESULTS_20260930.md`、停損結構 `docs/research/L5_stop_structure_20260930.md` |
 | L4 優化 | `docs/specs/spec_L4_R2.md`（待寫） |
 | 實盤五支 | `strategies/live/`｜研究 `strategies/research/` |
 | 晉升檢查 | `docs/policies/PROMOTE_CHECKLIST.md` |

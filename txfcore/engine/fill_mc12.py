@@ -25,6 +25,8 @@ OHLC 沒有路徑資訊。MC 必須用一個假設，而那個假設**沒有文�
 
 from __future__ import annotations
 
+import math
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -93,12 +95,20 @@ class FillPolicy:
     # 這是逐筆對帳之外，第一個能判定成交假設的訊號 ——
     # 而它來自一個我原本以為只是死碼的欄位。
     engine_stop_first: bool = False
+    # 2026-10-07 L2 v5.11 校正：MC 把停損／限價價位進位到 tick
+    # （買停損往上、賣停損往下；8 筆 TS_StopProfit 實證，例 10396.4 → 10397）。
+    round_to_tick: bool = False
+    # 2026-10-07 L2 v5.11 校正：SetStopLoss 只在空手時呼叫的策略，
+    # 引擎停損只在進場那一根有效（MC 報表 Stop Loss 全部與進場同一根）。
+    engine_stop_entry_bar_only: bool = False
 
     @property
     def name(self) -> str:
         return (f"{self.intrabar.value}|{self.gap.value}"
                 f"|sb={int(self.allow_same_bar_exit)}"
-                f"|ef={int(self.engine_stop_first)}")
+                f"|ef={int(self.engine_stop_first)}"
+                + ("|tick" if self.round_to_tick else "")
+                + ("|eb1" if self.engine_stop_entry_bar_only else ""))
 
 
 DEFAULT_POLICY = FillPolicy()
@@ -138,6 +148,20 @@ class Fill:
         return "ENGINE_STOP" if self.is_engine_stop else self.order.intent.label
 
 
+TICK = 1.0  # 台指期大、小、微台 tick 皆為 1 點
+
+
+def round_trigger(price: float, order_type: OrderType, side: Side,
+                  policy: "FillPolicy") -> float:
+    """MC 的價位進位：對成交者不利的方向（買停損、賣限價往上；賣停損、買限價往下）。"""
+    if not policy.round_to_tick or order_type is OrderType.MARKET:
+        return price
+    buying = side in (Side.BUY, Side.BUY_TO_COVER)
+    up = (buying and order_type is OrderType.STOP) or (not buying and order_type is OrderType.LIMIT)
+    q = price / TICK
+    return (math.ceil(q - 1e-9) if up else math.floor(q + 1e-9)) * TICK
+
+
 def _triggers_long(order_type: OrderType, side: Side, price: float, bar: Bar) -> bool:
     """該價位在這根 K 棒是否被觸及。"""
     buying = side in (Side.BUY, Side.BUY_TO_COVER)
@@ -157,6 +181,7 @@ def _fill_price(order: SizedOrder, bar: Bar, policy: FillPolicy) -> float:
 
     trigger = order.intent.price
     assert trigger is not None
+    trigger = round_trigger(trigger, ot, order.intent.side, policy)
     buying = order.intent.side in (Side.BUY, Side.BUY_TO_COVER)
 
     # 開盤已越過觸發價
@@ -216,8 +241,10 @@ class MC12FillModel:
         """
         hit = [
             o for o in orders
-            if _triggers_long(o.intent.order_type, o.intent.side, 
-                              o.intent.price if o.intent.price is not None else bar.open, bar)
+            if _triggers_long(o.intent.order_type, o.intent.side,
+                              round_trigger(o.intent.price, o.intent.order_type,
+                                            o.intent.side, self.policy)
+                              if o.intent.price is not None else bar.open, bar)
         ]
         hit.sort(key=lambda o: _sort_key(o, bar, self.policy))
         return [
@@ -244,6 +271,7 @@ class MC12FillModel:
         from txfcore.types.orders import OrderIntent
 
         buying = side in (Side.BUY, Side.BUY_TO_COVER)
+        stop_price = round_trigger(stop_price, OrderType.STOP, side, self.policy)
         touched = bar.high >= stop_price if buying else bar.low <= stop_price
         if not touched:
             return None

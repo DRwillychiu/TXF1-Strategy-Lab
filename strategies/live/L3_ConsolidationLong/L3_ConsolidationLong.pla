@@ -1,192 +1,103 @@
 {================================================================================
- Script Name : _Backtest_Adaptive_Farmer_v14_PureLong
- MC Load Name: STRATEGY_WILLY_LONG_C
- Description : Matrix Range Capture (Full-Range Consolidation Long)
- Version     : v15.0 (v14.1 base + SetStopContract + SL_Pct 0.55% + Opening Block + Min R:R)
- Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
- Platform    : MultiCharts 9.0 PowerLanguage x64
- Timeframe   : Data1 = 15M / Data2 = 60M / Data3 = Daily
+ L3 CONSOLIDATION LONG (Adaptive Farmer)  -  v18.4  (2026-10-03)
+ MC Load Name : STRATEGY_WILLY_LONG_C  (live name). Backtest / dry run under an
+                alias first; save under the live name ONLY when flat.
+ Data         : Data1 TXF1 15M / Data2 60M / Data3 daily. IOG off.
+ Verify       : all defaults, slippage 1,000 per lot, commission 0, 2 lots,
+                2017-06-07 to 2026-09-24 -> 522 trades / net 3,352,800 /
+                max DD -631,200 (= v18.2 report L3_182).
 
- ARCHITECTURE REDESIGN (v14.0, 2026-07-03):
-   Problem: v13 half-box design splits the box into Bot->Mid and Mid->Top,
-            structurally capping reward ratio at ~1.1x. CL_Entry_Bot was a
-            dead leg (26 trades, -10.4K). 94% of profit came from
-            CL_Entry_Mid targeting only half the box range.
+ VERSION
+  v18.4 (10/03) v18.2 trades unchanged. Kill switch also blocks entries and
+                is first in a single forced-exit chain; a forced exit sends
+                no other exit order on that bar; explicit 450-point cap on
+                the engine stop and the exit stop (0.7% binds first below
+                64,286); 05:00 signal bar blocked by Night_Only too;
+                comments condensed and corrected.
+  v18.2 (09/29) live 9/30: v18.1 code, Stop_Day_Pct 30, Target_Room_Pct 90,
+                SL_Pct 0.7.
 
-   Solution: Multi-dimensional matrix architecture.
-     Dim 1 [Box Qualification]: skip boxes < Min_Box_ATR * ATR (friction filter)
-     Dim 2 [Support Zone]:     unified entry at bottom Entry_Zone_Pct of box
-     Dim 3 [Dynamic Target]:   Frozen swing high (15M lookback, capped at Box_Top)
-     Dim 4 [Trend + Daily]:    unchanged filters from v13
-
-   Pre-verify: Python 28y TWII daily confirmed direction:
-     Full-range PF 1.086 vs half-box PF 0.806 (+35%)
-     Reward ratio 1.92x vs 0.90x (+113%)
-     Filtered variant (large boxes) best: Sharpe +0.366 vs baseline
-
-   Changes from v13.4:
-     - REMOVED: CL_Entry_Bot / CL_Entry_Mid dual-leg split
-     - REMOVED: v_Leg_IsBot / v_Work_IsBot leg classification
-     - REMOVED: CL_TP_Bot / CL_TP_Mid dual-leg targets
-     - ADDED:   CL_Entry (unified support zone entry)
-     - ADDED:   CL_TP (full-range target = dynamic swing high)
-     - ADDED:   Entry_Zone_Pct input (support zone = bottom 50% of box)
-     - ADDED:   Min_Box_ATR input (box must be >= N * ATR to trade)
-     - ADDED:   Swing_Lookback input (15M bars for dynamic target)
-     - KEPT:    All safety modules (Holiday v3, Settlement, ImmediateStop,
-                FrozenSL, BreakExit, Registry fail-safe, Manual Kill)
-     - KEPT:    BE mechanism code (disabled, BE_Trigger_Pts=0)
-
- V15.0 CHANGES (2026-07-25, stop loss hardening):
-   BUG-1 FIX: Added SetStopContract declaration.
-     Without it, 2-lot deployment halves the per-contract stop distance.
-     SetStopContract makes SetStopLoss amount per-CONTRACT (lot-invariant).
-   BUG-2 FIX: Added SL_Pct percentage-based stop distance cap.
-     ATR buffer scales non-linearly with index level. At high ATR, a single
-     stop can exceed any reasonable per-trade risk budget. SL_Pct caps the
-     maximum stop distance as a percentage of entry price.
-     Frozen SL becomes dual-layer: MaxList(ATR_leg, Pct_leg) = tightest.
-     SetStopLoss mirrors: MinList(ATR_distance, Pct_distance) = tightest.
-     SL_Pct = 0 disables the percentage leg (v14.1 compatible mode).
-   BUG-3 FIX: SetStopLoss distance formula unchanged (Close-based proxy).
-     Entry via Stop at Box_Btm fills near Close when Close > Box_Btm.
-     Close-based distance is a conservative approximation. Combined with
-     SL_Pct cap, the engine stop is always a valid safety net.
-   FILTER: Opening volatility block (08:45-09:45, Open_Block_End=945).
-     Day-session open entries are structurally toxic for consolidation strategies:
-     institutions probe/hunt box bottoms at open, invalidating support logic.
-     OB930 first pass removed 08:45-09:30 but cascade pushed 19T to 09:45
-     (WR 10.5%, -604K). OB945 eliminates cascade; 10:xx is the first
-     profitable slot (WR 41%, +134K). Blocks entry SIGNALS whose fills
-     would land in the forbidden zone: Time=500 (night session last bar
-     -> 09:00 fill) and Time 900..930 (-> 09:15..09:45 fills).
-   FILTER: Minimum R:R gate (Min_RR=1.0, requires SL_Pct > 0).
-     Rejects entries where Box_Range < Min_RR * Box_Bottom * SL_Pct/100.
-     27% of CL_TP trades had R:R < 1.0 (reward < risk). Box width varies
-     36-1188 pts but SL_Pct cap is nearly fixed, so narrow boxes create
-     structurally negative expected value entries. Optimizable parameter.
-
- PERFORMANCE (V15.0 w/ OB945, MC9 2026/07/25, 2-lot 2M capital, 1000 slip):
-   Net Profit    : 2,446,000 TWD
-   Profit Factor : 1.255
-   Max Drawdown  : -810,800 (29.4%)
-   Win Rate      : 46.3%
-   Total Trades  : 376
-   Day PF 1.03 / Night PF 1.32
-
- PERFORMANCE (v14.1 OPTIMIZED, MC9 Excel 2026/07/04, Initial Capital 1M):
-   Net Profit    : 2,048,000 TWD (+194% vs v13.4)
-   Profit Factor : 1.470 (+24% vs v13.4 1.187)
-   Win Rate      : 56.0%
-   Reward Ratio  : 1.154
-   MDD           : -378,600 (-22.3%)
-   Net/MDD       : 5.41
-   Total Trades  : 332
-   Annual Return : 33.3%
-   Sharpe        : 0.302
-   Backtest      : 2020/05/12 - 2026/07/04
-
- OPTIMIZATION (2026-07-04, 2-round MC9 sweep):
-   Round 1: range 0.15-0.50 / 1.5-6.0 / 16-64 -> all hit upper bound
-   Round 2: expanded 0.15-0.70 / 1.5-10.0 / 16-128 -> converged interior
-   Entry_Zone_Pct : 0.30 -> 0.50 (71% of range, plateau confirmed)
-   Min_Box_ATR    : 3.0  -> 8.5  (85% of range, off boundary)
-   Swing_Lookback : 32   -> 80   (63% of range, plateau confirmed)
+ LOGIC
+  Box     60M bar inside the previous 16 bars' range and its own range <=
+          10% of it -> box = that range; it re-anchors on each such bar and
+          ends when a 60M close leaves it. Qualified if width >= 8.5 ATR(9)
+          of 15M.
+  Entry   buy stop at the box bottom while Close is in the lower half of the
+          box and above the planned stop; 60M close > MA(12); daily close >
+          MA20 or MA60; box width >= 1 x planned stop; fills only 15:30-05:00
+          (Night_Only, open block to 09:45); not holiday tail, settlement
+          Wednesday or kill. Entries are allowed the evening before a
+          holiday; the tail exit flattens them.
+  Stop    distance = previous day range % x 30% of price, at least 60 pts,
+          at most 0.7% of price and 450 pts; engine stop on the entry bar
+          (per contract), exit stop frozen on the first bar in position.
+  Target  entry + (box top - entry) x 90% (limit), frozen with the stop.
+  Exit    forced first: kill, registry end, holiday tail (04:15 bar),
+          settlement (12:30 bar); else box end -> market; else target/stop.
+  Note    Data2 and Data3 are read on [0]/[1] of their series; in the MC
+          backtest Data3 [1] is the daily bar before the last completed
+          one (9/29 check, 178/178 stops). Live reading unverified (F8).
 ================================================================================}
 
 inputs:
-    { --- Data2 (60M) Box Detection --- }
+    { --- 60M box detection --- }
     Lookback_Bars(16),
     Range_Shrink_Rate(0.1),
     MA_Len(12),
 
-    { --- V14 Matrix Dimensions --- }
-    Entry_Zone_Pct(0.50),       { support zone = bottom 50% of box range (optimized from 0.30) }
-    Min_Box_ATR(8.5),           { skip boxes smaller than N * 15M ATR (optimized from 3.0) }
-    Swing_Lookback(80),         { 15M bars for dynamic swing high target (optimized from 32) }
-
-    { --- Risk Management (15M) --- }
+    { --- box quality: width >= Qual_ATR_Mult x ATR(15M) --- }
+    Qual_ATR_Mult(8.5),
     ATR_Length(9),
-    ATR_Stop_Mult(3.0),
-    SL_Pct(0.55),               { V15: percentage stop cap. 0 = disabled. E.g. 0.55 = 0.55% of entry }
-    Open_Block_End(945),        { V15: block entries filling before this MC time. 0 = disabled }
-    Min_RR(1.0),                { V15: min reward/risk for entry. 0 = disabled. Optimizable }
 
-    { --- Data3 (Daily) Filter Settings --- }
+    { --- entry --- }
+    Entry_Zone_Pct(0.50),       { support zone = bottom 50% of the box }
+    Min_RR(1.0),                { box must be at least Min_RR stops wide. 0 = off }
+    Open_Block_End(945),        { no entry filling before this time; 0 = off }
+    Night_Only(true),           { entries fill only in the night session }
+
+    { --- stop / target (v18) --- }
+    Stop_Day_Pct(30),           { stop distance = previous day's range % x N % }
+    Stop_Min_Pts(60),           { stop floor in points }
+    Target_Room_Pct(90),        { target = entry + (box top - entry) x N % }
+    Freeze_SL_On(true),         { stop / target frozen on the first bar in position }
+    SL_Pct(0.7),                { stop cap, % of price (engine and exit stop); 0 = off }
+    SL_Max_Pts(450),            { stop cap, points (engine and exit stop); 0 = off }
+
+    { --- daily filter (Data3) --- }
     Daily_MA_Fast(20),
     Daily_MA_Slow(60),
 
-    { --- Holiday Flat Rule v3 (Iron Rule 2026-06-12) --- }
+    { --- safety --- }
     Holiday_Flat_Time(415),
     Registry_Valid_Until(1270101),
     Manual_Kill_Switch(false),
-
-    { --- Monthly Settlement Flat (2026-06-17) --- }
     Settlement_Flat_Time(1230),
 
-    { --- Frozen SL (v13.2, always-on in v14) --- }
-    Freeze_SL_On(true),
-
-    { --- BE layer (DISABLED for range strategies, kept for compat) --- }
-    BE_Trigger_Pts(0),
-    BE_Offset_Pts(5);
+    { --- logging only (no effect on trades) --- }
+    Box_Log_On(true),
+    Qual_Log_On(false);
 
 variables:
-    { --- Data2 (60M) Box State --- }
-    v_Ref_High(0),
-    v_Ref_Low(0),
-    v_Curr_Range(0),
-    v_Ref_Range(0),
-    v_is_in_consolidation(false),
-    v_Box_Top(0),
-    v_Box_Btm(0),
-
-    { --- V14 Matrix State --- }
-    v_Mid_Line(0),
-    v_Box_Range(0),
-    v_Box_Qualified(false),
-    v_Support_Zone(0),
-    v_Swing_High(0),
-
-    { --- Data2 Trend Filter --- }
-    v_60M_MA(0),
-    v_Trend_Dir(0),
-
-    { --- Data3 Daily Filter --- }
-    v_Daily_MA_Fast(0),
-    v_Daily_MA_Slow(0),
-    v_Daily_Filter(false),
-
-    { --- Data1 (15M) Execution --- }
-    v_Current_ATR(0),
-    v_ATR_Buffer(0),
-    v_SL_Distance(0),          { V15: SetStopLoss distance (engine level) }
-    v_Opening_Block(false),    { V15: true during day-session opening no-trade window }
-    v_RR_Qualified(true),      { V15: true when box R:R meets Min_RR threshold }
-
-    { --- Holiday / Settlement --- }
-    v_Holiday_Block(false),
-    v_Registry_Expired(false),
-    Registry_Warn_ID(-1),
-    hidx(0),
+    v_Ref_High(0), v_Ref_Low(0), v_Curr_Range(0), v_Ref_Range(0),
+    v_is_in_consolidation(false), v_Box_Top(0), v_Box_Btm(0),
+    v_Box_Range(0), v_Box_Qualified(false), v_Support_Zone(0),
+    v_Qual_Need(0), v_Qual_Flag(0), v_Prev_BoxTop(0),
+    v_Stop_Px(0), v_Stop_Dist(0), v_Plan_RR(0), v_Entry_Px(0), v_Target_Px(0),
+    v_PrevDayRngPct(0), v_Day_Block(false), v_Stop_Floor(0),
+    v_60M_MA(0), v_Trend_Dir(0),
+    v_Daily_MA_Fast(0), v_Daily_MA_Slow(0), v_Daily_Filter(false),
+    v_Current_ATR(0), v_SL_Distance(0), v_Opening_Block(false), v_RR_Qualified(true),
+    v_Holiday_Block(false), v_Registry_Expired(false), Registry_Warn_ID(-1), hidx(0),
     v_Settlement_Day(false),
-
-    { --- Frozen SL / Target --- }
-    v_SL_Locked(false),
-    v_Frozen_SL(0),
-    v_Frozen_Target(0),
-    v_Work_SL(0),
-    v_Work_Target(0),
-    v_SL_Pct_Floor(0),        { V15: percentage leg SL price }
-    v_BE_Armed(false),
-    v_BE_IsFloor(false);
+    v_SL_Locked(false), v_Frozen_SL(0), v_Frozen_Target(0), v_Work_SL(0), v_Work_Target(0),
+    v_Box_Active(false), v_Force_Exit(false);
 
 arrays:
     Holiday_Tail[80](0);
 
-{ ==========================================
-  0. Holiday Tail Registry (TAIFEX-verified, shared with L1/L2)
-  ========================================== }
+{ ===== 0. Holiday tail registry (shared with L1/L2): date stamp of the 00:00-05:00
+  bars of the last night session before each closure. 2019 H1 and 2021-04-30
+  are missing (no position was affected); typhoon closures are manual. ===== }
 
 if CurrentBar = 1 then begin
     Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
@@ -258,9 +169,7 @@ if LastBarOnChart and
     end;
 end;
 
-{ ==========================================
-  1. Commander Logic (Data2 - 60M Box Detection)
-  ========================================== }
+{ ===== 1. 60M box (Data2) ===== }
 
 v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
 v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
@@ -287,31 +196,47 @@ if v_is_in_consolidation then begin
         v_is_in_consolidation = false;
 end;
 
-{ ==========================================
-  2. V14 Box Qualification Matrix (Dim 1)
-  ========================================== }
+{ ===== 2. Box quality, previous day range, session block ===== }
 
 v_Current_ATR = AvgTrueRange(ATR_Length);
 
-v_Box_Range    = 0;
+{ previous day range % (see header note on Data3 [1]) }
+v_PrevDayRngPct = 0;
+if (Close of Data3)[1] > 0 then
+    v_PrevDayRngPct = ((High of Data3)[1] - (Low of Data3)[1]) / (Close of Data3)[1] * 100;
+
+{ Night_Only: no signal on bars 09:00-13:45 (fill in the day session) or on the
+  05:00 bar (would fill at 08:45). Bar Time = bar close time. }
+v_Day_Block = false;
+if Night_Only then begin
+    if Time = 500 or (Time >= 900 and Time <= 1345) then v_Day_Block = true;
+end;
+
+v_Box_Range     = 0;
 v_Box_Qualified = false;
-v_Mid_Line     = 0;
-v_Support_Zone = 0;
-v_ATR_Buffer   = ATR_Stop_Mult * v_Current_ATR;
+v_Support_Zone  = 0;
+v_Box_Active    = v_is_in_consolidation and v_Box_Top > v_Box_Btm;
 
-if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+if v_Box_Active then begin
     v_Box_Range = v_Box_Top - v_Box_Btm;
-    v_Mid_Line  = (v_Box_Top + v_Box_Btm) / 2;
 
-    if v_Current_ATR > 0 and (v_Box_Range / v_Current_ATR >= Min_Box_ATR) then
-        v_Box_Qualified = true;
+    v_Qual_Need = Qual_ATR_Mult * v_Current_ATR;
+    if v_Current_ATR > 0 and v_Box_Range >= v_Qual_Need then v_Box_Qualified = true;
+
+    { diagnostic: one line per new box, qualified or not }
+    v_Qual_Flag = 0;
+    if v_Box_Qualified then v_Qual_Flag = 1;
+    if Qual_Log_On and v_Box_Top <> v_Prev_BoxTop then begin
+        Print( "L3_QUAL,", Date:7:0, ",", Time:4:0, ",",
+               v_Box_Btm:6:0, ",", v_Box_Top:6:0, ",", v_Box_Range:6:0, ",",
+               v_Current_ATR:6:1, ",", v_Qual_Need:6:0, ",", v_Qual_Flag:1:0 );
+        v_Prev_BoxTop = v_Box_Top;
+    end;
 
     v_Support_Zone = v_Box_Btm + v_Box_Range * Entry_Zone_Pct;
 end;
 
-{ ==========================================
-  3. Data3 Filter Logic (Daily)
-  ========================================== }
+{ ===== 3. Daily filter (Data3) ===== }
 
 v_Daily_MA_Fast = Average(Close, Daily_MA_Fast) of Data3;
 v_Daily_MA_Slow = Average(Close, Daily_MA_Slow) of Data3;
@@ -322,153 +247,137 @@ if (Close of Data3 > v_Daily_MA_Fast) or
 else
     v_Daily_Filter = false;
 
-{ ==========================================
-  4. Execution Block (requires active box, NOT box qualification)
-  Entry is gated by v_Box_Qualified; exit only needs active box.
-  BreakExit fires ONLY on true box break (not ATR-ratio drift).
-  ========================================== }
+{ ===== 4. Forced exit flag: kill, registry end, holiday tail, settlement ===== }
+v_Force_Exit = (MarketPosition = 1) and
+               (Manual_Kill_Switch or v_Registry_Expired or
+                (v_Holiday_Block and Time >= Holiday_Flat_Time) or
+                (v_Settlement_Day and Time >= Settlement_Flat_Time));
 
-if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+{ ===== 5. Active box: engine stop, entry, target / stop ===== }
+if v_Box_Active then begin
 
-    { P3b Immediate Stop Guard (Rule #12)
-      V15: SetStopContract makes amount per-CONTRACT (lot-invariant).
-      V15: SL_Pct caps the engine stop distance as percentage of Close.
-      MinList of distances = tightest stop (same logic as L1 V3.1). }
+    { engine stop on the entry bar, per contract }
     SetStopContract;
     if v_Box_Qualified and MarketPosition <= 0 then begin
-        v_SL_Distance = AbsValue(Close - (v_Box_Btm - v_ATR_Buffer));
+        v_SL_Distance = Close * v_PrevDayRngPct * Stop_Day_Pct / 10000;
+        if v_SL_Distance < Stop_Min_Pts then v_SL_Distance = Stop_Min_Pts;
         if SL_Pct > 0 then
             v_SL_Distance = MinList(v_SL_Distance, Close * SL_Pct / 100);
+        if SL_Max_Pts > 0 then
+            v_SL_Distance = MinList(v_SL_Distance, SL_Max_Pts);
         SetStopLoss(v_SL_Distance * BigPointValue);
     end;
 
-    { --- V15 Opening Volatility Filter --- }
+    { opening block }
     v_Opening_Block = false;
     if Open_Block_End > 0 then begin
         if Time = 500 then v_Opening_Block = true;
         if Time >= 900 and Time < Open_Block_End then v_Opening_Block = true;
     end;
 
-    { --- V15 Reward/Risk Qualification --- }
+    { plan at the box bottom (no % / point cap here): RR gate = box width >=
+      Min_RR x planned stop, target inside the box }
+    v_Entry_Px  = v_Box_Btm;
+    v_Stop_Px   = 0;
+    v_Stop_Dist = 0;
+    v_Target_Px = 0;
+    v_Plan_RR   = 0;
     v_RR_Qualified = true;
-    if Min_RR > 0 and SL_Pct > 0 and v_Box_Range > 0 then begin
-        if v_Box_Range < Min_RR * v_Box_Btm * SL_Pct / 100 then
-            v_RR_Qualified = false;
+    if v_Box_Btm > 0 then begin
+        v_Stop_Dist = v_Box_Btm * v_PrevDayRngPct * Stop_Day_Pct / 10000;
+        if v_Stop_Dist < Stop_Min_Pts then v_Stop_Dist = Stop_Min_Pts;
+        v_Stop_Px   = v_Box_Btm - v_Stop_Dist;
+        v_Target_Px = v_Box_Btm + (v_Box_Top - v_Box_Btm) * Target_Room_Pct / 100;
+        if v_Stop_Dist > 0 then
+            v_Plan_RR = (v_Target_Px - v_Box_Btm) / v_Stop_Dist;
     end;
+    if v_Stop_Dist <= 0 or v_Target_Px <= v_Box_Btm or v_Target_Px > v_Box_Top then
+        v_RR_Qualified = false;
+    if Min_RR > 0 and v_Stop_Dist > 0 and v_Box_Range < Min_RR * v_Stop_Dist then
+        v_RR_Qualified = false;
 
-    { --- V14 Entry (Dim 2: Unified Support Zone) --- }
+    { entry: buy stop at the box bottom (fills at the open when price is above it) }
     if v_Box_Qualified and MarketPosition = 0 then begin
         if (v_Trend_Dir = 1) and
            (v_Daily_Filter = true) and
            (v_Holiday_Block = false) and
            (v_Settlement_Day = false) and
            (v_Opening_Block = false) and
+           (v_Day_Block = false) and
+           (Manual_Kill_Switch = false) and
            (v_RR_Qualified = true) then begin
-
-            if (Close < v_Support_Zone) and
-               (Close > v_Box_Btm - v_ATR_Buffer) then
-                Buy ("CL_Entry") next bar at v_Box_Btm Stop;
-
+            if (Close < v_Support_Zone) and (Close > v_Stop_Px) then begin
+                if Box_Log_On and v_Entry_Px > 0 and v_Box_Btm > 0 then
+                    Print( "L3_BOX,", Date:7:0, ",", Time:4:0, ",",
+                           v_Box_Top:6:0, ",", v_Box_Btm:6:0, ",",
+                           v_Box_Range:6:0, ",",
+                           (v_Box_Range / v_Box_Btm * 100):5:2, ",",
+                           v_Entry_Px:6:0, ",", v_Stop_Px:6:0, ",",
+                           v_Stop_Dist:6:0, ",",
+                           (v_Stop_Dist / v_Entry_Px * 100):5:2, ",",
+                           v_Plan_RR:5:2, ",", v_Target_Px:6:0 );
+                Buy ("CL_Entry") next bar at v_Entry_Px Stop;
+            end;
         end;
     end;
 
-    { --- V14 Exit (Dim 3: Dynamic Target) --- }
+    { target / stop from the actual fill }
     if MarketPosition = 1 then begin
-
         if Freeze_SL_On = true then begin
             if v_SL_Locked = false then begin
-                v_Frozen_SL = v_Box_Btm - v_ATR_Buffer;
-
-                { V15: SL_Pct percentage leg (dual-layer frozen SL).
-                  MaxList picks the highest price = tightest for long. }
-                if SL_Pct > 0 then begin
-                    v_SL_Pct_Floor = EntryPrice - (EntryPrice * SL_Pct / 100);
-                    v_Frozen_SL = MaxList(v_Frozen_SL, v_SL_Pct_Floor);
-                end;
-
-                v_Swing_High = Highest(High, Swing_Lookback);
-                v_Frozen_Target = MinList(v_Swing_High, v_Box_Top);
-                if v_Frozen_Target < v_Mid_Line + v_Current_ATR then
-                    v_Frozen_Target = v_Box_Top;
-
+                v_Stop_Floor = EntryPrice * v_PrevDayRngPct * Stop_Day_Pct / 10000;
+                if v_Stop_Floor < Stop_Min_Pts then v_Stop_Floor = Stop_Min_Pts;
+                if SL_Pct > 0 then
+                    v_Stop_Floor = MinList(v_Stop_Floor, EntryPrice * SL_Pct / 100);
+                if SL_Max_Pts > 0 then
+                    v_Stop_Floor = MinList(v_Stop_Floor, SL_Max_Pts);
+                v_Frozen_SL = EntryPrice - v_Stop_Floor;
+                v_Frozen_Target = EntryPrice + (v_Box_Top - EntryPrice) * Target_Room_Pct / 100;
+                if v_Frozen_Target <= EntryPrice then v_Frozen_Target = v_Box_Top;
                 v_SL_Locked = true;
             end;
-
             v_Work_SL     = v_Frozen_SL;
             v_Work_Target = v_Frozen_Target;
-
         end else begin
-            v_Work_SL     = v_Box_Btm - v_ATR_Buffer;
-
-            { V15: SL_Pct percentage leg (non-frozen path) }
-            if SL_Pct > 0 then begin
-                v_SL_Pct_Floor = EntryPrice - (EntryPrice * SL_Pct / 100);
-                v_Work_SL = MaxList(v_Work_SL, v_SL_Pct_Floor);
-            end;
-
-            v_Swing_High  = Highest(High, Swing_Lookback);
-            v_Work_Target = MinList(v_Swing_High, v_Box_Top);
-            if v_Work_Target < v_Mid_Line + v_Current_ATR then
-                v_Work_Target = v_Box_Top;
+            v_Stop_Floor = EntryPrice * v_PrevDayRngPct * Stop_Day_Pct / 10000;
+            if v_Stop_Floor < Stop_Min_Pts then v_Stop_Floor = Stop_Min_Pts;
+            if SL_Pct > 0 then
+                v_Stop_Floor = MinList(v_Stop_Floor, EntryPrice * SL_Pct / 100);
+            if SL_Max_Pts > 0 then
+                v_Stop_Floor = MinList(v_Stop_Floor, SL_Max_Pts);
+            v_Work_SL = EntryPrice - v_Stop_Floor;
+            v_Work_Target = EntryPrice + (v_Box_Top - EntryPrice) * Target_Room_Pct / 100;
+            if v_Work_Target <= EntryPrice then v_Work_Target = v_Box_Top;
         end;
 
-        { BE layer (disabled by default, kept for compat) }
-        v_BE_IsFloor = false;
-        if BE_Trigger_Pts > 0 then begin
-            if (Close - EntryPrice) >= BE_Trigger_Pts then
-                v_BE_Armed = true;
-            if v_BE_Armed and
-               (EntryPrice + BE_Offset_Pts > v_Work_SL) then begin
-                v_Work_SL    = EntryPrice + BE_Offset_Pts;
-                v_BE_IsFloor = true;
-            end;
-        end;
-
-        { Exit orders }
-        Sell ("CL_TP") next bar at v_Work_Target Limit;
-
-        if v_BE_IsFloor then
-            Sell ("CL_BE") next bar at v_Work_SL Stop
-        else
+        if v_Force_Exit = false then begin
+            Sell ("CL_TP") next bar at v_Work_Target Limit;
             Sell ("CL_SL") next bar at v_Work_SL Stop;
-
+        end;
     end;
 
 end else begin
-    { ==========================================
-      5. True Box Break Exit (consolidation ended)
-      ========================================== }
-    if MarketPosition = 1 then
+    { box ended -> market exit }
+    if MarketPosition = 1 and v_Force_Exit = false then
         Sell ("CL_BreakExit") next bar at Market;
 end;
 
-{ ==========================================
-  6. Safety Exits (Priority 0, always active)
-  ========================================== }
-
-if MarketPosition = 1 then begin
-
-    if v_Registry_Expired then
+{ ===== 6. Forced exits: one market order, kill first ===== }
+if v_Force_Exit then begin
+    if Manual_Kill_Switch then
+        Sell ("CL_Kill") next bar at Market
+    else if v_Registry_Expired then
         Sell ("CL_RegistryEnd") next bar at Market
     else if v_Holiday_Block and Time >= Holiday_Flat_Time then
         Sell ("CL_Holiday") next bar at Market
-    else if v_Settlement_Day and Time >= Settlement_Flat_Time then
+    else
         Sell ("CL_Settlement") next bar at Market;
-
-    if Manual_Kill_Switch then
-        Sell ("CL_Kill") next bar at Market;
-
 end;
 
-{ ==========================================
-  7. State Reset (flat)
-  ========================================== }
+{ ===== 7. Reset when flat ===== }
 
 if MarketPosition = 0 then begin
     v_SL_Locked     = false;
     v_Frozen_SL     = 0;
     v_Frozen_Target = 0;
-    v_SL_Pct_Floor  = 0;
-    v_BE_Armed      = false;
-    v_BE_IsFloor    = false;
 end;

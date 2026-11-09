@@ -345,7 +345,7 @@ scope: read-only extraction; no repo file was modified
 - `docs/research/strategy_logic_inventory_20260804.md:386`（F-18）：「S16_S re-entry 鏈無次數上限（稽核標 B1 must fix before live_simulation），**至 research v1.12.0 仍未修**」，證據指向 `S16_S_MACrossShort_v1.12.0.pla:464-468`。
 - 同檔 `:444`（U27）列為未決事項：「**是刻意暫緩還是漏掉**」，解法欄寫「**使用者 ruling**」。
 - **本次更正：F-18 的「至 v1.12.0」低估了。實測至 v1.17.0（2026-08-08 head）仍未修。**
-- `docs/handoffs/HANDOFF_S16S_V1160_ADOPTED_20260808_EOD.md:166` 把它排入 Next 清單第 3 順位（「二次進場四個開關 + 失效測試」，排程 v1.17.0、4 次回測），但 **v1.17.0 實際做的是 MinSlope 百分比化，這一項沒做**。
+- `docs/archive/handoffs/HANDOFF_S16S_V1160_ADOPTED_20260808_EOD.md:166` 把它排入 Next 清單第 3 順位（「二次進場四個開關 + 失效測試」，排程 v1.17.0、4 次回測），但 **v1.17.0 實際做的是 MinSlope 百分比化，這一項沒做**。
 
 **repo 內出現過的三種修法，全部沒有存活**：
 
@@ -409,7 +409,7 @@ scope: read-only extraction; no repo file was modified
 |---|---|---|---|
 | `docs/research/S16S_v1140_code_architecture_audit_20260806.md`（443 行） | 確認「二次進場（`v_IsReEntry = True`）走同一段狀態重置程式碼，因此也會完整歸零」，符合 v1.12.0 F5 設計要求 | **PASS（非缺陷）** | `:83-84` |
 | `docs/research/S16S_v1150_deep_audit_20260806.md`（400 行） | 標籤表列出 `SE_MA_ReEntry`（`sell short` / stop 單 / ExitFired 欄位為「—（進場）」），列入「14 個標籤全部合規」 | **PASS（非缺陷）** | `:175` |
-| `docs/handoffs/HANDOFF_S16S_V1160_ADOPTED_20260808_EOD.md`（237 行） | Next 清單第 3 順位：「二次進場四個開關（`ReEntry_On` / 三道閘門 / `ReEntry_Max_Chain`）+ 失效測試」，排程 v1.17.0、4 次回測 | **待辦，未修** | `:166` |
+| `docs/archive/handoffs/HANDOFF_S16S_V1160_ADOPTED_20260808_EOD.md`（237 行） | Next 清單第 3 順位：「二次進場四個開關（`ReEntry_On` / 三道閘門 / `ReEntry_Max_Chain`）+ 失效測試」，排程 v1.17.0、4 次回測 | **待辦，未修** | `:166` |
 
 兩份稽核文件各自的真發現（v1.14.0 的 A-1~A-8、v1.15.0 的 B-1~B-6）**沒有任何一項與 re-entry 有關**。
 

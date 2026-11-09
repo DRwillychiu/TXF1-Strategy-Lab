@@ -19,7 +19,7 @@
 ## 目錄結構（2026-06-27 審計；2026-09-29 更新）
 ```
 CLAUDE.md                          # 總管：重點＋入口
-PROGRESS.md                        # 進度唯一來源
+PROJECT.md                         # 目前狀態、下一步、考題、決策紀錄（10/31 取代 PROGRESS.md）
 README.md                          # 專案總覽
 verify.bat / push.bat              # 驗證（G0＋G0b＋G1，可選 G3）／驗證後 commit＋push
 .gitignore

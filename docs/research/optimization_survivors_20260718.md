@@ -132,7 +132,7 @@ L1-L5 正在 6 個月實戰驗證期。**驗證期中改 .pla = 實驗中途換�
 ### A.3 關聯文件
 
 - `docs/research/portfolio_DD_postmortem_202607_L1-L5.md` — DD 危機診斷（本文件的風險側依據）
-- `docs/handoffs/handoff_20260717_portfolio_DD_audit.md` — 桌機端執行順序
+- `docs/archive/handoffs/handoff_20260717_portfolio_DD_audit.md` — 桌機端執行順序
 - `docs/methodology/position_sizing_and_capacity.md` §4.2 — 熔斷規則
 - `strategies/live/L4_ConsolidationShort.pla` — Spring Trap 現行實作（v14.4 + P3b）
 - `docs/methodology/non_WFA_validation_SOP_20260630.md` — Rule 18 五件套（所有第 2 優先項的驗證關卡）

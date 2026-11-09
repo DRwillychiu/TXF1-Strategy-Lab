@@ -1,0 +1,1122 @@
+{ ============================================================
+  ADAPTIVE FARMER - TREND BEARISH STRATEGY
+  Signal Name : Trendbearish_V510_RESEARCH
+  MC Load Name: Trendbearish_V510_RESEARCH
+                *** RESEARCH BUILD. Do NOT save over the live signal
+                Trendbearish_V1 (that overwrites the deployed code).
+                Save it as a NEW signal. ***
+  Description : Trend Short - weekly SMA13 bear filter + Donchian30 breakdown
+                + ZLEMA momentum. Short only.
+  Version     : 5.10 research (2026-10-03) = 5.9 code, default Crash_On 1
+                (L2 finalized version, Willy 10/3 17:11). Code identical
+                to 5.9; only the Crash_On default changes 0 -> 1.
+  Symbol      : TXF1 (Taiwan Stock Index Futures Front Month)
+  Platform    : MultiCharts 9.0 PowerLanguage x64
+  Timeframe   : 60-Minute (Day + Night Sessions, grid verified
+                vs Excel timestamps: day 09:45-13:45, night
+                16:00-05:00 hourly close stamps)
+
+  CHANGELOG:
+    5.10 (2026-10-03) FINALIZED L2 (Willy 10/3 17:11: v5.9 + Crash_On 1).
+         - Code identical to 5.9. Only change: #32 Crash_On default 0 -> 1.
+         - All other defaults = 5.9 (Pause_Mode 1, Bear_Pause_N 3, Skip_K 1,
+           SP_Pct 0.75, SL_Max_Pts 450, Hard_Stop_On 1, Crash_Drop_Pct 3.0,
+           Crash_Lookback 20, Crash_Body_ATR 1.0, Crash_ATRPct_Min 0.6,
+           Crash_SL_Pct 1.0, Crash_Trail_ATR 1.0, Crash_Time_Bars 40,
+           Crash_Leg_Max 1, Crash_Leg_Reset_Bars 0).
+         - All defaults must reproduce the 5.9 Crash_On 1 report:
+           MC 3,398,000 / 96 trades / max strategy drawdown -630,000.
+         - Evidence: 9 single-parameter MC scans (10/3 16:14-16:38); the
+           sequential set and the trail 1.0 set both failed the recent-2y
+           MDD rule (-8,780 vs -6,380); 5.9 defaults pass (-6,380).
+           Non-WFA suite pieces 1-4 pass (piece 5 robustness pending).
+    5.9  (2026-10-03) TOPIC 2: CRASH PATH ABOVE THE WEEKLY MA (Willy 10/3
+         15:54). Wk_Entry_Filter stays 1. When FilterOK = False (weekly close
+         above its 13-week SMA, so the bear path cannot trade) a separate
+         short entry fires on a crash bar:
+           ATR_Val / Close * 100 >= Crash_ATRPct_Min (volatility regime)
+           Close at least Crash_Drop_Pct % below Highest(High, Crash_Lookback)
+           Open - Close >= Crash_Body_ATR * ATR_Val (down body)
+           at most Crash_Leg_Max entries per leg; a leg starts at the first
+           crash entry (leg high = that Highest(High)) and ends when High >=
+           leg high, or after Crash_Leg_Reset_Bars bars (0 = never by time).
+         Crash position exits (replace bear Priorities 1-6):
+           Priority 0 (kill / registry / holiday / settlement) unchanged;
+           stop order at EntryPrice + MinList(Close * Crash_SL_Pct / 100,
+           SL_Max_Pts) trailed down to lowest Low since entry + Crash_Trail_ATR
+           * ATR_Val (day AND night, intrabar); time exit after
+           Crash_Time_Bars bars; #28 hard stop still applies.
+         - Entry bar: P3b engine stop distance = the crash distance.
+         - Crash trades do NOT feed the plan-B loss counter (v_Pos_Type).
+           v_Pos_Type is set on the bar after an entry order (market orders
+           fill at that open), so an entry-bar stop-out is still typed.
+         - Defaults: Pause_Mode 1, Bear_Pause_N 3, Skip_K 1 (plan B, decided
+           15:30 / 15:39), SP_Pct 0.75, Crash_On 0.
+         - All defaults must reproduce the 5.8 plan B report:
+           MC 2,391,200 / 85 trades / max strategy drawdown -377,200.
+    5.8  (2026-10-03) PLAN B (Willy 10/3 15:30: a pause until the bear regime
+         ends leaves no trade to 12/31 and makes the stop pointless -> after
+         #26 losing trades in a row skip only the NEXT trade). Base = 5.7.
+         - #29 SP_Pct default 0 -> 0.75 (Willy 10/3 15:17 decision).
+         - #30 Pause_Mode: 0 = 5.6/5.7 (no new entries until FilterOK =
+           False, or #27 bars). 1 = skip the next #31 Skip_K trades, then
+           trade normally. The loss counter restarts after each trigger.
+         - A skipped trade blocks its WHOLE signal run: the bear entry
+           condition stays true for several bars in a row; blocking one bar
+           would only delay the entry by one bar (replay bug found 10/3).
+           v_Skip_Run resets when the entry condition is false.
+         - A signal bar inside the holiday block or on a settlement day is
+           not a trade and does not consume Skip_K.
+         - All defaults (#30 0) must reproduce the 5.7 #29 0.75 report:
+           MC 1,958,800 / 45 trades / max strategy drawdown -334,000.
+    5.7  (2026-10-03) TOPIC 1 ONLY (Willy 10/3 14:39 / 14:46: change only
+         stopProfitPoints_Shrt to a percentage; solve and test one topic
+         at a time). Base = 5.6 code.
+         - #29 SP_Pct: 0 = stop-profit activates at stopProfitPoints_Shrt
+           points (250, = 5.6). > 0 = activates when open profit >=
+           EntryPrice * SP_Pct / 100. Only SECTION 12 activation changes;
+           giveback (profitReturnPrcnt_Shrt) and every other exit unchanged.
+         - Why: 250 pts was ~1.48% of entry in 2020-2025 history; at 48,091
+           it is 0.52% -> the module drifts as the index rises.
+         - Defaults #25-#28 set to the 5.6 selected values (450, 2, 0, 1) so
+           the all-defaults run must equal the 5.6 #26 2 report:
+           MC 2,112,400 / 40 trades / max strategy drawdown -334,000, and
+           no TS_HardSL exit in history.
+    5.6  (2026-10-03) RISK BUILD (Willy 10/3 13:11: priority = lower MDD and
+         max consecutive loss). Base = 5.5. Four new inputs, all default 0:
+         - #25 SL_Max_Pts: stop distance cap in points. Applied to the P3b
+           engine stop distance, the initial trigger SL_Trig and the working
+           stop Active_SL (MinList = tighter for a short). 450 = rule: one
+           trade max 450 pts per lot. Zero effect on 2020-2026 history (max
+           planned stop 189 pts) - it binds only at today's index level.
+           Active_SL cap added because the v5.3 trailing stop can sit ABOVE
+           SL_Trig (replay: 3 bars, up to 44 pts above trigger).
+         - #26 Bear_Pause_N: after N losing CLOSED trades in a row, block new
+           entries until FilterOK = False (this bear regime is over).
+         - #27 Bear_Pause_Bars: 0 = release only when FilterOK = False;
+           > 0 = also release after this many bars (whichever first).
+         - #28 Hard_Stop_On: 1 (with SL_Max_Pts > 0) = intrabar stop order
+           at EntryPrice + SL_Max_Pts on every bar after entry, day AND night.
+           Bounds the night close-confirmed exit (Priority 6), which can
+           otherwise overshoot the planned stop.
+         - Pause counter: SECTION 6B, at bar close AFTER this bar's fills and
+           BEFORE SECTION 7 signals (a stop-out bar cannot re-enter before the
+           counter updates). Trade result = NetProfit change when TotalTrades
+           changes. Counter is NOT reset when the regime ends (same as the
+           replay that produced the expected values).
+         - Exits are untouched by the pause.
+         - Defaults (0,0,0,0) must reproduce live 5.3: MC 2,882,400 / 78.
+    5.5  (2026-10-03) ATTRIBUTION BUILD (Willy 10/3: L2 has zero live trades).
+         Base = live 5.3 (strategies/live/L2_TrendShort). The 5.4 research
+         build (re-entry LABEL only) is NOT included.
+         - #23 Wk_Entry_Filter (1 = live): entry needs FilterOK (prior
+           Friday-12:45 close < 13-week SMA). 0 = entry ignores FilterOK.
+         - #24 Wk_Exit_On (1 = live): Friday 12:45 TS_WeeklyExit when
+           Close > weekly SMA. 0 = this exit is off.
+         - Nothing else changes. Defaults (1, 1) must reproduce live 5.3
+           trade for trade (MC 2,882,400 / 78 trades to 2026/09/11).
+    5.1  Label unification (TS_ prefix). No logic changes.
+    5.2  (2026-06-12) Holiday Flat Rule v3 + safety rails:
+         - Iron Rule: flat (0 position) BEFORE the 05:00 close of
+           the last night session preceding every market closure.
+           Audit found 1 historical violation: short held across
+           the 2025 Dragon Boat closure (-33,000, exited only
+           after the gap via TS_StructureTP).
+         - Holiday_Tail registry (63 dates, TAIFEX-verified, same
+           registry as L1 V2.4+). Tail bars (00:00-05:00, stamped
+           with the first closed date): entries blocked; forced
+           BuyToCover from Holiday_Flat_Time (03:00 on the 60M
+           grid -> fill 03:00, retry 04:00, flat before 05:00).
+         - Registry_Valid_Until fail-safe: beyond the verified
+           horizon block entries + flatten (TS_RegistryEnd) +
+           30-day red chart warning.
+         - Manual_Kill_Switch added (TS_Kill) for typhoon-class
+           unscheduled closures.
+         - Inserted as Priority 0 in the SECTION 13 exit chain
+           (above TS_WeeklyExit). Entry gate added in SECTION 7.
+         - Header performance reflects the OLD module set;
+           re-backtest after deployment. Deploy only when flat
+           (changes history for holiday-crossing trades).
+    5.2+ (2026-06-18) P3b Immediate Stop Guard:
+         - SetStopLoss = MC engine-level stop, active on entry
+           bar (no IOG dependency). Closes the structural 60-min
+           unprotected window between fill and first custom stop.
+         - Distance = AbsValue((DC_Lower + ATR*SL_ATR_Ratio) -
+           Close) * BigPointValue. Same anchor as Section 8 SL.
+         - Called only when not short (MP>=0) -> freezes when
+           short position opens (same principle as SL_Locked).
+         - Does NOT replace Section 8-13 exit logic. Dormant
+           backup once custom stops tighten.
+         - Deploy only when flat.
+    5.3  (2026-07-26) INITIAL STOP HARDENING (SetStopContract + SL_Pct):
+         BUG FIX - SetStopContract MISSING (same issue as L4 v14.6, L5 v19.9):
+           SetStopLoss without SetStopContract = stop dollar amount
+           is for the TOTAL POSITION, not per contract.
+           L2 trades 2 contracts -> engine stop was 2x tighter than
+           designed. SetStopContract makes SetStopLoss PER-CONTRACT.
+         NEW - SL_Pct Percentage Stop Cap (SHORT mirror of L1/L3/L4/L5):
+           ATR can spike in volatile regimes, causing the ATR-based
+           stop (DC_Lower + ATR*1.1) to exceed any reasonable risk budget.
+           SL_Pct caps max stop distance as pct of entry price.
+           For SHORT: ceiling = EntryPrice + EntryPrice * SL_Pct / 100.
+           Applied to BOTH engine stop (P3b) and custom stop (Section 8).
+           MC sweep 0.00-5.00 step 0.25: converge at SL_Pct=1.25.
+           1.25 is tightest non-degrading value (rows 6-21 identical
+           to baseline). Below 1.00 degrades significantly
+           (0.25 = -50% net, stops binding too tight on ATR spikes).
+
+  PERFORMANCE (Excel Report 2026/07/26, Initial Capital 1M, SL_Pct=1.25):
+    Net Profit    : 2,882,400 TWD
+    Profit Factor : 2.88
+    Win Rate      : 42.31%
+    MDD           : -484,400 (-14.99%)
+    Total Trades  : 78
+    Avg Trade     : 44,345 TWD
+    Sharpe (ann.) : 0.847
+    Sortino       : 1.233
+
+    PERFORMANCE CAVEATS (added 2026-08-25 audit):
+      - The source Excel is NOT in the repo. These numbers cannot be
+        reproduced from anything under version control. Treat as
+        UNVERIFIED until the report is archived alongside the .pla.
+      - "Initial Capital 1M" contradicts CLAUDE.md, which fixes the
+        account basis at 2,000,000 for percent and MDD-percent. Note
+        also that -484,400 / 1,000,000 = -48.4%, not the -14.99%
+        printed above. One of the three figures is wrong. UNRESOLVED
+        - do not rely on the percentages until this is settled.
+      - Contracts, slippage and backtest window are not stated here.
+        CLAUDE.md standard is 2 contracts, 1,000 NTD per side per lot.
+
+    STATUS (as of 2026-08-25):
+      Last closed trade 2025-06-03. 443 days (14.6 months) with zero
+      trades; 2026 year-to-date = 0 trades. Rule #13 (minimum two
+      trades per month) heavily breached.
+      Probable cause, INFERRED and NOT MEASURED: FilterOK requires the
+      weekly close below SMA(13) while the index ran 21,000 -> 47,000.
+      A short-only strategy idling through a bull regime is expected
+      behaviour, but the duration warrants a review.
+      Source: docs/research/L2_reentry_L28_check_20260824.md
+  ============================================================ }
+
+
+{ ============================================================
+  SECTION 1 - INPUTS
+  ============================================================ }
+
+Inputs:
+   { Weekly trend filter - one quarter = 13 weeks }
+   WkSMA_Len            ( 13   ),
+
+   { Entry: Donchian channel }
+   DC_Len               ( 30   ),
+
+   { Entry: ZLEMA - fixed by formula, do not optimize }
+   ZLEMA_Len            ( 20   ),
+   ZLEMA_Lag            ( 9    ),
+
+   { ATR period - shared by all modules }
+   ATR_Len              ( 21   ),
+
+   { C0 breakout confirmation: Close < DC_Lower - ATR * filter }
+   C0_ATR_Filter        ( 0.45 ),
+
+   { Initial SL buffer: SL_Trig = DC_Lower + ATR * ratio }
+   SL_ATR_Ratio         ( 1.1  ),
+
+   { TSL activation }
+   Accel_M              ( 0.5  ),
+   NLow_N               ( 15   ),
+   MinBars              ( 3    ),
+
+   { TSL tracking }
+   TSL_K                ( 9    ),
+   TSL_M                ( 1.0  ),
+
+   { Structure reversal take profit }
+   TP_N                 ( 30   ),
+
+   { Trailing take profit }
+   TTP_MinAtr           ( 4.0  ),
+   TTP_RebPct           ( 1.5  ),
+
+   { Stop profit: activate when profit >= stopProfitPoints_Shrt }
+   { Allow drawback up to profitReturnPrcnt_Shrt % of peak profit }
+   stopProfitPoints_Shrt  ( 250 ),
+   profitReturnPrcnt_Shrt ( 55  ),
+
+   { Holiday Flat Rule v3 (Iron Rule 2026-06-12) }
+   Holiday_Flat_Time      ( 300 ),     { 03:00 trigger on 60M grid -> fill 03:00, retry 04:00 }
+   Registry_Valid_Until   ( 1270101 ), { verified holiday-registry horizon; bump each Q4 }
+   Manual_Kill_Switch     ( False ),
+
+   { Monthly Settlement Flat (2026-06-17 added)
+     TXF1 settles every 3rd Wed of month at 13:30.
+     Detection: DayOfWeek=3 AND DayOfMonth in [15,21].
+     Flat at 12:30 (1hr buffer before 13:30 settlement). }
+   Settlement_Flat_Time   ( 1230 ),
+
+   { v5.3: SetStopContract + SL_Pct (2026-07-26) }
+   SL_Pct                 ( 1.25 ),    { Pct stop cap for SHORT. Ceiling = Entry + Entry*SL_Pct/100. MC sweep converge = 1.25. }
+
+   { v5.5 attribution switches (defaults = live 5.3) }
+   Wk_Entry_Filter        ( 1 ),       { 1 = entry needs weekly FilterOK (live). 0 = ignore it }
+   Wk_Exit_On             ( 1 ),       { 1 = Friday 12:45 TS_WeeklyExit (live). 0 = off }
+
+   { v5.6 risk switches (all 0 = 5.5 = live 5.3) }
+   SL_Max_Pts             ( 450 ),       { >0: stop distance cap in points (engine, initial, working stop). Rule value 450 }
+   Bear_Pause_N           ( 3 ),       { >0: N losing trades in a row -> no new entries until FilterOK = False }
+   Bear_Pause_Bars        ( 0 ),       { 0: release only on FilterOK = False. >0: also release after this many bars }
+   Hard_Stop_On           ( 1 ),       { 1 + SL_Max_Pts > 0: intrabar stop at EntryPrice + SL_Max_Pts, day and night }
+
+   { v5.7 topic 1 }
+   SP_Pct                 ( 0.75 ),    { 0 = stop-profit at stopProfitPoints_Shrt points. >0 = at EntryPrice * SP_Pct / 100 }
+
+   { v5.8 plan B }
+   Pause_Mode             ( 1 ),       { 0 = #26 losses -> no entries until FilterOK = False (or #27 bars). 1 = skip the next Skip_K trades }
+   Skip_K                 ( 1 ),       { Pause_Mode 1: trades skipped after #26 losses; a skipped trade blocks its whole signal run }
+
+   { v5.9 crash path above the weekly MA (only when FilterOK = False) }
+   Crash_On               ( 1 ),       { 1 = on (5.10 default; 0 = 5.8 plan B) }
+   Crash_Drop_Pct         ( 3.0 ),     { Close at least this % below Highest(High, Crash_Lookback) }
+   Crash_Lookback         ( 20 ),      { bars for the recent high }
+   Crash_Body_ATR         ( 1.0 ),     { down body Open - Close >= this x ATR }
+   Crash_ATRPct_Min       ( 0.6 ),     { ATR / Close x 100 >= this (high-volatility regime) }
+   Crash_SL_Pct           ( 1.0 ),     { initial stop = Close x this % at the signal bar, capped by SL_Max_Pts }
+   Crash_Trail_ATR        ( 1.0 ),     { trail = lowest Low since entry + this x ATR }
+   Crash_Time_Bars        ( 40 ),      { time exit after this many bars }
+   Crash_Leg_Max          ( 1 ),       { entries per leg; 0 = no limit }
+   Crash_Leg_Reset_Bars   ( 0 );       { 0 = leg ends only on a new high; > 0 also after this many bars }
+
+
+{ ============================================================
+  SECTION 2 - VARIABLES
+  ============================================================ }
+
+Variables:
+   { Session }
+   IsDay                ( False ),
+   IsNight              ( False ),
+
+   { Weekly filter }
+   WkBarCount           ( 0     ),
+   WkSMASum             ( 0     ),
+   IsNewWeek            ( False ),
+   FilterOK             ( False ),
+
+   { Indicators }
+   CompPrice            ( 0     ),
+   ZLEMA_Val            ( 0     ),
+   EMA20_Val            ( 0     ),
+   DC_Lower             ( 0     ),
+   ATR_Val              ( 0     ),
+
+   { Entry flags }
+   C0                   ( False ),
+   C_A                  ( False ),
+   C_B                  ( False ),
+
+   { Initial stop loss }
+   SL_Line              ( 0     ),
+   SL_Trig              ( 0     ),
+   SL_Locked            ( False ),
+
+   { TSL activation }
+   Accel                ( False ),
+   NLow                 ( False ),
+   C1_Bar               ( False ),
+   TSL_Armed            ( False ),
+
+   { TSL tracking }
+   New_TSL              ( 0     ),
+   TSL_Line             ( 0     ),
+   Active_TSL           ( 0     ),
+   Active_SL            ( 0     ),
+   v_SL_Src             ( 0     ),   { 0=flat 1=trailing 2=frozen initial. Mirrors
+                                       whatever set Active_SL, for label routing. }
+
+   { Trailing take profit }
+   LowestClose          ( 0     ),
+   WaveProfit           ( 0     ),
+   MinProfitPts         ( 0     ),
+   TTP_Line             ( 0     ),
+   TTP_Gate             ( False ),
+   TTP_Fire             ( False ),
+
+   { Stop profit }
+   posbleProfit_Short   ( 0     ),
+   stopProfitPrice      ( 0     ),
+
+   { Loop counter and exit control }
+   LoopIdx              ( 0     ),
+   ExitFired            ( 0     ),
+
+   { Holiday Flat Rule v3 }
+   v_Holiday_Block      ( False ),
+   v_Registry_Expired   ( False ),
+   Registry_Warn_ID     ( -1    ),
+   hidx                 ( 0     ),
+
+   { Monthly Settlement Flat }
+   v_Settlement_Day     ( False ),
+
+   { v5.3 SL_Pct }
+   v_Guard_Distance     ( 0 ),
+
+   { v5.6 loss pause and hard stop (v_Pause_ / v_Hard_ prefixes: no clash with 5.5 names) }
+   v_Pause_LossCnt      ( 0     ),
+   v_Pause_Active       ( False ),
+   v_Pause_StartBar     ( 0     ),
+   v_Pause_LastTT       ( 0     ),
+   v_Pause_LastNP       ( 0     ),
+   v_Pause_Delta        ( 0     ),
+   v_Hard_Stop_Px       ( 0     ),
+
+   { v5.7 stop-profit activation threshold in points }
+   v_SP_Thr             ( 0     ),
+
+   { v5.8 plan B: skip-next-trade state }
+   v_Bear_Sig           ( False ),
+   v_Skip_Left          ( 0     ),
+   v_Skip_Run           ( False ),
+
+   { v5.9 crash path }
+   v_Bear_Entry         ( False ),
+   v_Crash_Fire         ( False ),
+   v_Crash_HH           ( 0     ),
+   v_Crash_Dist         ( 0     ),
+   v_Crash_Stop         ( 0     ),
+   v_Crash_LL           ( 0     ),
+   v_Leg_Active         ( False ),
+   v_Leg_HH             ( 0     ),
+   v_Leg_N              ( 0     ),
+   v_Leg_Bar            ( 0     ),
+   v_Pend_Type          ( 0     ),   { type of the entry order sent on v_Pend_Bar: 1 crash, 2 bear }
+   v_Pend_Bar           ( 0     ),
+   v_Pos_Type           ( 0     );   { type of the current / last position: 1 crash, 2 bear }
+
+
+{ ============================================================
+  SECTION 3 - ARRAYS
+  WkCloses stores last WkSMA_Len completed weekly closes.
+  Size 21 covers indices 0 to 20. Only indices 1 to 20 used.
+  WkSMA_Len = 13, so indices 1 to 13 are actively used.
+  ============================================================ }
+
+Array: WkCloses[ 21 ] ( 0 ), Holiday_Tail[ 80 ] ( 0 );
+
+
+{ ============================================================
+  SECTION 4 - SESSION DETECTION
+  IsDay   : 60M CLOSE stamps 09:45 to 12:45 (Time 945..1245).
+            The 845 lower bound never binds - no bar carries a
+            stamp in 845..944. NOTE the 13:45 day-session close
+            bar is NOT included and falls into IsNight.
+  IsNight : every other bar = night close stamps 16:00 to 05:00,
+            PLUS the 13:45 day-session close bar.
+  ============================================================ }
+
+If ( Time >= 845 ) And ( Time <= 1245 ) Then
+   IsDay = True
+Else
+   IsDay = False;
+
+If IsDay = True Then
+   IsNight = False
+Else
+   IsNight = True;
+
+
+{ ============================================================
+  SECTION 4B - HOLIDAY FLAT RULE v3 (Iron Rule 2026-06-12)
+
+  Holiday_Tail = last trading day + 1 calendar day = the date
+  stamped on the 00:00-05:00 tail bars of the final night
+  session before each market closure.
+
+  Tail bars: block new entries; force BuyToCover from
+  Holiday_Flat_Time (60M grid: trigger on the 03:00 bar, fill
+  03:00, retry 04:00, always flat before the 05:00 close).
+  Beyond Registry_Valid_Until the strategy fails safe.
+
+  Dates: TAIFEX official calendars. 2026 verified 2026-06-12.
+  Entries marked * reconstructed (Labor Days; 2025 new
+  statutory holidays) - verify vs archived TAIFEX PDFs before
+  trusting re-backtest stats on those windows.
+  ============================================================ }
+
+If CurrentBar = 1 Then Begin
+
+   { --- 2019 --- }
+   Holiday_Tail[1]  = 1190913;
+   Holiday_Tail[2]  = 1191010;
+   Holiday_Tail[3]  = 1200101;
+
+   { --- 2020 --- }
+   Holiday_Tail[4]  = 1200121;  { CNY }
+   Holiday_Tail[5]  = 1200228;  { 228 }
+   Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+   Holiday_Tail[7]  = 1200501;  { * Labor Day }
+   Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+   Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+   Holiday_Tail[10] = 1201009;  { National Day }
+   Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+   { --- 2021 --- }
+   Holiday_Tail[12] = 1210206;  { CNY }
+   Holiday_Tail[13] = 1210227;  { 228 }
+   Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+   Holiday_Tail[15] = 1210612;  { Dragon Boat }
+   Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+   Holiday_Tail[17] = 1211009;  { National Day }
+   Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+   { --- 2022 --- }
+   Holiday_Tail[19] = 1220127;  { CNY }
+   Holiday_Tail[20] = 1220226;  { 228 }
+   Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+   Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+   Holiday_Tail[23] = 1220603;  { Dragon Boat }
+   Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+   Holiday_Tail[25] = 1221008;  { National Day }
+   Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+   { --- 2023 --- }
+   Holiday_Tail[27] = 1230118;  { CNY }
+   Holiday_Tail[28] = 1230225;  { 228 }
+   Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+   Holiday_Tail[30] = 1230429;  { * Labor Day }
+   Holiday_Tail[31] = 1230622;  { Dragon Boat }
+   Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+   Holiday_Tail[33] = 1231007;  { National Day }
+   Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+   { --- 2024 --- }
+   Holiday_Tail[35] = 1240206;  { CNY }
+   Holiday_Tail[36] = 1240228;  { 228 }
+   Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+   Holiday_Tail[38] = 1240501;  { * Labor Day }
+   Holiday_Tail[39] = 1240608;  { Dragon Boat }
+   Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+   Holiday_Tail[41] = 1241010;  { National Day }
+   Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+   { --- 2025 (* rows pending check vs 114-yr TAIFEX PDF) --- }
+   Holiday_Tail[43] = 1250123;  { CNY }
+   Holiday_Tail[44] = 1250228;  { 228 }
+   Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+   Holiday_Tail[46] = 1250501;  { * Labor Day }
+   Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+   Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+   Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+   Holiday_Tail[50] = 1251010;  { * National Day }
+   Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+   Holiday_Tail[52] = 1251225;  { * Constitution Day }
+   Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+   { --- 2026 (verified: TAIFEX official 115-yr calendar) --- }
+   Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+   Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+   Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+   Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+   Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+   Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+   Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+   Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+   Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+   Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+   { 2027 CNY onward: rebuild from TAIFEX 116-yr calendar in Q4 2026 }
+
+End;
+
+v_Holiday_Block = False;
+
+If Time <= 500 Then Begin
+   For hidx = 1 To 80 Begin
+      If Date = Holiday_Tail[ hidx ] Then
+         v_Holiday_Block = True;
+   End;
+End;
+
+v_Registry_Expired = False;
+
+If Date > Registry_Valid_Until Then Begin
+   v_Registry_Expired = True;
+   v_Holiday_Block    = True;
+End;
+
+{ Monthly Settlement Day detection (3rd Wed) }
+v_Settlement_Day = ( DayOfWeek( Date ) = 3 ) and
+                   ( DayOfMonth( Date ) >= 15 ) and
+                   ( DayOfMonth( Date ) <= 21 );
+
+If LastBarOnChart And
+   DateToJulian( Date ) >= DateToJulian( Registry_Valid_Until ) - 30 Then Begin
+   If Registry_Warn_ID < 0 Then Begin
+      Registry_Warn_ID = Text_New( Date, Time, High + 400,
+         "HOLIDAY REGISTRY EXPIRES " +
+         NumToStr( Registry_Valid_Until, 0 ) +
+         " - REBUILD FROM TAIFEX CALENDAR" );
+      Text_SetColor( Registry_Warn_ID, Red );
+      Text_SetSize( Registry_Warn_ID, 14 );
+      Text_SetAttribute( Registry_Warn_ID, 1, True );
+   End;
+End;
+
+
+{ ============================================================
+  SECTION 5 - WEEKLY TREND FILTER
+
+  FilterOK = True when prior completed weekly close is
+  strictly below the 13-week (one quarter) SMA.
+
+  Definition: weekly period = Friday 15:00 open to
+  Friday 13:45 close. IsNewWeek fires when the prior bar
+  is the Friday 12:45 bar (last completed day session bar).
+
+  WkSMA_Len = 13 represents one full calendar quarter.
+  FilterOK = True means the market has been below its
+  quarterly average, confirming a bearish environment.
+  ============================================================ }
+
+If ( Time[1] = 1245 ) And
+   ( DayOfWeek( Date[1] ) = 5 ) Then
+   IsNewWeek = True
+Else
+   IsNewWeek = False;
+
+If IsNewWeek = True Then Begin
+
+   { STEP 1 - Shift array rightward }
+   LoopIdx = WkSMA_Len;
+   While LoopIdx > 1 Begin
+      WkCloses[ LoopIdx ] = WkCloses[ LoopIdx - 1 ];
+      LoopIdx = LoopIdx - 1;
+   End;
+
+   { STEP 2 - Insert just-completed week close at index 1 }
+   WkCloses[1] = Close[1];
+
+   { STEP 3 - Increment stored week count }
+   If WkBarCount < WkSMA_Len Then
+      WkBarCount = WkBarCount + 1;
+
+   { STEP 4 - Recompute rolling SMA sum }
+   WkSMASum = 0;
+   LoopIdx  = 1;
+   While LoopIdx <= WkBarCount Begin
+      WkSMASum = WkSMASum + WkCloses[ LoopIdx ];
+      LoopIdx  = LoopIdx + 1;
+   End;
+
+   { STEP 5 - Update FilterOK with warm-up guard }
+   If WkBarCount >= WkSMA_Len Then Begin
+      If WkCloses[1] < ( WkSMASum / WkSMA_Len ) Then
+         FilterOK = True
+      Else
+         FilterOK = False;
+   End Else
+      FilterOK = False;
+
+End;
+
+
+{ ============================================================
+  SECTION 6 - INDICATOR CALCULATIONS
+  ============================================================ }
+
+ATR_Val   = AvgTrueRange( ATR_Len );
+DC_Lower  = Lowest( Low[1], DC_Len );
+CompPrice = ( 2.0 * Close ) - Close[ ZLEMA_Lag ];
+ZLEMA_Val = XAverage( CompPrice, ZLEMA_Len );
+EMA20_Val = XAverage( Close, ZLEMA_Len );
+
+
+{ ============================================================
+  SECTION 6B - BEAR LOSS PAUSE (v5.6: #26 Bear_Pause_N, #27 Bear_Pause_Bars)
+
+  Runs at bar close, AFTER this bar's intrabar fills and AFTER the
+  SECTION 5 FilterOK update, BEFORE the SECTION 7 entry signal.
+  A trade closed on this bar <=> TotalTrades changed since the last
+  bar (at most one per bar: entries need MarketPosition = 0 at the
+  close). Its result = change in NetProfit (closed trades, costs in).
+  Bear_Pause_N losses in a row -> v_Pause_Active = True, counter = 0.
+  Release: FilterOK = False (bear regime over), or Bear_Pause_Bars > 0
+  and more than that many bars since the pause started.
+  Only new entries are blocked. Every exit works as before.
+  ============================================================ }
+
+{ v5.9: an entry order sent last bar filled at this bar's open -> type the position }
+If ( v_Pend_Bar > 0 ) And ( v_Pend_Bar = CurrentBar - 1 ) Then
+   v_Pos_Type = v_Pend_Type;
+
+If TotalTrades <> v_Pause_LastTT Then Begin
+   v_Pause_Delta = NetProfit - v_Pause_LastNP;
+   If v_Pos_Type <> 1 Then Begin               { v5.9: crash-path trades do not feed the bear loss counter }
+      If v_Pause_Delta < 0 Then
+         v_Pause_LossCnt = v_Pause_LossCnt + 1
+      Else
+         v_Pause_LossCnt = 0;
+      If ( Bear_Pause_N > 0 ) And ( v_Pause_LossCnt >= Bear_Pause_N ) Then Begin
+         If Pause_Mode = 0 Then Begin
+            v_Pause_Active   = True;            { 5.6/5.7: wait for FilterOK = False }
+            v_Pause_StartBar = CurrentBar;
+         End Else
+            v_Skip_Left = Skip_K;               { 5.8 plan B: skip the next Skip_K trades }
+         v_Pause_LossCnt  = 0;
+      End;
+   End;
+   v_Pause_LastTT = TotalTrades;
+   v_Pause_LastNP = NetProfit;
+End;
+
+If v_Pause_Active = True Then Begin
+   If ( FilterOK = False ) Or
+      ( ( Bear_Pause_Bars > 0 ) And
+        ( CurrentBar - v_Pause_StartBar > Bear_Pause_Bars ) ) Then
+      v_Pause_Active = False;
+End;
+
+
+{ ============================================================
+  SECTION 7 - ENTRY CONDITIONS
+  ============================================================ }
+
+If Close < ( DC_Lower - ( ATR_Val * C0_ATR_Filter ) ) Then
+   C0 = True
+Else
+   C0 = False;
+
+If ZLEMA_Val < ZLEMA_Val[1] Then
+   C_A = True
+Else
+   C_A = False;
+
+If ZLEMA_Val < EMA20_Val Then
+   C_B = True
+Else
+   C_B = False;
+
+{ P3b: Immediate Stop Guard -- entry-bar protection (2026-06-18)
+  SetStopLoss is MC engine-level: active on entry bar, no IOG dependency.
+  Only called when not short -> freezes at signal-bar values once position opens.
+  v5.3: SetStopContract makes SetStopLoss amount PER-CONTRACT (lot-invariant).
+         SL_Pct caps engine stop distance as pct of Close.
+    Close is used here because EntryPrice does not exist before the
+    fill; the custom stop in Section 8 anchors on EntryPrice instead. }
+{ v5.9: the guard block moved below the entry signals (same bar, same result) so the
+  crash entry can hand its own distance to the engine stop. }
+
+{ v5.8: bear entry condition in one variable, plus plan B skip.
+  A skip is consumed only when a real order would have been placed
+  (flat, no holiday block, not settlement day), and it then blocks the
+  rest of that signal run until the condition turns false. }
+v_Bear_Sig = ( FilterOK = True Or Wk_Entry_Filter = 0 ) And
+             ( C0 = True ) And ( C_A = True ) And ( C_B = True );
+
+If v_Bear_Sig = False Then
+   v_Skip_Run = False;
+
+If ( v_Bear_Sig = True ) And
+   ( v_Holiday_Block = False ) And
+   ( v_Settlement_Day = False ) And
+   ( MarketPosition = 0 ) And
+   ( v_Skip_Run = False ) And
+   ( v_Skip_Left > 0 ) Then Begin
+   v_Skip_Left = v_Skip_Left - 1;
+   v_Skip_Run  = True;
+End;
+
+v_Bear_Entry = ( v_Bear_Sig = True ) And
+               ( v_Holiday_Block = False ) And
+               ( v_Settlement_Day = False ) And
+               ( v_Pause_Active = False ) And
+               ( v_Skip_Run = False ) And
+               ( MarketPosition = 0 );
+
+{ v5.9 crash path above the weekly MA. Leg end check runs every bar. }
+If v_Leg_Active = True Then Begin
+   If ( High >= v_Leg_HH ) Or
+      ( ( Crash_Leg_Reset_Bars > 0 ) And ( CurrentBar - v_Leg_Bar >= Crash_Leg_Reset_Bars ) ) Then Begin
+      v_Leg_Active = False;
+      v_Leg_N      = 0;
+   End;
+End;
+
+{ Highest() is evaluated on every bar (not inside the If) - series-type
+  functions must not be called conditionally in PowerLanguage. }
+v_Crash_HH   = Highest( High, Crash_Lookback );
+v_Crash_Fire = False;
+If ( Crash_On <> 0 ) And
+   ( MarketPosition = 0 ) And
+   ( FilterOK = False ) And
+   ( v_Bear_Sig = False ) And
+   ( v_Bear_Entry = False ) And
+   ( v_Holiday_Block = False ) And
+   ( v_Settlement_Day = False ) And
+   ( Close > 0 ) Then Begin
+   If ( v_Crash_HH > 0 ) And
+      ( ATR_Val / Close * 100 >= Crash_ATRPct_Min ) And
+      ( ( 1 - Close / v_Crash_HH ) * 100 >= Crash_Drop_Pct ) And
+      ( ( Open - Close ) >= Crash_Body_ATR * ATR_Val ) And
+      ( ( Crash_Leg_Max = 0 ) Or ( v_Leg_Active = False ) Or ( v_Leg_N < Crash_Leg_Max ) ) Then Begin
+      v_Crash_Fire = True;
+      If v_Leg_Active = False Then Begin
+         v_Leg_Active = True;
+         v_Leg_HH     = v_Crash_HH;
+         v_Leg_Bar    = CurrentBar;
+      End;
+      v_Leg_N = v_Leg_N + 1;
+      v_Crash_Dist = Close * Crash_SL_Pct / 100;
+      If SL_Max_Pts > 0 Then
+         v_Crash_Dist = MinList( v_Crash_Dist, SL_Max_Pts );   { MinList on a DISTANCE = tighter }
+   End;
+End;
+
+If MarketPosition >= 0 Then Begin
+   v_Guard_Distance = AbsValue( ( DC_Lower + ATR_Val * SL_ATR_Ratio ) - Close );
+   If SL_Pct > 0 Then
+      v_Guard_Distance = MinList( v_Guard_Distance, Close * SL_Pct / 100 );
+   { v5.6 #25: point cap (MinList on a DISTANCE = tighter) }
+   If SL_Max_Pts > 0 Then
+      v_Guard_Distance = MinList( v_Guard_Distance, SL_Max_Pts );
+   If v_Crash_Fire = True Then
+      v_Guard_Distance = v_Crash_Dist;               { v5.9: crash entry bar uses the crash distance }
+   SetStopContract;
+   SetStopLoss( v_Guard_Distance * BigPointValue );
+End;
+
+If v_Bear_Entry = True Then Begin
+   SellShort( "TS_Entry" ) Next Bar at Market;
+   v_Pend_Type = 2;
+   v_Pend_Bar  = CurrentBar;
+End Else If v_Crash_Fire = True Then Begin
+   SellShort( "CR_Entry" ) Next Bar at Market;
+   v_Pend_Type = 1;
+   v_Pend_Bar  = CurrentBar;
+End;
+
+
+{ ============================================================
+  SECTION 8 - INITIAL STOP LOSS
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( BarsSinceEntry = 0 ) And
+      ( SL_Locked = False ) Then Begin
+      SL_Line = DC_Lower;
+      SL_Trig = SL_Line + ( ATR_Val * SL_ATR_Ratio );
+      { v5.3: SL_Pct percentage stop cap (SHORT: ceiling above entry) }
+      If SL_Pct > 0 Then
+         SL_Trig = MinList( SL_Trig, EntryPrice + ( EntryPrice * SL_Pct / 100 ) );
+      { v5.6 #25: point cap (MinList on a short stop PRICE = tighter) }
+      If SL_Max_Pts > 0 Then
+         SL_Trig = MinList( SL_Trig, EntryPrice + SL_Max_Pts );
+      SL_Locked = True;
+   End;
+
+End Else Begin
+   SL_Line   = 0;
+   SL_Trig   = 0;
+   SL_Locked = False;
+End;
+
+
+{ ============================================================
+  SECTION 9 - TSL ACTIVATION
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If ( ( Open - Close ) > ( ATR_Val * Accel_M ) ) And
+      ( Close < Open ) Then
+      Accel = True
+   Else
+      Accel = False;
+
+   If Close < Lowest( Close[1], NLow_N ) Then
+      NLow = True
+   Else
+      NLow = False;
+
+   If Accel = True And NLow = True Then
+      C1_Bar = True
+   Else
+      C1_Bar = False;
+
+   If ( TSL_Armed = False ) And
+      ( C1_Bar    = True  ) And
+      ( C1_Bar[1] = True  ) And
+      ( BarsSinceEntry >= MinBars ) Then
+      TSL_Armed = True;
+
+End Else Begin
+   Accel     = False;
+   NLow      = False;
+   C1_Bar    = False;
+   TSL_Armed = False;
+End;
+
+
+{ ============================================================
+  SECTION 10 - TSL TRACKING
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If TSL_Armed = True Then Begin
+
+      New_TSL = Lowest( Close[1], TSL_K ) +
+                ( ATR_Val * TSL_M );
+
+      If TSL_Line = 0 Then
+         TSL_Line = New_TSL
+      Else
+         TSL_Line = MinList( TSL_Line, New_TSL );
+
+      Active_TSL = TSL_Line + ( ATR_Val * SL_ATR_Ratio );
+
+      If TSL_Line < SL_Trig Then Begin
+         Active_SL = Active_TSL;
+         v_SL_Src  = 1;
+      End Else Begin
+         Active_SL = SL_Trig;
+         v_SL_Src  = 2;
+      End;
+
+   End Else Begin
+      New_TSL    = 0;
+      TSL_Line   = 0;
+      Active_TSL = 0;
+      Active_SL  = SL_Trig;
+      v_SL_Src   = 2;
+   End;
+
+End Else Begin
+   New_TSL    = 0;
+   TSL_Line   = 0;
+   Active_TSL = 0;
+   Active_SL  = 0;
+   v_SL_Src   = 0;
+End;
+
+{ v5.6 #25: the working stop may never sit more than SL_Max_Pts above
+  entry. Needed because Active_TSL (TSL_Line + ATR * SL_ATR_Ratio) is
+  chosen whenever TSL_Line < SL_Trig and can then be ABOVE SL_Trig. }
+If ( MarketPosition = -1 ) And ( SL_Max_Pts > 0 ) And ( Active_SL > 0 ) Then
+   Active_SL = MinList( Active_SL, EntryPrice + SL_Max_Pts );
+
+
+{ ============================================================
+  SECTION 11 - TRAILING TAKE PROFIT (TTP)
+  ============================================================ }
+
+If MarketPosition = -1 Then Begin
+
+   If BarsSinceEntry = 0 Then
+      LowestClose = Close
+   Else
+      LowestClose = MinList( LowestClose, Close );
+
+   WaveProfit   = EntryPrice - LowestClose;
+   MinProfitPts = ATR_Val * TTP_MinAtr;
+   TTP_Line     = LowestClose * ( 1.0 + TTP_RebPct / 100.0 );
+
+   If WaveProfit >= MinProfitPts Then
+      TTP_Gate = True
+   Else
+      TTP_Gate = False;
+
+   If TTP_Gate = True And
+      Close > TTP_Line Then
+      TTP_Fire = True
+   Else
+      TTP_Fire = False;
+
+End Else Begin
+   LowestClose  = 0;
+   WaveProfit   = 0;
+   MinProfitPts = 0;
+   TTP_Line     = 0;
+   TTP_Gate     = False;
+   TTP_Fire     = False;
+End;
+
+
+{ ============================================================
+  SECTION 12 - STOP PROFIT MODULE
+  ============================================================ }
+
+If MarketPosition = 0 Then Begin
+   posbleProfit_Short = 0;
+   stopProfitPrice    = 0;
+End;
+
+If MarketPosition = -1 Then Begin
+   { v5.7 #29: activation threshold in points from % of entry, or the fixed points }
+   If SP_Pct > 0 Then
+      v_SP_Thr = EntryPrice * SP_Pct / 100
+   Else
+      v_SP_Thr = stopProfitPoints_Shrt;
+   If ( EntryPrice - Close ) >= v_SP_Thr Then Begin
+      If ( EntryPrice - Close ) > posbleProfit_Short Then
+         posbleProfit_Short = EntryPrice - Close;
+      stopProfitPrice = EntryPrice -
+         ( posbleProfit_Short * ( 1.0 - profitReturnPrcnt_Shrt / 100.0 ) );
+   End;
+End;
+
+
+{ ============================================================
+  SECTION 12B - CRASH PATH STOP (v5.9)
+  Entry bar: stop = EntryPrice + crash distance; every bar: trail down to
+  lowest Low since entry + Crash_Trail_ATR x ATR (MinList = tighter).
+  ============================================================ }
+
+If ( MarketPosition = -1 ) And ( v_Pos_Type = 1 ) Then Begin
+   If BarsSinceEntry = 0 Then Begin
+      v_Crash_LL   = Low;
+      v_Crash_Stop = EntryPrice + v_Crash_Dist;
+   End Else
+      v_Crash_LL = MinList( v_Crash_LL, Low );
+   v_Crash_Stop = MinList( v_Crash_Stop, v_Crash_LL + Crash_Trail_ATR * ATR_Val );
+End;
+
+
+{ ============================================================
+  SECTION 13 - EXIT CONDITIONS
+
+  LABEL REFERENCE:
+    TS_Entry       : short entry signal
+    TS_Kill        : manual kill switch (typhoon / emergency)
+    TS_RegistryEnd : holiday-registry horizon fail-safe exit
+    TS_Holiday     : pre-holiday forced flat (iron rule)
+    TS_Settlement  : monthly settlement forced flat (12:30)
+    TS_WeeklyExit  : weekly filter forced exit (trend reversal)
+    TS_StructureTP : structure reversal take profit
+    TS_TTP         : trailing take profit
+    TS_StopProfit  : stop profit protection module
+    TS_TSL_D       : trailing stop loss day session
+    TS_TSL_N       : trailing stop loss night session
+    TS_InitSL_D    : initial stop loss day session
+    TS_InitSL_N    : initial stop loss night session
+    TS_HardSL      : v5.6 hard stop ceiling (#28, outside the chain)
+    CR_Entry       : v5.9 crash path entry (FilterOK = False)
+    CR_Stop        : v5.9 crash path stop / trail
+    CR_Time        : v5.9 crash path time exit
+
+  PRIORITY ORDER:
+    0. TS_Kill / TS_RegistryEnd / TS_Holiday / TS_Settlement
+       (Next Bar at Market)
+    1. TS_WeeklyExit   (Next Bar at Market)
+    2. TS_StructureTP  (Next Bar at Market)
+    3. TS_TTP          (Next Bar at Market)
+    4. TS_StopProfit   (Next Bar at Stop)
+    5. TS_InitSL_D / TS_TSL_D  (Next Bar at Stop, day)
+    6. TS_InitSL_N / TS_TSL_N  (Next Bar at Market, night)
+  ============================================================ }
+
+ExitFired = 0;
+
+If MarketPosition = -1 Then Begin
+
+   { Priority 0 - Manual kill / registry fail-safe / holiday iron rule }
+   If ( ExitFired = 0 ) And ( Manual_Kill_Switch = True ) Then Begin
+      BuyToCover( "TS_Kill" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Registry_Expired = True ) Then Begin
+      BuyToCover( "TS_RegistryEnd" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Holiday_Block = True ) And
+      ( Time >= Holiday_Flat_Time ) Then Begin
+      BuyToCover( "TS_Holiday" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   If ( ExitFired = 0 ) And ( v_Settlement_Day = True ) And
+      ( Time >= Settlement_Flat_Time ) Then Begin
+      BuyToCover( "TS_Settlement" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { v5.9 crash position: own exits, then ExitFired = 1 so the bear
+     Priorities 1-6 below never act on it (the hard stop still does). }
+   If v_Pos_Type = 1 Then Begin
+      If ExitFired = 0 Then Begin
+         If BarsSinceEntry >= Crash_Time_Bars Then
+            BuyToCover( "CR_Time" ) Next Bar at Market
+         Else
+            BuyToCover( "CR_Stop" ) Next Bar at v_Crash_Stop Stop;
+      End;
+      ExitFired = 1;
+   End;
+
+   { Priority 1 - Weekly filter forced exit }
+   If ( ExitFired = 0 ) And
+      ( Wk_Exit_On <> 0 ) And
+      ( DayOfWeek( Date ) = 5 ) And
+      ( Time = 1245 ) And
+      ( WkBarCount >= WkSMA_Len ) And
+      ( Close > ( WkSMASum / WkSMA_Len ) ) Then Begin
+      BuyToCover( "TS_WeeklyExit" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 2 - Structure reversal take profit }
+   If ( ExitFired = 0 ) And
+      ( Close > Highest( Close[1], TP_N ) ) Then Begin
+      BuyToCover( "TS_StructureTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 3 - Trailing take profit }
+   If ( ExitFired = 0 ) And
+      ( TTP_Fire = True ) Then Begin
+      BuyToCover( "TS_TTP" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { Priority 4 - Stop profit }
+   If ( ExitFired = 0 ) And
+      ( stopProfitPrice > 0 ) Then Begin
+      BuyToCover( "TS_StopProfit" ) Next Bar at stopProfitPrice Stop;
+      ExitFired = 1;
+   End;
+
+   { Priority 5 - Day session stop order }
+   If ( ExitFired = 0 ) And
+      ( IsDay = True ) And
+      ( Active_SL > 0 ) Then Begin
+      If v_SL_Src = 1 Then
+         BuyToCover( "TS_TSL_D" ) Next Bar at Active_SL Stop
+      Else
+         BuyToCover( "TS_InitSL_D" ) Next Bar at Active_SL Stop;
+      ExitFired = 1;
+   End;
+
+   { Priority 6 - Night session close confirmed exit }
+   If ( ExitFired = 0 ) And
+      ( IsNight = True ) And
+      ( Active_SL > 0 ) And
+      ( Close > Active_SL ) Then Begin
+      If v_SL_Src = 1 Then
+         BuyToCover( "TS_TSL_N" ) Next Bar at Market
+      Else
+         BuyToCover( "TS_InitSL_N" ) Next Bar at Market;
+      ExitFired = 1;
+   End;
+
+   { v5.6 #28 Hard stop: OUTSIDE the ExitFired chain on purpose - it is a
+     ceiling that must exist on every bar, day and night, whatever the
+     chain chose. Re-issued every bar (MC cancels orders not re-sent). }
+   If ( Hard_Stop_On <> 0 ) And ( SL_Max_Pts > 0 ) Then Begin
+      v_Hard_Stop_Px = EntryPrice + SL_Max_Pts;
+      BuyToCover( "TS_HardSL" ) Next Bar at v_Hard_Stop_Px Stop;
+   End;
+
+End;

@@ -7,10 +7,12 @@ Usage: python tools/verify_versions.py [repo_root]        exit 0 = PASS, 1 = FAI
   R2  every research .pla whose header "MC Load Name" does not end in _RESEARCH
       is listed in tools/version_exceptions.txt (one path per line, "# reason" required)
   R3  no phrase from tools/retired_phrases.txt appears in the entry docs
-      (CLAUDE.md, PROGRESS.md, docs/LIVE_VERSIONS.md, docs/departments/*.md, docs/ops/*.md);
+      (CLAUDE.md, PROJECT.md, docs/LIVE_VERSIONS.md, docs/departments/*.md, docs/ops/*.md);
       lines containing 原寫 / 更正 / 已被取代 are correction notes and are skipped
-  R4  every .md in docs/decisions/ and docs/ops/ is mentioned (path or file name) by PROGRESS.md,
-      CLAUDE.md, docs/departments/*.md, docs/registers/*.md or docs/LIVE_VERSIONS.md
+  R4  every .md in docs/decisions/ and docs/ops/ is mentioned (path or file name) by PROJECT.md,
+      CLAUDE.md, agent.md, docs/departments/*.md, docs/registers/*.md or docs/LIVE_VERSIONS.md
+  R6  every strategies/live/<name>/<name>.pla is byte-identical to the research version that
+      LIVE_VERSIONS section 1 lists for it, unless the name is in tools/live_exceptions.txt (reason required)
   R5  WARN only: a file under strategies/research/ is newer than docs/LIVE_VERSIONS.md
       (mtime; after a fresh clone or pull this can be noise)
 
@@ -82,6 +84,40 @@ def mentioned(lv_text, lv_lines, folder, code, ver):
     return False
 
 
+LIVE_ROW_RE = re.compile(r"^\|\s*\*\*(?P<name>L\d_[A-Za-z]+)\*\*\s*\|\s*\*\*(?P<ver>[vV]\d+(?:\.\d+)+)\*\*")
+
+
+def live_check(root):
+    """R6: strategies/live/<name>/<name>.pla must equal the research file of the version that
+    LIVE_VERSIONS section 1 lists (2026-10-31: G1 had been checking pre-switch files for weeks).
+    Returns (fails, warns)."""
+    root = pathlib.Path(root).resolve(); fails = []; warns = []
+    lv = root / "docs" / "LIVE_VERSIONS.md"
+    if not lv.exists(): return ["R6 docs/LIVE_VERSIONS.md 不存在"], warns
+    rows, in_live = [], False
+    for line in read(lv).splitlines():
+        if line.startswith("## "): in_live = line.startswith("## 1.")
+        elif line.startswith("### "): in_live = False
+        m = LIVE_ROW_RE.match(line) if in_live else None
+        if m: rows.append((m.group("name"), "v" + m.group("ver")[1:]))
+    if not rows: return ["R6 LIVE_VERSIONS 第 1 節找不到上架表格列"], warns
+    exc = {v: r for v, r, _ in load_list(root / "tools" / "live_exceptions.txt")}
+    for name, ver in rows:
+        code = name.split("_")[0]
+        live = root / "strategies" / "live" / name / f"{name}.pla"
+        res = root / "strategies" / "research" / name / f"{code}_{ver}" / f"{name}_{ver}.pla"
+        if not live.exists(): fails.append(f"R6 上架檔不存在：{rel(root, live)}"); continue
+        if not res.exists(): fails.append(f"R6 LIVE_VERSIONS 列的 {name} {ver} 找不到研究版檔案：{rel(root, res)}"); continue
+        if live.read_bytes() == res.read_bytes(): continue
+        if name in exc:
+            if not exc[name]: fails.append(f"R6 tools/live_exceptions.txt 的 {name} 沒寫理由")
+            else: warns.append(f"R6 {name} 上架檔 ≠ {ver} 研究版（已登記例外：{exc[name]}）")
+        else:
+            fails.append(f"R6 {rel(root, live)} 和 LIVE_VERSIONS 列的 {ver}（{rel(root, res)}）不同："
+                         "換版沒有同步，或 LIVE_VERSIONS 沒更新")
+    return fails, warns
+
+
 def check(root):
     root = pathlib.Path(root).resolve(); fails = []; warns = []; info = []
     lv = root / "docs" / "LIVE_VERSIONS.md"
@@ -124,7 +160,7 @@ def check(root):
 
     # R3 retired phrases in entry docs
     phrases = [(val, reason) for val, reason, _ in load_list(root / "tools" / "retired_phrases.txt") if norm(val)]
-    entry = [root / "CLAUDE.md", root / "PROGRESS.md", lv]
+    entry = [root / "CLAUDE.md", root / "PROJECT.md", lv]
     entry += sorted((root / "docs" / "departments").glob("*.md")) + sorted((root / "docs" / "ops").glob("*.md"))
     entry = [f for f in entry if f.exists()]
     hits = 0
@@ -143,7 +179,7 @@ def check(root):
 
     # R4 decisions / ops docs must be linked from an index doc
     targets = sorted((root / "docs" / "decisions").glob("*.md")) + sorted((root / "docs" / "ops").glob("*.md"))
-    idx = [root / "PROGRESS.md", root / "CLAUDE.md", lv]
+    idx = [root / "PROJECT.md", root / "CLAUDE.md", root / "agent.md", lv]
     idx += sorted((root / "docs" / "departments").glob("*.md")) + sorted((root / "docs" / "registers").glob("*.md"))
     idx_text = "\n".join(read(f) for f in idx if f.exists())
     unlinked = []
@@ -152,7 +188,7 @@ def check(root):
         if t.name not in idx_text and not re.search(stem_re, idx_text): unlinked.append(t)
     info.append(f"R4 decisions／ops 文件 {len(targets)} 個：有被入口連到 {len(targets) - len(unlinked)} 個、沒被連到 {len(unlinked)} 個")
     for t in unlinked:
-        fails.append(f"R4 沒有被 PROGRESS／CLAUDE.md／部門檔／登記簿／LIVE_VERSIONS 連到：{rel(root, t)}")
+        fails.append(f"R4 沒有被 PROJECT／CLAUDE.md／agent.md／部門檔／登記簿／LIVE_VERSIONS 連到：{rel(root, t)}")
 
     # R5 (warn) research newer than LIVE_VERSIONS
     if lv.exists() and base.is_dir():
@@ -164,6 +200,11 @@ def check(root):
                 fmt = lambda t: datetime.datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M")
                 warns.append(f"R5 LIVE_VERSIONS 可能過期（may be stale）：{rel(root, newest)} {fmt(t_new)} "
                              f"晚於 docs/LIVE_VERSIONS.md {fmt(t_lv)}")
+
+    # R6 strategies/live files equal the listed research version
+    f6, w6 = live_check(root)
+    fails += f6; warns += w6
+    info.append(f"R6 上架檔對 LIVE_VERSIONS：不符 {len(f6)} 項、已登記例外 {len(w6)} 項")
 
     for s in info: print("    " + s)
     for w in warns: print("    ! " + w + "（警告，不擋）")

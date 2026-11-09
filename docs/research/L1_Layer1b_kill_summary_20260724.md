@@ -132,7 +132,7 @@ To reopen this decision, ALL of the following must be satisfied. Any missing con
 | `docs/research/L1_stop_forensics_20260722.md` | 456-trade forensic reconstruction that anchored the "loss context, not stop width" verdict |
 | `docs/research/L1-L5_stop_methods_analysis_20260721.md` | Cross-strategy stop methods analysis (candlestick patterns not for 45M/60M) |
 | `docs/research/L1_P3_python_analysis_20260724.md` | GATE 2 Fire-Quality Proxy study (this kill's data source) |
-| `docs/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md` | End-of-day handoff sealing the 34 variants |
+| `docs/archive/handoffs/HANDOFF_L1_STOP_CAMPAIGN_20260722_EOD.md` | End-of-day handoff sealing the 34 variants |
 
 ---
 

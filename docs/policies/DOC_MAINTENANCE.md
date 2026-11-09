@@ -10,17 +10,17 @@
   3. CLAUDE.md 留一行指向新位置
 - 切割後舊資料仍查得到：`docs/archive/` ＋ git 歷史
 
-## 2. PROGRESS.md
-- 只增不改；完成的 Phase 不回頭編輯
-- 格式固定 `- [ ] Task N.M：摘要`，由 G0 檢查
-- 每季（或超過 600 行）封存：`docs/archive/PROGRESS_2026Q3.md`，主檔留最近兩個 Phase ＋ 一行索引
+## 2. PROJECT.md（2026-10-31 取代 PROGRESS.md）
+- 依 `docs/policies/templates_v1.0/PROJECT_template.md`：目前狀態、下一步（最多 3 項）、考題、決策紀錄、已知坑
+- 「目前狀態」「下一步」每次收工改寫；「決策紀錄」只追加（G0 檢查日期依序）；「考題」每犯一次錯就加一題，且必須指向真的測試（G0 檢查）
+- 舊 `PROGRESS.md`（Phase 1–10）已封存：`docs/archive/progress/PROGRESS_20260906_20261031.md`
 
 ## 3. 其他 .md
 - 每週盤查一次：已定案的新版本取代舊內容，舊內容移到 `docs/archive/`
 - 規則類放 `docs/policies/`、流程類放 `docs/methodology/`、設計類放 `docs/specs/`、報告放 `docs/reports/<季度>_<主題>/`
 
 ## 4. 在其他平台／AI／裝置接手
-- 必讀：`CLAUDE.md` → `PROGRESS.md` → 目前 Phase 的 Spec
+- 必讀：`CLAUDE.md` → `PROJECT.md` → `agent.md`
 - 需要時再讀：`docs/policies/VERIFICATION_SOP.md`、`docs/registers/`
 
 ## 5. 版本／參數／上線決定同步清單（2026-09-29 起）
@@ -35,12 +35,12 @@
 
 **同一次 push 要一起更新**
 1. `docs/decisions/<策略>_*.md` 追加一行：時間、決定人、內容、依據的報表（只增不改）
-2. `PROGRESS.md` 追加一行：對應的 Task，或「決定：…見 `docs/decisions/…`」
+2. `PROJECT.md` 決策紀錄追加一行，或更新「目前狀態」
 3. `docs/LIVE_VERSIONS.md`：影響上架的改 §1（含排定切換）；研究版改 §2 或 §3，並寫狀態（研究／上架檔／否決）
 4. 影響上線時：`docs/ops/` 的閘門表，以及 DEPT_OPS、DEPT_RISK 的「重點」
 5. 研究版的 MC Load Name 沒有 `_RESEARCH` 結尾（例如上架檔）：登記到 `tools/version_exceptions.txt`，一行一個檔案，`#` 後面寫理由
 6. 有事實被淘汰（日期、版本、回退版）：把舊說法加進 `tools/retired_phrases.txt`。之後入口文件如果還要提到舊說法，那一行要寫「原寫」「更正」或「已被取代」，檢查才會放過
-7. 新增的 `docs/decisions/`、`docs/ops/` 文件：至少要被 PROGRESS、CLAUDE.md、部門檔、登記簿或 LIVE_VERSIONS 其中一份連到
+7. 新增的 `docs/decisions/`、`docs/ops/` 文件：至少要被 PROJECT.md、CLAUDE.md、agent.md、部門檔、登記簿或 LIVE_VERSIONS 其中一份連到
 8. 基準檔照原規定：Willy 核准後單獨 commit
 
 **自動檢查：`verify.bat` 的 G0b（`tools/verify_versions.py`）**
@@ -49,7 +49,7 @@
 |---|---|---|
 | R1 | `strategies/research/` 下每個 `<代號>_v*` 資料夾，都出現在 LIVE_VERSIONS（資料夾名稱，或同一行寫了策略代號和版號） | FAIL |
 | R2 | 研究版 `.pla` 標頭的 MC Load Name 以 `_RESEARCH` 結尾，或登記在 `tools/version_exceptions.txt` | FAIL |
-| R3 | 入口文件（CLAUDE.md、PROGRESS.md、LIVE_VERSIONS、`docs/departments/`、`docs/ops/`）沒有 `tools/retired_phrases.txt` 裡的舊說法 | FAIL |
+| R3 | 入口文件（CLAUDE.md、PROJECT.md、LIVE_VERSIONS、`docs/departments/`、`docs/ops/`）沒有 `tools/retired_phrases.txt` 裡的舊說法 | FAIL |
 | R4 | `docs/decisions/`、`docs/ops/` 的每個 .md，都被上面第 7 點的其中一份文件連到 | FAIL |
 | R5 | `strategies/research/` 有檔案比 LIVE_VERSIONS 新 | 只警告 |
 

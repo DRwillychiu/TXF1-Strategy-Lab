@@ -50,7 +50,9 @@ ALLOWED["engine"] = ALLOWED["engine"] | {"tradecal"}
 # 而結算行事曆是市場的參考資料。tradecal 不依賴 quotes，無環。
 # 2026-09-06 由本檢查抓出並記錄。
 ALLOWED["quotes"] = set(LAYER0) | {"tradecal"}
-ALLOWED["strategies"] = set(LAYER0) | SUPPORT              # 不含 quotes/notify/broker
+ALLOWED["config"] = set()                                  # 設定檔讀取，只用標準庫（2026-10-07）
+ALLOWED["modules"] = set(LAYER0) | {"indicators", "tradecal"}   # 策略內共用模組：純函式（2026-10-07）
+ALLOWED["strategies"] = set(LAYER0) | SUPPORT | {"modules", "config"}   # 不含 quotes/notify/broker
 ALLOWED["risk"] = set(LAYER0) | SUPPORT
 ALLOWED["parity"] = set(LAYER0) | SUPPORT | {"strategies"}
 ALLOWED["notify"] = set(LAYER0)
@@ -60,6 +62,7 @@ ALLOWED["runtime"] = set(LAYER0) | SUPPORT | {
     "quotes", "strategies", "risk", "parity", "notify", "broker",
 }
 
+ALLOWED["profiles"] = ALLOWED["runtime"] | {"runtime"}   # MC 相容設定：組裝層級（2026-10-07）
 ALL_PACKAGES = set(ALLOWED)
 
 

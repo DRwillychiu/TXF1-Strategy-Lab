@@ -38,9 +38,9 @@ from txfcore.quotes.guard import banner, check
 from txfcore.quotes.history import MC12MinuteSource
 from txfcore.strategies.base import MarketView, PositionView
 from txfcore.strategies.l1_trendlong import L1TrendLong
-from txfcore.strategies.l2_trendshort import L2TrendShort
+from txfcore.strategies.l2_trendshort_v5_11 import L2TrendShortV511 as L2TrendShort  # 10/5 上架版
 from txfcore.strategies.l3_consollong import L3ConsolLong
-from txfcore.strategies.l4_consolshort import L4ConsolShort
+from txfcore.strategies.l4_consolshort_v14_10 import L4ConsolShortV1410 as L4ConsolShort  # 10/5 上架版
 from txfcore.strategies.l5_breakoutlong import L5BreakoutLong
 from txfcore.tradecal.gates import evaluate
 from txfcore.types.bar import Bar, BarSeries
@@ -234,7 +234,7 @@ def main() -> int:
         ("L1", L1TrendLong(), m45, md, mw),
         ("L2", L2TrendShort(), m60, None, None),
         ("L3", L3ConsolLong(), m15, m60, md),
-        ("L4", L4ConsolShort(), m15, m60, md),
+        ("L4", L4ConsolShort(), m15, m60, mdn),   # MC 日 K ＝ 收盤日歸屬
         ("L5", L5BreakoutLong(), m15, md, mw),
     )
     for key, strat, d1, d2, d3 in specs:

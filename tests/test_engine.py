@@ -413,8 +413,8 @@ def test_low_confidence_flag():
 def test_settlement_calendar_derived_from_data():
     """92 個結算日，靜態規則只抓到 90。"""
     from txfcore.tradecal.settlement import SETTLEMENT_DAYS, static_rule
-    assert len(SETTLEMENT_DAYS) == 92
-    assert sum(1 for d in SETTLEMENT_DAYS if static_rule(d)) == 90
+    assert len(SETTLEMENT_DAYS) == 93  # 2026-10-07 資料換版至 9/24，新增 1260916
+    assert sum(1 for d in SETTLEMENT_DAYS if static_rule(d)) == 91
 
 
 def test_static_rule_misses_deferred_settlements():
@@ -549,8 +549,8 @@ def test_settlement_source_hash_recorded():
     """資料換版時雜湊會變，屆時必須重新反推結算日曆。"""
     from txfcore.tradecal.settlement import SOURCE_SHA256, SOURCE_ROWS, VERIFIED_UNTIL
     assert len(SOURCE_SHA256) == 64
-    assert SOURCE_ROWS == 2_098_922
-    assert VERIFIED_UNTIL == 1260905
+    assert SOURCE_ROWS == 2_113_687
+    assert VERIFIED_UNTIL == 1260924
 
 
 # ==================================================================

@@ -34,12 +34,13 @@ from txfcore.quotes.bars import aggregate_bars
 from txfcore.quotes.daily import DAY_FIRST, NIGHT_FIRST, build as build_daily
 from txfcore.quotes.guard import banner, check
 from txfcore.quotes.history import MC12MinuteSource
+from txfcore.profiles import mc_compat
 from txfcore.runtime.backtest import BacktestRunner
 from txfcore.runtime.multi import MultiStreamRunner
 from txfcore.strategies.l1_trendlong import L1TrendLong
-from txfcore.strategies.l2_trendshort import L2TrendShort
+from txfcore.strategies.l2_trendshort_v5_11 import L2TrendShortV511 as L2TrendShort  # 10/5 上架版
 from txfcore.strategies.l3_consollong import L3ConsolLong
-from txfcore.strategies.l4_consolshort import L4ConsolShort
+from txfcore.strategies.l4_consolshort_v14_10 import L4ConsolShortV1410 as L4ConsolShort  # 10/5 上架版
 from txfcore.strategies.l5_breakoutlong import L5BreakoutLong
 from txfcore.types.mctime import DayOfWeek, day_of_week
 from txfcore.types.bar import Bar
@@ -183,11 +184,10 @@ def main() -> int:
     for key, runner in (
         ("L1", lambda: MultiStreamRunner(L1TrendLong(), TXF,
                                          warmup_bars=200).run(m45, md, mw)),
-        ("L2", lambda: BacktestRunner(L2TrendShort(), TXF).run(m60)),
+        ("L2", lambda: mc_compat.single_runner(L2TrendShort()).run(m60)),
         ("L3", lambda: MultiStreamRunner(L3ConsolLong(), TXF,
                                          warmup_bars=200).run(m15, m60, md)),
-        ("L4", lambda: MultiStreamRunner(L4ConsolShort(), TXF,
-                                         warmup_bars=200).run(m15, m60, md)),
+        ("L4", lambda: mc_compat.multi_runner(L4ConsolShort()).run(m15, m60, mdn)),  # MC 日 K ＝ 收盤日歸屬
         ("L5", lambda: MultiStreamRunner(L5BreakoutLong(), TXF,
                                          warmup_bars=200).run(m15, mdn, mwn)),
     ):

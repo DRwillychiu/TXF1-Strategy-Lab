@@ -9,18 +9,28 @@ chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
 cd /d %~dp0
 
-echo ==== G0 docs check: CLAUDE.md / PROGRESS.md ====
+echo ==== G0 docs check: CLAUDE.md / PROJECT.md ====
 python tools\verify_docs.py .
 if errorlevel 1 goto FAIL
 
 echo.
-echo ==== G0b version sync: LIVE_VERSIONS / research Load Names / retired phrases / decision links ====
+echo ==== G0b version sync: LIVE_VERSIONS / research Load Names / retired phrases / decision links / live files ====
 python tools\verify_versions.py .
 if errorlevel 1 goto FAIL
 
 echo.
 echo ==== G1 static check: strategies\live ====
 python tools\verify_static.py strategies\live
+if errorlevel 1 goto FAIL
+
+echo.
+echo ==== Order names: each MC order name used once (strategies\live) ====
+python tools\check_order_names.py strategies\live
+if errorlevel 1 goto FAIL
+
+echo.
+echo ==== Unit tests: modules / layer boundaries / config = .pla ====
+python -m pytest -q -p no:cacheprovider tests
 if errorlevel 1 goto FAIL
 
 if "%~1"=="" goto SKIPG3

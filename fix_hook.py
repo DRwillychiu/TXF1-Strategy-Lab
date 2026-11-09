@@ -5,7 +5,7 @@ import pathlib, sys
 
 BLOCK = """
 echo ""
-echo "  --- G0  docs check (CLAUDE.md / PROGRESS.md) ---"
+echo "  --- G0  docs check (CLAUDE.md / PROJECT.md) ---"
 python tools/verify_docs.py . --soft-links
 if [ $? -ne 0 ]; then
   echo ""

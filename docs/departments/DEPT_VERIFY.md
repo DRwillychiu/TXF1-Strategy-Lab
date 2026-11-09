@@ -5,10 +5,12 @@
 ## 重點
 | 關卡 | 檢查 | 指令 | 何時 |
 |---|---|---|---|
-| G0 文件 | CLAUDE.md 行數／段落／連結、PROGRESS 格式 | `python tools\verify_docs.py .` | 每 Task |
-| G1 靜態 | ASCII、結算平倉、停損三件套、進場需空手、回看 ≤ 99、無佔位 | `python tools\verify_static.py strategies\live` | 每 Task |
+| G0 文件 | CLAUDE.md 三區塊、每條規則附原因；PROJECT.md 段落、下一步 ≤ 3、決策紀錄格式；考題指向的測試存在；連結 | `python tools\verify_docs.py .` | 每次推送 |
+| G0b 版本 | LIVE_VERSIONS 與研究版、退役說法、決定文件有入口；R6 上架檔 ＝ LIVE_VERSIONS 所列版本 | `python tools\verify_versions.py .` | 每次推送 |
+| G1 靜態 | ASCII、結算平倉、停損三件套、進場需空手、回看 ≤ 99、無佔位（10/31 起 `strategies\live` 已是實際上架版） | `python tools\verify_static.py strategies\live` | 每次推送 |
+| 委託名稱 | 每個 MC 委託名稱只用在一處 | `python tools\check_order_names.py strategies\live` | 每次推送 |
 | G2 設定比對 | S1 報表參數 ＝ 程式預設值；S3 註解還帶舊版號；S5 兩份報表可比（期間、資本、滑價、佣金、K 棒相同） | `python tools\verify_settings.py 策略.pla 報表.xlsx`；`--compare 報表A.xlsx 報表B.xlsx` | 每份新 MC 報表 |
-| 單元測試（未編號） | 規則層純函式（待建） | `pytest` | 每 Task |
+| 單元測試 | 模組、分層邊界、設定檔 ＝ .pla、G0／R6 工具；考題清單在 `PROJECT.md` | `python -m pytest -q -p no:cacheprovider tests` | 每次推送 |
 | G3 基準 | 設定與逐筆交易 vs 核准基準 | `python tools\verify_baseline.py 報告.xlsx tools\baselines\Lx.json` | Phase 結束 |
 | G4 券商 | 下單／改單／刪單／部位對帳（待建） | — | 上線前 |
 | G5 設定 | 圖表 Data1/2/3、時段（部分由 G3 涵蓋） | — | 回測前 |
@@ -18,7 +20,7 @@
 - **基準檔只能由 Willy 核准的版本產生**（`tools/make_baseline.py`），更新單獨 commit——屬 Tier 1
 - 踩過的坑 → 結案時必須新增一條檢查
 - 「G2」9/27 起指設定比對（`tools/verify_settings.py`，已建，目前手動執行）；原本的單元測試改為未編號、待建
-- G3 的 L3 基準：`tools/baselines/L3.json` 是 v15.0 上架版報表。10/1 切換後，G3 應比對 v18.2 的 `L3_182` 報表；目前沒有這個基準檔，要等 Willy 核准後用 `tools/make_baseline.py` 產生，並單獨 commit
+- G3 的 L3 基準：`tools/baselines/L3.json` 是 v15.0 上架版報表。9/30 切換後，G3 應比對 v18.2 的 `L3_182` 報表；目前沒有這個基準檔，要等 Willy 核准後用 `tools/make_baseline.py` 產生，並單獨 commit
 - L3 v18.2 上線前驗證：87 項，通過 49、沒通過 6、接受風險 2、警示 17、待實測 10、未觸發 3（9/29 19:01 更新） → `docs/ops/L3_v18.2_verification_20260929.md`；空跑與 9/30 閘門表 → `docs/ops/L3_dryrun_0929_gate_0930.md`
 
 ## 團隊（詳細內容在這裡）

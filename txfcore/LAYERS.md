@@ -29,7 +29,10 @@
 | **共用支撐** | `indicators` `tradecal` | 否 | — 純函數 | ✓ |
 | | `engine` | 否 | `FillModel` `PositionBook` | ○ |
 | **1 報價** | `quotes` | 是（入口） | `QuoteSource` | ○ |
-| **2 策略** | `strategies` | 是 | `Strategy` | L2 完成 |
+| **2 策略** | `strategies` | 是 | `Strategy` | L2 v5.11、L4 v14.10 組裝檔完成（2026-10-07） |
+| 策略內共用 | `modules`（gates／signals／stops／exits） | 否 | — 純函式與小狀態 | ◐（2026-10-07） |
+| 設定 | `config`（讀 `config/strategies/*.toml`，比對 .pla） | 否 | — | ✓ |
+| 組裝 | `profiles`（MC 相容設定） | — | — | ✓ |
 | **3 風險** | `risk` | 是 | `RiskGate` | ○ |
 | **5 通知下單** | `notify` `broker` | 是（出口） | `OrderSink` | ○ |
 | **旁路** | `parity` | 否 | `ParityChecker` | ○ |

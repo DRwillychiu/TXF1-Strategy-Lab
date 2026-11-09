@@ -77,3 +77,19 @@ strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.8.2.pla              
 strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.8.3.pla                    # legacy, rename in Q4 （現名 STRATEGY_GEN_S16_S_MACrossShort）
 strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.8.4.pla                    # legacy, rename in Q4 （現名 STRATEGY_GEN_S16_S_MACrossShort）
 strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.9.0.pla                    # legacy, rename in Q4 （現名 STRATEGY_GEN_S16_S_MACrossShort）
+strategies/research/L5_BreakoutLong/L5_v19.16/L5_BreakoutLong_v19.16.pla          # L5 research (2026-10-01); switch E Min_RR_Mid, alias _V1916, research only
+strategies/research/L5_BreakoutLong/L5_v19.17/L5_BreakoutLong_v19.17.pla          # L5 research (2026-10-01); loss defence switches LM/W/D, alias _V1917, research only
+strategies/research/L5_BreakoutLong/L5_v19.18/L5_BreakoutLong_v19.18.pla          # L5 candidate (2026-10-01 21:40); v19.17 + defaults LM 2/450/0.4, alias _V1918
+strategies/research/L5_BreakoutLong/L5_v19.19/L5_BreakoutLong_v19.19.pla          # L5 research (2026-10-02 12:30); v19.18 + intraday box #42-#45 default off, alias _V1919
+strategies/research/L4_ConsolidationShort/L4_v14.8/L4_ConsolidationShort_v14.8.pla  # L4 research (2026-10-02 13:30); live v14.6 + R1 loss-streak skip #24-#25 default off, alias _V148
+strategies/research/L4_ConsolidationShort/L4_v14.9/L4_ConsolidationShort_v14.9.pla  # L4 research (2026-10-02 23:10); v14.8 + #29 Entry_Mode / #30 Zone_Pct zone entry + Macro_Mode 4, default off, alias _V149
+strategies/research/L1_TrendLong/L1_v3.4/L1_TrendLong_v3.4.pla  # L1 research (2026-10-02 23:50); V3.2 live + #24-#26 daily trend gate + #27-#28 loss pause + #29 SL_Max_Pts + #30 Day_Loss_Stop_N, default off; ReEntry_On default 1; alias WILLY_ATR_LONG_45M_V34_RESEARCH
+strategies/research/L1_TrendLong/L1_v3.5/L1_TrendLong_v3.5.pla  # L1 research (2026-10-03 01:30); v3.4 + #31 DTrend_Slope_N (daily gate open while MA slow rising; 0 = off = v3.4); alias WILLY_ATR_LONG_45M_V35_RESEARCH
+strategies/research/L2_TrendShort/L2_v5.5/L2_TrendShort_v5.5.pla  # L2 attribution (2026-10-03); live 5.3 + #23 Wk_Entry_Filter + #24 Wk_Exit_On (defaults = live); alias Trendbearish_V55_RESEARCH
+strategies/research/L1_TrendLong/L1_v3.6/L1_TrendLong_v3.6.pla  # L1 research (2026-10-03 ~10:15); v3.5 + #32 Guard_Persist (engine stop re-issued while in position; 0 = off); alias WILLY_ATR_LONG_45M_V36_RESEARCH
+strategies/research/L1_TrendLong/L1_v3.7/L1_TrendLong_v3.7.pla  # L1 release candidate (2026-10-03 ~11:50); v3.6 code, defaults #24 1 #27 3 #29 450 #31 4 #32 1; live name WILLY_ATR_LONG_60M unconfirmed
+strategies/research/L1_TrendLong/L1_v3.8/L1_TrendLong_v3.8.pla  # L1 final live build (2026-10-03 17:40); V3.7 trades unchanged, comments condensed, kill switch blocks entries, display fixes; live name WILLY_ATR_LONG_60M (deploy file)
+strategies/research/L2_TrendShort/L2_v5.11/L2_TrendShort_v5.11.pla  # L2 final live build (2026-10-03 18:02); v5.10 trades unchanged, comments condensed, kill switch blocks entries, Crash_Time_Bars 0 = off; live name Trendbearish_V1 (deploy file)
+strategies/research/L3_ConsolidationLong/L3_v18.4/L3_ConsolidationLong_v18.4.pla  # L3 final live build (2026-10-03 18:14); v18.2 trades unchanged, kill blocks entries and leads one forced-exit chain, explicit 450 cap; live name STRATEGY_WILLY_LONG_C (deploy file)
+strategies/research/L4_ConsolidationShort/L4_v14.10/L4_ConsolidationShort_v14.10.pla  # L4 final live build (2026-10-03 18:32); defaults = T8, T8 trades unchanged, kill blocks entries, explicit 450 cap; live name STRATEGY_WILLY_SHORT_CTEST2 (deploy file)
+strategies/research/L5_BreakoutLong/L5_v19.20/L5_BreakoutLong_v19.20.pla  # L5 final live build (2026-10-03 18:51); v19.18 trades unchanged at State_Start_Date 0, default 1261005, kill blocks entries, IOG off declared; live name STRATEGY_WILLY_LONG_BREAKOUT_C (deploy file)

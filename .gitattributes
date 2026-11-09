@@ -11,3 +11,7 @@
 # .pla files are edited and compiled on Windows (MultiCharts). Leave them
 # to the platform default; do not normalise.
 *.pla       -text
+
+# cmd.exe batch files need CRLF: with LF-only endings, labels and goto can misfire.
+# push.bat / verify.bat must stay ASCII + CRLF (2026-10-31).
+*.bat       text eol=crlf

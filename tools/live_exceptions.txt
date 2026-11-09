@@ -1,0 +1,5 @@
+# G0b R6 例外：strategies/live 的檔案和 docs/LIVE_VERSIONS.md 第 1 節所列研究版不同，但目前允許
+# 格式：策略名稱  # 理由（必填）。問題解決後刪掉該行。
+# 建立：2026-10-31
+
+L1_TrendLong  # 檔案是 V3.1；實盤 V3.2 ＝ V3.1＋二次進場輸入（Willy 10/2）；10/28 圖上下單大師檔名為 L1_TrendLong_v3.8.txt，實際版本待確認

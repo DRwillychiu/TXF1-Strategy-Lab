@@ -49,6 +49,9 @@ class PositionView:
     prev_position_profit: float = 0.0
     current_contracts: int = 0
     max_contracts: int = 0
+    # MC 的 TotalTrades 與 NetProfit（含成本）。L2 v5.8 起的連虧計數用。
+    total_trades: int = 0
+    net_profit: float = 0.0
 
     @property
     def is_flat(self) -> bool:

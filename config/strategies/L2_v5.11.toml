@@ -1,0 +1,46 @@
+# L2_v5.11 參數（＝ .pla 預設值；載入時自動比對，不一致即紅燈）
+pla = "strategies/research/L2_TrendShort/L2_v5.11/L2_TrendShort_v5.11.pla"
+mc_load_name = "Trendbearish_V1"
+
+[params]
+WkSMA_Len = 13
+DC_Len = 30
+ZLEMA_Len = 20
+ZLEMA_Lag = 9
+ATR_Len = 21
+C0_ATR_Filter = 0.45
+SL_ATR_Ratio = 1.1
+Accel_M = 0.5
+NLow_N = 15
+MinBars = 3
+TSL_K = 9
+TSL_M = 1.0
+TP_N = 30
+TTP_MinAtr = 4.0
+TTP_RebPct = 1.5
+stopProfitPoints_Shrt = 250
+profitReturnPrcnt_Shrt = 55
+Holiday_Flat_Time = 300
+Registry_Valid_Until = 1270101
+Manual_Kill_Switch = false
+Settlement_Flat_Time = 1230
+SL_Pct = 1.25
+Wk_Entry_Filter = 1
+Wk_Exit_On = 1
+SL_Max_Pts = 450
+Bear_Pause_N = 3
+Bear_Pause_Bars = 0
+Hard_Stop_On = 1
+SP_Pct = 0.75
+Pause_Mode = 1
+Skip_K = 1
+Crash_On = 1
+Crash_Drop_Pct = 3.0
+Crash_Lookback = 20
+Crash_Body_ATR = 1.0
+Crash_ATRPct_Min = 0.6
+Crash_SL_Pct = 1.0
+Crash_Trail_ATR = 1.0
+Crash_Time_Bars = 40
+Crash_Leg_Max = 1
+Crash_Leg_Reset_Bars = 0

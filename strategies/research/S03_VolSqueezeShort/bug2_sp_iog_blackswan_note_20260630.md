@@ -106,4 +106,4 @@ TAIEX futures reversal days typically have HIGH liquidity (panic buying + short 
 - `v181_BarStatusFix_FAILED_20260629.md` — Failed Bug 2 fix attempt
 - `v181_GA_FAILED_architecture_verdict_20260629.md` — Architecture limitation confirmed
 - `extreme_event_coverage_20260624.md` — 45-trade exit analysis (v1.7.3)
-- `docs/handoffs/handoff_20260629_evening_bug2_unsolved_revisit_tomorrow.md` — Previous session handoff
+- `docs/archive/handoffs/handoff_20260629_evening_bug2_unsolved_revisit_tomorrow.md` — Previous session handoff

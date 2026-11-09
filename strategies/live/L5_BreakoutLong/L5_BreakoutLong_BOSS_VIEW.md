@@ -1,5 +1,7 @@
 # L5 BreakoutLong — 老闆快速 View
 
+> ⚠ **本頁是舊版內容，未隨 2026-10-05 換版更新**；現行上架版本見 `docs/LIVE_VERSIONS.md` 第 1 節。
+
 **版本** v19.9 + Cooldown-D + HolidayFlat_v3 ｜ **回測** 2020 ~ 2026（6.4 年）｜ **狀態** ✅ live 實盤
 
 ---

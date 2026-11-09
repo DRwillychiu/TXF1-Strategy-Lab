@@ -5,11 +5,11 @@
 ## 1. 每個 task 的流程
 
 ```
-開發 ──► verify.bat ──► 全綠 ──► 更新紀錄（登記簿／PROGRESS）──► commit
+開發 ──► verify.bat ──► 全綠 ──► 更新紀錄（登記簿／PROJECT.md）──► commit
               │
               └─ 紅燈 ──► 停 ──► Claude 列「問題＋三個解法」──► Willy 選 ──► 修 ──► 重跑
 ```
-- phase ＝ branch，task ＝ commit；每完成一個 Task 就在 `PROGRESS.md` 打勾，勾選與程式同一個 commit
+- 每完成一項工作：更新 `PROJECT.md`（目前狀態、下一步、決策紀錄、考題），與程式同一次推送（10/31 前是 `PROGRESS.md` 打勾）
 - 任一步出狀況就停，不跳步
 - Tier 1（進出場、停損、風控、下單防呆、部署）每個 Task 完成後暫停，等 Willy 審查
 
@@ -19,7 +19,7 @@
 
 | 關卡 | 檢查什麼 | 何時跑 | 狀態 |
 |---|---|---|---|
-| **G0 文件** | CLAUDE.md 行數／段落／連結、PROGRESS 格式 | 每個 task commit 前（verify.bat） | ✅ 已建（`tools/verify_docs.py`） |
+| **G0 文件** | CLAUDE.md 三區塊與規則原因；PROJECT.md 格式與考題指向的測試 | 每個 task commit 前（verify.bat） | ✅ 已建（`tools/verify_docs.py`） |
 | **G0b 版本同步** | 研究版資料夾都登記在 LIVE_VERSIONS；研究版 Load Name 帶 `_RESEARCH` 或登記例外；入口文件沒有退役說法；decisions／ops 文件都被入口連到 | 每個 task commit 前（verify.bat） | ✅ 已建（`tools/verify_versions.py`，9/29） |
 | **G1 靜態** | .pla 純 ASCII、結算日平倉（出場＋進場閘門）、停損三件套（SetStopContract→SetStopLoss＋SL_Pct）、進場需空手、回看長度 ≤ 99、無佔位／無效 Block 旗標 | 每個 task commit 前 | ✅ 已建（`tools/verify_static.py`） |
 | **G2 設定比對** | 報表參數 ＝ 程式預設值（S1）；兩份報表的期間、資本、滑價、佣金、K 棒相同才可比（S5） | 每份新 MC 報表 | ✅ 已建（`tools/verify_settings.py`，手動跑，未接進 verify.bat） |

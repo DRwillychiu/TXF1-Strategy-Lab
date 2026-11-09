@@ -1,5 +1,7 @@
 # L4 ConsolidationShort — 老闆快速 View
 
+> ⚠ **本頁是舊版內容，未隨 2026-10-05 換版更新**；現行上架版本見 `docs/LIVE_VERSIONS.md` 第 1 節。
+
 **版本** v14.2B (Variant B: Night 開、BE/SP 關) + v14.4 ImmediateStop ｜ **回測** 2020-02 ~ 2026-06（6.4 年）｜ **狀態** ✅ live 實盤
 
 ---

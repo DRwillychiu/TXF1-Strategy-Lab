@@ -13,10 +13,10 @@
 | 資料夾 | 用途 | 變更頻率 | 引用對象 |
 |--------|------|---------|---------|
 | **`departments/`** | 部門檔 `DEPT_*.md`：重點＋團隊清單（CLAUDE.md 的第二層） | 中 | CLAUDE.md |
-| **`decisions/`** | 逐條決定紀錄：時間、決定人、內容、依據的報表；只增不改 | 高（每個版本／參數／上線決定） | PROGRESS.md、部門檔、LIVE_VERSIONS |
-| **`ops/`** | 上線操作：空跑步驟、閘門表、上線前驗證報告 | 高（上線前後） | DEPT_OPS、PROGRESS.md |
+| **`decisions/`** | 逐條決定紀錄：時間、決定人、內容、依據的報表；只增不改 | 高（每個版本／參數／上線決定） | PROJECT.md 決策紀錄、部門檔、LIVE_VERSIONS |
+| **`ops/`** | 上線操作：空跑步驟、閘門表、上線前驗證報告 | 高（上線前後） | DEPT_OPS、PROJECT.md |
 | **`registers/`** | 問題登記簿：`issues_open.md`（待處理）、`issues_decided.md`（已裁決） | 中 | 部門檔 |
-| **`specs/`** | 設計規格（`spec_*.md`、各策略規格） | 中 | PROGRESS.md 各 Phase |
+| **`specs/`** | 設計規格（`spec_*.md`、各策略規格） | 中 | PROJECT.md、`docs/ops/project_breakdown_20261009.md` |
 | **`reports/`** | 報告，放 `<季度>_<主題>/` | 偶 | 報告部 |
 | **`policies/`** | 強制規範、憲法、排程鎖定 | 罕（重大決策後） | CLAUDE.md / 所有新策略 |
 | **`methodology/`** | 流程 SOP、工作方法論 | 偶（流程改進後） | 每次策略開發 |

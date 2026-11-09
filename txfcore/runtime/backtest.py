@@ -92,7 +92,13 @@ class BacktestRunner:
         slippage: SlippageModel = OFF,
         lineage: Lineage | None = None,
         warmup_bars: int = 40,
+        mc_cost_per_lot_side: float | None = None,
     ) -> None:
+        # 對帳 MC 報表用：MC 圖表設定「滑價每口 1,000、手續費 0」時傳 1000，
+        # 每筆成本 ＝ 1000 × 口數 × 2 邊，NetProfit 才與 MC 相同
+        # （L2 連虧計數看 NetProfit 正負，成本口徑不同會改變計數）。
+        self.mc_cost_per_lot_side = mc_cost_per_lot_side
+        self._entry_limit = False
         self.strategy = strategy
         self.instrument = instrument
         # **滑價是套在 fill_mc12 外面的一層**，不是塞進去。
@@ -134,7 +140,8 @@ class BacktestRunner:
             if pending or protective:
                 fills = self.fill_model.fill(pending, bar)
                 # 引擎停損：可在沒有任何出場單的情況下平倉（L5 實測 171 筆中 1 筆）
-                if protective and not pos.is_flat:
+                if (protective and not pos.is_flat
+                        and not self.fill_model.policy.engine_stop_entry_bar_only):
                     side = Side.SELL if pos.direction is MarketPosition.LONG else Side.BUY_TO_COVER
                     sign = -1 if pos.direction is MarketPosition.LONG else 1
                     stop_px = pos.entry_price + sign * protective.distance
@@ -157,6 +164,7 @@ class BacktestRunner:
                     if side in (Side.BUY, Side.SELL_SHORT):
                         if not pos.is_flat:
                             continue          # 已有部位，忽略重複進場
+                        self._entry_limit = f.order.intent.order_type is OrderType.LIMIT
                         pos.open_leg(f.order.intent.label, f.price, f.quantity,
                                      bar.mc_date, bar.mc_time, side)
                         entry_leg = (f.order.intent.label, f.price,
@@ -174,7 +182,8 @@ class BacktestRunner:
                             entry_price=epx, exit_price=f.price,
                             entry_date=ed, entry_time=et,
                             exit_date=bar.mc_date, exit_time=bar.mc_time,
-                            cost=trade_cost(self.instrument, epx, f.price, qty),
+                            cost=self._cost(epx, f.price, qty, self._entry_limit,
+                                            f.order.intent.order_type is OrderType.LIMIT),
                         )
                         res.trades.append(t)
                         ledger.record(t)
@@ -202,6 +211,8 @@ class BacktestRunner:
                     prev_position_profit=pos.prev_position_profit,
                     current_contracts=pos.current_contracts,
                     max_contracts=pos.max_contracts,
+                    total_trades=len(res.trades),
+                    net_profit=sum(x.net_ntd(self.instrument) for x in res.trades),
                 ),
                 calendar=evaluate(bar.mc_date, bar.mc_time,
                                   s.config.registry_valid_until),
@@ -214,6 +225,14 @@ class BacktestRunner:
             res.orders_emitted += len(pending)
 
         return res
+
+    def _cost(self, entry_px: float, exit_px: float, qty: int,
+              entry_limit: bool = False, exit_limit: bool = False) -> float:
+        """MC 的滑價只加在市價單與停損單，限價單不加（L4 T8 報表 54 筆 TP1 限價實證）。"""
+        if self.mc_cost_per_lot_side is not None:
+            c = self.mc_cost_per_lot_side * qty
+            return (0 if entry_limit else c) + (0 if exit_limit else c)
+        return trade_cost(self.instrument, entry_px, exit_px, qty)
 
     def _same_bar_stop(self, bar, pos, entry_leg, protective, ledger, res, name):
         """進場那根立刻被停損打掉。
@@ -251,7 +270,7 @@ class BacktestRunner:
             entry_price=epx, exit_price=ef.price,
             entry_date=ed, entry_time=et,
             exit_date=bar.mc_date, exit_time=bar.mc_time,
-            cost=trade_cost(self.instrument, epx, ef.price, qty),
+            cost=self._cost(epx, ef.price, qty, self._entry_limit),
         )
         res.trades.append(t)
         ledger.record(t)

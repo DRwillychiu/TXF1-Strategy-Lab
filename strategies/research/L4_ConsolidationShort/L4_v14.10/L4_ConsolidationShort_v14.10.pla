@@ -1,0 +1,508 @@
+{================================================================================
+ L4 CONSOLIDATION SHORT (Adaptive Farmer)  -  v14.10  (2026-10-03)
+ MC Load Name : STRATEGY_WILLY_SHORT_CTEST2  (live name). Backtest / dry run
+                under an alias first; save under the live name ONLY when flat.
+ Data         : Data1 TXF1 15M / Data2 60M / Data3 daily. IOG off. 2 lots.
+ Verify       : all defaults (= T8), slippage 1,000 per lot, commission 0,
+                2 lots, 2020-02-21 to 2026-09-24 -> net 694,200 / 135 report
+                rows (81 positions) / max DD -390,800 (= v14.8 T8 report).
+
+ VERSION
+  v14.10 (10/03) T8 trades unchanged. Defaults = T8 (SL_Pct 0.8, TP1_Room_Pct
+                 20); kill switch also blocks entries; explicit 450-point cap
+                 on the engine stop and the exit stop (0.8% binds first below
+                 56,250); a bar with a market exit sends no stop order;
+                 trailing stop no longer starts from the last trade's level;
+                 comments condensed and corrected.
+  v14.8  (10/02) T8 decided: SL 0.8%, partial take profit 1 lot at 20%.
+  v14.6  live until 10/05: SetStopContract + SL_Pct 1.5.
+
+ LOGIC
+  Block   no short while the daily trend is up: A (daily close > MA60 and
+          MA60 >= its previous value) OR B (daily MA20 > MA60).
+  Box     60M bar inside the previous 15 bars' range and its range <= 70%
+          of it -> box; ends when a 60M close leaves it.
+  Entry   S_Spring: High pokes above the box top (trap zone, 6 bars), then
+          Close < box top - 0.4 ATR(60); 60M close < MA(48); cooldown 8
+          bars; not 02:00-04:59, holiday tail, settlement day or kill.
+  Stop    frozen at entry: box top + 2 ATR, capped at 0.8% of entry and
+          450 pts; after the low reaches the box bottom it trails at the
+          lowest low + 1 ATR. Engine stop on the entry bar (per contract).
+  TP1     1 lot buys back at entry - 20% x (entry - box bottom), limit.
+  Exit    kill, registry end, holiday tail (04:15 bar), settlement (12:30
+          bar), box failed with 60M close above the locked top, time stop
+          60 bars before the trail -> market; else TP1 and the stop.
+  Note    Data2 / Data3 are read on bar [0]; live may read the bar in
+          progress (unverified, Q4 item F8). Loss-streak skip (#24) is off.
+================================================================================}
+
+[IntrabarOrderGeneration = false]
+
+inputs:
+    Daily_FastMA_Len(20),
+    Daily_SlowMA_Len(60),
+    Lookback_Bars(15),
+    Range_Shrink_Rate(0.7),
+    Weekly_MA_Len(48),             { 60M MA length (name kept) }
+    ATR_Length(60),
+    ATR_Stop_Mult(2),
+    i_Buffer_ATR_Mult(0.4),
+    Time_Limit_Bars(6),            { trap zone life, bars }
+    Cooldown_Bars(8),
+    Time_Stop_Bars(60),
+    Trail_ATR_Mult(1.0),
+    Freeze_SL_On(true),            { stop frozen at entry }
+    Holiday_Flat_Time(415),
+    Registry_Valid_Until(1270101), { holiday registry horizon }
+    Manual_Kill_Switch(false),     { true = flatten, no entries }
+    Settlement_Flat_Time(1230),
+    Night_Block_On(true),          { no entry 02:00-04:59 }
+    BE_Trigger_Pts(0),             { 0 = off (rejected) }
+    BE_Offset_Pts(5),
+    SP_Trigger_Pts(0),             { 0 = off (rejected) }
+    SP_Retain_Pct(50),
+    SL_Pct(0.80),                  { stop cap, % of entry }
+    Streak_Skip_N(0),              { 0 = off }
+    State_Start_Date(0),
+    Macro_Mode(0),                 { 0 = block if A or B }
+    TP1_Room_Pct(20),              { 0 = off; 1 lot at 20% of room }
+    TP1_BE_On(false),
+    SL_Max_Pts(450);               { stop cap, points; 0 = off }
+
+variables:
+    { Phase 0: Macro filter }
+    v_Daily_FastMA(0),
+    v_Daily_SlowMA(0),
+    v_Macro_Block(false),
+
+    { Phase 1: Box definition }
+    v_Ref_High(0),
+    v_Ref_Low(0),
+    v_Curr_Range(0),
+    v_Ref_Range(0),
+    v_is_in_consolidation(false),
+    v_Box_Top(0),
+    v_Box_Btm(0),
+    v_Weekly_MA(0),
+    v_Trend_Dir(0),
+
+    { Phase 2: Execution variables }
+    v_Current_ATR(0),
+    v_Trigger_Price(0),
+    v_Stop_Level(0),
+    v_In_Trap_Zone(false),
+    v_Trap_Counter(0),
+    v_Night_Block(false),
+
+    { Phase 3: Advanced Management Variables }
+    v_Locked_Top(0),
+    v_Locked_Btm(0),
+    v_BarsSinceExit(999),
+    v_Lowest_Low(999999),
+    v_Trail_Active(false),
+
+    { v14.1 Frozen Initial SL }
+    v_SL_Locked(false),
+    v_Frozen_ATR(0),
+    v_Frozen_LockedTop(0),
+
+    { Holiday Flat Rule v3 }
+    v_Holiday_Block(false),
+    v_Registry_Expired(false),
+    Registry_Warn_ID(-1),
+    hidx(0),
+
+    { Settlement Day }
+    v_Settlement_Day(false),
+
+    { v14.6 SL_Pct }
+    v_Guard_Distance(0),           { P3b engine stop distance (for SL_Pct cap) }
+    v_SL_Pct_Ceil(0),             { percentage stop ceiling price }
+
+    v_Peak_Profit_Pts(0),
+    v_BE_Armed(false),
+    v_SP_Armed(false),
+    v_BE_Floor(0),
+    v_SP_Floor(0),
+    v_Effective_Stop(0),
+
+    { Exit chain }
+    ExitFired(0),
+
+    { v14.8 R1 loss-streak skip }
+    v_NP_Base(0),                  { NetProfit at the last flat bar }
+    v_PrevTT(0),
+    v_LastPos(0),                  { P&L of the last closed position }
+    v_LossRun(0),                  { closed losing positions in a row }
+    v_SkipNext(false),             { true = the next entry signal is not traded }
+    v_CondA(false),                { daily close > MA60 and MA60 rising }
+    v_CondB(false),                { daily MA20 > MA60 }
+    v_TP1_Px(0),                   { frozen TP1 price (0 = none) }
+    v_TP1_Done(false);             { a contract was already taken off }
+
+arrays:
+    Holiday_Tail[80](0);
+
+{ ===== Holiday tail registry (shared with L1-L3): date stamp of the
+  00:00-05:00 bars of the last night session before each closure. ===== }
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    { 2020 } Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    { 2021 } Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    { 2022 } Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    { 2023 } Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    { 2024 } Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    { 2025 (* pending vs 114-yr PDF) }
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+
+end;
+
+{ holiday tail blocks entries; registry expiry blocks everything }
+v_Holiday_Block = false;
+
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = true;
+    end;
+end;
+
+v_Registry_Expired = false;
+
+if Date > Registry_Valid_Until then begin
+    v_Registry_Expired = true;
+    v_Holiday_Block    = true;
+end;
+
+{ settlement day = 3rd Wednesday (day 15-21) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+{ chart warning 30 days before the registry horizon }
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ===== Night block 02:00-04:59 ===== }
+v_Night_Block = false;
+if Night_Block_On = true and Time >= 200 and Time < 500 then
+    v_Night_Block = true;
+
+{ ===== Daily trend block (Data3). MA60[1] is the value one 15M bar ago. ===== }
+v_Daily_FastMA = Average(Close, Daily_FastMA_Len) of Data3;
+v_Daily_SlowMA = Average(Close, Daily_SlowMA_Len) of Data3;
+
+v_CondA = (Close of Data3 > v_Daily_SlowMA) and (v_Daily_SlowMA >= v_Daily_SlowMA[1]);
+v_CondB = (v_Daily_FastMA > v_Daily_SlowMA);
+if Macro_Mode = 1 then
+    v_Macro_Block = v_CondA and v_CondB
+else if Macro_Mode = 2 then
+    v_Macro_Block = v_CondA
+else if Macro_Mode = 3 then
+    v_Macro_Block = false
+else
+    v_Macro_Block = v_CondA or v_CondB;
+
+{ ===== 60M box and trend (Data2) ===== }
+v_Ref_High   = Highest(High, Lookback_Bars)[1] of Data2;
+v_Ref_Low    = Lowest(Low,   Lookback_Bars)[1] of Data2;
+v_Curr_Range = (High of Data2) - (Low of Data2);
+v_Ref_Range  = v_Ref_High - v_Ref_Low;
+
+v_Weekly_MA = Average(Close, Weekly_MA_Len) of Data2;
+
+if Close of Data2 < v_Weekly_MA then
+    v_Trend_Dir = -1
+else
+    v_Trend_Dir = 1;
+
+if (High of Data2 <= v_Ref_High) and (Low of Data2 >= v_Ref_Low) then begin
+    if v_Ref_Range > 0 and
+       (v_Curr_Range / v_Ref_Range <= Range_Shrink_Rate) then begin
+        v_is_in_consolidation = true;
+        v_Box_Top = v_Ref_High;
+        v_Box_Btm = v_Ref_Low;
+    end;
+end;
+
+if v_is_in_consolidation then begin
+    if (Close of Data2 > v_Box_Top) or
+       (Close of Data2 < v_Box_Btm) then
+        v_is_in_consolidation = false;
+end;
+
+{ ===== Entry (15M) ===== }
+v_Current_ATR = AvgTrueRange(ATR_Length);
+
+{ stop amounts are per contract }
+SetStopContract;
+
+{ loss-streak skip (#24, off at defaults) }
+if MarketPosition = 0 then begin
+    if TotalTrades <> v_PrevTT then begin
+        v_LastPos = NetProfit - v_NP_Base;
+        if State_Start_Date = 0 or Date >= State_Start_Date then begin
+            if v_LastPos < 0 then
+                v_LossRun = v_LossRun + 1
+            else
+                v_LossRun = 0;
+            if Streak_Skip_N > 0 and v_LossRun >= Streak_Skip_N then begin
+                v_SkipNext = true;
+                v_LossRun = 0;
+            end;
+        end;
+    end;
+    v_NP_Base = NetProfit;
+end;
+v_PrevTT = TotalTrades;
+if Streak_Skip_N <= 0 then v_SkipNext = false;
+
+{ Cooldown Counter Management }
+{ cooldown after a position closes }
+if MarketPosition <> 0 then
+    v_BarsSinceExit = 0
+else if MarketPosition = 0 and MarketPosition[1] <> 0 then
+    v_BarsSinceExit = 1
+else if MarketPosition = 0 then
+    v_BarsSinceExit = v_BarsSinceExit + 1;
+
+if v_is_in_consolidation and v_Box_Top > v_Box_Btm then begin
+
+    { Sub-Phase A: False Breakout (Trap) Detection }
+    { trap zone: High above the box top, lives Time_Limit_Bars }
+    if High > v_Box_Top then begin
+        v_In_Trap_Zone = true;
+        v_Trap_Counter = 0;
+    end;
+
+    if v_In_Trap_Zone then begin
+        v_Trap_Counter = v_Trap_Counter + 1;
+        if v_Trap_Counter > Time_Limit_Bars then
+            v_In_Trap_Zone = false;
+    end;
+
+    { engine stop for the entry bar: box top + 2 ATR, capped at 0.8% and 450 }
+    if MarketPosition >= 0 then begin
+        v_Guard_Distance = AbsValue((v_Box_Top + v_Current_ATR * ATR_Stop_Mult) - Close);
+        if SL_Pct > 0 then
+            v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+        if SL_Max_Pts > 0 then
+            v_Guard_Distance = MinList(v_Guard_Distance, SL_Max_Pts);
+        SetStopLoss(v_Guard_Distance * BigPointValue);
+    end;
+
+    { S_Spring entry }
+    v_Trigger_Price = v_Box_Top - (v_Current_ATR * i_Buffer_ATR_Mult);
+
+    if MarketPosition    =  0             and
+       v_BarsSinceExit  >= Cooldown_Bars  and
+       v_Trend_Dir       = -1             and
+       v_Macro_Block     = false          and
+       v_In_Trap_Zone    = true           and
+       Close             < v_Trigger_Price and
+       v_Holiday_Block   = false          and
+       v_Night_Block     = false          and
+       v_Settlement_Day  = false          and
+       Manual_Kill_Switch = false         then begin
+
+        if v_SkipNext then
+            v_SkipNext = false             { v14.8 R1: this signal is skipped }
+        else
+            SellShort ("CS_Entry") next bar at Market;
+        v_In_Trap_Zone = false;
+
+    end;
+
+end;
+
+{ Snapshot box and reset tracking when flat }
+{ ===== Exits. When flat: lock the box, reset all trade state ===== }
+if MarketPosition = 0 then begin
+    if v_is_in_consolidation then begin
+        v_Locked_Top = v_Box_Top;
+        v_Locked_Btm = v_Box_Btm;
+    end;
+    v_Lowest_Low       = 999999;
+    v_Trail_Active     = false;
+    v_SL_Locked        = false;
+    v_Frozen_ATR       = 0;
+    v_Frozen_LockedTop = 0;
+    v_Peak_Profit_Pts  = 0;
+    v_BE_Armed         = false;
+    v_SP_Armed         = false;
+    v_BE_Floor         = 0;
+    v_SP_Floor         = 0;
+    v_SL_Pct_Ceil      = 0;
+    v_TP1_Px           = 0;
+    v_TP1_Done         = false;
+    v_Stop_Level       = 999999;
+end;
+
+if MarketPosition = -1 then begin
+
+    { 1. Record Maximum Favorable Excursion }
+    { lowest low; trail starts when it reaches the locked box bottom }
+    if Low < v_Lowest_Low then
+        v_Lowest_Low = Low;
+
+    { 2. Trailing Stop Activation }
+    if v_Lowest_Low <= v_Locked_Btm then
+        v_Trail_Active = true;
+
+    { freeze ATR and box top on the first bar in position }
+    if Freeze_SL_On and v_SL_Locked = false then begin
+        v_Frozen_ATR       = v_Current_ATR;
+        v_Frozen_LockedTop = v_Locked_Top;
+        v_SL_Locked        = true;
+    end;
+
+    { stop: trail = min(previous, lowest low + 1 ATR); else frozen box top +
+      2 ATR; then capped at 0.8% of entry and 450 pts }
+    if v_Trail_Active then begin
+
+        v_Stop_Level = MinList(v_Stop_Level[1],
+            v_Lowest_Low + (Trail_ATR_Mult * v_Current_ATR));
+    end else begin
+        if Freeze_SL_On then begin
+
+            v_Stop_Level = v_Frozen_LockedTop + (ATR_Stop_Mult * v_Frozen_ATR);
+        end else begin
+
+            v_Stop_Level = v_Locked_Top + (ATR_Stop_Mult * v_Current_ATR);
+            if v_Box_Top < v_Locked_Top and v_Box_Top > 0 then
+                v_Locked_Top = v_Box_Top;
+        end;
+    end;
+
+    if SL_Pct > 0 then begin
+        v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+        v_Stop_Level = MinList(v_Stop_Level, v_SL_Pct_Ceil);
+    end;
+    if SL_Max_Pts > 0 then
+        v_Stop_Level = MinList(v_Stop_Level, EntryPrice + SL_Max_Pts);
+
+    { peak profit (close based) for BE / SP, both off at defaults }
+    if EntryPrice - Close > v_Peak_Profit_Pts then
+        v_Peak_Profit_Pts = EntryPrice - Close;
+
+    { TP1 price frozen on the first bar; TP1 done once a lot is gone }
+    if TP1_Room_Pct > 0 and v_TP1_Px = 0 and EntryPrice > v_Locked_Btm and v_Locked_Btm > 0 then
+        v_TP1_Px = EntryPrice - (EntryPrice - v_Locked_Btm) * TP1_Room_Pct / 100;
+    if MaxContracts > 1 and CurrentContracts < MaxContracts then
+        v_TP1_Done = true;
+    if TP1_BE_On and v_TP1_Done then
+        v_BE_Armed = true;
+    if BE_Trigger_Pts > 0 and v_Peak_Profit_Pts >= BE_Trigger_Pts then
+        v_BE_Armed = true;
+    if SP_Trigger_Pts > 0 and v_Peak_Profit_Pts >= SP_Trigger_Pts then
+        v_SP_Armed = true;
+
+    if v_BE_Armed then
+        v_BE_Floor = EntryPrice - BE_Offset_Pts;
+    if v_SP_Armed then
+        v_SP_Floor = EntryPrice -
+            (v_Peak_Profit_Pts * (1 - SP_Retain_Pct / 100));
+
+    { 6. Exit Chain with Priority Gates }
+    { exit chain: first market exit wins; then TP1 and one stop order }
+    ExitFired = 0;
+
+    { Priority 0 - Manual Kill }
+    if (ExitFired = 0) and Manual_Kill_Switch then begin
+        BuyToCover ("CS_Kill") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Registry Fail-Safe }
+    if (ExitFired = 0) and v_Registry_Expired then begin
+        BuyToCover ("CS_RegistryEnd") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Holiday Iron Rule }
+    if (ExitFired = 0) and v_Holiday_Block and
+       (Time >= Holiday_Flat_Time) then begin
+        BuyToCover ("CS_Holiday") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    { Priority 0 - Monthly Settlement Flat }
+    if (ExitFired = 0) and v_Settlement_Day and
+       (Time >= Settlement_Flat_Time) then begin
+        BuyToCover ("CS_Settlement") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    if (ExitFired = 0) and
+       (v_is_in_consolidation = false) and
+       (Close of Data2 > v_Locked_Top) then begin
+        BuyToCover ("CS_BreakExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    if (ExitFired = 0) and
+       (v_Trail_Active = false) and
+       (BarsSinceEntry >= Time_Stop_Bars) then begin
+        BuyToCover ("CS_TimeExit") next bar at Market;
+        ExitFired = 1;
+    end;
+
+    if (ExitFired = 0) and TP1_Room_Pct > 0 and v_TP1_Px > 0 and
+       (v_TP1_Done = false) and (MaxContracts > 1) and (CurrentContracts = MaxContracts) then
+        BuyToCover ("CS_TP1") 1 contracts next bar at v_TP1_Px Limit;
+
+    { stop label: CS_SP > CS_BE > CS_SL (tightest floor); none on a market-exit bar }
+    v_Effective_Stop = v_Stop_Level;
+
+    if ExitFired = 0 then begin
+        if v_SP_Armed = true and
+           v_SP_Floor > 0 and v_SP_Floor < v_Effective_Stop then begin
+            v_Effective_Stop = v_SP_Floor;
+            BuyToCover ("CS_SP") next bar at v_Effective_Stop Stop;
+        end else if v_BE_Armed = true and
+                    v_BE_Floor > 0 and v_BE_Floor < v_Effective_Stop then begin
+            v_Effective_Stop = v_BE_Floor;
+            BuyToCover ("CS_BE") next bar at v_Effective_Stop Stop;
+        end else begin
+            BuyToCover ("CS_SL") next bar at v_Effective_Stop Stop;
+        end;
+    end;
+
+end;

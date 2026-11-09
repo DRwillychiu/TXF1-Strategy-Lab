@@ -1,0 +1,34 @@
+# L4_v14.10 參數（＝ .pla 預設值；載入時自動比對，不一致即紅燈）
+pla = "strategies/research/L4_ConsolidationShort/L4_v14.10/L4_ConsolidationShort_v14.10.pla"
+mc_load_name = "STRATEGY_WILLY_SHORT_CTEST2"
+
+[params]
+Daily_FastMA_Len = 20
+Daily_SlowMA_Len = 60
+Lookback_Bars = 15
+Range_Shrink_Rate = 0.7
+Weekly_MA_Len = 48
+ATR_Length = 60
+ATR_Stop_Mult = 2
+i_Buffer_ATR_Mult = 0.4
+Time_Limit_Bars = 6
+Cooldown_Bars = 8
+Time_Stop_Bars = 60
+Trail_ATR_Mult = 1.0
+Freeze_SL_On = true
+Holiday_Flat_Time = 415
+Registry_Valid_Until = 1270101
+Manual_Kill_Switch = false
+Settlement_Flat_Time = 1230
+Night_Block_On = true
+BE_Trigger_Pts = 0
+BE_Offset_Pts = 5
+SP_Trigger_Pts = 0
+SP_Retain_Pct = 50
+SL_Pct = 0.8
+Streak_Skip_N = 0
+State_Start_Date = 0
+Macro_Mode = 0
+TP1_Room_Pct = 20
+TP1_BE_On = false
+SL_Max_Pts = 450
