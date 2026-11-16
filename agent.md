@@ -35,7 +35,11 @@
   1. `git fetch`；列出本機與 GitHub 不同的檔
   2. 本機比 GitHub 舊的檔不打包（避免蓋掉 GitHub 較新的）
   3. 做同步包（含 apply.py：檢查版本、檔案完整、自動清理），在 GitHub 全新複本實測 `verify.bat` 的每一步
-  4. 給完整可貼上的指令：git pull → 解壓 → `python TXF1_sync_年月日\apply.py` → `push.bat "說明"`
+  4. 交付方式（Willy 11/9 定案：這樣才叫高效率）：只給「一行 PowerShell」，不給分步教學
+     - Willy 用 PowerShell 5.1（不支援 `&&`）；開啟位置可能是 `C:\Windows\system32`，所以指令要自己找到 repo
+     - 一行內完成：在 `$HOME` 下找有 `push.bat` 和 `.git` 的資料夾 → cd → zip 不在就從 `$HOME\Downloads` 複製 → git pull → pip install pytest → Expand-Archive → apply.py → `.\push.bat "說明"`
+     - 每一步用 `if ($LASTEXITCODE -eq 0)` 串接，失敗就停
+     - 推完到 GitHub 確認最新一筆和正本逐檔相同
 
 ## A05 收到 MC 報表（xlsx）
 

@@ -93,3 +93,8 @@ git mv strategies/research/archive/batch03_S11-S15/S14_TripleTFTrend \
 - **S1 NightMomentum** → 已升級到 `live_simulation/`，原 batch01 位置已遷移
 
 L1-L5 開發 **早於** S 系列研究編號系統，不屬於此 archive 範圍。
+
+### L2_v5.12_draft_20261106/（2026-11-16 歸檔）
+- **內容**：11/6 的 L2 v5.12 五項草稿（出場線盤中觸價取最緊、2,500 點保留 70%〔收盤峰值〕、跌停先走、−8% 回升保本＋當天不進場）與當時的 MC 跑單
+- **歸檔原因**：11/9 量化（`docs/research/L2_L4_exit_efficiency_20261109.md`）盤中觸價取最緊全期 −8,500；Willy 11/16 決定 v5.12 只保留三項
+- **被誰取代**：`strategies/research/L2_TrendShort/L2_v5.12/`（11/16 版）

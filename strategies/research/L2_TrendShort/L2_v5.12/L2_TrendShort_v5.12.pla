@@ -1,5 +1,5 @@
 { ============================================================
-  L2 TREND SHORT (Adaptive Farmer)  -  v5.12  (2026-11-06, RESEARCH)
+  L2 TREND SHORT (Adaptive Farmer)  -  v5.12  (2026-11-16, RESEARCH)
   MC Load Name : Trendbearish_V1_RESEARCH  (research alias). The live name
                  Trendbearish_V1 is used ONLY after Willy approves and the
                  chart and broker are both flat.
@@ -8,25 +8,25 @@
   Verify       : all defaults, slippage 1,000 per lot, commission 0,
                  2 lots, end 2026/09/24 -> net 3,398,000 / 96 trades /
                  max DD -630,000 (= v5.10 and v5.9 Crash_On 1).
+                 v5.12: SP_Tier_Pts 0, LimitDn_On 0, Reb_On 0 must give
+                 exactly the v5.11 trades above (regression test R0).
 
   VERSION
-   v5.12 (11/06) exit changes after the 11/06 live trade (peak +2,177, out
-                 at +979 by TS_StopProfit while the 1.5% trailing line sat
-                 620 points tighter but only checked at bar close):
-                 A Exit_Mode 1: trailing-TP line, stop-profit line and stop
-                   line are all live stop orders; the tightest one is sent
-                   (day and night). 0 = v5.11 exits.
-                 B stop profit keeps SP_Tier_Keep % of the peak once the peak
-                   reaches SP_Tier_Pts (70% from 2,500 pts). 0 = off.
-                 C limit-down exit: buy limit at ref close x (1 - 9.8%),
-                   about 80 points before the limit price, so a small gap
-                   between the 13:45 close and the settlement still fills.
-                 D after the day's low breaks ref close x (1 - 8%), a buy
-                   stop at that line locks the profit; optional entry block
-                   for the rest of the trading day.
+   v5.12 (11/16) v5.11 + three extreme-day exits (Willy 11/16). Each is a
+                 separate order outside the exit chain, every bar, for
+                 bear and crash positions alike:
+                 1 TS_SPTier : once the peak profit measured from bar
+                   LOWS reaches SP_Tier_Pts (2,500), buy stop at
+                   entry - peak x SP_Tier_Keep% (70%).
+                 2 TS_LimitDn: buy limit at ref close x (1 - 9.8%).
+                 3 TS_Rebound: after a bar Low breaks ref close x (1 - 8%)
+                   in the trading day, buy stop at that line (profit
+                   side only). No entry block.
+                 Defaults (Willy 11/16 13:34): 1 on, 2 on, 3 OFF (Reb_On 0;
+                 history: 3 alone lost money, 1 + 2 is the best set).
                  Ref close = last 13:45 day-session close (proxy for the
-                 TAIFEX settlement price that sets the price limits).
-                 All four off = v5.11 trades exactly (regression test).
+                 settlement price that sets the price limits).
+                 The v5.11 exit chain is unchanged.
    v5.11 (10/03) v5.10 trades unchanged. Comments condensed and
                  corrected; kill switch also blocks new entries and does
                  not use up a skip (default False); Crash_Time_Bars 0 =
@@ -106,16 +106,14 @@ Inputs:
    Crash_Time_Bars        ( 40 ),        { 0 = no time exit }
    Crash_Leg_Max          ( 1 ),         { 0 = no limit }
    Crash_Leg_Reset_Bars   ( 0 ),         { 0 = leg ends on new high only }
-   Exit_Mode              ( 1 ),         { 1 = all price lines live, tightest wins; 0 = v5.11 }
-   SP_Tier_Pts            ( 2500 ),      { peak points that switch to SP_Tier_Keep; 0 = off }
-   SP_Tier_Keep           ( 70 ),        { % of peak kept once peak >= SP_Tier_Pts }
-   LimitDn_On             ( 1 ),         { 1 = cover at the limit-down price }
+   SP_Tier_Pts            ( 2500 ),      { peak (from bar lows) that arms TS_SPTier; 0 = off }
+   SP_Tier_Keep           ( 70 ),        { % of that peak kept by TS_SPTier }
+   LimitDn_On             ( 1 ),         { 1 = TS_LimitDn on }
    LimitDn_Pct            ( 9.8 ),       { % below ref close; 9.8 not 10 because the ref is the
                                             13:45 close, not the settlement price: a line computed
                                             below the true limit price could never fill }
-   Reb_On                 ( 1 ),         { 1 = after a -Reb_Pct break, stop at that line }
-   Reb_Pct                ( 8.0 ),       { day drop that arms the rebound stop, % }
-   Reb_Block_Entry        ( 1 );         { 1 = no new entries for the rest of an armed day }
+   Reb_On                 ( 0 ),         { 1 = TS_Rebound on; off by default (Willy 11/16) }
+   Reb_Pct                ( 8.0 );       { day drop that arms TS_Rebound, % }
 
 Variables:
    { Session }
@@ -217,16 +215,14 @@ Variables:
    v_Pend_Bar           ( 0     ),
    v_Pos_Type           ( 0     ),
 
-   { v5.12 exits }
+   { v5.12 extreme-day exits }
    v_Ref_Close          ( 0     ),
    v_Ref_Ready          ( False ),
    v_Reb_Line           ( 0     ),
    v_Reb_Armed          ( False ),
    v_LimDn_Px           ( 0     ),
-   v_Day_Block          ( False ),
-   v_SP_Keep            ( 0     ),
-   v_Uni_Stop           ( 0     ),
-   v_Uni_Src            ( 0     );
+   v_Peak_Low           ( 0     ),
+   v_Tier_Px            ( 0     );
 
 { WkCloses[1] = last Friday 12:45 close }
 Array: WkCloses[ 21 ] ( 0 ), Holiday_Tail[ 80 ] ( 0 );
@@ -247,7 +243,6 @@ If Time = 1345 Then Begin
    v_Reb_Line  = v_Ref_Close * ( 1 - Reb_Pct / 100 );
    v_LimDn_Px  = Round( v_Ref_Close * ( 1 - LimitDn_Pct / 100 ), 0 );
 End;
-v_Day_Block = ( Reb_On <> 0 ) And ( Reb_Block_Entry <> 0 ) And ( v_Reb_Armed = True );
 
 { ===== Session: IsDay = bar closes 08:45-12:45 (next bar is a day bar);
   the 13:45 bar and night bars use the close-confirmed night stop ===== }
@@ -490,7 +485,6 @@ If ( v_Bear_Sig = True ) And
    ( v_Holiday_Block = False ) And
    ( v_Settlement_Day = False ) And
    ( Manual_Kill_Switch = False ) And
-   ( v_Day_Block = False ) And
    ( MarketPosition = 0 ) And
    ( v_Skip_Run = False ) And
    ( v_Skip_Left > 0 ) Then Begin
@@ -502,7 +496,6 @@ v_Bear_Entry = ( v_Bear_Sig = True ) And
                ( v_Holiday_Block = False ) And
                ( v_Settlement_Day = False ) And
                ( Manual_Kill_Switch = False ) And
-               ( v_Day_Block = False ) And
                ( v_Pause_Active = False ) And
                ( v_Skip_Run = False ) And
                ( MarketPosition = 0 );
@@ -526,7 +519,6 @@ If ( Crash_On <> 0 ) And
    ( v_Holiday_Block = False ) And
    ( v_Settlement_Day = False ) And
    ( Manual_Kill_Switch = False ) And
-   ( v_Day_Block = False ) And
    ( Close > 0 ) Then Begin
    If ( v_Crash_HH > 0 ) And
       ( ATR_Val / Close * 100 >= Crash_ATRPct_Min ) And
@@ -718,12 +710,24 @@ If MarketPosition = -1 Then Begin
    If ( EntryPrice - Close ) >= v_SP_Thr Then Begin
       If ( EntryPrice - Close ) > posbleProfit_Short Then
          posbleProfit_Short = EntryPrice - Close;
-      If ( SP_Tier_Pts > 0 ) And ( posbleProfit_Short >= SP_Tier_Pts ) Then
-         v_SP_Keep = SP_Tier_Keep / 100.0
-      Else
-         v_SP_Keep = 1.0 - profitReturnPrcnt_Shrt / 100.0;
-      stopProfitPrice = EntryPrice - ( posbleProfit_Short * v_SP_Keep );
+      stopProfitPrice = EntryPrice -
+         ( posbleProfit_Short * ( 1.0 - profitReturnPrcnt_Shrt / 100.0 ) );
    End;
+End;
+
+{ ===== v5.12 peak profit from bar lows (all position types) ===== }
+If MarketPosition = -1 Then Begin
+   If BarsSinceEntry = 0 Then
+      v_Peak_Low = MaxList( 0, EntryPrice - Low )
+   Else
+      v_Peak_Low = MaxList( v_Peak_Low, EntryPrice - Low );
+   If ( SP_Tier_Pts > 0 ) And ( v_Peak_Low >= SP_Tier_Pts ) Then
+      v_Tier_Px = EntryPrice - v_Peak_Low * SP_Tier_Keep / 100
+   Else
+      v_Tier_Px = 0;
+End Else Begin
+   v_Peak_Low = 0;
+   v_Tier_Px  = 0;
 End;
 
 { ===== Crash stop: entry + distance, trailed down to lowest low + 1 ATR ===== }
@@ -794,36 +798,7 @@ If MarketPosition = -1 Then Begin
       ExitFired = 1;
    End;
 
-   { v5.12 Exit_Mode 1: the tightest of the trailing-TP line, the
-     stop-profit line and the stop line is sent as one live stop order,
-     day and night. Ties go to TTP, then stop profit, then the stop line. }
-   If ( ExitFired = 0 ) And ( Exit_Mode = 1 ) Then Begin
-      v_Uni_Stop = 999999;
-      v_Uni_Src  = 0;
-      If Active_SL > 0 Then Begin
-         v_Uni_Stop = Active_SL;
-         If v_SL_Src = 1 Then v_Uni_Src = 3 Else v_Uni_Src = 4;
-      End;
-      If ( stopProfitPrice > 0 ) And ( stopProfitPrice <= v_Uni_Stop ) Then Begin
-         v_Uni_Stop = stopProfitPrice;
-         v_Uni_Src  = 2;
-      End;
-      If ( TTP_Gate = True ) And ( TTP_Line > 0 ) And ( TTP_Line <= v_Uni_Stop ) Then Begin
-         v_Uni_Stop = TTP_Line;
-         v_Uni_Src  = 1;
-      End;
-      If v_Uni_Src = 1 Then
-         BuyToCover( "TS_TTP_I" ) Next Bar at v_Uni_Stop Stop
-      Else If v_Uni_Src = 2 Then
-         BuyToCover( "TS_SP_I" ) Next Bar at v_Uni_Stop Stop
-      Else If v_Uni_Src = 3 Then
-         BuyToCover( "TS_TSL_I" ) Next Bar at v_Uni_Stop Stop
-      Else If v_Uni_Src = 4 Then
-         BuyToCover( "TS_InitSL_I" ) Next Bar at v_Uni_Stop Stop;
-      ExitFired = 1;
-   End;
-
-   { 3 trailing take profit (Exit_Mode 0 = v5.11) }
+   { 3 trailing take profit }
    If ( ExitFired = 0 ) And
       ( TTP_Fire = True ) Then Begin
       BuyToCover( "TS_TTP" ) Next Bar at Market;
@@ -860,12 +835,16 @@ If MarketPosition = -1 Then Begin
       ExitFired = 1;
    End;
 
-   { v5.12 C limit-down: buy limit at the limit-down price }
+   { v5.12 1: keep SP_Tier_Keep % of the peak from bar lows }
+   If v_Tier_Px > 0 Then
+      BuyToCover( "TS_SPTier" ) Next Bar at v_Tier_Px Stop;
+
+   { v5.12 2 limit-down: buy limit at the limit-down line }
    If ( LimitDn_On <> 0 ) And ( v_Ref_Ready = True ) And
       ( v_LimDn_Px > 0 ) And ( v_LimDn_Px < EntryPrice ) Then
       BuyToCover( "TS_LimitDn" ) Next Bar at v_LimDn_Px Limit;
 
-   { v5.12 D after a -Reb_Pct break: buy stop at that line, profit only }
+   { v5.12 3 after a -Reb_Pct break: buy stop at that line, profit side only }
    If ( Reb_On <> 0 ) And ( v_Reb_Armed = True ) And
       ( v_Reb_Line > 0 ) And ( v_Reb_Line < EntryPrice ) Then
       BuyToCover( "TS_Rebound" ) Next Bar at v_Reb_Line Stop;
