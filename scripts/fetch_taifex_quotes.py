@@ -75,6 +75,29 @@ FORWARD = {
     '2026-10-09': 'ROC-115 annual calendar',
     '2026-10-26': 'ROC-115 annual calendar',
     '2026-12-25': 'ROC-115 annual calendar',
+    # ROC-116 (2027): https://www.taifex.com.tw/file/taifex/CHINESE/4/2027Calendar.pdf
+    # (PDF created 2026-11-11; TAIFEX letter 1150003597, 2026-11-10).  Read 2026-11-19.
+    # 02-02/02-03 are the 1st/2nd days after the year-end close ("feng guan").
+    '2027-01-01': 'ROC-116 annual calendar (New Year)',
+    '2027-02-02': 'ROC-116 annual calendar (Lunar New Year; day 1 after year-end close)',
+    '2027-02-03': 'ROC-116 annual calendar (Lunar New Year; day 2 after year-end close)',
+    '2027-02-04': 'ROC-116 annual calendar (Lunar New Year)',
+    '2027-02-05': 'ROC-116 annual calendar (Lunar New Year eve)',
+    '2027-02-08': 'ROC-116 annual calendar (Lunar New Year)',
+    '2027-02-09': 'ROC-116 annual calendar (Lunar New Year)',
+    '2027-02-10': 'ROC-116 annual calendar (Lunar New Year)',
+    '2027-03-01': 'ROC-116 annual calendar (Peace Memorial Day, observed)',
+    '2027-04-05': 'ROC-116 annual calendar (Tomb Sweeping Day)',
+    '2027-04-06': 'ROC-116 annual calendar (Children\'s Day, observed)',
+    '2027-04-30': 'ROC-116 annual calendar (Labour Day, observed)',
+    '2027-06-09': 'ROC-116 annual calendar (Dragon Boat Festival)',
+    '2027-09-15': 'ROC-116 annual calendar (Mid-Autumn Festival; 3rd Wednesday, '
+                  'index-futures final settlement moves to Thu 2027-09-16)',
+    '2027-09-28': 'ROC-116 annual calendar (Teachers\' Day)',
+    '2027-10-11': 'ROC-116 annual calendar (National Day, observed)',
+    '2027-10-25': 'ROC-116 annual calendar (Retrocession Day)',
+    '2027-12-24': 'ROC-116 annual calendar (Constitution Day, observed)',
+    '2027-12-31': 'ROC-116 annual calendar (New Year 2028, observed)',
 }
 
 
@@ -195,8 +218,16 @@ def main():
               % (fetched, os.path.relpath(CACHE_DIR, REPO_ROOT).replace(os.sep, '/')))
 
     lo, hi, closures = build(traded_dates(), FORWARD)
+    write_doc(make_doc(lo, hi, closures))
+    return 0
+
+
+def make_doc(lo, hi, closures):
+    """The JSON document.  Split out of main() on 2026-11-19 so it can be rebuilt
+    from the existing JSON without the (git-ignored) quote cache; see
+    scripts/research/registry_2027_20261119/rebuild_closures_json.py."""
     pdf_hi = max(FORWARD) if FORWARD else hi.isoformat()
-    doc = {
+    return {
         'schema_version': 1,
         'purpose': 'Single source of truth for TXF1 calendar risk. Holiday_Tail blocks '
                    'embedded in .pla files are GENERATED from this file and are never '
@@ -206,7 +237,8 @@ def main():
             'annual_pdf': {
                 'what': 'TAIFEX official annual futures-market calendar',
                 'url': 'https://www.taifex.com.tw/file/taifex/CHINESE/4/2026Calendar.pdf',
-                'roc_year': 115,
+                'url_roc116': 'https://www.taifex.com.tw/file/taifex/CHINESE/4/2027Calendar.pdf',
+                'roc_year': [115, 116],
                 'covers': ['2026-01-01', pdf_hi],
                 'limitation': 'published the previous Q4; structurally cannot contain '
                               'ad-hoc closures. Archived years (2025 and earlier) are '
@@ -240,8 +272,13 @@ def main():
             'backfilling is what keeps the backtest honest.',
         ],
         'known_gaps': [
-            'ROC-116 (2027) annual calendar not published yet, so the 2027-01-01 tail '
-            'and Registry_Valid_Until(1270101) cannot be re-verified until Q4 2026.',
+            'ROC-116 (2027) closures come from the annual calendar only (published '
+            '2026-11-11); a 2027 ad-hoc (typhoon) closure must be backfilled into ADHOC '
+            'and the .pla blocks. ROC-117 (2028) is not published yet, so '
+            'Registry_Valid_Until(1271231) is the edge of the verified map.',
+            '2027-09-15 is the 3rd Wednesday and closed, so index-futures final '
+            'settlement moves to Thu 2027-09-16. The static .pla settlement rule '
+            '(Wed, day 15-21) does not catch it.',
             'Annual PDFs for 2019-2025 are 404 on taifex.com.tw. Those years rest on the '
             'quote-data channel alone, which is stronger for backtesting but does not '
             'preserve the annual/ad-hoc split; that split is deduced from the absence '
@@ -249,6 +286,10 @@ def main():
         ],
         'closed_weekdays': closures,
     }
+
+
+def write_doc(doc):
+    closures = doc['closed_weekdays']
     with io.open(OUT_PATH, 'w', encoding='utf-8') as f:
         json.dump(doc, f, ensure_ascii=False, indent=2)
         f.write('\n')

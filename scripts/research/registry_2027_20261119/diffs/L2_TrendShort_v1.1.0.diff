@@ -1,0 +1,549 @@
+--- strategies/live_machine_snapshot/20261119/L2_TrendShort_live.txt
++++ strategies/research/L2_TrendShort/L2_v1.1.0/L2_TrendShort_v1.1.0.pla
+@@ -1,39 +1,14 @@
+-{ ============================================================
+-  L2 TREND SHORT (Adaptive Farmer)  -  v5.12  (2026-11-16, RESEARCH)
+-  MC Load Name : Trendbearish_V1_RESEARCH  (research alias). The live name
+-                 Trendbearish_V1 is used ONLY after Willy approves and the
+-                 chart and broker are both flat.
+-  Data         : TXF1 60-minute, one data stream, day + night. IOG off
+-                 (runs once per bar close). Chart history >= 13 weeks.
+-  Verify       : all defaults, slippage 1,000 per lot, commission 0,
+-                 2 lots, end 2026/09/24 -> net 3,398,000 / 96 trades /
+-                 max DD -630,000 (= v5.10 and v5.9 Crash_On 1).
+-                 v5.12: SP_Tier_Pts 0, LimitDn_On 0, Reb_On 0 must give
+-                 exactly the v5.11 trades above (regression test R0).
+-
+-  VERSION
+-   v5.12 (11/16) v5.11 + three extreme-day exits (Willy 11/16). Each is a
+-                 separate order outside the exit chain, every bar, for
+-                 bear and crash positions alike:
+-                 1 TS_SPTier : once the peak profit measured from bar
+-                   LOWS reaches SP_Tier_Pts (2,500), buy stop at
+-                   entry - peak x SP_Tier_Keep% (70%).
+-                 2 TS_LimitDn: buy limit at ref close x (1 - 9.8%).
+-                 3 TS_Rebound: after a bar Low breaks ref close x (1 - 8%)
+-                   in the trading day, buy stop at that line (profit
+-                   side only). No entry block.
+-                 Ref close = last 13:45 day-session close (proxy for the
+-                 settlement price that sets the price limits).
+-                 The v5.11 exit chain is unchanged.
+-   v5.11 (10/03) v5.10 trades unchanged. Comments condensed and
+-                 corrected; kill switch also blocks new entries and does
+-                 not use up a skip (default False); Crash_Time_Bars 0 =
+-                 time exit off; redundant crash condition removed.
+-   v5.10 (10/03) finalized: v5.9 code + Crash_On 1.
+-   v5.9  crash path above the weekly MA (#32-#41).
+-   v5.8  plan B: after 3 losing bear trades skip the next bear signal.
+-   v5.7  stop-profit threshold = 0.75% of entry (SP_Pct).
+-   v5.6  450-point cap on every stop + intrabar hard stop.
+-   v5.5  weekly entry filter / weekly exit as switches (both on).
+-
++{ ==========================================================================
++  L2 TREND SHORT (Adaptive Farmer)  -  V1.1.0  (2026-11-19; logic = v5.12)
++  MC Load Name : Trendbearish_V1  (live name)
++                 Test under an alias; compile the live name only when the
++                 chart and the broker are both flat.
++  Data         : TXF1 60M, one stream, day + night. IOG off. 2 lots.
++                 Chart history >= 13 weeks.
++  V1.1.0       : 2027 holiday rows Holiday_Tail[64]-[74] (TAIFEX 116-yr
++                 calendar, letter 1150003597) + Registry_Valid_Until 1271231
++                 + Reb_On 0 (TS_Rebound off; Willy 11/19, as decided 11/16).
++                 Chart inputs after the switch: Registry_Valid_Until = 1271231
++                 and Reb_On = 0.
++  Known gap    : 2027-09-16 settlement (moved from Wed 9/15) is not flattened.
+   LOGIC
+@@ -62,3 +37,3 @@
+             NetProfit change, so slippage settings matter.
+-  ============================================================ }
++  ========================================================================== }
+ 
+@@ -83,3 +58,3 @@
+    Holiday_Flat_Time      ( 300 ),
+-   Registry_Valid_Until   ( 1270101 ),   { holiday registry horizon }
++   Registry_Valid_Until   ( 1271231 ),   { holiday registry horizon }
+    Manual_Kill_Switch     ( False ),     { True = flatten, no entries }
+@@ -109,6 +84,4 @@
+    LimitDn_On             ( 1 ),         { 1 = TS_LimitDn on }
+-   LimitDn_Pct            ( 9.8 ),       { % below ref close; 9.8 not 10 because the ref is the
+-                                            13:45 close, not the settlement price: a line computed
+-                                            below the true limit price could never fill }
+-   Reb_On                 ( 1 ),         { 1 = TS_Rebound on }
++   LimitDn_Pct            ( 9.8 ),       { % below ref close; }
++   Reb_On                 ( 0 ),         { 1 = TS_Rebound on; off by default (Willy 11/16, 11/19) }
+    Reb_Pct                ( 8.0 );       { day drop that arms TS_Rebound, % }
+@@ -117,16 +90,11 @@
+    { Session }
+-   IsDay                ( False ),
+-   IsNight              ( False ),
++   IsDay                ( False ), IsNight              ( False ),
+ 
+    { Weekly filter }
+-   WkBarCount           ( 0     ),
+-   WkSMASum             ( 0     ),
+-   IsNewWeek            ( False ),
+-   FilterOK             ( False ),
++   WkBarCount           ( 0     ), WkSMASum             ( 0     ),
++   IsNewWeek            ( False ), FilterOK             ( False ),
+ 
+    { Indicators }
+-   CompPrice            ( 0     ),
+-   ZLEMA_Val            ( 0     ),
+-   EMA20_Val            ( 0     ),
+-   DC_Lower             ( 0     ),
++   CompPrice            ( 0     ), ZLEMA_Val            ( 0     ),
++   EMA20_Val            ( 0     ), DC_Lower             ( 0     ),
+    ATR_Val              ( 0     ),
+@@ -134,4 +102,3 @@
+    { Entry flags }
+-   C0                   ( False ),
+-   C_A                  ( False ),
++   C0                   ( False ), C_A                  ( False ),
+    C_B                  ( False ),
+@@ -139,4 +106,3 @@
+    { Initial stop loss }
+-   SL_Line              ( 0     ),
+-   SL_Trig              ( 0     ),
++   SL_Line              ( 0     ), SL_Trig              ( 0     ),
+    SL_Locked            ( False ),
+@@ -144,12 +110,8 @@
+    { TSL activation }
+-   Accel                ( False ),
+-   NLow                 ( False ),
+-   C1_Bar               ( False ),
+-   TSL_Armed            ( False ),
++   Accel                ( False ), NLow                 ( False ),
++   C1_Bar               ( False ), TSL_Armed            ( False ),
+ 
+    { TSL tracking }
+-   New_TSL              ( 0     ),
+-   TSL_Line             ( 0     ),
+-   Active_TSL           ( 0     ),
+-   Active_SL            ( 0     ),
++   New_TSL              ( 0     ), TSL_Line             ( 0     ),
++   Active_TSL           ( 0     ), Active_SL            ( 0     ),
+    v_SL_Src             ( 0     ),
+@@ -157,22 +119,15 @@
+    { Trailing take profit }
+-   LowestClose          ( 0     ),
+-   WaveProfit           ( 0     ),
+-   MinProfitPts         ( 0     ),
+-   TTP_Line             ( 0     ),
+-   TTP_Gate             ( False ),
+-   TTP_Fire             ( False ),
++   LowestClose          ( 0     ), WaveProfit           ( 0     ),
++   MinProfitPts         ( 0     ), TTP_Line             ( 0     ),
++   TTP_Gate             ( False ), TTP_Fire             ( False ),
+ 
+    { Stop profit }
+-   posbleProfit_Short   ( 0     ),
+-   stopProfitPrice      ( 0     ),
++   posbleProfit_Short   ( 0     ), stopProfitPrice      ( 0     ),
+ 
+    { Loop counter and exit control }
+-   LoopIdx              ( 0     ),
+-   ExitFired            ( 0     ),
++   LoopIdx              ( 0     ), ExitFired            ( 0     ),
+ 
+    { Holiday / registry }
+-   v_Holiday_Block      ( False ),
+-   v_Registry_Expired   ( False ),
+-   Registry_Warn_ID     ( -1    ),
+-   hidx                 ( 0     ),
++   v_Holiday_Block      ( False ), v_Registry_Expired   ( False ),
++   Registry_Warn_ID     ( -1    ), hidx                 ( 0     ),
+ 
+@@ -185,10 +140,6 @@
+    { Loss counter, pause, hard stop, stop-profit threshold }
+-   v_Pause_LossCnt      ( 0     ),
+-   v_Pause_Active       ( False ),
+-   v_Pause_StartBar     ( 0     ),
+-   v_Pause_LastTT       ( 0     ),
+-   v_Pause_LastNP       ( 0     ),
+-   v_Pause_Delta        ( 0     ),
++   v_Pause_LossCnt      ( 0     ), v_Pause_Active       ( False ),
++   v_Pause_StartBar     ( 0     ), v_Pause_LastTT       ( 0     ),
++   v_Pause_LastNP       ( 0     ), v_Pause_Delta        ( 0     ),
+    v_Hard_Stop_Px       ( 0     ),
+-
+    v_SP_Thr             ( 0     ),
+@@ -196,4 +147,3 @@
+    { Plan B skip }
+-   v_Bear_Sig           ( False ),
+-   v_Skip_Left          ( 0     ),
++   v_Bear_Sig           ( False ), v_Skip_Left          ( 0     ),
+    v_Skip_Run           ( False ),
+@@ -201,23 +151,14 @@
+    { Crash path; v_Pos_Type 1 = crash, 2 = bear }
+-   v_Bear_Entry         ( False ),
+-   v_Crash_Fire         ( False ),
+-   v_Crash_HH           ( 0     ),
+-   v_Crash_Dist         ( 0     ),
+-   v_Crash_Stop         ( 0     ),
+-   v_Crash_LL           ( 0     ),
+-   v_Leg_Active         ( False ),
+-   v_Leg_HH             ( 0     ),
+-   v_Leg_N              ( 0     ),
+-   v_Leg_Bar            ( 0     ),
+-   v_Pend_Type          ( 0     ),
+-   v_Pend_Bar           ( 0     ),
++   v_Bear_Entry         ( False ), v_Crash_Fire         ( False ),
++   v_Crash_HH           ( 0     ), v_Crash_Dist         ( 0     ),
++   v_Crash_Stop         ( 0     ), v_Crash_LL           ( 0     ),
++   v_Leg_Active         ( False ), v_Leg_HH             ( 0     ),
++   v_Leg_N              ( 0     ), v_Leg_Bar            ( 0     ),
++   v_Pend_Type          ( 0     ), v_Pend_Bar           ( 0     ),
+    v_Pos_Type           ( 0     ),
+ 
+-   { v5.12 extreme-day exits }
+-   v_Ref_Close          ( 0     ),
+-   v_Ref_Ready          ( False ),
+-   v_Reb_Line           ( 0     ),
+-   v_Reb_Armed          ( False ),
+-   v_LimDn_Px           ( 0     ),
+-   v_Peak_Low           ( 0     ),
++   { extreme-day exits }
++   v_Ref_Close          ( 0     ), v_Ref_Ready          ( False ),
++   v_Reb_Line           ( 0     ), v_Reb_Armed          ( False ),
++   v_LimDn_Px           ( 0     ), v_Peak_Low           ( 0     ),
+    v_Tier_Px            ( 0     );
+@@ -227,5 +168,3 @@
+ 
+-{ ===== v5.12 reference close and -Reb_Pct arming. The trading day of a
+-  bar ends with the 13:45 bar: test this bar against the current ref first,
+-  then roll the ref (and clear the flag) on the 13:45 bar. ===== }
++{ ===== reference close and -Reb_Pct arming. The trading day of a bar ends with the 13:45 bar ===== }
+ If v_Ref_Ready = True Then Begin
+@@ -244,4 +183,3 @@
+ 
+-{ ===== Session: IsDay = bar closes 08:45-12:45 (next bar is a day bar);
+-  the 13:45 bar and night bars use the close-confirmed night stop ===== }
++{ ===== Session: IsDay = bar closes 08:45-12:45 (next bar is a day bar) ===== }
+ If ( Time >= 845 ) And ( Time <= 1245 ) Then
+@@ -250,3 +188,2 @@
+    IsDay = False;
+-
+ If IsDay = True Then
+@@ -256,85 +193,31 @@
+ 
+-{ ===== Holiday tail registry: date stamp of the 00:00-05:00 bars of the
+-  last night session before each closure. Source: TAIFEX calendars. ===== }
++{ ===== Holiday tail registry ===== }
+ If CurrentBar = 1 Then Begin
+ 
+-   { --- 2019 --- }
+-   Holiday_Tail[1]  = 1190913;
+-   Holiday_Tail[2]  = 1191010;
+-   Holiday_Tail[3]  = 1200101;
+-
+-   { --- 2020 --- }
+-   Holiday_Tail[4]  = 1200121;  { CNY }
+-   Holiday_Tail[5]  = 1200228;  { 228 }
+-   Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+-   Holiday_Tail[7]  = 1200501;  { * Labor Day }
+-   Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+-   Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+-   Holiday_Tail[10] = 1201009;  { National Day }
+-   Holiday_Tail[11] = 1210101;  { 2021 New Year }
+-
+-   { --- 2021 --- }
+-   Holiday_Tail[12] = 1210206;  { CNY }
+-   Holiday_Tail[13] = 1210227;  { 228 }
+-   Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+-   Holiday_Tail[15] = 1210612;  { Dragon Boat }
+-   Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+-   Holiday_Tail[17] = 1211009;  { National Day }
+-   Holiday_Tail[18] = 1211231;  { 2022 New Year }
+-
+-   { --- 2022 --- }
+-   Holiday_Tail[19] = 1220127;  { CNY }
+-   Holiday_Tail[20] = 1220226;  { 228 }
+-   Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+-   Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+-   Holiday_Tail[23] = 1220603;  { Dragon Boat }
+-   Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+-   Holiday_Tail[25] = 1221008;  { National Day }
+-   Holiday_Tail[26] = 1221231;  { 2023 New Year }
+-
+-   { --- 2023 --- }
+-   Holiday_Tail[27] = 1230118;  { CNY }
+-   Holiday_Tail[28] = 1230225;  { 228 }
+-   Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+-   Holiday_Tail[30] = 1230429;  { * Labor Day }
+-   Holiday_Tail[31] = 1230622;  { Dragon Boat }
+-   Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+-   Holiday_Tail[33] = 1231007;  { National Day }
+-   Holiday_Tail[34] = 1231230;  { 2024 New Year }
+-
+-   { --- 2024 --- }
+-   Holiday_Tail[35] = 1240206;  { CNY }
+-   Holiday_Tail[36] = 1240228;  { 228 }
+-   Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+-   Holiday_Tail[38] = 1240501;  { * Labor Day }
+-   Holiday_Tail[39] = 1240608;  { Dragon Boat }
+-   Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+-   Holiday_Tail[41] = 1241010;  { National Day }
+-   Holiday_Tail[42] = 1250101;  { 2025 New Year }
+-
+-   { --- 2025 (* = reconstructed) --- }
+-   Holiday_Tail[43] = 1250123;  { CNY }
+-   Holiday_Tail[44] = 1250228;  { 228 }
+-   Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+-   Holiday_Tail[46] = 1250501;  { * Labor Day }
+-   Holiday_Tail[47] = 1250530;  { Dragon Boat (5/30 make-up) }
+-   Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+-   Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+-   Holiday_Tail[50] = 1251010;  { * National Day }
+-   Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+-   Holiday_Tail[52] = 1251225;  { * Constitution Day }
+-   Holiday_Tail[53] = 1260101;  { 2026 New Year }
+-
+-   { --- 2026 (TAIFEX 115-yr calendar) --- }
+-   Holiday_Tail[54] = 1260212;  { CNY: final trading day 2/11 }
+-   Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+-   Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+-   Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+-   Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+-   Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+-   Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+-   Holiday_Tail[61] = 1261024;  { Retrocession 10/24-10/26, eve 10/23 }
+-   Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+-   Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+-
++   { last trading day + 1 before each closure, 2019-2027 (TAIFEX calendars) }
++   Holiday_Tail[1] = 1190913;  Holiday_Tail[2] = 1191010;  Holiday_Tail[3] = 1200101;
++   Holiday_Tail[4] = 1200121;  Holiday_Tail[5] = 1200228;  Holiday_Tail[6] = 1200402;
++   Holiday_Tail[7] = 1200501;  Holiday_Tail[8] = 1200625;  Holiday_Tail[9] = 1201001;
++   Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;  Holiday_Tail[12] = 1210206;
++   Holiday_Tail[13] = 1210227;  Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
++   Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;  Holiday_Tail[18] = 1211231;
++   Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;  Holiday_Tail[21] = 1220402;
++   Holiday_Tail[22] = 1220430;  Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
++   Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;  Holiday_Tail[27] = 1230118;
++   Holiday_Tail[28] = 1230225;  Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
++   Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;  Holiday_Tail[33] = 1231007;
++   Holiday_Tail[34] = 1231230;  Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
++   Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;  Holiday_Tail[39] = 1240608;
++   Holiday_Tail[40] = 1240917;  Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
++   Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;  Holiday_Tail[45] = 1250403;
++   Holiday_Tail[46] = 1250501;  Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
++   Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;  Holiday_Tail[51] = 1251024;
++   Holiday_Tail[52] = 1251225;  Holiday_Tail[53] = 1260101;  Holiday_Tail[54] = 1260212;
++   Holiday_Tail[55] = 1260227;  Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
++   Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;  Holiday_Tail[60] = 1261009;
++   Holiday_Tail[61] = 1261024;  Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
++   Holiday_Tail[64] = 1270202;  Holiday_Tail[65] = 1270227;  Holiday_Tail[66] = 1270403;
++   Holiday_Tail[67] = 1270430;  Holiday_Tail[68] = 1270609;  Holiday_Tail[69] = 1270915;
++   Holiday_Tail[70] = 1270928;  Holiday_Tail[71] = 1271009;  Holiday_Tail[72] = 1271023;
++   Holiday_Tail[73] = 1271224;  Holiday_Tail[74] = 1271231;
+ End;
+@@ -343,3 +226,2 @@
+ v_Holiday_Block = False;
+-
+ If Time <= 500 Then Begin
+@@ -350,5 +232,3 @@
+ End;
+-
+ v_Registry_Expired = False;
+-
+ If Date > Registry_Valid_Until Then Begin
+@@ -383,3 +263,2 @@
+    IsNewWeek = False;
+-
+ If IsNewWeek = True Then Begin
+@@ -392,8 +271,5 @@
+    End;
+-
+    WkCloses[1] = Close[1];
+-
+    If WkBarCount < WkSMA_Len Then
+       WkBarCount = WkBarCount + 1;
+-
+    WkSMASum = 0;
+@@ -413,3 +289,2 @@
+       FilterOK = False;
+-
+ End;
+@@ -423,4 +298,3 @@
+ 
+-{ ===== Loss counter (plan B). An entry order sent last bar filled at this
+-  bar open: type the position (1 crash, 2 bear) before counting. ===== }
++{ ===== Loss counter (plan B). An entry order sent last bar filled at this bar open ===== }
+ If ( v_Pend_Bar > 0 ) And ( v_Pend_Bar = CurrentBar - 1 ) Then
+@@ -462,3 +336,2 @@
+    C0 = False;
+-
+ If ZLEMA_Val < ZLEMA_Val[1] Then
+@@ -467,3 +340,2 @@
+    C_A = False;
+-
+ If ZLEMA_Val < EMA20_Val Then
+@@ -472,3 +344,2 @@
+    C_B = False;
+-
+ v_Bear_Sig = ( FilterOK = True Or Wk_Entry_Filter = 0 ) And
+@@ -476,7 +347,5 @@
+ 
+-{ a skipped signal blocks its whole run; holiday, settlement and kill bars
+-  do not use up a skip }
++{ a skipped signal blocks its whole run; holiday, settlement and kill bars do not use up a skip }
+ If v_Bear_Sig = False Then
+    v_Skip_Run = False;
+-
+ If ( v_Bear_Sig = True ) And
+@@ -491,3 +360,2 @@
+ End;
+-
+ v_Bear_Entry = ( v_Bear_Sig = True ) And
+@@ -538,4 +406,3 @@
+ 
+-{ engine stop distance for the entry bar (per contract); a crash entry uses
+-  its own distance }
++{ engine stop distance for the entry bar (per contract); a crash entry uses its own distance }
+ If MarketPosition >= 0 Then Begin
+@@ -544,3 +411,2 @@
+       v_Guard_Distance = MinList( v_Guard_Distance, Close * SL_Pct / 100 );
+-
+    If SL_Max_Pts > 0 Then
+@@ -564,6 +430,4 @@
+ 
+-{ ===== Initial stop, frozen on the entry bar: DC low + 1.1 ATR, capped at
+-  1.25% and 450 pts ===== }
++{ ===== Initial stop, frozen on the entry bar: DC low + 1.1 ATR, capped at 1.25% and 450 pts ===== }
+ If MarketPosition = -1 Then Begin
+-
+    If ( BarsSinceEntry = 0 ) And
+@@ -572,6 +436,4 @@
+       SL_Trig = SL_Line + ( ATR_Val * SL_ATR_Ratio );
+-
+       If SL_Pct > 0 Then
+          SL_Trig = MinList( SL_Trig, EntryPrice + ( EntryPrice * SL_Pct / 100 ) );
+-
+       If SL_Max_Pts > 0 Then
+@@ -580,3 +442,2 @@
+    End;
+-
+ End Else Begin
+@@ -589,3 +450,2 @@
+ If MarketPosition = -1 Then Begin
+-
+    If ( ( Open - Close ) > ( ATR_Val * Accel_M ) ) And
+@@ -595,3 +455,2 @@
+       Accel = False;
+-
+    If Close < Lowest( Close[1], NLow_N ) Then
+@@ -600,3 +459,2 @@
+       NLow = False;
+-
+    If Accel = True And NLow = True Then
+@@ -605,3 +463,2 @@
+       C1_Bar = False;
+-
+    If ( TSL_Armed = False ) And
+@@ -611,3 +468,2 @@
+       TSL_Armed = True;
+-
+ End Else Begin
+@@ -619,11 +475,7 @@
+ 
+-{ ===== Trailing stop: lowest close of 9 + 1 ATR, only moves down; the
+-  active stop is the tighter of trail + 1.1 ATR and the initial stop ===== }
++{ ===== Trailing stop: lowest close of 9 + 1 ATR, only moves down ===== }
+ If MarketPosition = -1 Then Begin
+-
+    If TSL_Armed = True Then Begin
+-
+       New_TSL = Lowest( Close[1], TSL_K ) +
+                 ( ATR_Val * TSL_M );
+-
+       If TSL_Line = 0 Then
+@@ -632,5 +484,3 @@
+          TSL_Line = MinList( TSL_Line, New_TSL );
+-
+       Active_TSL = TSL_Line + ( ATR_Val * SL_ATR_Ratio );
+-
+       If TSL_Line < SL_Trig Then Begin
+@@ -642,3 +492,2 @@
+       End;
+-
+    End Else Begin
+@@ -650,3 +499,2 @@
+    End;
+-
+ End Else Begin
+@@ -665,3 +513,2 @@
+ If MarketPosition = -1 Then Begin
+-
+    If BarsSinceEntry = 0 Then
+@@ -670,3 +517,2 @@
+       LowestClose = MinList( LowestClose, Close );
+-
+    WaveProfit   = EntryPrice - LowestClose;
+@@ -674,3 +520,2 @@
+    TTP_Line     = LowestClose * ( 1.0 + TTP_RebPct / 100.0 );
+-
+    If WaveProfit >= MinProfitPts Then
+@@ -679,3 +524,2 @@
+       TTP_Gate = False;
+-
+    If TTP_Gate = True And
+@@ -685,3 +529,2 @@
+       TTP_Fire = False;
+-
+ End Else Begin
+@@ -700,5 +543,3 @@
+ End;
+-
+ If MarketPosition = -1 Then Begin
+-
+    If SP_Pct > 0 Then
+@@ -715,3 +556,3 @@
+ 
+-{ ===== v5.12 peak profit from bar lows (all position types) ===== }
++{ ===== peak profit from bar lows (all position types) ===== }
+ If MarketPosition = -1 Then Begin
+@@ -740,9 +581,5 @@
+ 
+-{ ===== Exits. Priority 0 (kill, registry, holiday, settlement) first; a
+-  crash position then uses only its own exits; bear exits 1-6 follow.
+-  The hard stop is outside the chain. ===== }
++{ ===== Exits. Priority 0 (kill, registry, holiday, settlement) first ===== }
+ ExitFired = 0;
+-
+ If MarketPosition = -1 Then Begin
+-
+    If ( ExitFired = 0 ) And ( Manual_Kill_Switch = True ) Then Begin
+@@ -751,3 +588,2 @@
+    End;
+-
+    If ( ExitFired = 0 ) And ( v_Registry_Expired = True ) Then Begin
+@@ -756,3 +592,2 @@
+    End;
+-
+    If ( ExitFired = 0 ) And ( v_Holiday_Block = True ) And
+@@ -762,3 +597,2 @@
+    End;
+-
+    If ( ExitFired = 0 ) And ( v_Settlement_Day = True ) And
+@@ -835,3 +669,3 @@
+ 
+-   { v5.12 1: keep SP_Tier_Keep % of the peak from bar lows }
++   { 1: keep SP_Tier_Keep % of the peak from bar lows }
+    If v_Tier_Px > 0 Then
+@@ -839,3 +673,3 @@
+ 
+-   { v5.12 2 limit-down: buy limit at the limit-down line }
++   { 2 limit-down: buy limit at the limit-down line }
+    If ( LimitDn_On <> 0 ) And ( v_Ref_Ready = True ) And
+@@ -844,3 +678,3 @@
+ 
+-   { v5.12 3 after a -Reb_Pct break: buy stop at that line, profit side only }
++   { 3 after a -Reb_Pct break: buy stop at that line, profit side only }
+    If ( Reb_On <> 0 ) And ( v_Reb_Armed = True ) And
+@@ -854,4 +688,3 @@
+    End;
+-
+-End;
+-
++End;
++

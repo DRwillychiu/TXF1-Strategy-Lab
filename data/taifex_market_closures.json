@@ -6,10 +6,14 @@
     "annual_pdf": {
       "what": "TAIFEX official annual futures-market calendar",
       "url": "https://www.taifex.com.tw/file/taifex/CHINESE/4/2026Calendar.pdf",
-      "roc_year": 115,
+      "url_roc116": "https://www.taifex.com.tw/file/taifex/CHINESE/4/2027Calendar.pdf",
+      "roc_year": [
+        115,
+        116
+      ],
       "covers": [
         "2026-01-01",
-        "2026-12-25"
+        "2027-12-31"
       ],
       "limitation": "published the previous Q4; structurally cannot contain ad-hoc closures. Archived years (2025 and earlier) are no longer served by taifex.com.tw."
     },
@@ -31,7 +35,8 @@
     "After EVERY ad-hoc closure announcement: add the date to ADHOC in scripts/fetch_taifex_quotes.py, re-run, regenerate the .pla blocks. An ad-hoc closure cannot be predicted, but it can be backfilled, and backfilling is what keeps the backtest honest."
   ],
   "known_gaps": [
-    "ROC-116 (2027) annual calendar not published yet, so the 2027-01-01 tail and Registry_Valid_Until(1270101) cannot be re-verified until Q4 2026.",
+    "ROC-116 (2027) closures come from the annual calendar only (published 2026-11-11); a 2027 ad-hoc (typhoon) closure must be backfilled into ADHOC and the .pla blocks. ROC-117 (2028) is not published yet, so Registry_Valid_Until(1271231) is the edge of the verified map.",
+    "2027-09-15 is the 3rd Wednesday and closed, so index-futures final settlement moves to Thu 2027-09-16. The static .pla settlement rule (Wed, day 15-21) does not catch it.",
     "Annual PDFs for 2019-2025 are 404 on taifex.com.tw. Those years rest on the quote-data channel alone, which is stronger for backtesting but does not preserve the annual/ad-hoc split; that split is deduced from the absence of any statutory holiday on the date."
   ],
   "closed_weekdays": [
@@ -1200,6 +1205,177 @@
         "annual_pdf"
       ],
       "note": "ROC-115 annual calendar"
+    },
+    {
+      "date": "2027-01-01",
+      "weekday": "Fri",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (New Year)"
+    },
+    {
+      "date": "2027-02-02",
+      "weekday": "Tue",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year; day 1 after year-end close)"
+    },
+    {
+      "date": "2027-02-03",
+      "weekday": "Wed",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year; day 2 after year-end close)"
+    },
+    {
+      "date": "2027-02-04",
+      "weekday": "Thu",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year)"
+    },
+    {
+      "date": "2027-02-05",
+      "weekday": "Fri",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year eve)"
+    },
+    {
+      "date": "2027-02-08",
+      "weekday": "Mon",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year)"
+    },
+    {
+      "date": "2027-02-09",
+      "weekday": "Tue",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year)"
+    },
+    {
+      "date": "2027-02-10",
+      "weekday": "Wed",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Lunar New Year)"
+    },
+    {
+      "date": "2027-03-01",
+      "weekday": "Mon",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Peace Memorial Day, observed)"
+    },
+    {
+      "date": "2027-04-05",
+      "weekday": "Mon",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Tomb Sweeping Day)"
+    },
+    {
+      "date": "2027-04-06",
+      "weekday": "Tue",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Children's Day, observed)"
+    },
+    {
+      "date": "2027-04-30",
+      "weekday": "Fri",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Labour Day, observed)"
+    },
+    {
+      "date": "2027-06-09",
+      "weekday": "Wed",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Dragon Boat Festival)"
+    },
+    {
+      "date": "2027-09-15",
+      "weekday": "Wed",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Mid-Autumn Festival; 3rd Wednesday, index-futures final settlement moves to Thu 2027-09-16)"
+    },
+    {
+      "date": "2027-09-28",
+      "weekday": "Tue",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Teachers' Day)"
+    },
+    {
+      "date": "2027-10-11",
+      "weekday": "Mon",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (National Day, observed)"
+    },
+    {
+      "date": "2027-10-25",
+      "weekday": "Mon",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Retrocession Day)"
+    },
+    {
+      "date": "2027-12-24",
+      "weekday": "Fri",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (Constitution Day, observed)"
+    },
+    {
+      "date": "2027-12-31",
+      "weekday": "Fri",
+      "channel": "annual",
+      "evidence": [
+        "annual_pdf"
+      ],
+      "note": "ROC-116 annual calendar (New Year 2028, observed)"
     }
   ]
 }

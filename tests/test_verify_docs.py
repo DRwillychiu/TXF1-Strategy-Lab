@@ -86,9 +86,13 @@ def test_live_folder_matches_live_versions():
 
 
 def test_live_check_catches_stale_live_file(tmp_path):
+    # 2026-11-19：L2 研究版從 LIVE_VERSIONS §1 讀（v5.11 → v5.12 → v5.12.1 換版時不用再改這裡）
+    lines = (ROOT / "docs/LIVE_VERSIONS.md").read_text(encoding="utf-8").splitlines()
+    ver = next("v" + m.group("ver")[1:] for l in lines
+               if (m := verify_versions.LIVE_ROW_RE.match(l)) and m.group("name") == "L2_TrendShort")
     for rel in ["docs/LIVE_VERSIONS.md",
                 "strategies/live/L2_TrendShort/L2_TrendShort.pla",
-                "strategies/research/L2_TrendShort/L2_v5.11/L2_TrendShort_v5.11.pla"]:
+                f"strategies/research/L2_TrendShort/L2_{ver}/L2_TrendShort_{ver}.pla"]:
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / rel, tmp_path / rel)
     lv = tmp_path / "docs/LIVE_VERSIONS.md"

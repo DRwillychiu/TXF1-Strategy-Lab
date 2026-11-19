@@ -93,3 +93,10 @@ strategies/research/L2_TrendShort/L2_v5.11/L2_TrendShort_v5.11.pla  # L2 final l
 strategies/research/L3_ConsolidationLong/L3_v18.4/L3_ConsolidationLong_v18.4.pla  # L3 final live build (2026-10-03 18:14); v18.2 trades unchanged, kill blocks entries and leads one forced-exit chain, explicit 450 cap; live name STRATEGY_WILLY_LONG_C (deploy file)
 strategies/research/L4_ConsolidationShort/L4_v14.10/L4_ConsolidationShort_v14.10.pla  # L4 final live build (2026-10-03 18:32); defaults = T8, T8 trades unchanged, kill blocks entries, explicit 450 cap; live name STRATEGY_WILLY_SHORT_CTEST2 (deploy file)
 strategies/research/L5_BreakoutLong/L5_v19.20/L5_BreakoutLong_v19.20.pla  # L5 final live build (2026-10-03 18:51); v19.18 trades unchanged at State_Start_Date 0, default 1261005, kill blocks entries, IOG off declared; live name STRATEGY_WILLY_LONG_BREAKOUT_C (deploy file)
+
+# ---- 2027 假日登錄表候選版（2026-11-19；上架版 + 2027 Holiday_Tail 11 筆 + Registry_Valid_Until 1271231）----
+strategies/research/L1_TrendLong/L1_v1.1.0/L1_TrendLong_v1.1.0.pla                  # V1.1.0 live version (2026-11-19, Willy numbering): V3.8 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
+strategies/research/L2_TrendShort/L2_v1.1.0/L2_TrendShort_v1.1.0.pla                # V1.1.0 live version (2026-11-19, Willy numbering): v5.12 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
+strategies/research/L3_ConsolidationLong/L3_v1.1.0/L3_ConsolidationLong_v1.1.0.pla  # V1.1.0 live version (2026-11-19, Willy numbering): v18.4 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
+strategies/research/L4_ConsolidationShort/L4_v1.1.0/L4_ConsolidationShort_v1.1.0.pla# V1.1.0 live version (2026-11-19, Willy numbering): v14.10 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
+strategies/research/L5_BreakoutLong/L5_v1.1.0/L5_BreakoutLong_v1.1.0.pla            # V1.1.0 live version (2026-11-19, Willy numbering): v19.20 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch

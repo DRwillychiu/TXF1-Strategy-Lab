@@ -52,6 +52,21 @@
 - 切換完成後：§1 L3 列改為 v18.2，v15.0 移到 §3 標「前上架版（回退用）」，本節刪除這一列。
 - 依據：`docs/decisions/L3_deploy_v18_20260928.md`；上線前驗證：`docs/ops/L3_v18.2_verification_20260929.md`；空跑與閘門：`docs/ops/L3_dryrun_0929_gate_0930.md`
 
+### 1.1a 排定換版：2027 假日登錄表（五支，Willy 2026-11-19）
+
+| 策略 | 現行（MC） | 換成 | 檔案 | MC Load Name | 狀態 |
+|---|---|---|---|---|---|
+| **L1_TrendLong** | V3.8 | **V1.1.0**（`L1_v1.1.0`） | `strategies/research/L1_TrendLong/L1_v1.1.0/L1_TrendLong_v1.1.0.pla` | `WILLY_ATR_LONG_60M` | 排定 |
+| **L2_TrendShort** | v5.12（上架機原碼） | **V1.1.0**（`L2_v1.1.0`；回升保本改關 `Reb_On` 0，圖上輸入值也要改） | `strategies/research/L2_TrendShort/L2_v1.1.0/L2_TrendShort_v1.1.0.pla` | `Trendbearish_V1` | 排定 |
+| **L3_ConsolidationLong** | v18.4 | **V1.1.0**（`L3_v1.1.0`） | `strategies/research/L3_ConsolidationLong/L3_v1.1.0/L3_ConsolidationLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_C` | 排定 |
+| **L4_ConsolidationShort** | v14.10 | **V1.1.0**（`L4_v1.1.0`） | `strategies/research/L4_ConsolidationShort/L4_v1.1.0/L4_ConsolidationShort_v1.1.0.pla` | `STRATEGY_WILLY_SHORT_CTEST2` | 排定 |
+| **L5_BreakoutLong** | v19.20 | **V1.1.0**（`L5_v1.1.0`） | `strategies/research/L5_BreakoutLong/L5_v1.1.0/L5_BreakoutLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_BREAKOUT_C` | 排定 |
+
+- **截止：2027-01-04（一）08:45 開盤前**。不換：五支從 2027 年第一個開盤起擋進場、持倉強制平倉；2026-12-02 起圖上紅字
+- 只改假日表（`Holiday_Tail[64]`–`[74]` 11 筆）與 `Registry_Valid_Until` 1270101 → 1271231；2027-02-02 以前的交易不變
+- 資料來源：期交所 116 年行事曆（`2027Calendar.pdf`，台期交字第1150003597號）；決定：`docs/decisions/registry_2027_20261119.md`；換法與 MC 檢查單：`docs/ops/registry_2027_switch_20261119.md`
+- MC 換完後：`python scripts/research/registry_2027_20261119/switch_live_registry_2027.py --date <換版日>`（先空跑再 `--apply`），會把本節狀態改成已換版、更新 §1
+
 ### 1.2 v18 設計摘要（現行 L3，`L3_v18.2` 預設值）
 
 - 停損 ＝ 前一日振幅 % × `Stop_Day_Pct`（30）%，下限 60 點（`Stop_Min_Pts`），上限為進場價的 0.7%（`SL_Pct`）
@@ -106,6 +121,11 @@
 | **L5** | `L5_v19.20` | **L5 上架最終版**（10/3 18:51）：v19.18 交易不變；預設 `State_Start_Date` ＝ 1261005（上架決定直接寫進預設值）；Kill 開關擋進場；明示 `[IntrabarOrderGeneration = false]`；強制出場那根不再送其他出場單；檔頭移除巢狀大括號（v19.18 第 198～199 行）；註解精簡更正；載入名 `STRATEGY_WILLY_LONG_BREAKOUT_C`（上架名，回測先用別名） | 待 MC 回歸（研究圖）：①全預設 ＝ 310 列／2,275,400／−1,038,000（損失記憶在歷史中不作用 ＝ v19.15）；②`State_Start_Date` 0 ＝ 295 列／2,737,800／−768,000（＝ v19.18 逐筆）；G1 PASS；委託名稱 34／34；begin／end 62／62 | `State_Start_Date` 1261005 維持（Willy 10/3 19:27 採 A；上線初期風險以 −51,900 估）；待 Willy 裁示：450 點規則未在程式中強制（歷史 3 筆超過：497／558／668 點）；上架實測：Data2／Data3 即時讀值（F8）、出場單重疊 |
 | **L4** | `L4_v14.8` | 上架版 v14.6 ＋ R1 連虧跳過開關（預設關）：#24 `Streak_Skip_N`（0 關；N ＝ 連虧 N 筆後跳過下一個訊號）、#25 `State_Start_Date`、#26 `Macro_Mode`（日線多頭封鎖：0 ＝ A 或 B；1 ＝ A 且 B；2 ＝ 只 A；3 ＝ 關）；#27 `TP1_Room_Pct`（分批停利 1 口，0 關）、#28 `TP1_BE_On`（分批後剩下 1 口保本）；載入名 `STRATEGY_WILLY_SHORT_CTEST2_V148`（研究／候選） | 回歸通過（R1 ＝ R0，81 筆逐筆相同） | 10/5 上架 T8（22:05 驗證完成：U1 8／8、U2 估算通過、U3 風險 7／7、選參 0／3 已登記、固定 T8 樣本外 3／3 勝）：#23 0.8、#27 20（T7 為 35）、#28 false、#24 0、#26 0（D 批日線封鎖全不通過；1.0 在 48,000 點超過 450 點規則） |
 | **L4** | `L4_v14.9` | v14.8 ＋ L3 鏡像測試（預設關）：#29 `Entry_Mode`（0 ＝ 假突破；1 ＝ 區間上緣壓力進場 `CS_ZEntry`；2 ＝ 兩者）、#30 `Zone_Pct`（0.5 ＝ 箱體上半部）、#26 `Macro_Mode` 4（日收盤 ≥ MA20 且 ≥ MA60 才封鎖）；載入名 `STRATEGY_WILLY_SHORT_CTEST2_V149`（研究） | 回歸通過（預設值 ＝ R0 934,800／81 筆） | **KILLED 2026-10-02 23:10**：Z 批 18 組，上緣進場 PF 全 < 1、Macro 4 全面變差 |
+| **L1** | `L1_v1.1.0` | **V1.1.0 上架版（第二次實戰測試；Willy 11/19 編號）**：V3.8（MC 實盤版）＋ `Holiday_Tail[64]`～`[74]`（期交所 116 年行事曆）＋ `Registry_Valid_Until` 1271231，其餘程式逐句相同；檔頭是上架載入名（回測先用別名） | 待 MC：同圖對底版逐筆相同；待比對上架機原碼 | 排定換版（§1.1a） |
+| **L2** | `L2_v1.1.0` | **V1.1.0 上架版（第二次實戰測試；Willy 11/19 編號）**：上架機原碼 v5.12（11/19 匯出）＋ `Holiday_Tail[64]`～`[74]`（期交所 116 年行事曆）＋ `Registry_Valid_Until` 1271231 ＋ `Reb_On` 1 → 0（Willy 11/19「關掉」）；去掉註解後 ＝ 研究版 `L2_v5.12` ＋ 假日表；檔頭是上架載入名（回測先用別名） | 待 MC：同圖對底版逐筆相同；待比對上架機原碼 | 排定換版（§1.1a） |
+| **L3** | `L3_v1.1.0` | **V1.1.0 上架版（第二次實戰測試；Willy 11/19 編號）**：v18.4（MC 實盤版）＋ `Holiday_Tail[64]`～`[74]`（期交所 116 年行事曆）＋ `Registry_Valid_Until` 1271231，其餘程式逐句相同；檔頭是上架載入名（回測先用別名） | 待 MC：同圖對底版逐筆相同；待比對上架機原碼 | 排定換版（§1.1a） |
+| **L4** | `L4_v1.1.0` | **V1.1.0 上架版（第二次實戰測試；Willy 11/19 編號）**：v14.10（MC 實盤版）＋ `Holiday_Tail[64]`～`[74]`（期交所 116 年行事曆）＋ `Registry_Valid_Until` 1271231，其餘程式逐句相同；檔頭是上架載入名（回測先用別名） | 待 MC：同圖對底版逐筆相同；待比對上架機原碼 | 排定換版（§1.1a） |
+| **L5** | `L5_v1.1.0` | **V1.1.0 上架版（第二次實戰測試；Willy 11/19 編號）**：v19.20（MC 實盤版）＋ `Holiday_Tail[64]`～`[74]`（期交所 116 年行事曆）＋ `Registry_Valid_Until` 1271231，其餘程式逐句相同；檔頭是上架載入名（回測先用別名） | 待 MC：同圖對底版逐筆相同；待比對上架機原碼 | 排定換版（§1.1a） |
 | **L4** | `L4_v14.10` | **L4 上架最終版**（10/3 18:32）：預設值直接 ＝ T8（`SL_Pct` 0.8、`TP1_Room_Pct` 20）；T8 交易不變；Kill 開關擋進場；引擎停損與出場停損加 450 點上限（新 input `SL_Max_Pts`，0.8% 在 56,250 以下先生效）；有市價出場的那根不再同時掛停損單；追蹤停損不再沿用上一筆的舊停損（樣本 1 筆，推估同價）；註解精簡更正；載入名 `STRATEGY_WILLY_SHORT_CTEST2`（上架名，回測先用別名） | 待 MC 回歸：預設值 ＝ 694,200／135 列／−390,800（＝ T8 逐筆）；G2 參數 29（v14.8 的 28 個＋SL_Max_Pts；10/3 19:15 更正，原誤寫 30）；G1 PASS；委託名稱 11／11；begin／end 37／37 | 上架實測：TP1 成交後其餘停損單口數（F2）、Data2／Data3 即時讀值（F8） |
 
 ### 2.1 ⭐ 四支是純標籤，只有 L1 改了行為

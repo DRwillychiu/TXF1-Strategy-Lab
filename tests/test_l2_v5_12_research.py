@@ -42,5 +42,6 @@ def test_no_entry_block():
 @pytest.mark.skipif(not os.environ.get("TXF1_MIN_DATA"), reason="需要 1 分 K（TXF1_MIN_DATA）")
 def test_r0_all_off_equals_v511():
     out = subprocess.run([sys.executable, str(ROOT / "scripts/research/l2_v5_12_20261116/predict.py"),
-                          os.environ["TXF1_MIN_DATA"], "260924"], capture_output=True, text=True, check=True).stdout
+                          os.environ["TXF1_MIN_DATA"], "260924"], capture_output=True, text=True, check=True,
+                         encoding="utf-8", env=dict(os.environ, PYTHONIOENCODING="utf-8")).stdout   # Windows cp950（11/19）
     assert "R0 三項全關 == v5.11 逐筆： True 筆數 96" in out

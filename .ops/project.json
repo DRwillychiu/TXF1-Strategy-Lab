@@ -1,0 +1,14 @@
+{
+  "name": "txf1-strategy-lab",
+  "role": "work",
+  "_note": "ops-state 通用宣告檔。放在專案根目錄的 .ops/project.json，ops-state 會自動發現。改這個檔算 meta 工作。",
+  "exclude": [
+    "data/**",
+    "logs/**",
+    "**/*.parquet",
+    "**/*.duckdb"
+  ],
+  "meta_patterns_extra": [],
+  "bookkeeping_patterns_extra": [],
+  "liveness": null
+}

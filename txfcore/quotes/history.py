@@ -32,6 +32,10 @@ from txfcore.types.bar import Bar
 from txfcore.types.mctime import date_to_mc_date, time_to_mc_time
 
 EXPECTED_HEADER_FIELDS = ("date", "time", "open", "high", "low", "close", "volume")
+# 2026-11-16 起 MC 新匯出：12 欄，量用 TotalVolume（價格欄位與 7 欄版相同）
+EXPECTED_HEADER_FIELDS_12 = ("date", "time", "open", "high", "low", "close",
+                             "upvolume", "downvolume", "totalvolume",
+                             "upticks", "downticks", "totalticks")
 
 
 class ExportFormatError(ValueError):
@@ -57,19 +61,25 @@ class RawMinute:
         )
 
 
-def _parse_header(line: str) -> None:
-    fields = [f.strip().strip("<>").lower() for f in line.strip().split(",")]
-    if tuple(fields) != EXPECTED_HEADER_FIELDS:
-        raise ExportFormatError(
-            f"欄位不符。預期 {EXPECTED_HEADER_FIELDS}，實得 {tuple(fields)}。"
-            f"格式變了就停下來，不做寬鬆解析。"
-        )
+def _parse_header(line: str) -> int:
+    """回傳欄位數（7 或 12）。其他格式一律停。"""
+    fields = tuple(f.strip().strip("<>").lower() for f in line.strip().lstrip("﻿").split(","))
+    if fields == EXPECTED_HEADER_FIELDS:
+        return 7
+    if fields == EXPECTED_HEADER_FIELDS_12:
+        return 12
+    raise ExportFormatError(
+        f"欄位不符。預期 {EXPECTED_HEADER_FIELDS} 或 {EXPECTED_HEADER_FIELDS_12}，實得 {fields}。"
+        f"格式變了就停下來，不做寬鬆解析。"
+    )
 
 
-def _parse_line(line: str, lineno: int) -> RawMinute:
+def _parse_line(line: str, lineno: int, ncols: int = 7) -> RawMinute:
     parts = line.rstrip("\r\n").split(",")
-    if len(parts) != 7:
-        raise ExportFormatError(f"第 {lineno} 行欄位數 {len(parts)}，預期 7：{line[:80]!r}")
+    if len(parts) != ncols:
+        raise ExportFormatError(f"第 {lineno} 行欄位數 {len(parts)}，預期 {ncols}：{line[:80]!r}")
+    if ncols == 12:
+        parts = parts[:6] + [parts[8]]  # TotalVolume
     d, t, o, h, l, c, v = parts
     try:
         y, mo, dy = (int(x) for x in d.split("/"))
@@ -96,12 +106,12 @@ class MC12MinuteSource:
 
     def stream(self) -> Iterator[Bar]:
         with self.path.open(encoding="utf-8", errors="strict", newline="") as fh:
-            _parse_header(fh.readline())
+            ncols = _parse_header(fh.readline())
             prev: datetime | None = None
             for lineno, line in enumerate(fh, start=2):
                 if not line.strip():
                     continue
-                m = _parse_line(line, lineno)
+                m = _parse_line(line, lineno, ncols)
                 if self.validate:
                     if not (m.low <= m.open <= m.high and m.low <= m.close <= m.high):
                         raise ExportFormatError(f"第 {lineno} 行 OHLC 不一致")

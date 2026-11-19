@@ -32,7 +32,8 @@ def test_matches_mc_v510_trade_by_trade():
     from txfcore.quotes.history import MC12MinuteSource
     from txfcore.types.mctime import mc_date_to_date
 
-    mins = [m for m in MC12MinuteSource(os.environ["TXF1_MIN_DATA"]).stream() if m.mc_date <= 1260924]
+    mins = [m for m in MC12MinuteSource(os.environ["TXF1_MIN_DATA"]).stream()
+            if 1190102 <= m.mc_date <= 1260924]   # 2019-01-02 起 ＝ 舊資料檔起點（11/19 新檔從 2000 起）
     m60 = list(aggregate_bars(mins, 60))
     res = mc_compat.single_runner(L2TrendShortV511()).run(m60)
     ts = lambda d, t: dt.datetime.combine(mc_date_to_date(d), dt.time(t // 100, t % 100)).strftime("%Y-%m-%d %H:%M")

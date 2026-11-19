@@ -1,0 +1,377 @@
+--- strategies/research/L1_TrendLong/L1_v3.8/L1_TrendLong_v3.8.pla
++++ strategies/research/L1_TrendLong/L1_v1.1.0/L1_TrendLong_v1.1.0.pla
+@@ -1,23 +1,11 @@
+-{ ============================================================
+-  L1 TREND LONG (Adaptive Farmer)  -  V3.8  (2026-10-03)
+-  MC Load Name : WILLY_ATR_LONG_60M  (live name; chart is 45M, name kept
+-                 for live continuity). Backtest / dry run under an alias
+-                 first; save under the live name ONLY when flat.
+-  Data         : Data1 TXF1 45M / Data2 daily / Data3 weekly. IOG = true.
+-  Verify       : all defaults, Bar Magnifier OFF, slippage 1,000 per lot,
+-                 commission 0, capital 2,000,000, 2 lots, end 2026/09/24
+-                 -> net 4,634,400 / 461 trades / max DD -802,800 (= V3.7).
+-
+-  VERSION
+-   V3.8 (10/03) V3.7 trades unchanged. Comments condensed and corrected;
+-                kill switch also blocks new entries (default False);
+-                forced-flat bars clear the re-entry arm (spec 2.3; no
+-                V3.7 re-entry is affected);
+-                year-MDD label reused instead of one new label per bar;
+-                registry warning created once; per-tick-only work moved
+-                to bar close.
+-   V3.7 (10/03) Q4 defaults: #24 DTrend_Gate 1, #31 DTrend_Slope_N 4,
+-                #27 Loss_Pause_N 3 (#28 K 1), #29 SL_Max_Pts 450,
+-                #32 Guard_Persist 1. Earlier history: repo / LIVE_VERSIONS.
+-
++{ ==========================================================================
++  L1 TREND LONG (Adaptive Farmer)  -  V1.1.0  (2026-11-19; logic = V3.8)
++  MC Load Name : WILLY_ATR_LONG_60M  (live name; the chart is 45M, name kept)
++                 Test under an alias; compile the live name only when the
++                 chart and the broker are both flat.
++  Data         : Data1 TXF1 45M / Data2 daily / Data3 weekly. IOG = true. 2 lots.
++  V1.1.0       : 2027 holiday rows Holiday_Tail[64]-[74] (TAIFEX 116-yr
++                 calendar, letter 1150003597) + Registry_Valid_Until 1271231.
++                 Chart inputs after the switch: Registry_Valid_Until = 1271231.
++  Known gap    : 2027-09-16 settlement (moved from Wed 9/15) is not flattened.
+   LOGIC (signals at 45M bar close = BarStatus(1) = 2; stops every tick)
+@@ -46,3 +34,3 @@
+            progress (unverified, Q4 item F8). Data2 reads [1].
+-  ============================================================ }
++  ========================================================================== }
+ 
+@@ -63,3 +51,3 @@
+     Holiday_Flat_Time(345),
+-    Registry_Valid_Until(1270101),     { holiday registry horizon }
++    Registry_Valid_Until(1271231),     { holiday registry horizon }
+     Settlement_Flat_Time(1230),
+@@ -85,24 +73,9 @@
+ Variables:
+-    maBase(0),
+-    maTrail(0),
+-    Breakout_Level(0),
+-    Current_ATR(0),
+-    Daily_ATR(0),
+-    Cond_Breakout(False),
+-    MP(0),
+-    Entry_P(0),
+-    Exit_Price_ATR(0),
+-    Exit_Price_Cap(0),
+-    Exit_Price_Pct(0),
+-    Exit_Price_SL(0),
+-    Exit_Price_Trail(0),
+-    Final_Exit_Price(0),
+-    v_SL_Locked(False),
+-    v_Frozen_SL(0),
++    maBase(0), maTrail(0), Breakout_Level(0), Current_ATR(0), Daily_ATR(0),
++    Cond_Breakout(False), MP(0), Entry_P(0), Exit_Price_ATR(0), Exit_Price_Cap(0),
++    Exit_Price_Pct(0), Exit_Price_SL(0), Exit_Price_Trail(0), Final_Exit_Price(0),
++    v_SL_Locked(False), v_Frozen_SL(0),
+ 
+     { holiday / registry }
+-    Init_Done(False),
+-    v_Holiday_Block(False),
+-    v_Registry_Expired(False),
+-    idx(0),
++    Init_Done(False), v_Holiday_Block(False), v_Registry_Expired(False), idx(0),
+ 
+@@ -112,9 +85,4 @@
+     { year MDD label (display only) }
+-    MyEquity(0),
+-    Current_Year_Log(0),
+-    Year_High_Equity(0),
+-    Year_DD(0),
+-    Year_Max_DD(0),
+-    txtID(0),
+-    txtNow(-1),
++    MyEquity(0), Current_Year_Log(0), Year_High_Equity(0), Year_DD(0), Year_Max_DD(0),
++    txtID(0), txtNow(-1),
+     strMsg(""),
+@@ -122,13 +90,7 @@
+     { weekly filter }
+-    v_Weekly_MA_Fast(0),
+-    v_Weekly_MA_Slow(0),
+-    v_Weekly_Filter(false),
++    v_Weekly_MA_Fast(0), v_Weekly_MA_Slow(0), v_Weekly_Filter(false),
+ 
+     { re-entry }
+-    v_Prev_MP(0),
+-    v_ReEntry_Armed(False),
+-    v_ReEntry_Price(0),
+-    v_IsReEntry(False),
++    v_Prev_MP(0), v_ReEntry_Armed(False), v_ReEntry_Price(0), v_IsReEntry(False),
+     v_Last_EntryPrice(0),
+-
+     v_Frozen_Gap(0),           { set at main entry: entry - MA61 }
+@@ -140,28 +102,11 @@
+     { re-entry derived at bar close }
+-    v_TrendRatio(0),
+-    v_Wk_Now_Fast(False),
+-    v_Wk_Now_Slow(False),
+-    v_Wk_Tier_OK(False),
++    v_TrendRatio(0), v_Wk_Now_Fast(False), v_Wk_Now_Slow(False), v_Wk_Tier_OK(False),
+ 
+     { switch mirrors }
+-    v_ReEntry_On(False),
+-    v_RE_Close_Gate(False),
+-    v_RE_Trend_Gate(False),
+-    v_RE_Weekly_Gate(False),
+-    v_RE_MABase_Gate(False),
+-    v_RE_WeeklyTier_Gate(False),
++    v_ReEntry_On(False), v_RE_Close_Gate(False), v_RE_Trend_Gate(False),
++    v_RE_Weekly_Gate(False), v_RE_MABase_Gate(False), v_RE_WeeklyTier_Gate(False),
+ 
+     { daily gate, loss pause, day stop, engine stop distance }
+-    v_DT_Fast(0),
+-    v_DT_Slow(0),
+-    v_DT_OK(true),
+-    v_DT_Slow_Ago(0),
+-    v_PrevTT(0),
+-    v_NP_Base(0),
+-    v_LastPnL(0),
+-    v_LossRun(0),
+-    v_SkipLeft(0),
+-    v_Guard_D(0),
+-    v_DayKey(0),
+-    v_PrevDayKey(0),
++    v_DT_Fast(0), v_DT_Slow(0), v_DT_OK(true), v_DT_Slow_Ago(0), v_PrevTT(0), v_NP_Base(0),
++    v_LastPnL(0), v_LossRun(0), v_SkipLeft(0), v_Guard_D(0), v_DayKey(0), v_PrevDayKey(0),
+     v_DayLossRun(0),
+@@ -174,3 +119,2 @@
+     v_Trail_High(0);
+-
+ Array:
+@@ -178,88 +122,32 @@
+ 
+-{ ===== 0. Holiday tail registry: date stamp of the 00:00-05:00 bars of
+-  the last night session before each closure (last trading day + 1).
+-  Source: TAIFEX annual calendars (2026 verified). ===== }
++{ ===== 0. Holiday tail registry ===== }
+ if Init_Done = False then begin
+ 
+-    { --- 2019 --- }
+-    Holiday_Tail[1]  = 1190913;
+-    Holiday_Tail[2]  = 1191010;
+-    Holiday_Tail[3]  = 1200101;  { 2020 New Year }
+-
+-    { --- 2020 --- }
+-    Holiday_Tail[4]  = 1200121;  { CNY }
+-    Holiday_Tail[5]  = 1200228;  { 228 }
+-    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+-    Holiday_Tail[7]  = 1200501;  { * Labor Day }
+-    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+-    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+-    Holiday_Tail[10] = 1201009;  { National Day }
+-    Holiday_Tail[11] = 1210101;  { 2021 New Year }
+-
+-    { --- 2021 --- }
+-    Holiday_Tail[12] = 1210206;  { CNY }
+-    Holiday_Tail[13] = 1210227;  { 228 }
+-    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+-    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+-    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+-    Holiday_Tail[17] = 1211009;  { National Day }
+-    Holiday_Tail[18] = 1211231;  { 2022 New Year }
+-
+-    { --- 2022 --- }
+-    Holiday_Tail[19] = 1220127;  { CNY }
+-    Holiday_Tail[20] = 1220226;  { 228 }
+-    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+-    Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+-    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+-    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+-    Holiday_Tail[25] = 1221008;  { National Day }
+-    Holiday_Tail[26] = 1221231;  { 2023 New Year }
+-
+-    { --- 2023 --- }
+-    Holiday_Tail[27] = 1230118;  { CNY }
+-    Holiday_Tail[28] = 1230225;  { 228 }
+-    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+-    Holiday_Tail[30] = 1230429;  { * Labor Day }
+-    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+-    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+-    Holiday_Tail[33] = 1231007;  { National Day }
+-    Holiday_Tail[34] = 1231230;  { 2024 New Year }
+-
+-    { --- 2024 --- }
+-    Holiday_Tail[35] = 1240206;  { CNY }
+-    Holiday_Tail[36] = 1240228;  { 228 }
+-    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+-    Holiday_Tail[38] = 1240501;  { * Labor Day }
+-    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+-    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+-    Holiday_Tail[41] = 1241010;  { National Day }
+-    Holiday_Tail[42] = 1250101;  { 2025 New Year }
+-
+-    { --- 2025 (* = reconstructed) --- }
+-    Holiday_Tail[43] = 1250123;  { CNY }
+-    Holiday_Tail[44] = 1250228;  { 228 }
+-    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+-    Holiday_Tail[46] = 1250501;  { * Labor Day }
+-    Holiday_Tail[47] = 1250530;  { Dragon Boat }
+-    Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+-    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+-    Holiday_Tail[50] = 1251010;  { * National Day }
+-    Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+-    Holiday_Tail[52] = 1251225;  { * Constitution Day }
+-    Holiday_Tail[53] = 1260101;  { 2026 New Year }
+-
+-    { --- 2026 (TAIFEX 115-yr calendar) --- }
+-    Holiday_Tail[54] = 1260212;  { CNY }
+-    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+-    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+-    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+-    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+-    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+-    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+-    Holiday_Tail[61] = 1261024;  { Retrocession, Saturday tail }
+-    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+-    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+-
++    { last trading day + 1 before each closure, 2019-2027 (TAIFEX calendars) }
++    Holiday_Tail[1] = 1190913;  Holiday_Tail[2] = 1191010;  Holiday_Tail[3] = 1200101;
++    Holiday_Tail[4] = 1200121;  Holiday_Tail[5] = 1200228;  Holiday_Tail[6] = 1200402;
++    Holiday_Tail[7] = 1200501;  Holiday_Tail[8] = 1200625;  Holiday_Tail[9] = 1201001;
++    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;  Holiday_Tail[12] = 1210206;
++    Holiday_Tail[13] = 1210227;  Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
++    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;  Holiday_Tail[18] = 1211231;
++    Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;  Holiday_Tail[21] = 1220402;
++    Holiday_Tail[22] = 1220430;  Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
++    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;  Holiday_Tail[27] = 1230118;
++    Holiday_Tail[28] = 1230225;  Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
++    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;  Holiday_Tail[33] = 1231007;
++    Holiday_Tail[34] = 1231230;  Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
++    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;  Holiday_Tail[39] = 1240608;
++    Holiday_Tail[40] = 1240917;  Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
++    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;  Holiday_Tail[45] = 1250403;
++    Holiday_Tail[46] = 1250501;  Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
++    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;  Holiday_Tail[51] = 1251024;
++    Holiday_Tail[52] = 1251225;  Holiday_Tail[53] = 1260101;  Holiday_Tail[54] = 1260212;
++    Holiday_Tail[55] = 1260227;  Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
++    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;  Holiday_Tail[60] = 1261009;
++    Holiday_Tail[61] = 1261024;  Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
++    Holiday_Tail[64] = 1270202;  Holiday_Tail[65] = 1270227;  Holiday_Tail[66] = 1270403;
++    Holiday_Tail[67] = 1270430;  Holiday_Tail[68] = 1270609;  Holiday_Tail[69] = 1270915;
++    Holiday_Tail[70] = 1270928;  Holiday_Tail[71] = 1271009;  Holiday_Tail[72] = 1271023;
++    Holiday_Tail[73] = 1271224;  Holiday_Tail[74] = 1271231;
+     Init_Done = True;
+-
+ end;
+@@ -270,8 +158,5 @@
+     maTrail = Average(Close, Length20);
+-
+     Current_ATR = AvgTrueRange(ATR_Length) of Data1;
+     Daily_ATR   = AvgTrueRange(ATR_Length)[1] of Data2;
+-
+     Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
+-
+     Cond_Breakout  = (Close Crosses Over Breakout_Level);
+@@ -283,3 +168,2 @@
+     v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+-
+     if (Close of Data3 > v_Weekly_MA_Fast) or
+@@ -289,3 +173,2 @@
+         v_Weekly_Filter = false;
+-
+     v_DT_OK = true;                       { daily gate: previous completed daily bar }
+@@ -295,3 +178,2 @@
+         v_DT_OK = (v_DT_Fast > v_DT_Slow);
+-
+         if DTrend_Slope_N > 0 then begin
+@@ -328,4 +210,3 @@
+ 
+-{ ===== 1b. Re-entry derived state (bar close). Trend ratio = (Close - MA61)
+-  / (entry - MA61 at entry); a non-positive gap never arms. ===== }
++{ ===== 1b. Re-entry derived state (bar close). Trend ratio = (Close - MA61) / (entry - MA61 at entry) ===== }
+ if BarStatus(1) = 2 then begin
+@@ -337,3 +218,2 @@
+     v_RE_WeeklyTier_Gate = ( ReEntry_WeeklyTier_Gate <> 0 );
+-
+     if v_Frozen_Gap > 0 then
+@@ -342,3 +222,2 @@
+         v_TrendRatio = 0;
+-
+     v_Wk_Now_Fast = (Close of Data3 > v_Weekly_MA_Fast);
+@@ -355,3 +234,2 @@
+     v_Holiday_Block = False;
+-
+     if Time <= 500 then begin
+@@ -362,5 +240,3 @@
+     end;
+-
+     v_Registry_Expired = False;
+-
+     if Date > Registry_Valid_Until then begin
+@@ -393,4 +269,3 @@
+ 
+-{ P3b engine stop, per contract: distance = tightest stop leg, frozen at the
+-  last flat calculation; re-issued every calculation while long (#32). }
++{ P3b engine stop, per contract: distance = tightest stop leg, frozen at the last flat calculation; }
+ SetStopContract;
+@@ -404,3 +279,2 @@
+                             Daily_ATR * Daily_Cap_Multiplier);
+-
+     if SL_Max_Pts > 0 then
+@@ -411,9 +285,5 @@
+     SetStopLoss(v_Guard_D * BigPointValue);
+-
+-if BarStatus(1) = 2 then begin
+-
+-    { re-entry state: MUST run before both entry blocks.
+-      (1) arm after an exit (2) disarm when the thesis is gone or on a
+-      forced-flat bar (holiday tail, settlement day, registry end, kill),
+-      so a forced exit never arms (3) a new breakout clears it }
++if BarStatus(1) = 2 then begin
++
++    { re-entry state: MUST run before both entry blocks. }
+     if v_Prev_MP = 1 and MP = 0 and v_Frozen_Gap > 0 then begin
+@@ -422,3 +292,2 @@
+     end;
+-
+     if v_ReEntry_Armed = True then begin
+@@ -431,3 +300,2 @@
+     end;
+-
+     if Cond_Breakout then begin
+@@ -481,3 +349,2 @@
+ if MP > 0 then begin
+-
+     Entry_P = EntryPrice;
+@@ -485,4 +352,3 @@
+ 
+-    { frozen stop = tightest leg (MaxList of prices), set at the entry bar
+-      close; a re-entry never gets a looser stop than the original trade }
++    { frozen stop = tightest leg (MaxList of prices), set at the entry bar close; }
+     if BarStatus(1) = 2 and v_SL_Locked = False then begin
+@@ -494,6 +360,4 @@
+             Exit_Price_Pct = 0;
+-
+         if SL_Max_Pts > 0 then
+             Exit_Price_Pct = MaxList(Exit_Price_Pct, Entry_P - SL_Max_Pts);
+-
+         if v_IsReEntry = True and v_Frozen_SL_Orig > 0 then
+@@ -513,3 +377,2 @@
+     end;
+-
+     Exit_Price_SL = v_Frozen_SL;
+@@ -530,4 +393,3 @@
+ 
+-    { labels: loss side TL_SL / TL_SL_Gap / TL_TSL, profit side TL_SP /
+-      TL_SP_Gap / TL_TP (side judged at order placement) }
++    { labels: }
+     if BarStatus(1) = 2 and Close < Final_Exit_Price then begin
+@@ -548,3 +410,2 @@
+     end;
+-
+ end else begin
+@@ -560,3 +421,2 @@
+ if MP > 0 then begin
+-
+     if v_Registry_Expired then begin
+@@ -570,3 +430,2 @@
+     end;
+-
+     if Manual_Kill_Switch = True then begin
+@@ -574,3 +433,2 @@
+     end;
+-
+ end;

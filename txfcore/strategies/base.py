@@ -142,7 +142,8 @@ class StrategyConfig:
     # 每支不同，不是共用常數：L1=345 / L2=300 / L3,L4,L5=415
     holiday_flat_time: int = 415
     settlement_flat_time: int = 1230
-    registry_valid_until: int = 1270101
+    # ＝ 2027 版上架 .pla（V1.1.0）的預設值，也 ＝ tradecal.registry.REGISTRY_VALID_UNTIL（測試鎖住）
+    registry_valid_until: int = 1271231
     # MC 相容欄位：.pla 的 Manual_Kill_Switch 是 input，因為 MC 沒有控制平面，
     # 只能把停機塞成策略參數。mc12 模式必須照抄這個行為才對得上帳。
     # 真正的停機開關是 state/KillSwitch，由 runtime 檢查，優先於一切。

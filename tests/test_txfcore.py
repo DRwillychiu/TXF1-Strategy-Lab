@@ -80,9 +80,10 @@ def test_trading_day_night_tail_rolls_back():
 # 行事曆層：五支共用
 # ====================================================================
 
-def test_registry_has_63_entries():
-    assert len(HOLIDAY_TAIL) == 63
-    assert HOLIDAY_TAIL[-1] == REGISTRY_VALID_UNTIL
+def test_registry_has_74_entries():
+    # 2026-11-19：63 → 74（加 2027 共 11 筆，＝ 五支 V1.1.0 的 Holiday_Tail[64]–[74]）
+    assert len(HOLIDAY_TAIL) == 74
+    assert HOLIDAY_TAIL[-1] == REGISTRY_VALID_UNTIL == 1271231
 
 
 def test_holiday_tail_only_matches_night_segment():
@@ -100,9 +101,13 @@ def test_settlement_is_third_wednesday():
 
 def test_registry_expiry_fails_safe():
     """走出已驗證的地圖之外必須同時封鎖進場，不是只警告。"""
-    st = evaluate(1270102, 1245)
+    st = evaluate(1280103, 1245)              # 2027 假日表之後（預設 1271231）
     assert st.registry_expired is True
     assert st.holiday_block is True
+    # 舊版 .pla（Registry_Valid_Until = 1270101）在 2027 年一開盤就封鎖：這就是不換版的後果
+    old = evaluate(1270104, 1245, registry_valid_until=1270101)
+    assert old.registry_expired is True and old.holiday_block is True
+    assert evaluate(1270104, 1245).registry_expired is False
 
 
 # ====================================================================

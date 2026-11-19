@@ -139,6 +139,20 @@ def holiday_tails(closed, start, end):
             'reopen': b,
             'closed_business_days': [x for x in skipped if x.weekday() < 5],
         })
+    # A closure that runs to the window end (e.g. 2026-12-25, 2027-12-31) has no
+    # reopen inside the window, but its tail is already known: last trading day + 1.
+    # Without this the last tail of every year showed up as "unknown" (2026-11-19).
+    if days:
+        a = days[-1]
+        rest = [a + datetime.timedelta(days=k) for k in range(1, (end - a).days + 1)]
+        shut = [x for x in rest if x.weekday() < 5]
+        if shut:
+            out.append({
+                'tail': a + datetime.timedelta(days=1),
+                'last_trading_day': a,
+                'reopen': None,
+                'closed_business_days': shut,
+            })
     return out
 
 
@@ -199,7 +213,7 @@ def emit_block(tails, indent='    '):
             '%sHoliday_Tail[%-2d] = %d;  { last trade %s, %d business day%s shut, '
             'reopen %s }'
             % (indent, i, to_mc(d), ref.isoformat(), n, '' if n == 1 else 's',
-               t['reopen'].isoformat()))
+               t['reopen'].isoformat() if t['reopen'] else 'after window'))
     return '\n'.join(lines).lstrip('\n')
 
 
@@ -221,7 +235,7 @@ def cmd_list(doc, closed, args):
         ) else '     '
         print('  [%2d] %d  %s  %s  last trade %s -> reopen %s'
               % (i, to_mc(t['tail']), t['tail'], flag,
-                 t['last_trading_day'], t['reopen']))
+                 t['last_trading_day'], t['reopen'] or 'after window'))
     return 0
 
 

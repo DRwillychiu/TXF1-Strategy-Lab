@@ -1,0 +1,620 @@
+{ ============================================================
+  L1 TREND LONG (Adaptive Farmer)  -  V3.8  (2026-10-03)
+  MC Load Name : WILLY_ATR_LONG_60M  (live name; chart is 45M, name kept
+                 for live continuity). Backtest / dry run under an alias
+                 first; save under the live name ONLY when flat.
+  Data         : Data1 TXF1 45M / Data2 daily / Data3 weekly. IOG = true.
+  Verify       : all defaults, Bar Magnifier OFF, slippage 1,000 per lot,
+                 commission 0, capital 2,000,000, 2 lots, end 2026/09/24
+                 -> net 4,634,400 / 461 trades / max DD -802,800 (= V3.7).
+
+  VERSION
+   V3.8 (10/03) V3.7 trades unchanged. Comments condensed and corrected;
+                kill switch also blocks new entries (default False);
+                forced-flat bars clear the re-entry arm (spec 2.3; no
+                V3.7 re-entry is affected);
+                year-MDD label reused instead of one new label per bar;
+                registry warning created once; per-tick-only work moved
+                to bar close.
+   V3.7 (10/03) Q4 defaults: #24 DTrend_Gate 1, #31 DTrend_Slope_N 4,
+                #27 Loss_Pause_N 3 (#28 K 1), #29 SL_Max_Pts 450,
+                #32 Guard_Persist 1. Earlier history: repo / LIVE_VERSIONS.
+
+  LOGIC (signals at 45M bar close = BarStatus(1) = 2; stops every tick)
+   Entry   Close crosses above MA(61) + ATR(20) x 2.0; weekly filter
+           (weekly Close > MA20 OR > MA60); daily gate; not holiday tail;
+           not settlement Wednesday; kill switch off; loss pause.
+   Gate    #24/#31: blocks only when daily MA20 <= MA60 AND MA60 is not
+           rising vs 4 days earlier (previous completed daily bar).
+   Pause   #27/#28: after 3 losing trades in a row, skip the next signal
+           (main or re-entry).
+   ReEntry armed after a stop or profit exit at the last entry price;
+           buy stop at that price while Close <= it, trend ratio >= 0.20
+           and weekly filter on. Disarmed by Close <= MA61, weekly filter
+           off, a new breakout, or any forced-flat bar (holiday tail,
+           settlement day, registry end, kill). Order lives one tick (IOG).
+           A pause (#27) is consumed by the next signal, re-entry included.
+   Stop    frozen at entry = tightest of ATR x 1.5, daily ATR x 0.5,
+           0.5% of entry, 450 pts. Engine stop (SetStopLoss, same
+           distance, per contract) from the entry bar on (#32).
+   Exit    one stop = max(frozen stop, MA55 - 50 trail, profit lock).
+           Profit lock arms at +200 pts (tick price), keeps 45% of peak.
+           Bar close below the stop -> market exit (gap).
+   Forced  holiday tail from 03:45, settlement Wednesday from 12:30,
+           registry expiry, kill switch -> market exit.
+   Note    Data3 (weekly) is read on bar [0]; live may read the bar in
+           progress (unverified, Q4 item F8). Data2 reads [1].
+  ============================================================ }
+
+[IntrabarOrderGeneration = true]
+
+Inputs:
+    Length60(61),                      { main MA length (name kept) }
+    Entry_Multiplier(2.0),
+    SL_Multiplier(1.5),
+    Daily_Cap_Multiplier(0.5),
+    SL_Pct(0.5),                       { stop leg: % of entry; 0 = off }
+    Length20(55),                      { trail MA length (name kept) }
+    TrailOffset(50),
+    stopProfitPoints_Long(200),        { profit lock arms at this profit }
+    profitReturnPrcnt_Long(55),        { giveback % of peak allowed }
+    ATR_Length(20),
+    Manual_Kill_Switch(False),         { True = flatten and no entries }
+    Holiday_Flat_Time(345),
+    Registry_Valid_Until(1270101),     { holiday registry horizon }
+    Settlement_Flat_Time(1230),
+    Weekly_MA_Fast(20),
+    Weekly_MA_Slow(60),
+    ReEntry_On              ( 1    ),
+    ReEntry_Close_Gate      ( 1    ),
+    ReEntry_Trend_Gate      ( 1    ),
+    ReEntry_Weekly_Gate     ( 1    ),
+    ReEntry_MABase_Gate     ( 0    ),
+    ReEntry_WeeklyTier_Gate ( 0    ),
+    ReEntry_Trend_Ratio     ( 0.20 ),
+    DTrend_Gate             ( 1    ),
+    DTrend_Fast             ( 20   ),
+    DTrend_Slow             ( 60   ),
+    Loss_Pause_N            ( 3    ),  { 0 = off }
+    Loss_Pause_K            ( 1    ),
+    SL_Max_Pts              ( 450  ),  { 0 = off }
+    Day_Loss_Stop_N         ( 0    ),  { 0 = off }
+    DTrend_Slope_N          ( 4    ),  { 0 = off }
+    Guard_Persist           ( 1    );  { 0 = off }
+
+Variables:
+    maBase(0),
+    maTrail(0),
+    Breakout_Level(0),
+    Current_ATR(0),
+    Daily_ATR(0),
+    Cond_Breakout(False),
+    MP(0),
+    Entry_P(0),
+    Exit_Price_ATR(0),
+    Exit_Price_Cap(0),
+    Exit_Price_Pct(0),
+    Exit_Price_SL(0),
+    Exit_Price_Trail(0),
+    Final_Exit_Price(0),
+    v_SL_Locked(False),
+    v_Frozen_SL(0),
+
+    { holiday / registry }
+    Init_Done(False),
+    v_Holiday_Block(False),
+    v_Registry_Expired(False),
+    idx(0),
+
+    { settlement }
+    v_Settlement_Day(False),
+
+    { year MDD label (display only) }
+    MyEquity(0),
+    Current_Year_Log(0),
+    Year_High_Equity(0),
+    Year_DD(0),
+    Year_Max_DD(0),
+    txtID(0),
+    txtNow(-1),
+    strMsg(""),
+
+    { weekly filter }
+    v_Weekly_MA_Fast(0),
+    v_Weekly_MA_Slow(0),
+    v_Weekly_Filter(false),
+
+    { re-entry }
+    v_Prev_MP(0),
+    v_ReEntry_Armed(False),
+    v_ReEntry_Price(0),
+    v_IsReEntry(False),
+    v_Last_EntryPrice(0),
+
+    v_Frozen_Gap(0),           { set at main entry: entry - MA61 }
+    v_Frozen_MABase(0),        { W2 reference }
+    v_Frozen_SL_Orig(0),       { inherited stop PRICE }
+    v_Wk_Entry_Fast(False),    { W3 reference }
+    v_Wk_Entry_Slow(False),
+
+    { re-entry derived at bar close }
+    v_TrendRatio(0),
+    v_Wk_Now_Fast(False),
+    v_Wk_Now_Slow(False),
+    v_Wk_Tier_OK(False),
+
+    { switch mirrors }
+    v_ReEntry_On(False),
+    v_RE_Close_Gate(False),
+    v_RE_Trend_Gate(False),
+    v_RE_Weekly_Gate(False),
+    v_RE_MABase_Gate(False),
+    v_RE_WeeklyTier_Gate(False),
+
+    { daily gate, loss pause, day stop, engine stop distance }
+    v_DT_Fast(0),
+    v_DT_Slow(0),
+    v_DT_OK(true),
+    v_DT_Slow_Ago(0),
+    v_PrevTT(0),
+    v_NP_Base(0),
+    v_LastPnL(0),
+    v_LossRun(0),
+    v_SkipLeft(0),
+    v_Guard_D(0),
+    v_DayKey(0),
+    v_PrevDayKey(0),
+    v_DayLossRun(0),
+    v_DayBlock(false);
+
+Variables: IntraBarPersist
+    Registry_Warn_ID(-1),
+    posbleProfit_Long(0),
+    stopProfitPrice_L(0),
+    v_Trail_High(0);
+
+Array:
+    Holiday_Tail[80](0);
+
+{ ===== 0. Holiday tail registry: date stamp of the 00:00-05:00 bars of
+  the last night session before each closure (last trading day + 1).
+  Source: TAIFEX annual calendars (2026 verified). ===== }
+if Init_Done = False then begin
+
+    { --- 2019 --- }
+    Holiday_Tail[1]  = 1190913;
+    Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;  { 2020 New Year }
+
+    { --- 2020 --- }
+    Holiday_Tail[4]  = 1200121;  { CNY }
+    Holiday_Tail[5]  = 1200228;  { 228 }
+    Holiday_Tail[6]  = 1200402;  { Tomb Sweeping }
+    Holiday_Tail[7]  = 1200501;  { * Labor Day }
+    Holiday_Tail[8]  = 1200625;  { Dragon Boat }
+    Holiday_Tail[9]  = 1201001;  { Mid-Autumn }
+    Holiday_Tail[10] = 1201009;  { National Day }
+    Holiday_Tail[11] = 1210101;  { 2021 New Year }
+
+    { --- 2021 --- }
+    Holiday_Tail[12] = 1210206;  { CNY }
+    Holiday_Tail[13] = 1210227;  { 228 }
+    Holiday_Tail[14] = 1210402;  { Tomb Sweeping }
+    Holiday_Tail[15] = 1210612;  { Dragon Boat }
+    Holiday_Tail[16] = 1210918;  { Mid-Autumn }
+    Holiday_Tail[17] = 1211009;  { National Day }
+    Holiday_Tail[18] = 1211231;  { 2022 New Year }
+
+    { --- 2022 --- }
+    Holiday_Tail[19] = 1220127;  { CNY }
+    Holiday_Tail[20] = 1220226;  { 228 }
+    Holiday_Tail[21] = 1220402;  { Tomb Sweeping }
+    Holiday_Tail[22] = 1220430;  { * Labor Day (5/2 make-up) }
+    Holiday_Tail[23] = 1220603;  { Dragon Boat }
+    Holiday_Tail[24] = 1220909;  { Mid-Autumn }
+    Holiday_Tail[25] = 1221008;  { National Day }
+    Holiday_Tail[26] = 1221231;  { 2023 New Year }
+
+    { --- 2023 --- }
+    Holiday_Tail[27] = 1230118;  { CNY }
+    Holiday_Tail[28] = 1230225;  { 228 }
+    Holiday_Tail[29] = 1230401;  { Tomb Sweeping }
+    Holiday_Tail[30] = 1230429;  { * Labor Day }
+    Holiday_Tail[31] = 1230622;  { Dragon Boat }
+    Holiday_Tail[32] = 1230929;  { Mid-Autumn }
+    Holiday_Tail[33] = 1231007;  { National Day }
+    Holiday_Tail[34] = 1231230;  { 2024 New Year }
+
+    { --- 2024 --- }
+    Holiday_Tail[35] = 1240206;  { CNY }
+    Holiday_Tail[36] = 1240228;  { 228 }
+    Holiday_Tail[37] = 1240404;  { Tomb Sweeping }
+    Holiday_Tail[38] = 1240501;  { * Labor Day }
+    Holiday_Tail[39] = 1240608;  { Dragon Boat }
+    Holiday_Tail[40] = 1240917;  { Mid-Autumn }
+    Holiday_Tail[41] = 1241010;  { National Day }
+    Holiday_Tail[42] = 1250101;  { 2025 New Year }
+
+    { --- 2025 (* = reconstructed) --- }
+    Holiday_Tail[43] = 1250123;  { CNY }
+    Holiday_Tail[44] = 1250228;  { 228 }
+    Holiday_Tail[45] = 1250403;  { Tomb Sweeping }
+    Holiday_Tail[46] = 1250501;  { * Labor Day }
+    Holiday_Tail[47] = 1250530;  { Dragon Boat }
+    Holiday_Tail[48] = 1250927;  { * Teachers Day (9/29 make-up) }
+    Holiday_Tail[49] = 1251004;  { Mid-Autumn }
+    Holiday_Tail[50] = 1251010;  { * National Day }
+    Holiday_Tail[51] = 1251024;  { * Retrocession Day (10/24 make-up) }
+    Holiday_Tail[52] = 1251225;  { * Constitution Day }
+    Holiday_Tail[53] = 1260101;  { 2026 New Year }
+
+    { --- 2026 (TAIFEX 115-yr calendar) --- }
+    Holiday_Tail[54] = 1260212;  { CNY }
+    Holiday_Tail[55] = 1260227;  { 228: 2/27 make-up, eve 2/26 }
+    Holiday_Tail[56] = 1260403;  { Children/Tomb 4/3-4/6, eve 4/2 }
+    Holiday_Tail[57] = 1260501;  { Labor Day 5/1-5/3, eve 4/30 }
+    Holiday_Tail[58] = 1260619;  { Dragon Boat 6/19-6/21, eve 6/18 }
+    Holiday_Tail[59] = 1260925;  { Mid-Autumn + Teachers 9/25-9/28, eve 9/24 }
+    Holiday_Tail[60] = 1261009;  { National Day 10/9-10/11, eve 10/8 }
+    Holiday_Tail[61] = 1261024;  { Retrocession, Saturday tail }
+    Holiday_Tail[62] = 1261225;  { Constitution 12/25-12/27, eve 12/24 }
+    Holiday_Tail[63] = 1270101;  { 2027 New Year 1/1-1/3, eve 12/31 }
+
+    Init_Done = True;
+
+end;
+
+{ ===== 1. Indicators (bar close) ===== }
+if BarStatus(1) = 2 then begin
+    maBase  = Average(Close, Length60);
+    maTrail = Average(Close, Length20);
+
+    Current_ATR = AvgTrueRange(ATR_Length) of Data1;
+    Daily_ATR   = AvgTrueRange(ATR_Length)[1] of Data2;
+
+    Breakout_Level = maBase + (Current_ATR * Entry_Multiplier);
+
+    Cond_Breakout  = (Close Crosses Over Breakout_Level);
+end;
+
+{ ===== 1a. Weekly filter, daily gate, day key, loss count (bar close) ===== }
+if BarStatus(1) = 2 then begin
+    v_Weekly_MA_Fast = Average(Close, Weekly_MA_Fast) of Data3;
+    v_Weekly_MA_Slow = Average(Close, Weekly_MA_Slow) of Data3;
+
+    if (Close of Data3 > v_Weekly_MA_Fast) or
+       (Close of Data3 > v_Weekly_MA_Slow) then
+        v_Weekly_Filter = true
+    else
+        v_Weekly_Filter = false;
+
+    v_DT_OK = true;                       { daily gate: previous completed daily bar }
+    if DTrend_Gate <> 0 then begin
+        v_DT_Fast = Average(Close, DTrend_Fast)[1] of Data2;
+        v_DT_Slow = Average(Close, DTrend_Slow)[1] of Data2;
+        v_DT_OK = (v_DT_Fast > v_DT_Slow);
+
+        if DTrend_Slope_N > 0 then begin
+            v_DT_Slow_Ago = Average(Close, DTrend_Slow)[1 + DTrend_Slope_N] of Data2;
+            if v_DT_Slow > v_DT_Slow_Ago then v_DT_OK = true;
+        end;
+    end;
+
+    { night session and next day session share one key }
+    v_DayKey = DateToJulian(Date) + IFF(Time >= 1500, 1, 0);
+    if v_DayKey <> v_PrevDayKey then begin
+        v_DayLossRun = 0;
+        v_DayBlock   = false;
+    end;
+    v_PrevDayKey = v_DayKey;
+
+    { loss streak: P&L of each closed trade, counted on flat bar closes }
+    if MarketPosition = 0 then begin
+        if TotalTrades <> v_PrevTT then begin
+            v_LastPnL = NetProfit - v_NP_Base;
+            if v_LastPnL < 0 then v_DayLossRun = v_DayLossRun + 1 else v_DayLossRun = 0;
+            if Day_Loss_Stop_N > 0 and v_DayLossRun >= Day_Loss_Stop_N then
+                v_DayBlock = true;
+            if v_LastPnL < 0 then v_LossRun = v_LossRun + 1 else v_LossRun = 0;
+            if Loss_Pause_N > 0 and v_LossRun >= Loss_Pause_N then begin
+                v_SkipLeft = Loss_Pause_K;
+                v_LossRun  = 0;
+            end;
+        end;
+        v_NP_Base = NetProfit;
+    end;
+    v_PrevTT = TotalTrades;
+end;
+
+{ ===== 1b. Re-entry derived state (bar close). Trend ratio = (Close - MA61)
+  / (entry - MA61 at entry); a non-positive gap never arms. ===== }
+if BarStatus(1) = 2 then begin
+    v_ReEntry_On         = ( ReEntry_On              <> 0 );
+    v_RE_Close_Gate      = ( ReEntry_Close_Gate      <> 0 );
+    v_RE_Trend_Gate      = ( ReEntry_Trend_Gate      <> 0 );
+    v_RE_Weekly_Gate     = ( ReEntry_Weekly_Gate     <> 0 );
+    v_RE_MABase_Gate     = ( ReEntry_MABase_Gate     <> 0 );
+    v_RE_WeeklyTier_Gate = ( ReEntry_WeeklyTier_Gate <> 0 );
+
+    if v_Frozen_Gap > 0 then
+        v_TrendRatio = (Close - maBase) / v_Frozen_Gap
+    else
+        v_TrendRatio = 0;
+
+    v_Wk_Now_Fast = (Close of Data3 > v_Weekly_MA_Fast);
+    v_Wk_Now_Slow = (Close of Data3 > v_Weekly_MA_Slow);
+    v_Wk_Tier_OK  = True;
+    if v_Wk_Entry_Fast = True and v_Wk_Now_Fast = False then
+        v_Wk_Tier_OK = False;
+    if v_Wk_Entry_Slow = True and v_Wk_Now_Slow = False then
+        v_Wk_Tier_OK = False;
+end;
+
+{ ===== 1c. Holiday tail and registry horizon (bar close) ===== }
+if BarStatus(1) = 2 then begin
+    v_Holiday_Block = False;
+
+    if Time <= 500 then begin
+        for idx = 1 to 80 begin
+            if Date = Holiday_Tail[idx] then
+                v_Holiday_Block = True;
+        end;
+    end;
+
+    v_Registry_Expired = False;
+
+    if Date > Registry_Valid_Until then begin
+        v_Registry_Expired = True;
+        v_Holiday_Block    = True;
+    end;
+end;
+
+{ settlement day = 3rd Wednesday (day 15-21) }
+v_Settlement_Day = (DayOfWeek(Date) = 3) and
+                   (DayOfMonth(Date) >= 15) and
+                   (DayOfMonth(Date) <= 21);
+
+{ chart warning 30 days before the registry horizon }
+if LastBarOnChart and
+   DateToJulian(Date) >= DateToJulian(Registry_Valid_Until) - 30 then begin
+    if Registry_Warn_ID < 0 then begin
+        Registry_Warn_ID = Text_New(Date, Time, High + 400,
+            "P5 HOLIDAY REGISTRY EXPIRES " +
+            NumToStr(Registry_Valid_Until, 0) +
+            " - REBUILD FROM TAIFEX CALENDAR");
+        Text_SetColor(Registry_Warn_ID, Red);
+        Text_SetSize(Registry_Warn_ID, 14);
+        Text_SetAttribute(Registry_Warn_ID, 1, true);
+    end;
+end;
+
+{ ===== 2. Engine stop and entries ===== }
+MP = MarketPosition;
+
+{ P3b engine stop, per contract: distance = tightest stop leg, frozen at the
+  last flat calculation; re-issued every calculation while long (#32). }
+SetStopContract;
+if MP <= 0 then begin
+    if SL_Pct > 0 then
+        v_Guard_D = MinList(Current_ATR * SL_Multiplier,
+                            MinList(Daily_ATR * Daily_Cap_Multiplier,
+                                    Close * SL_Pct / 100))
+    else
+        v_Guard_D = MinList(Current_ATR * SL_Multiplier,
+                            Daily_ATR * Daily_Cap_Multiplier);
+
+    if SL_Max_Pts > 0 then
+        v_Guard_D = MinList(v_Guard_D, SL_Max_Pts);
+    SetStopLoss(v_Guard_D * BigPointValue);
+end
+else if Guard_Persist <> 0 then
+    SetStopLoss(v_Guard_D * BigPointValue);
+
+if BarStatus(1) = 2 then begin
+
+    { re-entry state: MUST run before both entry blocks.
+      (1) arm after an exit (2) disarm when the thesis is gone or on a
+      forced-flat bar (holiday tail, settlement day, registry end, kill),
+      so a forced exit never arms (3) a new breakout clears it }
+    if v_Prev_MP = 1 and MP = 0 and v_Frozen_Gap > 0 then begin
+        v_ReEntry_Armed = True;
+        v_ReEntry_Price = v_Last_EntryPrice;
+    end;
+
+    if v_ReEntry_Armed = True then begin
+        if v_TrendRatio <= 0 or v_Weekly_Filter = false or
+           v_Holiday_Block or v_Settlement_Day or
+           v_Registry_Expired or Manual_Kill_Switch then begin
+            v_ReEntry_Armed = False;
+            v_ReEntry_Price = 0;
+        end;
+    end;
+
+    if Cond_Breakout then begin
+        v_ReEntry_Armed = False;
+        v_ReEntry_Price = 0;
+    end;
+
+    { main entry }
+    if MP = 0 and
+       Cond_Breakout and
+       (v_Weekly_Filter = true) and
+       (v_DT_OK = true) and
+       (v_DayBlock = false) and
+       (Manual_Kill_Switch = False) and
+       (v_Holiday_Block = false) and
+       (v_Settlement_Day = false) then begin
+        if v_SkipLeft > 0 then
+            v_SkipLeft = v_SkipLeft - 1        { loss pause: signal skipped }
+        else begin
+            Buy ("TL_Entry") next bar at Market;
+            v_IsReEntry = False;
+        end;
+    end;
+
+    { re-entry: compliance gates must stay identical to the main entry }
+    if MP = 0 and
+       v_ReEntry_On    = True and
+       v_ReEntry_Armed = True and
+       ( v_RE_Close_Gate      = False or Close <= v_ReEntry_Price ) and
+       ( v_RE_Trend_Gate      = False or v_TrendRatio >= ReEntry_Trend_Ratio ) and
+       ( v_RE_Weekly_Gate     = False or v_Weekly_Filter = true ) and
+       ( v_RE_MABase_Gate     = False or maBase >= v_Frozen_MABase ) and
+       ( v_RE_WeeklyTier_Gate = False or v_Wk_Tier_OK = True ) and
+       (v_DT_OK = true) and
+       (v_DayBlock = false) and
+       (Manual_Kill_Switch = False) and
+       (v_Holiday_Block  = false) and
+       (v_Settlement_Day = false) then begin
+        if v_SkipLeft > 0 then begin
+            v_SkipLeft      = v_SkipLeft - 1;  { loss pause: re-entry skipped }
+            v_ReEntry_Armed = False;
+            v_ReEntry_Price = 0;
+        end else begin
+            v_IsReEntry = True;
+            Buy ("TL_ReEntry") next bar at v_ReEntry_Price stop;
+        end;
+    end;
+end;
+
+{ ===== 3. Exits ===== }
+if MP > 0 then begin
+
+    Entry_P = EntryPrice;
+    v_Last_EntryPrice = Entry_P;   { re-entry order price }
+
+    { frozen stop = tightest leg (MaxList of prices), set at the entry bar
+      close; a re-entry never gets a looser stop than the original trade }
+    if BarStatus(1) = 2 and v_SL_Locked = False then begin
+        Exit_Price_ATR = Entry_P - (Current_ATR * SL_Multiplier);
+        Exit_Price_Cap = Entry_P - (Daily_ATR   * Daily_Cap_Multiplier);
+        if SL_Pct > 0 then
+            Exit_Price_Pct = Entry_P - (Entry_P * SL_Pct / 100)
+        else
+            Exit_Price_Pct = 0;
+
+        if SL_Max_Pts > 0 then
+            Exit_Price_Pct = MaxList(Exit_Price_Pct, Entry_P - SL_Max_Pts);
+
+        if v_IsReEntry = True and v_Frozen_SL_Orig > 0 then
+            v_Frozen_SL = MaxList(v_Frozen_SL_Orig,
+                          MaxList(Exit_Price_ATR,
+                          MaxList(Exit_Price_Cap, Exit_Price_Pct)))
+        else begin
+            v_Frozen_SL      = MaxList(Exit_Price_ATR,
+                               MaxList(Exit_Price_Cap, Exit_Price_Pct));
+            v_Frozen_SL_Orig = v_Frozen_SL;
+            v_Frozen_Gap     = Entry_P - maBase;
+            v_Frozen_MABase  = maBase;
+            v_Wk_Entry_Fast  = (Close of Data3 > v_Weekly_MA_Fast);
+            v_Wk_Entry_Slow  = (Close of Data3 > v_Weekly_MA_Slow);
+        end;
+        v_SL_Locked    = True;
+    end;
+
+    Exit_Price_SL = v_Frozen_SL;
+
+    { profit lock: peak on tick price, ratchets up only }
+    if (Close - Entry_P) >= stopProfitPoints_Long then begin
+        if (Close - Entry_P) > posbleProfit_Long then
+            posbleProfit_Long = Close - Entry_P;
+        stopProfitPrice_L = Entry_P +
+            (posbleProfit_Long * (1.0 - profitReturnPrcnt_Long / 100.0));
+    end;
+
+    { MA55 trail, ratchets up only }
+    v_Trail_High = MaxList(v_Trail_High, maTrail - TrailOffset);
+    Exit_Price_Trail = v_Trail_High;
+    Final_Exit_Price = MaxList(Exit_Price_Trail,
+                       MaxList(Exit_Price_SL, stopProfitPrice_L));
+
+    { labels: loss side TL_SL / TL_SL_Gap / TL_TSL, profit side TL_SP /
+      TL_SP_Gap / TL_TP (side judged at order placement) }
+    if BarStatus(1) = 2 and Close < Final_Exit_Price then begin
+        if Final_Exit_Price >= Entry_P then
+            Sell ("TL_SP_Gap") next bar at Market
+        else
+            Sell ("TL_SL_Gap") next bar at Market;
+    end else begin
+        if AbsValue(Final_Exit_Price - Exit_Price_SL) < 0.001 then
+            Sell ("TL_SL") next bar at Final_Exit_Price Stop
+        else if stopProfitPrice_L > 0 and
+                AbsValue(Final_Exit_Price - stopProfitPrice_L) < 0.001 then
+            Sell ("TL_SP") next bar at Final_Exit_Price Stop
+        else if Exit_Price_Trail >= Entry_P then
+            Sell ("TL_TP") next bar at Final_Exit_Price Stop
+        else
+            Sell ("TL_TSL") next bar at Final_Exit_Price Stop;
+    end;
+
+end else begin
+    { Flat: release locks for the next trade }
+    v_SL_Locked       = False;
+    v_Frozen_SL       = 0;
+    posbleProfit_Long = 0;
+    stopProfitPrice_L = 0;
+    v_Trail_High      = 0;
+end;
+
+{ ===== 4. Forced flat: registry end, holiday tail, settlement, kill ===== }
+if MP > 0 then begin
+
+    if v_Registry_Expired then begin
+        Sell ("TL_RegistryEnd") next bar at Market;
+    end
+    else if v_Holiday_Block and Time >= Holiday_Flat_Time then begin
+        Sell ("TL_Holiday") next bar at Market;
+    end
+    else if v_Settlement_Day and Time >= Settlement_Flat_Time then begin
+        Sell ("TL_Settlement") next bar at Market;
+    end;
+
+    if Manual_Kill_Switch = True then begin
+        Sell ("TL_Kill") next bar at Market;
+    end;
+
+end;
+
+{ ===== 5. Year MDD label (display only) ===== }
+if BarStatus(1) = 2 then begin
+    if CurrentBar = 1 then begin
+        Current_Year_Log = Year(Date);
+        Year_High_Equity = InitialCapital;
+        Year_Max_DD      = 0;
+    end;
+    MyEquity = InitialCapital + NetProfit + OpenPositionProfit;
+    if Year(Date) <> Current_Year_Log then begin
+        if Current_Year_Log >= 2024 then begin
+            strMsg = "Year: " + NumToStr(Current_Year_Log, 0) + NewLine +
+                     "MDD: $" + NumToStr(Year_Max_DD, 0);
+            txtID = Text_New(Date[1], Time[1], High[1] + 200, strMsg);
+            Text_SetStyle(txtID, 2, 1);
+            Text_SetColor(txtID, Green);
+            Text_SetSize(txtID, 12);
+            Text_SetAttribute(txtID, 1, true);
+        end;
+        Current_Year_Log = Year(Date);
+        Year_High_Equity = MyEquity[1];
+        Year_Max_DD      = 0;
+    end;
+    if MyEquity > Year_High_Equity then Year_High_Equity = MyEquity;
+    Year_DD = Year_High_Equity - MyEquity;
+    if Year_DD > Year_Max_DD then Year_Max_DD = Year_DD;
+    if LastBarOnChart and Current_Year_Log >= 2024 then begin
+        strMsg = "Year: " + NumToStr(Current_Year_Log, 0) + NewLine +
+                 "MDD: $" + NumToStr(Year_Max_DD, 0);
+        if txtNow < 0 then begin
+            txtNow = Text_New(Date, Time, High + 200, strMsg);
+            Text_SetStyle(txtNow, 2, 1);
+            Text_SetColor(txtNow, Green);
+            Text_SetSize(txtNow, 12);
+            Text_SetAttribute(txtNow, 1, true);
+        end else begin
+            Text_SetLocation(txtNow, Date, Time, High + 200);
+            Text_SetString(txtNow, strMsg);
+        end;
+    end;
+end;
+
+{ last line, outside every block: previous bar position for the re-entry arm }
+v_Prev_MP = MarketPosition;
