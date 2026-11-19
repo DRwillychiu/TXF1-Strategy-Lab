@@ -1,6 +1,6 @@
 # 現行版本總表 —— 單一真相來源
 
-**最後校對：2026-10-31 21:00**（§1 改為 10/5 換版後的實際上架版；四支新版複製進 `strategies/live/`，舊上架檔移到 `strategies/research/archive/live_until_20261005/`）；前一次 2026-10-04 11:30**（§1.1 改為 10/5 五支換版）；前一次 **2026-10-03 17:13**（L2 v5.10 定案）；前一次 **2026-10-02 23:10**（L4 v14.9 研究版；L4 T8 ＝ SL 0.8＋分批 20 驗證完成，10/5 上架；L5 v19.18 定案 10/5 上架；L5 v19.19 研究版；L3 v18.2 驗證完成；前一次 2026-10-02 20:20）
+**最後校對：2026-11-19**（§1 五支換成 2027 假日表版：五支 V1.1.0（第二次上架測試）；舊上架檔在 `strategies/research/archive/live_until_20261119/`）；前一次 2026-10-31 21:00（§1 改為 10/5 換版後的實際上架版；四支新版複製進 `strategies/live/`，舊上架檔移到 `strategies/research/archive/live_until_20261005/`）；前一次 2026-10-04 11:30**（§1.1 改為 10/5 五支換版）；前一次 **2026-10-03 17:13**（L2 v5.10 定案）；前一次 **2026-10-02 23:10**（L4 v14.9 研究版；L4 T8 ＝ SL 0.8＋分批 20 驗證完成，10/5 上架；L5 v19.18 定案 10/5 上架；L5 v19.19 研究版；L3 v18.2 驗證完成；前一次 2026-10-02 20:20）
 **校對方式：直接讀每一支 `.pla` 的 `Version:` 與 `MC Load Name` 標頭，非引用二手文件。**
 
 > **這份檔案存在的理由**：在 2026-09-06 之前，要知道「L1 現在是哪一版」
@@ -17,14 +17,16 @@
 
 | 策略 | 版本 | MC Load Name | 時間框架 | IOG | 行數 |
 |---|---|---|---|---|---|
-| **L1_TrendLong** | **V3.2**（Willy 10/2 23:16：實盤跑的是 V3.2＝V3.1＋二次進場；本檔原記 V3.1，實盤輸入與載入名稱待截圖確認） | `WILLY_ATR_LONG_60M` ⚠（未確認；V3.2 研究版標頭為 `WILLY_ATR_LONG_45M_V32_RESEARCH`） | Data1 45M / Data2 Daily / Data3 Weekly | **true** | 707 |
-| **L2_TrendShort** | **v5.11**（10/5 起） | `Trendbearish_V1` | 60M 單一資料流 | false | 777 |
-| **L3_ConsolidationLong** | **v18.4**（10/5 起；交易與 v18.2 相同） | `STRATEGY_WILLY_LONG_C` | Data1 15M / Data2 60M / Data3 Daily | false | 383 |
-| **L4_ConsolidationShort** | **v14.10**（10/5 起，預設 ＝ T8） | `STRATEGY_WILLY_SHORT_CTEST2` | Data1 15M / Data2 60M / Data3 Daily | **false（明示）** | 508 |
-| **L5_BreakoutLong** | **v19.20**（10/5 起，`State_Start_Date` 1261005） | `STRATEGY_WILLY_LONG_BREAKOUT_C` | Data1 15M / Data2 Daily / Data3 Weekly | false | 776 |
+| **L1_TrendLong** | **V1.1.0**（2026-11-19 起；＝ V3.8 ＋ 2027 假日表） | `WILLY_ATR_LONG_60M` | Data1 45M / Data2 Daily / Data3 Weekly | **true** | 478 |
+| **L2_TrendShort** | **V1.1.0**（2026-11-19 起；＝ v5.12 ＋ 2027 假日表） | `Trendbearish_V1` | 60M 單一資料流 | false | 689 |
+| **L3_ConsolidationLong** | **V1.1.0**（2026-11-19 起；＝ v18.4 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_C` | Data1 15M / Data2 60M / Data3 Daily | false | 340 |
+| **L4_ConsolidationShort** | **V1.1.0**（2026-11-19 起；＝ v14.10 ＋ 2027 假日表） | `STRATEGY_WILLY_SHORT_CTEST2` | Data1 15M / Data2 60M / Data3 Daily | **false（明示）** | 437 |
+| **L5_BreakoutLong** | **V1.1.0**（2026-11-19 起；＝ v19.20 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_BREAKOUT_C` | Data1 15M / Data2 Daily / Data3 Weekly | false | 644 |
 
-- **⚠ L1 版本待確認（2026-10-28）**：10/5 決定維持 V3.2，但 10/28 圖上下單大師讀的檔案是 `Z:\L1_TrendLong_v3.8.txt`。確認前 L1 對帳基準不定；`strategies/live/L1_TrendLong/` 仍是 V3.1 檔（V3.2 ＝ V3.1＋二次進場，輸入值不同）。
+- L1 版本（2026-11-19 更正）：Willy 11/19 確認實盤是 V3.8，2026-11-19 換成 V1.1.0，`strategies/live/L1_TrendLong/` 已是 V1.1.0 原檔（原寫：L1 版本待確認，上架資料夾是 V3.1 檔）
 - 10/5 換版的四支：`strategies/live/` 已換成新版；舊上架檔（L2 v5.3、L3 v18.2、L4 v14.6、L5 v19.9）在 `strategies/research/archive/live_until_20261005/`，回退用。
+
+- **2027 假日表換版（2026-11-19）**：Willy 在 MC 換完五支（五支 V1.1.0（第二次上架測試）；交易邏輯 ＝ L1 V3.8、L2 v5.12、L3 v18.4、L4 v14.10、L5 v19.20，只加 2027 假日 11 筆、`Registry_Valid_Until` 1271231）。`strategies/live/` 換成這五個研究版原檔；舊上架檔在 `strategies/research/archive/live_until_20261119/`，回退用。決定：`docs/decisions/registry_2027_20261119.md`
 
 **⚠ L1 的 MC Load Name 寫 `60M`，實際壓縮是 45M。**
 標頭已註明：名稱保留是為了 live 連續性，改名會斷掉既有訊號。**不要「順手修正」。**
@@ -56,11 +58,11 @@
 
 | 策略 | 現行（MC） | 換成 | 檔案 | MC Load Name | 狀態 |
 |---|---|---|---|---|---|
-| **L1_TrendLong** | V3.8 | **V1.1.0**（`L1_v1.1.0`） | `strategies/research/L1_TrendLong/L1_v1.1.0/L1_TrendLong_v1.1.0.pla` | `WILLY_ATR_LONG_60M` | 排定 |
-| **L2_TrendShort** | v5.12（上架機原碼） | **V1.1.0**（`L2_v1.1.0`；回升保本改關 `Reb_On` 0，圖上輸入值也要改） | `strategies/research/L2_TrendShort/L2_v1.1.0/L2_TrendShort_v1.1.0.pla` | `Trendbearish_V1` | 排定 |
-| **L3_ConsolidationLong** | v18.4 | **V1.1.0**（`L3_v1.1.0`） | `strategies/research/L3_ConsolidationLong/L3_v1.1.0/L3_ConsolidationLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_C` | 排定 |
-| **L4_ConsolidationShort** | v14.10 | **V1.1.0**（`L4_v1.1.0`） | `strategies/research/L4_ConsolidationShort/L4_v1.1.0/L4_ConsolidationShort_v1.1.0.pla` | `STRATEGY_WILLY_SHORT_CTEST2` | 排定 |
-| **L5_BreakoutLong** | v19.20 | **V1.1.0**（`L5_v1.1.0`） | `strategies/research/L5_BreakoutLong/L5_v1.1.0/L5_BreakoutLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_BREAKOUT_C` | 排定 |
+| **L1_TrendLong** | V3.8 | **V1.1.0**（`L1_v1.1.0`） | `strategies/research/L1_TrendLong/L1_v1.1.0/L1_TrendLong_v1.1.0.pla` | `WILLY_ATR_LONG_60M` | **已換版 2026-11-19** |
+| **L2_TrendShort** | v5.12（上架機原碼） | **V1.1.0**（`L2_v1.1.0`；回升保本改關 `Reb_On` 0，圖上輸入值也要改） | `strategies/research/L2_TrendShort/L2_v1.1.0/L2_TrendShort_v1.1.0.pla` | `Trendbearish_V1` | **已換版 2026-11-19** |
+| **L3_ConsolidationLong** | v18.4 | **V1.1.0**（`L3_v1.1.0`） | `strategies/research/L3_ConsolidationLong/L3_v1.1.0/L3_ConsolidationLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_C` | **已換版 2026-11-19** |
+| **L4_ConsolidationShort** | v14.10 | **V1.1.0**（`L4_v1.1.0`） | `strategies/research/L4_ConsolidationShort/L4_v1.1.0/L4_ConsolidationShort_v1.1.0.pla` | `STRATEGY_WILLY_SHORT_CTEST2` | **已換版 2026-11-19** |
+| **L5_BreakoutLong** | v19.20 | **V1.1.0**（`L5_v1.1.0`） | `strategies/research/L5_BreakoutLong/L5_v1.1.0/L5_BreakoutLong_v1.1.0.pla` | `STRATEGY_WILLY_LONG_BREAKOUT_C` | **已換版 2026-11-19** |
 
 - **截止：2027-01-04（一）08:45 開盤前**。不換：五支從 2027 年第一個開盤起擋進場、持倉強制平倉；2026-12-02 起圖上紅字
 - 只改假日表（`Holiday_Tail[64]`–`[74]` 11 筆）與 `Registry_Valid_Until` 1270101 → 1271231；2027-02-02 以前的交易不變

@@ -12,11 +12,11 @@
 
 | 策略 | 類別 | 方向 | 版本 | 標籤前綴 | 基準淨利（7/26 舊值） | BOSS_VIEW |
 |------|------|------|------|----------|--------------|----------|
-| **L1** TrendLong | 趨勢追蹤 | 純多 | **V3.2**（本資料夾的檔案是 V3.1；10/28 圖上下單大師檔名為 v3.8，實際版本待確認） | `TL_` | +3,216,200（V2.6 時） | [📋](L1_TrendLong/L1_TrendLong_BOSS_VIEW.md)（舊版） |
-| **L2** TrendShort | 趨勢追蹤 | 純空 | **v5.11**（10/5 起） | `TS_` | 未更新 | [📋](L2_TrendShort/L2_TrendShort_BOSS_VIEW.md)（舊版） |
-| **L3** ConsolidationLong | 盤整區間 | 純多 | **v18.4**（10/5 起；交易與 v18.2 相同） | `CL_` | 未更新 | [📋](L3_ConsolidationLong/L3_ConsolidationLong_BOSS_VIEW.md)（舊版） |
-| **L4** ConsolidationShort | 盤整反轉 | 純空 | **v14.10**（10/5 起，T8） | `CS_` | 未更新 | [📋](L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md)（舊版） |
-| **L5** BreakoutLong | 盤整突破 | 純多 | **v19.20**（10/5 起） | `BL_` | 未更新 | [📋](L5_BreakoutLong/L5_BreakoutLong_BOSS_VIEW.md)（舊版） |
+| **L1** TrendLong | 趨勢追蹤 | 純多 | **V1.1.0**（2026-11-19 起；＝ V3.8 ＋ 2027 假日表） | `TL_` | +3,216,200（V2.6 時） | [📋](L1_TrendLong/L1_TrendLong_BOSS_VIEW.md)（舊版） |
+| **L2** TrendShort | 趨勢追蹤 | 純空 | **V1.1.0**（2026-11-19 起；＝ v5.12 ＋ 2027 假日表） | `TS_` | 未更新 | [📋](L2_TrendShort/L2_TrendShort_BOSS_VIEW.md)（舊版） |
+| **L3** ConsolidationLong | 盤整區間 | 純多 | **V1.1.0**（2026-11-19 起；＝ v18.4 ＋ 2027 假日表） | `CL_` | 未更新 | [📋](L3_ConsolidationLong/L3_ConsolidationLong_BOSS_VIEW.md)（舊版） |
+| **L4** ConsolidationShort | 盤整反轉 | 純空 | **V1.1.0**（2026-11-19 起；＝ v14.10 ＋ 2027 假日表） | `CS_` | 未更新 | [📋](L4_ConsolidationShort/L4_ConsolidationShort_BOSS_VIEW.md)（舊版） |
+| **L5** BreakoutLong | 盤整突破 | 純多 | **V1.1.0**（2026-11-19 起；＝ v19.20 ＋ 2027 假日表） | `BL_` | 未更新 | [📋](L5_BreakoutLong/L5_BreakoutLong_BOSS_VIEW.md)（舊版） |
 
 📋 = **BOSS_VIEW**（老闆快速 view，每隻策略強制附，規範見 [`docs/methodology/BOSS_VIEW_TEMPLATE.md`](../../docs/methodology/BOSS_VIEW_TEMPLATE.md)）
 
@@ -26,8 +26,8 @@
 
 | 模組 | 用途 | L1 | L2 | L3 | L4 | L5 |
 |------|------|----|----|----|----|----|
-| Holiday_Tail[80] 63 筆 TAIFEX 登錄表 | 假日尾段日強制歸零 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Registry_Valid_Until = 1270101 | 視界 fail-safe | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Holiday_Tail[80] 74 筆 TAIFEX 登錄表（2026-11-19 起，到 2027 年底） | 假日尾段日強制歸零 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Registry_Valid_Until = 1271231 | 視界 fail-safe | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Manual_Kill_Switch | 緊急停市 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Frozen Initial SL | 進場根鎖 ATR（防 reload 漂移） | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **SetStopContract** | 引擎停損 per-contract（非 total） | ✅ | ✅ | ✅ | ✅ | ✅ |
