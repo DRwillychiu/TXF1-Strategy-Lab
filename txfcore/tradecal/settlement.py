@@ -21,7 +21,7 @@
 比靜態規則可靠。
 
 **期間**：2019-01-02 ~ 2026-09-05（資料涵蓋範圍）。
-超出範圍時退回靜態規則，並應告警 —— 與 Holiday_Tail 的
+超出範圍時退回 .pla 規則（第三個週三＋遞延表 SETTLE_SKIP / SETTLE_ADD），並應告警 —— 與 Holiday_Tail 的
 Registry_Valid_Until fail-safe 同一個原則：走出已驗證的地圖要 fail safe。
 """
 
@@ -63,20 +63,36 @@ VERIFIED_UNTIL = 1260924
 # 靜態規則漏標的日期（農曆年後遞延）。列出來當文件，不參與運算。
 RULE_MISSED = (1230130, 1260223)
 
+# 結算日遞延表（2026-11-20，Willy「把 2027-09-16 結算日缺口先修掉」）：第 3 個週三休市 → 結算順延到下一個營業日。
+# ＝ L1–L5 V0.1.0、L6 V0.1.0 .pla 裡的 `if Date = ... then v_Settlement_Day = False/True;` 兩行。
+# 來源 data/taifex_market_closures.json（期交所 116 年行事曆），只列 2027 年起（實戰期）；
+# 2023-01-30、2026-02-23 不放進 .pla，歷史交易才會和 MC 報表逐筆相同。測試：tests/test_settle_table_l1_l5.py
+SETTLE_SKIP: tuple[int, ...] = (1270915,)   # 2027-09-15（三）中秋休市
+SETTLE_ADD: tuple[int, ...] = (1270916,)    # 2027-09-16（四）順延結算
+
 
 def static_rule(mc_date: int) -> bool:
-    """五份 .pla 使用的靜態判定。保留供對帳時重現 MC 的行為。"""
+    """V1.1.0 以前 .pla 的靜態判定（第三個週三）。保留供對帳時重現舊 MC 報表。"""
     return (
         day_of_week(mc_date) is DayOfWeek.WED
         and 15 <= day_of_month(mc_date) <= 21
     )
 
 
+def pla_rule(mc_date: int) -> bool:
+    """V0.1.0 起 .pla 的判定：第三個週三，再套遞延表。2027 年以前與 static_rule 相同。"""
+    if mc_date in SETTLE_ADD:
+        return True
+    if mc_date in SETTLE_SKIP:
+        return False
+    return static_rule(mc_date)
+
+
 def is_settlement_day(mc_date: int) -> bool:
-    """實際結算日。已驗證範圍內用資料，範圍外退回靜態規則。"""
+    """實際結算日。已驗證範圍內用資料，範圍外退回 .pla 規則（含遞延表）。"""
     if VERIFIED_FROM <= mc_date <= VERIFIED_UNTIL:
         return mc_date in SETTLEMENT_SET
-    return static_rule(mc_date)
+    return pla_rule(mc_date)
 
 
 def is_verified(mc_date: int) -> bool:

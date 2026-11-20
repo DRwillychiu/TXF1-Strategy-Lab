@@ -32,7 +32,9 @@
 6. **每天收盤後（停單線）**：
    1. 把 MC 的 Trades List 匯出成 CSV，欄位要有 `exit_dt, entry_px, exit_px, net_ntd`。
    2. 執行下面的指令。第 2 行的 `--other` 放 L2、L4 的匯出檔，可省略。
-   3. 結果是 🔴 時，MC 的 `Manual_Kill_Switch` 改 true。
+   3. 結果是 🔴 時：**先在券商把 L6 的單平倉，再把 MC 的 `Manual_Kill_Switch` 改 true**。改輸入值會讓 MC 從頭重算，以為自己空手，但不會平掉券商的單。
+
+完整上線確認與 SOP：`L6_golive_audit_20261120.md`
 
 ```powershell
 python tools/l6_stopline_check.py --start 2026-11-23 --l6 <L6匯出.csv> --notify

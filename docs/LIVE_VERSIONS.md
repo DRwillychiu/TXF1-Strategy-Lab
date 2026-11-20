@@ -35,6 +35,8 @@
   - 參數檔：`config/strategies/L6_v1.0.0.toml`
   - 換版步驟：`docs/ops/L6_v100_golive/L6_switch_runbook_20261119.md`
   - 決定：`docs/decisions/L6_v100_20261119.md`
+- **L6_MACrossShort_v0.1.0（開發版，未上架）**：＝ v1.0.0＋結算日遞延表（2027-09-15 中秋休市 → 結算順延 2027-09-16 平倉），Build 2611201；檔案 `strategies/research/L6_MACrossShort/L6_v0.1.0/`、產生器 `scripts/research/s16_streak_20261118/build_l6_v010.py`、考題 `tests/test_l6_v010_settle.py`；等 Willy 審查，實戰期（到 2027-01-05）後才換版
+- **L1–L5 V0.1.0（開發版，未上架，2026-11-20）**：＝ 各自 V1.1.0 ＋ 和 L6 v0.1.0 相同的兩行結算日遞延表（2027-09-16 擋進場、12:30 平倉；2027 年以前交易不變）。資料夾 `L1_v0.1.0`、`L2_v0.1.0`、`L3_v0.1.0`、`L4_v0.1.0`、`L5_v0.1.0`（`strategies/research/<策略>/` 下）；產生器 `scripts/research/settle_table_20261120/build_v010_l1_l5.py`；考題 `tests/test_settle_table_l1_l5.py`；決定 `docs/decisions/settle_table_20261120.md`；換版步驟 `docs/ops/settle_table_switch_20261120.md`。上架時才給 V1.x.y 編號
 
 **⚠ L1 的 MC Load Name 寫 `60M`，實際壓縮是 45M。**
 標頭已註明：名稱保留是為了 live 連續性，改名會斷掉既有訊號。**不要「順手修正」。**

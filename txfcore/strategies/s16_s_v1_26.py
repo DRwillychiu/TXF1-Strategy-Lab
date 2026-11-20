@@ -35,6 +35,7 @@ PLA_261118 = PLA_DIR / "S16_S_MACrossShort_v1.27.0_candidate.pla"   # 研究候�
 PLA_2611181 = PLA_DIR / "S16_S_MACrossShort_v1.28.0_candidate.pla"  # 研究候選：＋同時段門檻 TOD_Gate_Days／Q
 PLA_2611191 = PLA_DIR / "S16_S_MACrossShort_v1.28.1_candidate.pla"  # 研究候選：B 預設（90 日）＋2027 假日表
 PLA_L6_V100 = PLA_DIR.parent / "L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.pla"  # 上架候選：＝v1.28.1 B，Build 2611193
+PLA_L6_V010 = PLA_DIR.parent / "L6_MACrossShort/L6_v0.1.0/L6_MACrossShort_v0.1.0.pla"  # 開發版：＝L6 v1.0.0＋結算日遞延表
 PLA_2611192 = PLA_DIR / "S16_S_MACrossShort_v1.29.0_candidate.pla"  # 研究候選：大殺盤 6 個 input（全 0 ＝ v1.28.1）
 
 BPV = 200.0
@@ -185,8 +186,16 @@ class S16Result:
     build: int = 0
 
 
+def settle_shift(path: Path) -> tuple[set[int], set[int]]:
+    """結算日遞延表（L6 v0.1.0 起）：(第 3 週三休市要取消的日, 順延後的結算日)，MC 日期格式。舊版回兩個空集合。"""
+    txt = path.read_text(encoding="utf-8", errors="replace")
+    skip = {int(d) for d in re.findall(r"if Date = (\d+) then v_Settlement_Day = False;", txt)}
+    add = {int(d) for d in re.findall(r"if Date = (\d+) then v_Settlement_Day = True;", txt)}
+    return skip, add
+
+
 def run(bars: list[Bar5], params: dict, holidays: set[int], veto=None, on_signal=None,
-        reentry_veto=None) -> S16Result:
+        reentry_veto=None, settle_shift: tuple[set[int], set[int]] | None = None) -> S16Result:
     """研究掛鉤，預設 None ＝ 與 MC 逐筆相同。
     veto(i, trades) 回 True ＝ 擋掉第 i 根的死亡交叉進場；on_signal(i, mp) 在每個合格死亡交叉訊號呼叫（含持倉中）；
     reentry_veto(i, trades) 回 True ＝ 擋掉第 i 根掛出的再進場停損單（研究用，.pla 沒有對應）。"""
@@ -322,6 +331,11 @@ def run(bars: list[Bar5], params: dict, holidays: set[int], veto=None, on_signal
         registry_expired = dte > p["Registry_Valid_Until"]
         holiday = (t <= 500 and dte in holidays) or registry_expired
         settle = _dow_mc(b.dt) == 3 and 15 <= b.dt.day <= 21
+        if settle_shift is not None:          # 結算日遞延表（.pla 的 if Date = ... 兩行）
+            if dte in settle_shift[0]:
+                settle = False
+            if dte in settle_shift[1]:
+                settle = True
 
         # ======== SECTION 4 ZLEMA ========
         pf = 2 * C[i] - C[i - fast_lag]

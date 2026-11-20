@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from txfcore.tradecal.registry import HOLIDAY_TAIL_SET, REGISTRY_VALID_UNTIL
-from txfcore.types.mctime import DayOfWeek, day_of_month, day_of_week
 
 NIGHT_TAIL_SCAN_END = 500  # 只在 Time <= 500 掃描，與 .pla 一致
 
@@ -50,11 +49,9 @@ def is_settlement_day(mc_date: int, use_data: bool = True) -> bool:
 
 
 def static_settlement_rule(mc_date: int) -> bool:
-    """`.pla` 的原始判定。保留供 mc12 模式重現。"""
-    return (
-        day_of_week(mc_date) is DayOfWeek.WED
-        and 15 <= day_of_month(mc_date) <= 21
-    )
+    """`.pla` 的判定，供 mc12 模式重現：第三個週三＋結算日遞延表（V0.1.0 起；2027 年以前與舊規則相同）。"""
+    from txfcore.tradecal.settlement import pla_rule
+    return pla_rule(mc_date)
 
 
 def evaluate(
