@@ -259,3 +259,50 @@ def test_candidate_v1290_crash_off_matches_mc_v1281c():
         assert (t.entry_dt.strftime("%Y-%m-%d %H:%M"), t.entry_label, t.exit_dt.strftime("%Y-%m-%d %H:%M"),
                 t.exit_label[:19]) == (m["entry_dt"], m["entry_label"], m["exit_dt"], m["exit_label"][:19])
         assert abs(t.net_ntd - float(m["net_ntd"])) < 1
+
+
+L6_DIR = ROOT / "strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0"
+
+
+def test_l6_v100_is_v1281_code_except_build_id():
+    """L6_MACrossShort_v1.0.0（Willy 11/19 命名）＝S16 v1.28.1 候選：去掉註解後只差 Build_ID；純 ASCII、CRLF、.txt＝.pla。"""
+    import re
+    src, pla, txt = (s16.PLA_2611191.read_bytes(), s16.PLA_L6_V100.read_bytes(),
+                     (L6_DIR / "L6_MACrossShort_v1.0.0.txt").read_bytes())
+    assert txt == pla
+    assert all(c < 128 for c in pla) and pla.count(b"\r\n") == pla.count(b"\n")
+    strip = lambda b: re.sub(r"\{[^}]*\}", "", b.decode("ascii"))
+    assert strip(pla).replace("2611193", "2611191") == strip(src)
+    p, q = s16.pla_params(s16.PLA_L6_V100), s16.pla_params(s16.PLA_2611191)
+    assert p["Build_ID"] == 2611193 and {k: v for k, v in p.items() if k != "Build_ID"} == \
+        {k: v for k, v in q.items() if k != "Build_ID"}
+    assert p["TOD_Gate_Days"] == 90 and p["TOD_Gate_Q"] == 0.70 and p["SL_Pct"] == 1.0
+    assert p["Registry_Valid_Until"] == 1271231 and p["Manual_Kill_Switch"] is False
+    assert s16.holiday_tail(s16.PLA_L6_V100) == s16.holiday_tail(s16.PLA_2611191)
+
+
+@pytest.mark.skipif(not os.environ.get("TXF1_MIN_DATA"), reason="需要 1 分 K（TXF1_MIN_DATA，到 2026-11-19）")
+def test_l6_v100_matches_mc_v1281c_to_20261119():
+    """L6 預設值對 MC v1281c 報表（資料到 2026-11-19）逐筆相同：144 筆，含 11/17 以後 5 筆。"""
+    from txfcore.quotes.history import MC12MinuteSource
+    fx = ROOT / "tests/fixtures/mc_S16_v1.28.1_b2611191_to20261119_trades.csv"
+    bars = s16.aggregate_5m(MC12MinuteSource(os.environ["TXF1_MIN_DATA"], validate=False).stream(),
+                            datetime(2019, 1, 1), datetime(2026, 11, 19, 13, 45))
+    res = s16.run(bars, s16.pla_params(s16.PLA_L6_V100), s16.holiday_tail(s16.PLA_L6_V100))
+    mc = list(csv.DictReader(fx.open(encoding="utf-8")))
+    got = [t for t in res.trades if t.entry_dt.strftime("%Y-%m-%d %H:%M") >= mc[0]["entry_dt"]]
+    assert len(got) == len(mc) == 144
+    for t, m in zip(got, mc):
+        assert (t.entry_dt.strftime("%Y-%m-%d %H:%M"), t.entry_label, t.exit_dt.strftime("%Y-%m-%d %H:%M"),
+                t.exit_label[:19]) == (m["entry_dt"], m["entry_label"], m["exit_dt"], m["exit_label"][:19])
+        assert abs(t.net_ntd - float(m["net_ntd"])) < 1
+
+
+def test_l6_v100_config_and_calendar():
+    """L6 參數檔＝.pla 預設值（載入即比對）；2026-11-20 起的 Holiday_Tail＝共用註冊表。"""
+    from txfcore.config.loader import load_strategy
+    from txfcore.tradecal.registry import HOLIDAY_TAIL
+    cfg = load_strategy("L6_v1.0.0")
+    assert cfg["capital"] == 120000 and cfg["stop_dd_ntd"] == 18000 and cfg["account_stop_loss_ntd"] == 22500
+    tail = s16.holiday_tail(s16.PLA_L6_V100)
+    assert {t for t in tail if t >= 1261120} == {t for t in HOLIDAY_TAIL if t >= 1261120}

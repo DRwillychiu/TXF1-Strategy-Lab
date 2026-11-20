@@ -34,6 +34,7 @@ PLA_260825 = PLA_DIR / "S16_S_MACrossShort_v1.26.0.pla"
 PLA_261118 = PLA_DIR / "S16_S_MACrossShort_v1.27.0_candidate.pla"   # 研究候選：260825 ＋ Vol_Gate_Pct
 PLA_2611181 = PLA_DIR / "S16_S_MACrossShort_v1.28.0_candidate.pla"  # 研究候選：＋同時段門檻 TOD_Gate_Days／Q
 PLA_2611191 = PLA_DIR / "S16_S_MACrossShort_v1.28.1_candidate.pla"  # 研究候選：B 預設（90 日）＋2027 假日表
+PLA_L6_V100 = PLA_DIR.parent / "L6_MACrossShort/L6_MACrossShort_v1.0.0/L6_MACrossShort_v1.0.0.pla"  # 上架候選：＝v1.28.1 B，Build 2611193
 PLA_2611192 = PLA_DIR / "S16_S_MACrossShort_v1.29.0_candidate.pla"  # 研究候選：大殺盤 6 個 input（全 0 ＝ v1.28.1）
 
 BPV = 200.0

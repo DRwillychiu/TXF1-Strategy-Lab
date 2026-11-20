@@ -28,6 +28,13 @@
 
 - **2027 假日表換版（2026-11-19）**：Willy 在 MC 換完五支（五支 V1.1.0（第二次上架測試）；交易邏輯 ＝ L1 V3.8、L2 v5.12、L3 v18.4、L4 v14.10、L5 v19.20，只加 2027 假日 11 筆、`Registry_Valid_Until` 1271231）。`strategies/live/` 換成這五個研究版原檔；舊上架檔在 `strategies/research/archive/live_until_20261119/`，回退用。決定：`docs/decisions/registry_2027_20261119.md`
 
+- **待上架：L6_MACrossShort_v1.0.0**（2026-11-19 準備完成，等老闆 11/20 拍板，還沒進 `strategies/live/`）
+  - 邏輯：S16 v1.28.1 候選 B，Build_ID 2611193。
+  - 檔案：`strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/`
+  - 參數檔：`config/strategies/L6_v1.0.0.toml`
+  - 換版步驟：`docs/ops/L6_v100_golive/L6_switch_runbook_20261119.md`
+  - 決定：`docs/decisions/L6_v100_20261119.md`
+
 **⚠ L1 的 MC Load Name 寫 `60M`，實際壓縮是 45M。**
 標頭已註明：名稱保留是為了 live 連續性，改名會斷掉既有訊號。**不要「順手修正」。**
 
