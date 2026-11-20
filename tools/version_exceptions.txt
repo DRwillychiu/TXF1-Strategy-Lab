@@ -101,4 +101,4 @@ strategies/research/L3_ConsolidationLong/L3_v1.1.0/L3_ConsolidationLong_v1.1.0.p
 strategies/research/L4_ConsolidationShort/L4_v1.1.0/L4_ConsolidationShort_v1.1.0.pla# V1.1.0 live version (2026-11-19, Willy numbering): v14.10 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
 strategies/research/L5_BreakoutLong/L5_v1.1.0/L5_BreakoutLong_v1.1.0.pla            # V1.1.0 live version (2026-11-19, Willy numbering): v19.20 + 2027 holiday registry only; alias for backtest / dry run, live name only at the flat switch
 # ---- L6 MACrossShort 上架候選（2026-11-19）----
-strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/L6_MACrossShort_v1.0.0.pla   # L6 V1.0.0 live candidate (2026-11-19, Willy naming): code = S16 v1.28.1 B, Build_ID 2611193; load name is the planned live name, compile only at the flat switch
+strategies/research/L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.pla   # L6 V1.0.0 live candidate (2026-11-19, Willy naming): code = S16 v1.28.1 B, Build_ID 2611193; load name is the planned live name, compile only at the flat switch

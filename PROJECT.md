@@ -76,6 +76,7 @@
 
 - 2026-11-19｜決定：（Willy 執行 11/19 的決定）MC 五支換成 2027 假日表版（五支 V1.1.0（第二次上架測試））；repo 同步：舊上架檔移到 `strategies/research/archive/live_until_20261119/`，`strategies/live` 換成研究版原檔｜原因：`Registry_Valid_Until` 1270101 到期（`docs/decisions/registry_2027_20261119.md`）｜放棄的選項：無
 - 2026-11-19｜決定：（Willy）S16 新版定名 `L6_MACrossShort_v1.0.0`（邏輯＝S16 v1.28.1 B，Build 2611193）。放空方帳戶 15 萬，和 L2、L4 同帳戶；L6 資金 120,000（2 口 × 保證金 60,000）。停單線：L6 從最高點回落 18,000 或連虧 10 筆停 L6；空方帳戶淨值比起始資金少 15%（22,500）全部停。上線要等老闆 11/20 拍板｜原因：Willy 11/19 原話「放同帳戶加資金」「空方資金就是15萬」「用起始資金算」「18000」「L6_MACrossShort_v1.0.0」，Telegram /ok｜放棄的選項：另開帳戶；從最高點回落 15% 停單（2020 起會觸發 3 次）（`docs/decisions/L6_v100_20261119.md`）
+- 2026-11-20｜決定：（Willy）L6_MACrossShort_v1.0.0 放上架，`strategies/live/L6_MACrossShort/` ＝ 研究版原檔｜原因：Willy 11/20 原話「L6 放上架」；MC 報表 145 筆和 Python 逐筆一致｜放棄的選項：無
 
 ## 已知坑
 - MC 會保留上次的輸入值，整批報表作廢 → 每份報表先跑 G2 設定比對

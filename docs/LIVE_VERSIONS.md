@@ -11,7 +11,7 @@
 
 ---
 
-## 1. LIVE —— 正在上架的五支
+## 1. LIVE —— 正在上架的六支（L6 2026-11-20 加入）
 
 **路徑一律 `strategies/live/<名稱>/<名稱>.pla`，檔名不帶版號（一支就是一支）。**
 
@@ -21,6 +21,7 @@
 | **L2_TrendShort** | **V1.1.0**（2026-11-19 起；＝ v5.12 ＋ 2027 假日表） | `Trendbearish_V1` | 60M 單一資料流 | false | 689 |
 | **L3_ConsolidationLong** | **V1.1.0**（2026-11-19 起；＝ v18.4 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_C` | Data1 15M / Data2 60M / Data3 Daily | false | 340 |
 | **L4_ConsolidationShort** | **V1.1.0**（2026-11-19 起；＝ v14.10 ＋ 2027 假日表） | `STRATEGY_WILLY_SHORT_CTEST2` | Data1 15M / Data2 60M / Data3 Daily | **false（明示）** | 437 |
+| **L6_MACrossShort** | **v1.0.0**（2026-11-20 起；＝ S16 v1.28.1 B，Build 2611193） | `L6_MACrossShort_v1.0.0` | 5M 單一資料流（日＋夜盤） | false | 1680 |
 | **L5_BreakoutLong** | **V1.1.0**（2026-11-19 起；＝ v19.20 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_BREAKOUT_C` | Data1 15M / Data2 Daily / Data3 Weekly | false | 644 |
 
 - L1 版本（2026-11-19 更正）：Willy 11/19 確認實盤是 V3.8，2026-11-19 換成 V1.1.0，`strategies/live/L1_TrendLong/` 已是 V1.1.0 原檔（原寫：L1 版本待確認，上架資料夾是 V3.1 檔）
@@ -28,9 +29,9 @@
 
 - **2027 假日表換版（2026-11-19）**：Willy 在 MC 換完五支（五支 V1.1.0（第二次上架測試）；交易邏輯 ＝ L1 V3.8、L2 v5.12、L3 v18.4、L4 v14.10、L5 v19.20，只加 2027 假日 11 筆、`Registry_Valid_Until` 1271231）。`strategies/live/` 換成這五個研究版原檔；舊上架檔在 `strategies/research/archive/live_until_20261119/`，回退用。決定：`docs/decisions/registry_2027_20261119.md`
 
-- **待上架：L6_MACrossShort_v1.0.0**（2026-11-19 準備完成，等老闆 11/20 拍板，還沒進 `strategies/live/`）
+- **L6_MACrossShort_v1.0.0 上架**（Willy 11/20「L6 放上架」）：`strategies/live/L6_MACrossShort/L6_MACrossShort.pla` ＝ 研究版原檔；MC 報表 145 筆和 Python 逐筆一致（`docs/ops/L6_v100_golive/L6_mc_check_20261120.md`）
   - 邏輯：S16 v1.28.1 候選 B，Build_ID 2611193。
-  - 檔案：`strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/`
+  - 檔案：`strategies/research/L6_MACrossShort/L6_v1.0.0/`
   - 參數檔：`config/strategies/L6_v1.0.0.toml`
   - 換版步驟：`docs/ops/L6_v100_golive/L6_switch_runbook_20261119.md`
   - 決定：`docs/decisions/L6_v100_20261119.md`

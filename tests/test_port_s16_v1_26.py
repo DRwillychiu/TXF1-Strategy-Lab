@@ -261,7 +261,7 @@ def test_candidate_v1290_crash_off_matches_mc_v1281c():
         assert abs(t.net_ntd - float(m["net_ntd"])) < 1
 
 
-L6_DIR = ROOT / "strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0"
+L6_DIR = ROOT / "strategies/research/L6_MACrossShort/L6_v1.0.0"
 
 
 def test_l6_v100_is_v1281_code_except_build_id():

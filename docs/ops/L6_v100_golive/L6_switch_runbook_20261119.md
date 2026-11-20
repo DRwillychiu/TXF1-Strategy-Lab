@@ -5,7 +5,7 @@
 ## 已完成（Claude，11/19，全部有測試）
 | 項目 | 結果 | 證據 |
 |---|---|---|
-| 上架候選檔 | `strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/` .pla／.txt；程式碼＝S16 v1.28.1 B，只改 Build_ID 2611193 | `test_l6_v100_is_v1281_code_except_build_id` |
+| 上架候選檔 | `strategies/research/L6_MACrossShort/L6_v1.0.0/` .pla／.txt；程式碼＝S16 v1.28.1 B，只改 Build_ID 2611193 | `test_l6_v100_is_v1281_code_except_build_id` |
 | MC 逐筆一致 | 144／144（到 11/19，含 11/17 以後 5 筆） | `test_l6_v100_matches_mc_v1281c_to_20261119` |
 | 假日表、結算日 | 2026-11-20～2027-12-31 的假日表全部正確；結算日只有 2027-09-15 會漏（實戰期內不受影響） | `L6_calendar_check_20261119.md` |
 | 參數檔 | `config/strategies/L6_v1.0.0.toml`，載入時自動和 .pla 比對 | `test_l6_v100_config_and_calendar` |
@@ -13,7 +13,7 @@
 
 ## 你要做的（依順序）
 1. **上架載入名**：`L6_MACrossShort_v1.0.0`（Willy 11/19 確認）。
-2. **審查上架檔**：`strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/L6_MACrossShort_v1.0.0.txt`。同意後回「L6 放上架」，我會：
+2. **審查上架檔**：`strategies/research/L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.txt`。同意後回「L6 放上架」，我會：
    - 複製到 `strategies/live/L6_MACrossShort/L6_MACrossShort.pla`
    - 更新版本總表 §1，以及 CLAUDE.md 的帳戶資金（空方 15 萬）
    - 跑 verify

@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 SRC = ROOT / "strategies/research/S16_MACrossShort/S16_S_MACrossShort_v1.28.1_candidate.pla"
-OUT = ROOT / "strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0"
+OUT = ROOT / "strategies/research/L6_MACrossShort/L6_v1.0.0"
 BUILD_OLD, BUILD_NEW = "2611191", "2611193"
 
 HEAD_OLD = [

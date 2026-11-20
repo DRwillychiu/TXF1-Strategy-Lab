@@ -1,6 +1,6 @@
 # L6_MACrossShort_v1.0.0 參數（＝ .pla 預設值；載入時自動比對，不一致即紅燈）
 # 邏輯＝S16 v1.28.1 B；資金 120,000（2 口 × 保證金 60,000）；停單線：L6 從最高點回落 18,000 或連虧 10 筆、空方帳戶淨值比起始少 15%（22,500）
-pla = "strategies/research/L6_MACrossShort/L6_MACrossShort_v1.0.0/L6_MACrossShort_v1.0.0.pla"
+pla = "strategies/research/L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.pla"
 mc_load_name = "L6_MACrossShort_v1.0.0"  # 上架載入名（Willy 11/19 確認）
 capital = 120000
 stop_dd_ntd = 18000

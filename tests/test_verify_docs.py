@@ -97,7 +97,7 @@ def test_live_check_catches_stale_live_file(tmp_path):
         shutil.copy(ROOT / rel, tmp_path / rel)
     lv = tmp_path / "docs/LIVE_VERSIONS.md"
     lv.write_text("\n".join(l for l in lv.read_text(encoding="utf-8").splitlines()
-                            if not l.startswith(("| **L1", "| **L3", "| **L4", "| **L5"))), encoding="utf-8")
+                            if not l.startswith(("| **L1", "| **L3", "| **L4", "| **L5", "| **L6"))), encoding="utf-8")
     assert verify_versions.live_check(tmp_path)[0] == []
     (tmp_path / "strategies/live/L2_TrendShort/L2_TrendShort.pla").write_text("old", encoding="utf-8")
     assert any("L2_TrendShort" in x for x in verify_versions.live_check(tmp_path)[0])
