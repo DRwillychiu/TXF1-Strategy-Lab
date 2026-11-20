@@ -30,12 +30,16 @@ def main():
     days = trading_days(f1, y0)
     pri = {ln.split(",")[0] for ln in open(fsp, encoding="utf-8").read().splitlines()[1:]} & days
     order = sorted(pri, key=ymd, reverse=True) + sorted(days - pri, key=ymd, reverse=True)
+    if os.environ.get("FETCH_OLDEST_FIRST") == "1":
+        order = sorted(days, key=ymd)
     todo = [d for d in order if not os.path.exists(os.path.join(out, ymd(d) + ".csv"))
             and not os.path.exists(os.path.join(out, ymd(d) + ".nodata"))]
     print(f"days {len(days)}  priority {len(pri)}  todo {len(todo)}", flush=True)
     errs = done = 0
     for d in todo[:limit]:
         k = ymd(d)
+        if os.path.exists(os.path.join(out, k + ".csv")):
+            continue
         try:
             req = urllib.request.Request(URL.format(d=k), headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
             j = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
