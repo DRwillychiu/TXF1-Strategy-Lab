@@ -261,14 +261,14 @@ def test_candidate_v1290_crash_off_matches_mc_v1281c():
         assert abs(t.net_ntd - float(m["net_ntd"])) < 1
 
 
-L6_DIR = ROOT / "strategies/research/L6_MACrossShort/L6_v1.0.0"
+L6_DIR = ROOT / "strategies/research/archive/live_until_20261120"  # 第一版 V1.0.0（b2611193）
 
 
 def test_l6_v100_is_v1281_code_except_build_id():
     """L6_MACrossShort_v1.0.0（Willy 11/19 命名）＝S16 v1.28.1 候選：去掉註解後只差 Build_ID；純 ASCII、CRLF、.txt＝.pla。"""
     import re
     src, pla, txt = (s16.PLA_2611191.read_bytes(), s16.PLA_L6_V100.read_bytes(),
-                     (L6_DIR / "L6_MACrossShort_v1.0.0.txt").read_bytes())
+                     (L6_DIR / "L6_MACrossShort_v1.0.0_b2611193.txt").read_bytes())
     assert txt == pla
     assert all(c < 128 for c in pla) and pla.count(b"\r\n") == pla.count(b"\n")
     strip = lambda b: re.sub(r"\{[^}]*\}", "", b.decode("ascii"))

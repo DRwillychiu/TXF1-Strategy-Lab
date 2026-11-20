@@ -34,7 +34,8 @@ PLA_260825 = PLA_DIR / "S16_S_MACrossShort_v1.26.0.pla"
 PLA_261118 = PLA_DIR / "S16_S_MACrossShort_v1.27.0_candidate.pla"   # 研究候選：260825 ＋ Vol_Gate_Pct
 PLA_2611181 = PLA_DIR / "S16_S_MACrossShort_v1.28.0_candidate.pla"  # 研究候選：＋同時段門檻 TOD_Gate_Days／Q
 PLA_2611191 = PLA_DIR / "S16_S_MACrossShort_v1.28.1_candidate.pla"  # 研究候選：B 預設（90 日）＋2027 假日表
-PLA_L6_V100 = PLA_DIR.parent / "L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.pla"  # 上架候選：＝v1.28.1 B，Build 2611193
+PLA_L6_V100 = PLA_DIR.parent / "archive/live_until_20261120/L6_MACrossShort_v1.0.0_b2611193.pla"  # 第一版 V1.0.0（＝v1.28.1 B，Build 2611193；11/20 由精簡版取代，未上正式機）
+PLA_L6_LIVE = PLA_DIR.parent / "L6_MACrossShort/L6_v1.0.0/L6_MACrossShort_v1.0.0.pla"  # 上架 V1.0.0（＝開發版 v0.2.0，Build 2611202）
 PLA_L6_V010 = PLA_DIR.parent / "L6_MACrossShort/L6_v0.1.0/L6_MACrossShort_v0.1.0.pla"  # 開發版：＝L6 v1.0.0＋結算日遞延表
 PLA_2611192 = PLA_DIR / "S16_S_MACrossShort_v1.29.0_candidate.pla"  # 研究候選：大殺盤 6 個 input（全 0 ＝ v1.28.1）
 

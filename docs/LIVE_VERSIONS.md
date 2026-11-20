@@ -21,7 +21,7 @@
 | **L2_TrendShort** | **V1.1.0**（2026-11-19 起；＝ v5.12 ＋ 2027 假日表） | `Trendbearish_V1` | 60M 單一資料流 | false | 689 |
 | **L3_ConsolidationLong** | **V1.1.0**（2026-11-19 起；＝ v18.4 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_C` | Data1 15M / Data2 60M / Data3 Daily | false | 340 |
 | **L4_ConsolidationShort** | **V1.1.0**（2026-11-19 起；＝ v14.10 ＋ 2027 假日表） | `STRATEGY_WILLY_SHORT_CTEST2` | Data1 15M / Data2 60M / Data3 Daily | **false（明示）** | 437 |
-| **L6_MACrossShort** | **v1.0.0**（2026-11-20 起；＝ S16 v1.28.1 B，Build 2611193） | `L6_MACrossShort_v1.0.0` | 5M 單一資料流（日＋夜盤） | false | 1680 |
+| **L6_MACrossShort** | **v1.0.0**（2026-11-20 起；精簡版，Build 2611202；邏輯＝S16 v1.28.1 B） | `L6_MACrossShort_v1.0.0` | 5M 單一資料流（日＋夜盤） | false | 1680 |
 | **L5_BreakoutLong** | **V1.1.0**（2026-11-19 起；＝ v19.20 ＋ 2027 假日表） | `STRATEGY_WILLY_LONG_BREAKOUT_C` | Data1 15M / Data2 Daily / Data3 Weekly | false | 644 |
 
 - L1 版本（2026-11-19 更正）：Willy 11/19 確認實盤是 V3.8，2026-11-19 換成 V1.1.0，`strategies/live/L1_TrendLong/` 已是 V1.1.0 原檔（原寫：L1 版本待確認，上架資料夾是 V3.1 檔）
@@ -35,6 +35,7 @@
   - 參數檔：`config/strategies/L6_v1.0.0.toml`
   - 換版步驟：`docs/ops/L6_v100_golive/L6_switch_runbook_20261119.md`
   - 決定：`docs/decisions/L6_v100_20261119.md`
+- **11/20 換版：V1.0.0 改用精簡版（＝開發版 v0.2.0，Build 2611202）**（Willy「把v0.2.0 改成V1.0.0上正式機，做上架換版」）：只留定案參數與程式碼、含 2027-09-16 結算日遞延表；MC 報表 145 筆和第一版逐筆相同。第一版（b2611193，未上正式機）移到 `strategies/research/archive/live_until_20261120/`。決定：`docs/decisions/L6_v100_clean_20261120.md`
 - **L6_MACrossShort_v0.1.0（開發版，未上架）**：＝ v1.0.0＋結算日遞延表（2027-09-15 中秋休市 → 結算順延 2027-09-16 平倉），Build 2611201；檔案 `strategies/research/L6_MACrossShort/L6_v0.1.0/`、產生器 `scripts/research/s16_streak_20261118/build_l6_v010.py`、考題 `tests/test_l6_v010_settle.py`；等 Willy 審查，實戰期（到 2027-01-05）後才換版
 - **L6_MACrossShort_v0.2.0（開發版，未上架）**：＝ v0.1.0 只保留定案參數與程式碼（Willy 11/20），刪 32 個關閉／固定模式 input，Build 2611202；檔案 `strategies/research/L6_MACrossShort/L6_v0.2.0/`、考題 `tests/test_l6_v020_clean.py`；MC 報表 145 筆與 v1.0.0 逐筆相同（`docs/ops/L6_v100_golive/L6_v020_mc_check_20261120.md`）
 - **L1–L5 V0.1.0（開發版，未上架，2026-11-20）**：＝ 各自 V1.1.0 ＋ 和 L6 v0.1.0 相同的兩行結算日遞延表（2027-09-16 擋進場、12:30 平倉；2027 年以前交易不變）。資料夾 `L1_v0.1.0`、`L2_v0.1.0`、`L3_v0.1.0`、`L4_v0.1.0`、`L5_v0.1.0`（`strategies/research/<策略>/` 下）；產生器 `scripts/research/settle_table_20261120/build_v010_l1_l5.py`；考題 `tests/test_settle_table_l1_l5.py`；決定 `docs/decisions/settle_table_20261120.md`；換版步驟 `docs/ops/settle_table_switch_20261120.md`。上架時才給 V1.x.y 編號

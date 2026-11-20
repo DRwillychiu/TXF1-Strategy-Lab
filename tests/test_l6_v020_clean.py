@@ -79,3 +79,14 @@ def test_v020_history_equals_v010_and_mc():
         assert (t.entry_dt.strftime("%Y-%m-%d %H:%M"), t.entry_label, t.exit_dt.strftime("%Y-%m-%d %H:%M"),
                 t.exit_label[:19]) == (m["entry_dt"], m["entry_label"], m["exit_dt"], m["exit_label"][:19])
         assert abs(t.net_ntd - float(m["net_ntd"])) < 1
+
+
+def test_live_v100_is_v020_code():
+    """11/20 換版：上架 V1.0.0（live 檔＝研究 L6_v1.0.0）＝ v0.2.0 程式碼，只改檔頭註解；參數同 v0.2.0（Build 2611202）。"""
+    live = ROOT / "strategies/live/L6_MACrossShort/L6_MACrossShort.pla"
+    res = s16.PLA_L6_LIVE
+    assert live.read_bytes() == res.read_bytes() == res.with_suffix(".txt").read_bytes()
+    strip = lambda p: re.sub(r"\{[^}]*\}", "", p.read_text(encoding="ascii"))
+    assert strip(res) == strip(PLA)
+    assert s16.pla_params(res) == s16.pla_params(PLA)
+    assert "MC Load Name: L6_MACrossShort_v1.0.0" in res.read_text(encoding="ascii")
