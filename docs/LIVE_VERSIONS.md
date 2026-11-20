@@ -36,6 +36,7 @@
   - 換版步驟：`docs/ops/L6_v100_golive/L6_switch_runbook_20261119.md`
   - 決定：`docs/decisions/L6_v100_20261119.md`
 - **L6_MACrossShort_v0.1.0（開發版，未上架）**：＝ v1.0.0＋結算日遞延表（2027-09-15 中秋休市 → 結算順延 2027-09-16 平倉），Build 2611201；檔案 `strategies/research/L6_MACrossShort/L6_v0.1.0/`、產生器 `scripts/research/s16_streak_20261118/build_l6_v010.py`、考題 `tests/test_l6_v010_settle.py`；等 Willy 審查，實戰期（到 2027-01-05）後才換版
+- **L6_MACrossShort_v0.2.0（開發版，未上架）**：＝ v0.1.0 只保留定案參數與程式碼（Willy 11/20），刪 32 個關閉／固定模式 input，Build 2611202；檔案 `strategies/research/L6_MACrossShort/L6_v0.2.0/`、考題 `tests/test_l6_v020_clean.py`；MC 報表 145 筆與 v1.0.0 逐筆相同（`docs/ops/L6_v100_golive/L6_v020_mc_check_20261120.md`）
 - **L1–L5 V0.1.0（開發版，未上架，2026-11-20）**：＝ 各自 V1.1.0 ＋ 和 L6 v0.1.0 相同的兩行結算日遞延表（2027-09-16 擋進場、12:30 平倉；2027 年以前交易不變）。資料夾 `L1_v0.1.0`、`L2_v0.1.0`、`L3_v0.1.0`、`L4_v0.1.0`、`L5_v0.1.0`（`strategies/research/<策略>/` 下）；產生器 `scripts/research/settle_table_20261120/build_v010_l1_l5.py`；考題 `tests/test_settle_table_l1_l5.py`；決定 `docs/decisions/settle_table_20261120.md`；換版步驟 `docs/ops/settle_table_switch_20261120.md`。上架時才給 V1.x.y 編號
 
 **⚠ L1 的 MC Load Name 寫 `60M`，實際壓縮是 45M。**

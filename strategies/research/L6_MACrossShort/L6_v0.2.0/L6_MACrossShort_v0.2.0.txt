@@ -1,0 +1,964 @@
+{ ======================================================================
+  L6 MA CROSS SHORT  -  V0.2.0 DEV  (2026-11-20)
+  Signal Name : L6_MACrossShort
+  MC Load Name: L6_MACrossShort_v020_RESEARCH  (DEV, NOT live)
+  Version     : V0.2.0   Build_ID 2611202   (base L6 V0.1.0 b2611201)
+
+  V0.2.0 = V0.1.0 with only the settled parameters and code kept
+  (Willy 11/20). Features that were OFF are removed: ML exit, Trail,
+  Tier2, UpGap gate, Vol_Gate_Pct, KB_Entry_Mode / BullExit_Mode,
+  Slope_Require_Adjacent. Fixed modes are hard-wired: Slope_Form 2,
+  M8_Form 2, Gap_KB_Group 1, Struct_UseClose 1, KB_Gap_Pat 1.
+  Trades must equal V0.1.0 bar for bar.
+
+  Data   : TXF1 5M, day + night, 2 micro lots, MaxBarsBack 100.
+  Account: short account 150,000 (with L2, L4); L6 capital 120,000.
+  Stop   : L6 equity -18,000 from peak or 10 losses in a row -> stop L6;
+           short account -22,500 -> stop all short strategies.
+           Manual_Kill_Switch = true to stop.
+  Compile the live load name only when the chart and the broker are
+  both flat.
+  ====================================================================== }
+
+[IntrabarOrderGeneration = False]
+
+inputs:
+    Build_ID                ( 2611202 ),
+
+    { Entry: ZLEMA death cross + slope rate }
+    ZLEMA_Fast              ( 25    ),
+    ZLEMA_Slow              ( 70    ),
+    MinSlope_Rate           ( 0.050 ),     { pct per minute on the signal bar }
+
+    { Quick stop }
+    QuickStop_On            ( 1     ),
+    QS_Time_On              ( 1     ),
+    QS_Loss_On              ( 1     ),
+    QuickStop_MaxBars       ( 4     ),
+    QS_MaxLoss_Pct          ( 0.70  ),
+
+    { Break-even and structure stop }
+    BE_On                   ( 1     ),
+    BE_Trigger_Pct          ( 0.70  ),
+    BE_Cost_Pts             ( 20    ),
+    Struct_On               ( 1     ),
+    Struct_Lookback         ( 20    ),
+    Struct_Buffer_Pts       ( 12    ),
+    Struct_Trigger_Pct      ( 0.60  ),
+
+    { Time stop and profit target }
+    M8_On                   ( 1     ),
+    MaxHoldingBars          ( 48    ),
+    MaxHold_Pct             ( 2.30  ),
+
+    { K-bar pattern selector }
+    Sess_GapReset_On        ( 1     ),
+    KB_Pat_LongBody         ( 0.50  ),
+    KB_Pat_DojiRatio        ( 0.10  ),
+    KB_Pat_DojiMinRange     ( 3     ),
+    KB_Pat_DojiMinShadow    ( 1     ),
+    KB_Pat_MinRange         ( 0     ),
+
+    { Hard stop }
+    ATR_Len                 ( 14    ),
+    StopATRMult             ( 4.0   ),
+    SL_Pct                  ( 1.00  ),
+
+    { Compliance: holiday, registry, kill switch, settlement }
+    Holiday_Flat_Time       ( 415   ),
+    Registry_Valid_Until    ( 1271231 ),
+    Manual_Kill_Switch      ( False ),
+    Settlement_Flat_Time    ( 1230  ),
+
+    { Session tail }
+    Tail_NoEntry_From       ( 415   ),
+    Tail_ForceExit_Time     ( 430   ),
+    Tail_DayNoEntry_From    ( 1335  ),
+    Tail_Signal_Lead_Bars   ( 2     ),
+
+    { Opening gap filter }
+    Gap_Filter_On           ( 1     ),
+    Gap_Day_On              ( 1     ),
+    Gap_Night_On            ( 1     ),
+    Gap_Down_Min_Pct        ( 0.10  ),
+    Gap_Rise_Min_Pct        ( 0.20  ),
+    Gap_Scope_Bars          ( 3     ),
+    Gap_KB_Gate_On          ( 1     ),
+    Gap_KB_Scope_Bars       ( 3     ),
+
+    { Sessions }
+    Sess_Day_Start          ( 845   ),
+    Sess_Day_End            ( 1345  ),
+    Sess_Night_Start        ( 1500  ),
+    Sess_Night_End          ( 500   ),
+    Sess_LastBar_Block_On   ( 1     ),
+
+    { First-bar K type (opening gap filter) }
+    KB_Body_Long            ( 0.75  ),
+    KB_Body_Mid             ( 0.30  ),
+    KB_Body_Small           ( 0.05  ),
+    KB_Shadow_Ratio         ( 2.00  ),
+
+    { Re-entry }
+    ReEntry_On              ( 1     ),
+    ReEntry_Structure_Gate  ( 1     ),
+    ReEntry_Slope_Gate      ( 1     ),
+    ReEntry_Close_Gate      ( 1     ),
+
+    { Time-of-day volatility gate on new entries }
+    TOD_Gate_Days           ( 90    ),
+    TOD_Gate_Q              ( 0.70  );
+
+variables:
+    v_Fast_Lag              ( 0     ),
+    v_Slow_Lag              ( 0     ),
+    v_ZLEMA_Fast            ( 0     ),
+    v_ZLEMA_Slow            ( 0     ),
+    v_Death_Cross           ( False ),
+    v_Golden_Cross          ( False ),
+    v_ATR                   ( 0     ),
+    v_EntryBar              ( 0     ),
+    v_BarsSince             ( 0     ),
+    v_Prev_MP               ( 0     ),
+    v_Loss                  ( 0     ),
+    v_Profit                ( 0     ),
+    v_SL_Locked             ( False ),
+    v_Frozen_ATR            ( 0     ),
+    v_Original_Frozen_ATR   ( 0     ),
+    v_Frozen_SL_Dist        ( 0     ),
+    v_SL_Level              ( 0     ),
+    v_Guard_Distance        ( 0     ),
+    v_SL_Pct_Ceil           ( 0     ),
+    v_QuickStop_Fired       ( False ),
+    v_QuickStop_On          ( False ),
+    v_QS_Time_On            ( False ),
+    v_QS_Loss_On            ( False ),
+    v_M8_Target             ( 0     ),
+    v_KB_Code               ( 0     ),
+    v_KB_BullNow            ( False ),
+    v_Filt_Pass             ( False ),
+    v_Sess_GapMin           ( 0     ),
+    v_Sess_Gap_Seen         ( False ),
+    v_ReEntry_Filt_OK       ( False ),
+    v_KB_R0                 ( 0     ),
+    v_KB_R1                 ( 0     ),
+    v_KB_R2                 ( 0     ),
+    v_KB_R3                 ( 0     ),
+    v_KB_R4                 ( 0     ),
+    v_KB_B0                 ( 0     ),
+    v_KB_B1                 ( 0     ),
+    v_KB_B2                 ( 0     ),
+    v_KB_B3                 ( 0     ),
+    v_KB_B4                 ( 0     ),
+    v_KB_T0                 ( 0     ),
+    v_KB_T1                 ( 0     ),
+    v_KB_T2                 ( 0     ),
+    v_KB_M0                 ( 0     ),
+    v_KB_M1                 ( 0     ),
+    v_KB_M2                 ( 0     ),
+    v_KB_S0                 ( 0     ),
+    v_KB_S1                 ( 0     ),
+    v_KB_S2                 ( 0     ),
+    v_KB_N2                 ( 0     ),
+    v_KB_L0                 ( False ),
+    v_KB_L1                 ( False ),
+    v_KB_L2                 ( False ),
+    v_KB_L3                 ( False ),
+    v_KB_L4                 ( False ),
+    v_KB_D0                 ( False ),
+    v_BE_Active             ( False ),
+    v_BE_Stop_Level         ( 0     ),
+    v_MaxProfit             ( 0     ),
+    v_Protect_Lock          ( 0     ),
+    v_Struct_Active         ( False ),
+    v_Struct_Window         ( 0     ),
+    v_Struct_Ref            ( 0     ),
+    v_Struct_Raw            ( 0     ),
+    v_Struct_Lock           ( 0     ),
+    v_Struct_Binding        ( False ),
+    v_ReEntry_Armed         ( False ),
+    v_ReEntry_Price         ( 0     ),
+    v_Last_EntryPrice       ( 0     ),
+    v_IsReEntry             ( False ),
+    v_Holiday_Block         ( False ),
+    v_Registry_Expired      ( False ),
+    v_Settlement_Day        ( False ),
+    hidx                    ( 0     ),
+    ExitFired               ( 0     ),
+    v_In_Day                ( False ),
+    v_In_Night              ( False ),
+    v_Day_First             ( False ),
+    v_Night_First           ( False ),
+    v_Sess_First            ( False ),
+    v_Bars_In_Sess          ( 0     ),
+    v_Sess_LastBar          ( False ),
+    v_Sess_LastBar_Block    ( False ),
+    v_Tail_Entry_OK         ( True  ),
+    v_Tail_Cutoff           ( 0     ),
+    v_Day_Cutoff            ( 0     ),
+    v_Slope_Rate            ( 0     ),
+    v_Elapsed_Min           ( 0     ),
+    v_Slope_Pass            ( False ),
+    v_Sess_Gap_Pts          ( 0     ),
+    v_Sess_Gap_Pct          ( 0     ),
+    v_First_Open            ( 0     ),
+    v_First_High            ( 0     ),
+    v_First_Low             ( 0     ),
+    v_First_Close           ( 0     ),
+    v_First_Rise_Pct        ( 0     ),
+    v_KB_Range              ( 0     ),
+    v_KB_Body               ( 0     ),
+    v_KB_UpSh               ( 0     ),
+    v_KB_DnSh               ( 0     ),
+    v_KB_Up                 ( False ),
+    v_KB_Type               ( 0     ),
+    v_BE_On                 ( False ),
+    v_Struct_On             ( False ),
+    v_M8_On                 ( False ),
+    v_Gap_Filter_On         ( False ),
+    v_Gap_Day_On            ( False ),
+    v_Gap_Night_On          ( False ),
+    v_Sess_LastBar_Block_On ( False ),
+    v_ReEntry_On            ( False ),
+    v_ReEntry_Structure_Gate ( False ),
+    v_ReEntry_Slope_Gate    ( False ),
+    v_ReEntry_Close_Gate    ( False ),
+    v_Gap_KB_Gate_On        ( False ),
+    v_KB_InGroup            ( False ),
+    v_Gap_Block             ( False ),
+    v_TOD_OK                ( True  ),
+    v_TOD_Days              ( 0     ),
+    v_TOD_Slot              ( 0     ),
+    v_TOD_N                 ( 0     ),
+    v_TOD_J                 ( 0     ),
+    v_TOD_K                 ( 0     ),
+    v_TOD_Thr               ( 0     ),
+    v_TOD_ATRPct            ( 0     );
+
+arrays:
+    Holiday_Tail[80](0),
+    TOD_Buf[288, 120](0),
+    TOD_Cnt[288](0),
+    TOD_Pos[288](0),
+    TOD_Sort[120](0);
+
+
+{ ==== 1. BUILD STAMP AND SWITCHES ==== }
+if CurrentBar = 1 then
+    Print( "L6 build ", Build_ID );
+
+v_QuickStop_On          = ( QuickStop_On          <> 0 );
+v_QS_Time_On            = ( QS_Time_On            <> 0 );
+v_QS_Loss_On            = ( QS_Loss_On            <> 0 );
+v_BE_On                 = ( BE_On                 <> 0 );
+v_Struct_On             = ( Struct_On             <> 0 );
+v_M8_On                 = ( M8_On                 <> 0 );
+v_Gap_Filter_On         = ( Gap_Filter_On         <> 0 );
+v_Gap_Day_On            = ( Gap_Day_On            <> 0 );
+v_Gap_Night_On          = ( Gap_Night_On          <> 0 );
+v_Sess_LastBar_Block_On = ( Sess_LastBar_Block_On <> 0 );
+v_ReEntry_On            = ( ReEntry_On            <> 0 );
+v_ReEntry_Structure_Gate = ( ReEntry_Structure_Gate <> 0 );
+v_ReEntry_Slope_Gate    = ( ReEntry_Slope_Gate    <> 0 );
+v_ReEntry_Close_Gate    = ( ReEntry_Close_Gate    <> 0 );
+v_Gap_KB_Gate_On        = ( Gap_KB_Gate_On        <> 0 );
+
+
+{ ==== 2. COMPLIANCE: HOLIDAY, REGISTRY, SETTLEMENT ==== }
+{ Holiday_Tail = last trading day before a closure + 1 calendar day
+  (the Date of the after-midnight night bars). Source: TAIFEX calendar,
+  data/taifex_market_closures.json. Update every Q4 and after any ad-hoc
+  closure, and bump Registry_Valid_Until. }
+if CurrentBar = 1 then begin
+    Holiday_Tail[1]  = 1190913;  Holiday_Tail[2]  = 1191010;
+    Holiday_Tail[3]  = 1200101;
+    Holiday_Tail[4]  = 1200121;  Holiday_Tail[5]  = 1200228;
+    Holiday_Tail[6]  = 1200402;  Holiday_Tail[7]  = 1200501;
+    Holiday_Tail[8]  = 1200625;  Holiday_Tail[9]  = 1201001;
+    Holiday_Tail[10] = 1201009;  Holiday_Tail[11] = 1210101;
+    Holiday_Tail[12] = 1210206;  Holiday_Tail[13] = 1210227;
+    Holiday_Tail[14] = 1210402;  Holiday_Tail[15] = 1210612;
+    Holiday_Tail[16] = 1210918;  Holiday_Tail[17] = 1211009;
+    Holiday_Tail[18] = 1211231;
+    Holiday_Tail[19] = 1220127;  Holiday_Tail[20] = 1220226;
+    Holiday_Tail[21] = 1220402;  Holiday_Tail[22] = 1220430;
+    Holiday_Tail[23] = 1220603;  Holiday_Tail[24] = 1220909;
+    Holiday_Tail[25] = 1221008;  Holiday_Tail[26] = 1221231;
+    Holiday_Tail[27] = 1230118;  Holiday_Tail[28] = 1230225;
+    Holiday_Tail[29] = 1230401;  Holiday_Tail[30] = 1230429;
+    Holiday_Tail[31] = 1230622;  Holiday_Tail[32] = 1230929;
+    Holiday_Tail[33] = 1231007;  Holiday_Tail[34] = 1231230;
+    Holiday_Tail[35] = 1240206;  Holiday_Tail[36] = 1240228;
+    Holiday_Tail[37] = 1240404;  Holiday_Tail[38] = 1240501;
+    Holiday_Tail[39] = 1240608;  Holiday_Tail[40] = 1240917;
+    Holiday_Tail[41] = 1241010;  Holiday_Tail[42] = 1250101;
+    Holiday_Tail[43] = 1250123;  Holiday_Tail[44] = 1250228;
+    Holiday_Tail[45] = 1250403;  Holiday_Tail[46] = 1250501;
+    Holiday_Tail[47] = 1250530;  Holiday_Tail[48] = 1250927;
+    Holiday_Tail[49] = 1251004;  Holiday_Tail[50] = 1251010;
+    Holiday_Tail[51] = 1251024;  Holiday_Tail[52] = 1251225;
+    Holiday_Tail[53] = 1260101;
+    Holiday_Tail[54] = 1260212;  Holiday_Tail[55] = 1260227;
+    Holiday_Tail[56] = 1260403;  Holiday_Tail[57] = 1260501;
+    Holiday_Tail[58] = 1260619;  Holiday_Tail[59] = 1260925;
+    Holiday_Tail[60] = 1261009;  Holiday_Tail[61] = 1261024;
+    Holiday_Tail[62] = 1261225;  Holiday_Tail[63] = 1270101;
+    Holiday_Tail[64] = 1270202;
+    Holiday_Tail[65] = 1270227;
+    Holiday_Tail[66] = 1270403;
+    Holiday_Tail[67] = 1270430;
+    Holiday_Tail[68] = 1270609;  Holiday_Tail[69] = 1270915;
+    Holiday_Tail[70] = 1270928;
+    Holiday_Tail[71] = 1271009;
+    Holiday_Tail[72] = 1271023;
+    Holiday_Tail[73] = 1271224;
+    Holiday_Tail[74] = 1271231;
+end;
+
+v_Registry_Expired = False;
+if Date > Registry_Valid_Until then
+    v_Registry_Expired = True;
+
+v_Holiday_Block = False;
+if Time <= 500 then begin
+    for hidx = 1 to 80 begin
+        if Date = Holiday_Tail[hidx] then
+            v_Holiday_Block = True;
+    end;
+end;
+if v_Registry_Expired = True then
+    v_Holiday_Block = True;
+
+{ Settlement day: 3rd Wednesday; deferral table for a closed 3rd Wed (2027 only) }
+v_Settlement_Day = ( DayOfWeek(Date) = 3 ) and
+                   ( DayOfMonth(Date) >= 15 ) and
+                   ( DayOfMonth(Date) <= 21 );
+if Date = 1270915 then v_Settlement_Day = False;  { Settle_Skip 2027-09-15 closed }
+if Date = 1270916 then v_Settlement_Day = True;   { Settle_Add  2027-09-16 deferred }
+
+
+{ ==== 3. ZLEMA ==== }
+v_Fast_Lag = IntPortion( ( ZLEMA_Fast - 1 ) / 2 );
+v_Slow_Lag = IntPortion( ( ZLEMA_Slow - 1 ) / 2 );
+v_ZLEMA_Fast = XAverage( 2 * Close - Close[v_Fast_Lag], ZLEMA_Fast );
+v_ZLEMA_Slow = XAverage( 2 * Close - Close[v_Slow_Lag], ZLEMA_Slow );
+
+
+{ ==== 4. SESSION BOUNDARY, OPENING GAP, FIRST-BAR K TYPE ==== }
+v_In_Day   = Time >  Sess_Day_Start   and Time <= Sess_Day_End;
+v_In_Night = Time >  Sess_Night_Start or  Time <= Sess_Night_End;
+
+{ A wall-clock gap longer than one bar also starts a new session }
+v_Sess_GapMin = 0;
+if CurrentBar > 1 then
+    v_Sess_GapMin = ( DateToJulian( Date ) - DateToJulian( Date[1] ) ) * 1440
+                  + ( TimeToMinutes( Time ) - TimeToMinutes( Time[1] ) );
+v_Sess_Gap_Seen = ( Sess_GapReset_On <> 0 ) and ( CurrentBar > 1 )
+                  and ( BarInterval > 0 ) and ( v_Sess_GapMin > BarInterval );
+
+v_Day_First   = False;
+v_Night_First = False;
+if CurrentBar > 1 then begin
+    if v_In_Day   and ( v_In_Day[1]   = False or v_Sess_Gap_Seen ) then
+        v_Day_First   = True;
+    if v_In_Night and ( v_In_Night[1] = False or v_Sess_Gap_Seen ) then
+        v_Night_First = True;
+end;
+v_Sess_First = v_Day_First or v_Night_First;
+
+if v_Sess_First then
+    v_Bars_In_Sess = 1
+else if v_In_Day or v_In_Night then
+    v_Bars_In_Sess = v_Bars_In_Sess + 1
+else
+    v_Bars_In_Sess = 0;
+
+v_Sess_LastBar = ( v_In_Day   and Time = Sess_Day_End   ) or
+                 ( v_In_Night and Time = Sess_Night_End );
+
+if v_Sess_First then begin
+    v_Sess_Gap_Pts = Open - Close[1];
+    if Close[1] > 0 then
+        v_Sess_Gap_Pct = v_Sess_Gap_Pts / Close[1] * 100
+    else
+        v_Sess_Gap_Pct = 0;
+    v_First_Open  = Open;
+    v_First_High  = High;
+    v_First_Low   = Low;
+    v_First_Close = Close;
+    if Open > 0 then
+        v_First_Rise_Pct = ( Close - Open ) / Open * 100
+    else
+        v_First_Rise_Pct = 0;
+end;
+
+{ First-bar K type 1-17 (used by the gap K gate) }
+if v_Sess_First then begin
+    v_KB_Range = v_First_High - v_First_Low;
+    v_KB_Up    = v_First_Close > v_First_Open;
+    if v_KB_Range <= 0 then begin
+        v_KB_Body  = 0;
+        v_KB_UpSh  = 0;
+        v_KB_DnSh  = 0;
+        v_KB_Type  = 0;
+    end
+    else begin
+        v_KB_Body = AbsValue( v_First_Close - v_First_Open ) / v_KB_Range;
+        v_KB_UpSh = ( v_First_High - MaxList( v_First_Open, v_First_Close ) ) / v_KB_Range;
+        v_KB_DnSh = ( MinList( v_First_Open, v_First_Close ) - v_First_Low ) / v_KB_Range;
+        if v_KB_Body >= KB_Body_Long then begin
+            if v_KB_Up then v_KB_Type = 1 else v_KB_Type = 2;
+        end
+        else if v_KB_Body >= KB_Body_Mid then begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then begin
+                if v_KB_Up then v_KB_Type = 3 else v_KB_Type = 4;
+            end
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then begin
+                if v_KB_Up then v_KB_Type = 5 else v_KB_Type = 6;
+            end
+            else begin
+                if v_KB_Up then v_KB_Type = 7 else v_KB_Type = 8;
+            end;
+        end
+        else if v_KB_Body >= KB_Body_Small then begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then begin
+                if v_KB_Up then v_KB_Type = 9 else v_KB_Type = 10;
+            end
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then begin
+                if v_KB_Up then v_KB_Type = 11 else v_KB_Type = 12;
+            end
+            else begin
+                if v_KB_Up then v_KB_Type = 13 else v_KB_Type = 14;
+            end;
+        end
+        else begin
+            if v_KB_DnSh >= KB_Shadow_Ratio * v_KB_UpSh then
+                v_KB_Type = 15
+            else if v_KB_UpSh >= KB_Shadow_Ratio * v_KB_DnSh then
+                v_KB_Type = 16
+            else
+                v_KB_Type = 17;
+        end;
+    end;
+end;
+
+{ Gap filter: gap down then the first bar rallies -> no entry }
+v_Gap_Block = False;
+if v_Gap_Filter_On and v_Bars_In_Sess >= 1 and v_Bars_In_Sess <= Gap_Scope_Bars then begin
+    if ( v_In_Day and v_Gap_Day_On ) or ( v_In_Night and v_Gap_Night_On ) then begin
+        if v_Sess_Gap_Pct  <= -Gap_Down_Min_Pct and
+           v_First_Rise_Pct >= Gap_Rise_Min_Pct then
+            v_Gap_Block = True;
+    end;
+end;
+
+{ Gap K gate: gap down and the first bar has a long lower shadow -> no entry }
+v_KB_InGroup = ( v_KB_Type = 3  or v_KB_Type = 4  or v_KB_Type = 9  or
+                 v_KB_Type = 10 or v_KB_Type = 15 );
+if v_Gap_KB_Gate_On = True and
+   v_Bars_In_Sess >= 1 and v_Bars_In_Sess <= Gap_KB_Scope_Bars and
+   v_Sess_Gap_Pct <= -Gap_Down_Min_Pct and
+   v_KB_InGroup   =  True then
+    v_Gap_Block = True;
+
+v_Sess_LastBar_Block = False;
+if v_Sess_LastBar_Block_On = True and v_Sess_LastBar = True then
+    v_Sess_LastBar_Block = True;
+
+{ Session tail: no new signal in the last bars of each session }
+v_Tail_Cutoff = MinutesToTime( TimeToMinutes( Tail_NoEntry_From )
+                               - Tail_Signal_Lead_Bars * BarInterval );
+v_Day_Cutoff  = MinutesToTime( TimeToMinutes( Tail_DayNoEntry_From )
+                               - Tail_Signal_Lead_Bars * BarInterval );
+v_Tail_Entry_OK = ( v_In_Day   and Time <= v_Day_Cutoff )
+               or ( v_In_Night and ( Time <= v_Tail_Cutoff or Time > 500 ) );
+
+
+{ ==== 5. CROSSES AND RE-ENTRY STATE ==== }
+v_Death_Cross  = v_ZLEMA_Fast[1] >= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    <  v_ZLEMA_Slow;
+v_Golden_Cross = v_ZLEMA_Fast[1] <= v_ZLEMA_Slow[1] and
+                 v_ZLEMA_Fast    >  v_ZLEMA_Slow;
+
+{ After an exit, arm a stop re-entry at the last entry price until the
+  fast line goes back above the slow line or a new death cross appears }
+if v_Prev_MP = -1 and MarketPosition = 0 then begin
+    v_ReEntry_Armed = True;
+    v_ReEntry_Price = v_Last_EntryPrice;
+end;
+if v_ReEntry_Armed = True then begin
+    if v_Golden_Cross = True or v_ZLEMA_Fast >= v_ZLEMA_Slow then begin
+        v_ReEntry_Armed = False;
+        v_ReEntry_Price = 0;
+    end;
+end;
+if v_Death_Cross = True then begin
+    v_ReEntry_Armed = False;
+    v_ReEntry_Price = 0;
+end;
+
+
+{ ==== 6. HARD STOP (frozen at entry) ==== }
+v_ATR = AvgTrueRange( ATR_Len );
+
+if MarketPosition = -1 then begin
+    v_Last_EntryPrice = EntryPrice;
+    if v_SL_Locked = False then begin
+        { a re-entry reuses the first entry's ATR }
+        if v_IsReEntry = True and v_Original_Frozen_ATR > 0 then
+            v_Frozen_ATR = v_Original_Frozen_ATR
+        else begin
+            v_Frozen_ATR = v_ATR;
+            v_Original_Frozen_ATR = v_ATR;
+        end;
+        v_Frozen_SL_Dist = v_Frozen_ATR * StopATRMult;
+        v_SL_Level       = EntryPrice + v_Frozen_SL_Dist;
+        if SL_Pct > 0 then begin
+            v_SL_Pct_Ceil = EntryPrice + (EntryPrice * SL_Pct / 100);
+            v_SL_Level = MinList(v_SL_Level, v_SL_Pct_Ceil);
+        end;
+        v_SL_Locked       = True;
+        v_EntryBar        = CurrentBar;
+        v_QuickStop_Fired = False;
+        v_BE_Active       = False;
+        v_MaxProfit       = 0;
+        v_Struct_Active   = False;
+        v_Struct_Lock     = 0;
+        v_Struct_Binding  = False;
+    end;
+end
+else begin
+    v_SL_Locked       = False;
+    v_Frozen_ATR      = 0;
+    v_Frozen_SL_Dist  = 0;
+    v_SL_Level        = 0;
+    v_EntryBar        = 0;
+    v_QuickStop_Fired = False;
+    v_BE_Active       = False;
+    v_MaxProfit       = 0;
+    v_Struct_Active   = False;
+    v_Struct_Lock     = 0;
+    v_Struct_Binding  = False;
+end;
+
+{ Engine stop for the entry bar itself }
+v_Guard_Distance = v_ATR * StopATRMult;
+if SL_Pct > 0 then
+    v_Guard_Distance = MinList(v_Guard_Distance, Close * SL_Pct / 100);
+if MarketPosition >= 0 then begin
+    SetStopContract;
+    SetStopLoss( v_Guard_Distance * BigPointValue );
+end;
+
+
+{ ==== 7. SLOPE RATE (pct per elapsed minute) ==== }
+if CurrentBar > 1 then begin
+    v_Elapsed_Min = TimeToMinutes( Time ) - TimeToMinutes( Time[1] );
+    if v_Elapsed_Min <= 0 then
+        v_Elapsed_Min = v_Elapsed_Min + 1440;
+end
+else
+    v_Elapsed_Min = 0;
+
+if Close <> 0 and v_Elapsed_Min > 0 then
+    v_Slope_Rate = ( ( Close[1] - Close ) / Close * 100 ) / v_Elapsed_Min
+else
+    v_Slope_Rate = 0;
+v_Slope_Pass = v_Slope_Rate > MinSlope_Rate;
+
+
+{ ==== 8. K-BAR PATTERN SELECTOR ==== }
+{ Codes are checked in order; the first match wins. 1-15 bearish,
+  16-28 bullish, 29-30 inside/outside, 31-33 gap patterns (bullish).
+  The bearish codes stay because they take priority over bullish ones. }
+v_KB_Code = 0;
+if v_Bars_In_Sess >= 2 then begin
+    v_KB_R0 = H    - L;
+    v_KB_R1 = H[1] - L[1];
+    v_KB_B0 = AbsValue( C    - O    );
+    v_KB_B1 = AbsValue( C[1] - O[1] );
+    v_KB_T0 = MaxList( O,    C    );
+    v_KB_T1 = MaxList( O[1], C[1] );
+    v_KB_M0 = MinList( O,    C    );
+    v_KB_M1 = MinList( O[1], C[1] );
+    v_KB_S0 = H    - v_KB_T0;
+    v_KB_S1 = H[1] - v_KB_T1;
+    v_KB_L0 = ( v_KB_R0 > 0 ) and ( v_KB_R0 >= KB_Pat_MinRange )
+              and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) >= KB_Pat_LongBody );
+    v_KB_L1 = ( v_KB_R1 > 0 ) and ( v_KB_R1 >= KB_Pat_MinRange )
+              and ( v_KB_B1 / MaxList( v_KB_R1, 1 ) >= KB_Pat_LongBody );
+    v_KB_D0 = ( v_KB_R0 >= KB_Pat_DojiMinRange )
+              and ( v_KB_B0 / MaxList( v_KB_R0, 1 ) < KB_Pat_DojiRatio )
+              and ( v_KB_S0 >= KB_Pat_DojiMinShadow )
+              and ( v_KB_M0 - L >= KB_Pat_DojiMinShadow );
+    if v_Bars_In_Sess >= 3 then begin
+        v_KB_R2 = H[2] - L[2];
+        v_KB_B2 = AbsValue( C[2] - O[2] );
+        v_KB_T2 = MaxList( O[2], C[2] );
+        v_KB_M2 = MinList( O[2], C[2] );
+        v_KB_S2 = H[2] - v_KB_T2;
+        v_KB_N2 = v_KB_M2 - L[2];
+        v_KB_L2 = ( v_KB_R2 > 0 ) and ( v_KB_R2 >= KB_Pat_MinRange )
+                  and ( v_KB_B2 / MaxList( v_KB_R2, 1 ) >= KB_Pat_LongBody );
+    end;
+    if v_Bars_In_Sess >= 5 then begin
+        v_KB_R3 = H[3] - L[3];
+        v_KB_R4 = H[4] - L[4];
+        v_KB_B3 = AbsValue( C[3] - O[3] );
+        v_KB_B4 = AbsValue( C[4] - O[4] );
+        v_KB_L3 = ( v_KB_R3 > 0 ) and ( v_KB_R3 >= KB_Pat_MinRange )
+                  and ( v_KB_B3 / MaxList( v_KB_R3, 1 ) >= KB_Pat_LongBody );
+        v_KB_L4 = ( v_KB_R4 > 0 ) and ( v_KB_R4 >= KB_Pat_MinRange )
+                  and ( v_KB_B4 / MaxList( v_KB_R4, 1 ) >= KB_Pat_LongBody );
+    end;
+
+{ -- bearish 1-15 -- }
+if v_Bars_In_Sess >= 2 then begin
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C < O )
+       and ( O >= C[1] ) and ( C <= O[1] ) and ( v_KB_B0 > v_KB_B1 ) then
+        v_KB_Code = 1;
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( C < O )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] ) then
+        v_KB_Code = 2;
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] ) then
+        v_KB_Code = 3;
+    if v_KB_Code = 0 and ( H = H[1] ) and ( C[1] > O[1] ) and ( C < O ) then
+        v_KB_Code = 4;
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( v_KB_L1 = True ) and ( C > O )
+       and ( O > O[1] ) and ( C = C[1] ) then
+        v_KB_Code = 5;
+    if v_Bars_In_Sess >= 3 then begin
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( C[1] < C[2] ) and ( C < C[1] )
+           and ( O[1] < O[2] ) and ( O[1] > C[2] )
+           and ( O < O[1] )    and ( O > C[1] ) then
+            v_KB_Code = 6;
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
+           and ( v_KB_T1 <= C[2] ) and ( v_KB_M1 >= O[2] )
+           and ( C < O ) and ( C < C[1] ) then
+            v_KB_Code = 7;
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] < O[1] )
+           and ( O[1] >= C[2] ) and ( C[1] <= O[2] ) and ( v_KB_B1 > v_KB_B2 )
+           and ( C < O ) and ( C < C[1] ) then
+            v_KB_Code = 8;
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( O[1] = C[2] ) and ( O = C[1] )
+           and ( C[1] < C[2] ) and ( C < C[1] ) then
+            v_KB_Code = 9;
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( v_KB_B1 < v_KB_B2 ) and ( v_KB_B0 < v_KB_B1 )
+           and ( v_KB_S1 > 0 ) and ( v_KB_S0 > 0 ) and ( v_KB_S0 > v_KB_S2 ) then
+            v_KB_Code = 10;
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( v_KB_B0 < v_KB_B1 / 2 ) and ( O >= C[1] ) then
+            v_KB_Code = 11;
+    end;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] < O[4] ) and ( v_KB_L4 = True )
+       and ( C[3] > O[3] ) and ( C[2] > O[2] ) and ( C[1] > O[1] )
+       and ( v_KB_B3 < v_KB_B4 ) and ( v_KB_B2 < v_KB_B4 ) and ( v_KB_B1 < v_KB_B4 )
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <= H[4] ) and ( L[2] >= L[4] )
+       and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
+       and ( C < O ) and ( v_KB_L0 = True )
+       and ( O > C[1] ) and ( C < C[4] ) then
+        v_KB_Code = 12;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 4
+       and ( C[3] > O[3] ) and ( C[2] > O[2] ) and ( C[1] > O[1] )
+       and ( O[2] > O[3] ) and ( O[1] > O[2] )
+       and ( C[2] > C[3] ) and ( C[1] > C[2] )
+       and ( C < O ) and ( O > C[1] ) and ( C < O[3] ) then
+        v_KB_Code = 13;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] > H[3] )  and ( L[2] > L[3] )
+       and ( L < L[3] ) then
+        v_KB_Code = 14;
+    if v_KB_Code = 0 and ( C[1] > O[1] ) and ( C > O )
+       and ( v_KB_T0 <= C[1] ) and ( v_KB_M0 >= O[1] )
+       and ( v_KB_B0 < v_KB_B1 ) then
+        v_KB_Code = 15;
+end;
+
+{ -- bullish 16-28 -- }
+if v_Bars_In_Sess >= 2 then begin
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C > O )
+       and ( O <= C[1] ) and ( C >= O[1] ) and ( v_KB_B0 > v_KB_B1 ) then
+        v_KB_Code = 16;
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C > O )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
+        v_KB_Code = 17;
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( v_KB_D0 = True )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] ) then
+        v_KB_Code = 18;
+    if v_KB_Code = 0 and ( L = L[1] ) and ( C[1] < O[1] ) and ( C > O ) then
+        v_KB_Code = 19;
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( v_KB_L1 = True ) and ( C < O )
+       and ( O < O[1] ) and ( C = C[1] ) then
+        v_KB_Code = 20;
+    if v_Bars_In_Sess >= 3 then begin
+        if v_KB_Code = 0 and ( C[2] > O[2] ) and ( C[1] > O[1] ) and ( C > O )
+           and ( v_KB_L2 = True ) and ( v_KB_L1 = True ) and ( v_KB_L0 = True )
+           and ( C[1] > C[2] ) and ( C > C[1] )
+           and ( O[1] > O[2] ) and ( O[1] < C[2] )
+           and ( O > O[1] )    and ( O < C[1] ) then
+            v_KB_Code = 21;
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] > O[1] )
+           and ( v_KB_T1 <= O[2] ) and ( v_KB_M1 >= C[2] )
+           and ( C > O ) and ( C > C[1] ) then
+            v_KB_Code = 22;
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] > O[1] )
+           and ( O[1] <= C[2] ) and ( C[1] >= O[2] ) and ( v_KB_B1 > v_KB_B2 )
+           and ( C > O ) and ( C > C[1] ) then
+            v_KB_Code = 23;
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( C[1] < O[1] ) and ( C < O )
+           and ( v_KB_L2 = True ) and ( v_KB_N2 > 0 )
+           and ( O[1] < O[2] ) and ( O[1] > C[2] ) and ( L[1] > L[2] )
+           and ( v_KB_B1 < v_KB_B2 )
+           and ( H <= H[1] ) and ( L >= L[1] ) and ( v_KB_B0 < v_KB_B1 ) then
+            v_KB_Code = 24;
+        if v_KB_Code = 0 and ( C[2] < O[2] ) and ( v_KB_L2 = True ) and ( C[1] < O[1] )
+           and ( O[1] <= O[2] ) and ( O[1] >= C[2] ) and ( L[1] < L[2] )
+           and ( C[1] > C[2] )
+           and ( C > O ) and ( v_KB_B0 < v_KB_B1 ) and ( C < C[1] ) then
+            v_KB_Code = 25;
+    end;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] > O[4] ) and ( v_KB_L4 = True )
+       and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
+       and ( v_KB_B3 < v_KB_B4 ) and ( v_KB_B2 < v_KB_B4 ) and ( v_KB_B1 < v_KB_B4 )
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <= H[4] ) and ( L[2] >= L[4] )
+       and ( H[1] <= H[4] ) and ( L[1] >= L[4] )
+       and ( C > O ) and ( v_KB_L0 = True )
+       and ( O < C[1] ) and ( C > C[4] ) then
+        v_KB_Code = 26;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 5
+       and ( C[4] < O[4] ) and ( C[3] < O[3] ) and ( C[2] < O[2] )
+       and ( v_KB_L4 = True ) and ( v_KB_L3 = True ) and ( v_KB_L2 = True )
+       and ( O[3] < O[4] ) and ( O[2] < O[3] )
+       and ( C[3] < C[4] ) and ( C[2] < C[3] )
+       and ( C[1] < O[1] ) and ( v_KB_S1 >= v_KB_B1 )
+       and ( C > O ) and ( O > O[1] ) then
+        v_KB_Code = 27;
+    if v_KB_Code = 0 and v_Bars_In_Sess >= 4
+       and ( C[3] < O[3] ) and ( C[2] < O[2] ) and ( C[1] < O[1] )
+       and ( O[2] < O[3] ) and ( O[1] < O[2] )
+       and ( C[2] < C[3] ) and ( C[1] < C[2] )
+       and ( C > O ) and ( O < C[1] ) and ( C > O[3] ) then
+        v_KB_Code = 28;
+end;
+
+{ -- inside / outside bar 29-30 -- }
+if v_Bars_In_Sess >= 2 then begin
+    if v_KB_Code = 0 and ( H <= H[1] ) and ( L >= L[1] ) then
+        v_KB_Code = 29;
+    if v_KB_Code = 0 and ( H >= H[1] ) and ( L <= L[1] ) then
+        v_KB_Code = 30;
+end;
+
+{ -- gap patterns 31-33 -- }
+if v_Bars_In_Sess >= 5 then begin
+    if v_KB_Code = 0
+       and ( H[3] <= H[4] ) and ( L[3] >= L[4] )
+       and ( H[2] <  H[3] ) and ( L[2] <  L[3] )
+       and ( C > H[3] ) then
+        v_KB_Code = 31;
+end;
+if v_Bars_In_Sess >= 2 then begin
+    if v_KB_Code = 0 and ( C[1] < O[1] ) and ( C < O )
+       and ( v_KB_T0 <= O[1] ) and ( v_KB_M0 >= C[1] )
+       and ( v_KB_B0 < v_KB_B1 ) then
+        v_KB_Code = 32;
+end;
+if v_Bars_In_Sess >= 3 then begin
+    if v_KB_Code = 0
+       and ( C[2] < O[2] ) and ( C[1] > O[1] ) and ( C < O )
+       and ( C = C[2] ) and ( C[1] > C[2] ) then
+        v_KB_Code = 33;
+end;
+end;
+
+v_KB_BullNow = ( ( v_KB_Code >= 16 ) and ( v_KB_Code <= 28 ) )
+               or ( ( v_KB_Code >= 31 ) and ( v_KB_Code <= 33 ) );
+
+{ Entry signal: death cross + slope, not on a bullish K bar }
+v_Filt_Pass = ( v_KB_BullNow = False ) and ( v_Death_Cross = True )
+              and ( v_Slope_Pass = True );
+
+
+{ ==== 9. TIME-OF-DAY VOLATILITY GATE ==== }
+{ Each 5-min slot keeps its last TOD_Gate_Days ATR% values. On a signal,
+  the bar's ATR% must reach the TOD_Gate_Q quantile of the past values
+  (current bar not included). Needs half the window before it applies. }
+v_TOD_OK   = True;
+v_TOD_Days = MinList( TOD_Gate_Days, 120 );
+if v_TOD_Days > 0 and Close > 0 then begin
+    v_TOD_ATRPct = v_ATR / Close * 100;
+    v_TOD_Slot   = IntPortion( Time / 100 ) * 12 + IntPortion( Mod( Time, 100 ) / 5 );
+    v_TOD_N      = TOD_Cnt[ v_TOD_Slot ];
+    if MarketPosition = 0 and v_Filt_Pass = True and v_TOD_N >= IntPortion( v_TOD_Days / 2 ) then begin
+        for v_TOD_J = 0 to v_TOD_N - 1 begin
+            TOD_Sort[ v_TOD_J ] = TOD_Buf[ v_TOD_Slot, v_TOD_J ];
+        end;
+        Array_Sort( TOD_Sort, 0, v_TOD_N - 1, True );
+        v_TOD_K   = MinList( v_TOD_N - 1, IntPortion( v_TOD_N * TOD_Gate_Q ) );
+        v_TOD_Thr = TOD_Sort[ v_TOD_K ];
+        v_TOD_OK  = ( v_TOD_ATRPct >= v_TOD_Thr );
+    end;
+    TOD_Buf[ v_TOD_Slot, TOD_Pos[ v_TOD_Slot ] ] = v_TOD_ATRPct;
+    TOD_Pos[ v_TOD_Slot ] = Mod( TOD_Pos[ v_TOD_Slot ] + 1, v_TOD_Days );
+    if TOD_Cnt[ v_TOD_Slot ] < v_TOD_Days then
+        TOD_Cnt[ v_TOD_Slot ] = TOD_Cnt[ v_TOD_Slot ] + 1;
+end;
+
+
+{ ==== 10. ENTRY ==== }
+if MarketPosition = 0 and
+   v_Filt_Pass           = True and
+   v_TOD_OK              = True and
+   v_Tail_Entry_OK       = True and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False and
+   v_Gap_Block           = False and
+   v_Sess_LastBar_Block  = False then begin
+    v_IsReEntry = False;
+    sell short ( "SE_MA_DeathCross" ) next bar at market;
+end;
+
+v_ReEntry_Filt_OK = ( v_KB_BullNow = False );
+if MarketPosition = 0 and
+   v_ReEntry_On          = True and
+   v_ReEntry_Armed       = True and
+   ( v_ReEntry_Structure_Gate = False or v_ZLEMA_Fast < v_ZLEMA_Slow ) and
+   ( v_ReEntry_Slope_Gate     = False or v_Slope_Pass = True ) and
+   v_ReEntry_Filt_OK     = True and
+   ( v_ReEntry_Close_Gate     = False or Close        >= v_ReEntry_Price ) and
+   v_Tail_Entry_OK       = True and
+   v_Settlement_Day      = False and
+   v_Holiday_Block       = False and
+   v_Registry_Expired    = False and
+   Manual_Kill_Switch    = False and
+   v_Gap_Block           = False and
+   v_Sess_LastBar_Block  = False then begin
+    v_IsReEntry = True;
+    sell short ( "SE_MA_ReEntry" ) next bar at v_ReEntry_Price stop;
+end;
+
+
+{ ==== 11. EXITS (priority order) ==== }
+if MarketPosition = -1 then begin
+    ExitFired = 0;
+    v_BarsSince = CurrentBar - v_EntryBar;
+    v_Loss = Close - EntryPrice;
+    v_Profit = EntryPrice - Close;
+
+    { P0 compliance }
+    if Manual_Kill_Switch = True then begin
+        buy to cover ( "SX_MA_Kill" ) next bar at market;
+        ExitFired = 1;
+    end;
+    if ExitFired = 0 and v_Registry_Expired = True then begin
+        buy to cover ( "SX_MA_Registry" ) next bar at market;
+        ExitFired = 1;
+    end;
+    if ExitFired = 0 and v_Holiday_Block = True and
+       Time >= Holiday_Flat_Time then begin
+        buy to cover ( "SX_MA_Holiday" ) next bar at market;
+        ExitFired = 1;
+    end;
+    if ExitFired = 0 and v_Settlement_Day = True and
+       Time >= Settlement_Flat_Time then begin
+        buy to cover ( "SX_MA_Settlement" ) next bar at market;
+        ExitFired = 1;
+    end;
+    if ExitFired = 0 and
+       Time >= Tail_ForceExit_Time and Time <= 500 then begin
+        buy to cover ( "SX_MA_TailFlat" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { P1 quick stop: loss leg, then time leg (no profit after N bars) }
+    if ExitFired = 0 and v_QuickStop_On = True and
+       v_QuickStop_Fired = False then begin
+        if v_QS_Loss_On = True and
+           v_Loss > EntryPrice * QS_MaxLoss_Pct / 100 then begin
+            buy to cover ( "SX_MA_QuickStop_Loss" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+        if ExitFired = 0 and v_QS_Time_On = True and
+           v_BarsSince >= QuickStop_MaxBars and
+           Close >= EntryPrice then begin
+            buy to cover ( "SX_MA_QuickStop_Time" ) next bar at market;
+            v_QuickStop_Fired = True;
+            ExitFired = 1;
+        end;
+    end;
+
+    { P2 protect stop: break-even, then structure stop if tighter }
+    if v_Profit > v_MaxProfit then
+        v_MaxProfit = v_Profit;
+    if v_BE_On = True and
+       v_Profit >= EntryPrice * BE_Trigger_Pct / 100 then
+        v_BE_Active = True;
+    if v_Struct_On = True and
+       v_MaxProfit >= EntryPrice * Struct_Trigger_Pct / 100 then
+        v_Struct_Active = True;
+
+    v_Protect_Lock   = 0;
+    v_Struct_Binding = False;
+    if v_BE_On = True and v_BE_Active = True then
+        v_Protect_Lock = BE_Cost_Pts;
+    if v_Struct_On = True and v_Struct_Active = True then begin
+        v_Struct_Window = MinList( Struct_Lookback, v_BarsSince + 1 );
+        if v_Struct_Window < 1 then
+            v_Struct_Window = 1;
+        v_Struct_Ref = Highest( Close, v_Struct_Window );
+        v_Struct_Raw = EntryPrice - ( v_Struct_Ref + Struct_Buffer_Pts );
+        if v_Struct_Raw > v_Struct_Lock then
+            v_Struct_Lock = v_Struct_Raw;
+        if v_Struct_Lock > v_Protect_Lock then begin
+            v_Protect_Lock   = v_Struct_Lock;
+            v_Struct_Binding = True;
+        end;
+    end;
+    if ExitFired = 0 and v_Protect_Lock > 0 then begin
+        v_BE_Stop_Level = EntryPrice - v_Protect_Lock;
+        if v_Struct_Binding = True then
+            buy to cover ( "SX_MA_Struct" ) next bar at v_BE_Stop_Level stop
+        else
+            buy to cover ( "SX_MA_BE" ) next bar at v_BE_Stop_Level stop;
+    end;
+
+    { P3 golden cross }
+    if ExitFired = 0 and v_Golden_Cross = True then begin
+        buy to cover ( "SX_MA_GoldenCross" ) next bar at market;
+        ExitFired = 1;
+    end;
+
+    { P4 profit target and time stop }
+    if ExitFired = 0 and v_M8_On = True then begin
+        v_M8_Target = EntryPrice - EntryPrice * MaxHold_Pct / 100;
+        buy to cover ( "SX_MA_TimeStop_Pct" ) next bar at v_M8_Target limit;
+        if v_BarsSince >= MaxHoldingBars then begin
+            buy to cover ( "SX_MA_TimeStop" ) next bar at market;
+            ExitFired = 1;
+        end;
+    end;
+
+    { P5 hard stop }
+    if ExitFired = 0 and v_SL_Locked = True then begin
+        buy to cover ( "SX_MA_SL" ) next bar at v_SL_Level Stop;
+    end;
+end;
+
+v_Prev_MP = MarketPosition;
