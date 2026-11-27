@@ -27,7 +27,7 @@
 </commands>
 
 <project_rules>
-- 會動到實盤的動作先停下，等 Willy 同意才做：覆蓋 `strategies/live/`、更新 `tools/baselines/`、上架編譯、券商與下單大師設定。研究和研究檔的修改，一路做到交付物（能匯入的 .pla＋跑完就能判對錯的預測）才停，中間步驟不停。原因：直接賠錢的是實盤；Willy 2026-11-26 裁示，每個中間步驟都停下等審查只會拖慢進度、產生過程文件。
+- 會動到實盤的動作先停下，等 Willy 同意才做：覆蓋 `strategies/live/`、更新 `tools/baselines/`、上架編譯、券商與下單大師設定（`.claude/hooks/guard.py` 強制：自動模式下直接擋，要改時 Willy 切成 default 模式會跳確認）。研究和研究檔的修改，一路做到交付物（能匯入的 .pla＋跑完就能判對錯的預測）才停，中間步驟不停。原因：直接賠錢的是實盤；Willy 2026-11-26 裁示，每個中間步驟都停下等審查只會拖慢進度、產生過程文件。
 - Spec 沒寫的設計決策不自行發明；矛盾或缺漏就標註並停下來問。原因：策略邏輯、參數、上架版本都是 Willy 的決定（9/28 定）。
 - 基準檔（`tools/baselines/`）只能由 Willy 核准的版本產生，更新單獨一次推送。原因：基準檔是 G3 的答案卷，基準錯了，錯誤會通過驗證。
 - 文件同步：版本、參數、上線決定，同一次推送要一起更新 `docs/LIVE_VERSIONS.md`、`PROJECT.md` 決策紀錄、`docs/decisions/`、受影響的部門檔與 `docs/ops/`（清單見 `docs/policies/DOC_MAINTENANCE.md` §5）。原因：9/28–9/29 的 L3 決定只寫進 decisions、ops，入口文件停在舊版。
