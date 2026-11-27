@@ -67,7 +67,7 @@
 | [`index_level_thesis.md`](research/index_level_thesis.md) | 指數位階論基礎 thesis |
 | [`structural_issues_review_20260618.md`](research/structural_issues_review_20260618.md) | 跨策略 5 個結構性議題審查（A-E） |
 | [`optimization_opportunities_2026Q2.md`](research/optimization_opportunities_2026Q2.md) | 2026 Q2 全策略優化機會清單 |
-| [`L3_MDD_scenarios_20260927.md`](research/L3_MDD_scenarios_20260927.md) | L3 MDD 與市場情境（9/27）；上架與回退版本已被取代，見檔頭 |
+| [`L3_MDD_scenarios_20260927.md`](archive/md_audit_20261127/docs/research/L3_MDD_scenarios_20260927.md) | L3 MDD 與市場情境（9/27）；上架與回退版本已被取代，見檔頭 |
 | [`L3_v18_next_optimizations_20260928.md`](research/L3_v18_next_optimizations_20260928.md) | L3 v18 弱點與後續優化方案（A1 已完成、A8 已被取代、`Loser_Flat` 已否決） |
 | [`L3_v18_1_yearly_20260928.html`](research/L3_v18_1_yearly_20260928.html) | L3 v18.1 逐年績效 |
 | [`L3_day_session_plan_20260929.md`](research/L3_day_session_plan_20260929.md) | L3 日盤模組時程與 SOP（初稿，待 Willy 確認） |

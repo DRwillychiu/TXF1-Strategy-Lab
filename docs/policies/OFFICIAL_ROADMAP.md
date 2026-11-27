@@ -1,5 +1,7 @@
 # OFFICIAL ROADMAP — 原始策略開發排程（強制鎖定）
 
+> 2026-11-26 更正（Willy 裁示，已被取代的部分以 CLAUDE.md 為準）：終止策略改為在 PROJECT.md 決策紀錄追加一行，不再寫 FINAL_VERDICT.md；新策略開工改用三行任務單（成果／判定／範圍），取代 9 點 intake。
+
 **建立日**：2026-06-22
 **狀態**：🔒 **LOCKED — 不可偏離，不可發明新策略名稱**
 **起源依據**：[strategies/research/archive/README.md](../strategies/research/archive/README.md) batch01-03

@@ -1,6 +1,7 @@
 ---
 name: version-performance-table
 description: 版本績效總表格式規範。每次版本推進或最佳化批次採用後，必須把績效寫進全版本對照表，讓「這一版比上一版優化了哪裡」一眼看得出來。定義欄位、資料來源、視覺約定、可比性斷點標記。2026-08-15 用戶裁示確立。
+disable-model-invocation: true
 ---
 
 # 版本績效總表格式規範

@@ -4,7 +4,7 @@
 
 ## 重點
 - **2026-10-31 起依 v1.0 範本**（`docs/policies/templates_v1.0/`）：`CLAUDE.md` 只放規則（每條附原因），`PROJECT.md` 放目前狀態、下一步（最多 3 項）、考題、決策紀錄（只追加）、已知坑；G0 會檢查兩份的格式
-- 全部 .md 一句話清單：`docs/ops/md_inventory_20261031.md`（每週五重產，agent.md A09）
+- 全部 .md 一句話清單：`docs/ops/md_inventory_20261127.md`（每週五重產，agent.md A09）
 - `PROGRESS.md` 已歸檔到 `docs/archive/progress/PROGRESS_20260906_20261031.md`（Phase 1–10 歷史）；不再建每日計畫檔
 - `CLAUDE.md` 上限 300 行；懷疑某條規則過時 → 刪掉後跑全部考題，沒退步就提議永久刪除（agent.md A09）
 - 三層架構：**CLAUDE.md（總管）→ 部門 .md（重點）→ 團隊 .md（完整細節）**

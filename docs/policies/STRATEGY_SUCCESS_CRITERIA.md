@@ -1,5 +1,7 @@
 # STRATEGY SUCCESS CRITERIA — 集中編碼 Success Gates
 
+> 2026-11-26 更正（Willy 裁示，已被取代的部分以 CLAUDE.md 為準）：終止策略改為在 PROJECT.md 決策紀錄追加一行，不再寫 FINAL_VERDICT.md；新策略開工改用三行任務單（成果／判定／範圍），取代 9 點 intake。
+
 **建立日**：2026-06-28
 **目的**：把散落各處的 success gates 集中編碼，供 Loop framework 引用
 **狀態**：🔒 LOCKED（不可降低標準，可加嚴）

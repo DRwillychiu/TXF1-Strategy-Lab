@@ -1,6 +1,7 @@
 ---
 name: version-promote
 description: Live strategy version upgrade workflow. Archive old version to research, deploy new version to live, update defaults. Ensures every past version is recoverable.
+disable-model-invocation: true
 ---
 
 # Version Promote SKILL
@@ -99,9 +100,9 @@ Every version ever deployed is findable in `strategies/research/L{N}_v{XX}/`.
 
 | Version | Date | Location | Key change |
 |---------|------|----------|------------|
-| V3.0 | 2026-07-23 | `research/L1_v3.0/` | IOG migration, tick-level SP/trail |
-| V3.1 | 2026-07-25 | `research/L1_v3.1/` + `live/` | SL_Pct percentage stop cap (0.5%) |
-| V3.2 | KILLED | `research/L1_v3.1/L1_v3.2_X4_FINAL_VERDICT.md` | X4 Breakout Quality Filter (cross-TF cliff-edge) |
+| V3.0 | 2026-07-23 | `strategies/research/L1_TrendLong/L1_v3.0/` | IOG migration, tick-level SP/trail |
+| V3.1 | 2026-07-25 | `strategies/research/L1_TrendLong/L1_v3.1/` + `strategies/live/` | SL_Pct percentage stop cap (0.5%) |
+| V3.2 | KILLED | `strategies/research/L1_TrendLong/L1_v3.1/L1_v3.2_X4_FINAL_VERDICT.md` | X4 Breakout Quality Filter (cross-TF cliff-edge) |
 
 ## Notes
 

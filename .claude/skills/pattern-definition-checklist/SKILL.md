@@ -1,6 +1,7 @@
 ---
 name: pattern-definition-checklist
 description: 圖形型態定義檢查表。任何新的 K 棒型態或圖形型態進入「逐一邏輯規劃」時，必須先逐條回答本表 18 條，一次把母體定死，避免定義邊做邊改導致下游統計反覆重算。2026-08-26 用戶裁示確立，源自 P29 的五次母體重定義。
+disable-model-invocation: true
 ---
 
 # 圖形型態定義檢查表
@@ -244,8 +245,8 @@ Build 260880 就是這樣做的：P18／P57／P17 接進 SECTION 7 既有的
 新型態一律：
 
 ```
-scripts/research/s16s_pivots.py    -> s16s_pivots.json    （視窗 1/2 一次算完）
-scripts/research/s16s_patterns.py  -> s16s_patterns.json  （所有型態與屬性）
+scripts/research/s16s_pivots.py    -> s16s_pivots.json    （視窗 1/2 一次算完；尚未建立，第一次需要時先建）
+scripts/research/s16s_patterns.py  -> s16s_patterns.json  （所有型態與屬性；尚未建立）
 其餘腳本只讀 json，不碰 CSV，不重算樞紐
 ```
 

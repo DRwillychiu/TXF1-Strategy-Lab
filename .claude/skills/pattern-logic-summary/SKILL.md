@@ -1,6 +1,7 @@
 ---
 name: pattern-logic-summary
 description: 型態邏輯總整理格式規範。每討論完一個 K 棒型態或圖形型態的邏輯，必須依五段格式（標題／重點說明／圖形示意圖說明／操作邏輯／程式碼邏輯）產出 .md 並呈現給用戶。2026-08-25 用戶裁示確立。
+disable-model-invocation: true
 ---
 
 # 型態邏輯總整理格式規範

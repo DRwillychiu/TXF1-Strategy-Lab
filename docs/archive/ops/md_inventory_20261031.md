@@ -27,15 +27,15 @@
 - `strategies/research/L5_BreakoutLong/L5_v19.11/SEMANTICS.md` — L5 v19.11 語意對照表（Willy 2026-09-30 10:54 確認；程式已交付）
 - `strategies/research/MC_batch_20260928_L3L1L5.md` — 9/28 MC 批次：11 份（L3 × 2、L1 × 5、L5 × 4），可連續跑、一起傳
 - `strategies/research/README.md` — strategies/research/ — 研究中策略（OFFICIAL_ROADMAP 單軌）
-- `strategies/research/S03_VolSqueezeShort/HANDOFF_20260704_to_laptop.md` — S3_S Handoff: Desktop 2026-07-04 → Laptop 2026-07-05
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/HANDOFF_20260704_to_laptop.md` — S3_S Handoff: Desktop 2026-07-04 → Laptop 2026-07-05
 - `strategies/research/S03_VolSqueezeShort/PROMOTION_20260706.md` — S3_S v1.9.6-OPT PROMOTION Report (2026-07-06)
 - `strategies/research/S03_VolSqueezeShort/README.md` — S3_S VolSqueezeShort — Bollinger BandWidth Squeeze Breakout (R-6 Short half)
 - `strategies/research/S03_VolSqueezeShort/S3_VolSqueezeShort_annotated.md` — S3_S 波動率壓縮放空 — VolSqueezeShort
 - `strategies/research/S03_VolSqueezeShort/bug2_sp_iog_blackswan_note_20260630.md` — Bug 2 SP IOG Black Swan Note — Practical Assessment
 - `strategies/research/S03_VolSqueezeShort/extreme_event_coverage_20260624.md` — S3_S v1.2 FROZEN Cool=1 — 極端行情捕捉覆蓋率分析
-- `strategies/research/S03_VolSqueezeShort/progress_20260623_handoff.md` — S3_S VolSqueezeShort — Progress Handoff (2026-06-23 桌機 → 筆電端)
-- `strategies/research/S03_VolSqueezeShort/progress_20260624_handoff.md` — S3_S Progress Handoff (2026-06-24 桌機 → 筆電端)
-- `strategies/research/S03_VolSqueezeShort/progress_20260625_handoff.md` — S3_S Progress Handoff (2026-06-25 桌機 → 筆電端)
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/progress_20260623_handoff.md` — S3_S VolSqueezeShort — Progress Handoff (2026-06-23 桌機 → 筆電端)
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/progress_20260624_handoff.md` — S3_S Progress Handoff (2026-06-24 桌機 → 筆電端)
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/progress_20260625_handoff.md` — S3_S Progress Handoff (2026-06-25 桌機 → 筆電端)
 - `strategies/research/S03_VolSqueezeShort/v173_w4_wfa_FAIL_verdict_20260628.md` — S3_S v1.7.3 Band-Reject — W4 WFA FINAL VERDICT (FAIL)
 - `strategies/research/S03_VolSqueezeShort/v174_HardSLCap_spec.md` — S3_S v1.7.4 EXPERIMENTAL — Hard SL Cap Spec
 - `strategies/research/S03_VolSqueezeShort/v174_cap100_result_20260628.md` — S3_S v1.7.4 EXPERIMENTAL cap 100 — 首次 backtest 結果
@@ -44,17 +44,17 @@
 - `strategies/research/S03_VolSqueezeShort/v17_round1_evaluation_20260627.md` — S3_S v1.7.1 Round 1 GA Best — 完整評估文件
 - `strategies/research/S03_VolSqueezeShort/v17_round1_w4_wfa_20260627.md` — S3_S v1.7.1 Round 1 — W4 WFA 完整報告
 - `strategies/research/S03_VolSqueezeShort/v17_round1_w5_institutional_20260627.md` — S3_S v1.7.1 Round 1 — W5 Institutional 10-dim Eval
-- `strategies/research/S03_VolSqueezeShort/v180GA_W4_WFA_spec_20260630.md` — S3_S v1.8.0-GA W4 Walk-Forward Analysis Spec
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/v180GA_W4_WFA_spec_20260630.md` — S3_S v1.8.0-GA W4 Walk-Forward Analysis Spec
 - `strategies/research/S03_VolSqueezeShort/v180_GA_R1_result_20260629.md` — S3_S v1.8.0 GA Round 1 — **救活！** + Bug 2 仍待解
 - `strategies/research/S03_VolSqueezeShort/v180_MultiLayer1M_spec.md` — S3_S v1.8.0 — Multi-Layer 1M Exit Monitoring Spec
 - `strategies/research/S03_VolSqueezeShort/v180_Phase2_GA_R1_spec_20260629.md` — S3_S v1.8.0 Phase 2 GA Round 1 — ML 4 核心 params 最佳化
-- `strategies/research/S03_VolSqueezeShort/v180_W4_WFA_BOSS_REPORT_20260630.md` — S3_S v1.8.0 W4 WFA — 老闆彙報 (Boss Report)
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/v180_W4_WFA_BOSS_REPORT_20260630.md` — S3_S v1.8.0 W4 WFA — 老闆彙報 (Boss Report)
 - `strategies/research/S03_VolSqueezeShort/v181_BarStatusFix_FAILED_20260629.md` — S3_S v1.8.1 BarStatus Fix — **FAILED** verdict
 - `strategies/research/S03_VolSqueezeShort/v181_GA_FAILED_architecture_verdict_20260629.md` — S3_S v1.8.1-GA FAILED — **Architecture Issue Confirmed**
 - `strategies/research/S03_VolSqueezeShort/v181_SP_IOG_fix_spec_20260629.md` — S3_S v1.8.1 EXPERIMENTAL — Bug 2 SP IOG Fix
 - `strategies/research/S03_VolSqueezeShort/v182_1M_market_SL_spec_20260630.md` — S3_S v1.8.2 EXPERIMENTAL — 1M Market Exit for SP/SL（取代 Stop order）
-- `strategies/research/S03_VolSqueezeShort/v192_spec_20260701.md` — S3_S v1.9.2 EXPERIMENTAL — SP Priority Fire + Tiered Retain
-- `strategies/research/S03_VolSqueezeShort/v195_GA_validation_20260703.md` — S3_S v1.9.5 GA Validation Report (2026-07-03)
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/v192_spec_20260701.md` — S3_S v1.9.2 EXPERIMENTAL — SP Priority Fire + Tiered Retain
+- `docs/archive/md_audit_20261127/strategies/research/S03_VolSqueezeShort/v195_GA_validation_20260703.md` — S3_S v1.9.5 GA Validation Report (2026-07-03)
 - `strategies/research/S03_VolSqueezeShort/v195_unresolved_and_realworld_20260703.md` — S3_S v1.9.5 — 未解決問題 + 實戰延伸分析
 - `strategies/research/S03_VolSqueezeShort/v196_ANTIHUNT_MC_bootstrap_OPT_20260706.md` — S3_S v1.9.6-ANTIHUNT Config B + OPT — MC + Bootstrap Non-WFA Validation
 - `strategies/research/S03_VolSqueezeShort/v196_ANTIHUNT_spec_20260704.md` — S3_S v1.9.6-ANTIHUNT Spec (2026-07-04)
@@ -73,25 +73,25 @@
 - `strategies/research/S16_MACrossShort/S16_MACrossShort_10M/S16_S_10M_FINAL_SUMMARY_20260718.md` — S16_S_10M 時框延伸實驗 — FINAL SUMMARY（實驗完結）
 - `strategies/research/S16_MACrossShort/S16_MACrossShort_10M/S16_S_10M_W2_SPEC_20260718.md` — S16_S_10M — W2 移植規格 + W3 回測 SOP
 - `strategies/research/S16_MACrossShort/S16_MACrossShort_10M/S16_S_10M_W3_SCAN1_20260718.md` — S16_S_10M W3 — MinSlope 第一輪掃描（32-64）結果
-- `strategies/research/S16_MACrossShort/S16_S_CAPABILITY_ANALYSIS_20260723.md` — S16_S MACrossShort — 能力邊界分析 + 程式碼自我審計
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/S16_S_CAPABILITY_ANALYSIS_20260723.md` — S16_S MACrossShort — 能力邊界分析 + 程式碼自我審計
 - `strategies/research/S16_MACrossShort/S16_S_EXIT_AUDIT_20260729.md` — S16_S v1.7.1 Exit Mechanism Full Audit (2026-07-29)
 - `strategies/research/S16_MACrossShort/S16_S_FINAL_SUMMARY_20260710.md` — S16_S MACrossShort v0.5-FINAL — 完整策略收尾報告
-- `strategies/research/S16_MACrossShort/S16_S_HANDOFF_20260716.md` — S16_S Session Handoff — 2026-07-16 (Desktop → Laptop)
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/S16_S_HANDOFF_20260716.md` — S16_S Session Handoff — 2026-07-16 (Desktop → Laptop)
 - `strategies/research/S16_MACrossShort/S16_S_HOLIDAY_IMPACT_20260717.md` — S16_S Holiday Patch 績效衝擊分析 — 單筆 -371K 完整歸因
 - `strategies/research/S16_MACrossShort/S16_S_HOLIDAY_PATCH_20260716.md` — S16_S Holiday Patch — Post-Promote Compliance Fix
-- `strategies/research/S16_MACrossShort/S16_S_LIVE_TRADING_RISK_AUDIT_20260723.md` — S16_S MACrossShort — Live Trading Risk Audit (Pre-Seal)
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/S16_S_LIVE_TRADING_RISK_AUDIT_20260723.md` — S16_S MACrossShort — Live Trading Risk Audit (Pre-Seal)
 - `strategies/research/S16_MACrossShort/S16_S_O1_CONCLUSION_20260714.md` — O-1 MinSlope Percentage Optimization — Conclusion
 - `strategies/research/S16_MACrossShort/S16_S_OPEN_ISSUES_20260713.md` — S16_S v1.0-PROD — Potential Issues & Risk Register
 - `strategies/research/S16_MACrossShort/S16_S_STRATEGY_TEXT_20260713.md` — S16_S MACrossShort — Strategy Text Description
 - `strategies/research/S16_MACrossShort/S16_S_STRATEGY_TEXT_20260718.md` — S16_S MACrossShort — Strategy Text Description
 - `strategies/research/S16_MACrossShort/S16_S_V162_V171_V180_COMPARISON_20260729.md` — S16_S v1.6.2 vs v1.7.1 vs v1.8.0 完整績效比對（2026-07-29）
-- `strategies/research/S16_MACrossShort/S16_S_V17_RESEARCH_LOG_20260729.md` — S16_S v1.7 Research Log — Percentage Parameter Conversion (2026-07-29)
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/S16_S_V17_RESEARCH_LOG_20260729.md` — S16_S v1.7 Research Log — Percentage Parameter Conversion (2026-07-29)
 - `strategies/research/S16_MACrossShort/S16_S_V180_V190_COMPARISON_20260730.md` — S16_S v1.8.0 vs v1.9.0 完整績效比對（2026-07-30）
 - `strategies/research/S16_MACrossShort/S16_S_W4_WFA_v14_SOP_20260718.md` — S16_S v1.4-BELATE W4 WFA 重跑 SOP
 - `strategies/research/S16_MACrossShort/S16_S_WFA_AUDIT_20260718.md` — S16_S WFA 方法論 Audit — 原版 77.4% 與 v1.4 首輪重跑同時作廢
 - `strategies/research/S16_MACrossShort/S16_S_entry_exit_spec_20260708.md` — S16_S MACrossShort — 完整進出場規劃 Spec
 - `strategies/research/S16_MACrossShort/S16_S_strategy.md` — S16_S MACrossShort — Strategy Definition (W1)
-- `strategies/research/S16_MACrossShort/S16_S_v1.10.0_FINAL_VERDICT.md` — S16_S v1.10.0 NoSlope Pure DC — FINAL VERDICT (KILLED)
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/S16_S_v1.10.0_FINAL_VERDICT.md` — S16_S v1.10.0 NoSlope Pure DC — FINAL VERDICT (KILLED)
 - `strategies/research/S16_MACrossShort/S16_S_v14_fivepiece_20260718.md` — S16_S v1.4-BELATE Rule #18 Non-WFA 5 件套驗證
 - `strategies/research/S16_MACrossShort/S16_stage1_spec.md` — S16 MACrossShort — Stage-1 設計討論
 - `strategies/research/S16_MACrossShort/W0_alpha_preverify_result_20260708.md` — S16_S MACrossShort — W0 Alpha Pre-Verify 結果
@@ -99,13 +99,13 @@
 - `strategies/research/S16_MACrossShort/W4_ReGA_Phase1_analysis_20260709.md` — S16_S v0.3-P0FIX Phase 1 GA — Critical Analysis
 - `strategies/research/S16_MACrossShort/W4_WFA_analysis_20260710.md` — S16_S v0.5-FINAL W4 Walk-Forward Analysis Report
 - `strategies/research/S16_MACrossShort/W4_WFA_v14_analysis_20260718.md` — S16_S v1.4-BELATE W4 WFA 分析（乾淨窗口版）
-- `strategies/research/S16_MACrossShort/W4_issue_registry_20260708.md` — S16_S v0.3-P0FIX Issue Registry (2026-07-08, updated)
+- `docs/archive/md_audit_20261127/strategies/research/S16_MACrossShort/W4_issue_registry_20260708.md` — S16_S v0.3-P0FIX Issue Registry (2026-07-08, updated)
 - `strategies/research/S16_MACrossShort/W5_fivepack_validation_20260709.md` — S16_S v0.5 — W5 Five-Pack Validation Report
 - `strategies/research/S16_MACrossShort/archive/V17_RESEARCH_CONCLUSION_20260729.md` — S16_S v1.7 Research Conclusion (2026-07-29)
 - `strategies/research/S16_MACrossShort/v04_CANDIDATE_analysis_20260709.md` — S16_S v0.4-CANDIDATE Deep Analysis (2026-07-09)
 - `strategies/research/S16_MACrossShort/v06_ADAPTIVE_test_SOP_20260710.md` — S16_S v0.6-ADAPTIVE — Test SOP (2026-07-10)
-- `strategies/research/S17_SwingShort60M/S17_S_STAGE1_DISCUSSION_20260720.md` — S17_S SwingShort60M — Stage-1 Discussion Record
-- `strategies/research/S17_SwingShort60M/S17_S_STAGE1_LAPTOP_HANDOFF_20260721.md` — S17_S Stage-1 Laptop Handoff — 2026-07-21
+- `docs/archive/md_audit_20261127/strategies/research/S17_SwingShort60M/S17_S_STAGE1_DISCUSSION_20260720.md` — S17_S SwingShort60M — Stage-1 Discussion Record
+- `docs/archive/md_audit_20261127/strategies/research/S17_SwingShort60M/S17_S_STAGE1_LAPTOP_HANDOFF_20260721.md` — S17_S Stage-1 Laptop Handoff — 2026-07-21
 - `strategies/research/archive/README.md` — strategies/research/archive/ — 歸檔策略與歷史資料
 - `strategies/research/archive/S02_InsideBarBreak_killed_20260622/ARCHIVE_NOTE.md` — ARCHIVED — S2 InsideBarBreak (on-roadmap, KILLED in development)
 - `strategies/research/archive/S02_InsideBarBreak_killed_20260622/README.md` — S2 InsideBarBreak — Reactivation Track
@@ -184,11 +184,11 @@
 用途：研究、驗證報告、規則手冊、審查
 
 - `docs/research/1M_fill_SL_extreme_market_research_TODO.md` — 「1M 還沒形成幾根就 fill SL」深度研究 TODO
-- `docs/research/FOMC_night_session_risk_analysis_20260725.md` — FOMC Night Session Risk Analysis
-- `docs/research/L1-L5_optimization_user_review_20260722.md` — L1-L5 Structural Optimization — User Review + Deep Q&A
+- `docs/archive/md_audit_20261127/docs/research/FOMC_night_session_risk_analysis_20260725.md` — FOMC Night Session Risk Analysis
+- `docs/archive/md_audit_20261127/docs/research/L1-L5_optimization_user_review_20260722.md` — L1-L5 Structural Optimization — User Review + Deep Q&A
 - `docs/research/L1-L5_stop_methods_analysis_20260721.md` — L1-L5 Initial Stop Methods Analysis — Beyond ATR
 - `docs/research/L1-L5_structural_audit_20260721.md` — L1-L5 Full Structural Audit — 15 Consolidated Problems
-- `docs/research/L1_IOG_migration_spec_20260723.md` — L1 IOG Migration Spec — V3.0 Architectural Upgrade
+- `docs/archive/md_audit_20261127/docs/research/L1_IOG_migration_spec_20260723.md` — L1 IOG Migration Spec — V3.0 Architectural Upgrade
 - `docs/research/L1_L5_attribution_20260929.md` — L1、L5 停損／停利機制歸因（暫定版，2026-09-29）
 - `docs/research/L1_L5_final_compare_20261003.md` — L1～L5 原始上架版 vs 定案版 績效對照（2026-10-03 17:08）
 - `docs/research/L1_L5_portfolio_20261003.md` — L1–L5 定案版組合績效（MC 組合報表，2026-10-03 20:10）
@@ -197,28 +197,28 @@
 - `docs/research/L1_P3_initial_SL_architecture_20260723.md` — L1 TrendLong — P3 Initial Stop Loss Architecture Design (2026-07-23)
 - `docs/research/L1_P3_python_analysis_20260724.md` — L1 P3 Python Analysis Report — 2026-07-24
 - `docs/research/L1_attribution_20261002.md` — L1 V3.2（上架版）完整歸因（2026-10-02 23:50）
-- `docs/research/L1_buffer_reclaim_tests_20260722.md` — L1 擦線誤殺對策雙測試 — P3b Buffer 掃描 + 窄域 Reclaim
-- `docs/research/L1_daily_loss_cap_design_20260722.md` — L1 Daily Loss Cap Design Spec — P8 Module (V2.8)
-- `docs/research/L1_daily_loss_cap_points_analysis_20260722.md` — L1 Daily Loss Cap — Points-Based Analysis (Continued Session)
-- `docs/research/L1_entry_threshold_ATR_vs_percent_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L1_buffer_reclaim_tests_20260722.md` — L1 擦線誤殺對策雙測試 — P3b Buffer 掃描 + 窄域 Reclaim
+- `docs/archive/md_audit_20261127/docs/research/L1_daily_loss_cap_design_20260722.md` — L1 Daily Loss Cap Design Spec — P8 Module (V2.8)
+- `docs/archive/md_audit_20261127/docs/research/L1_daily_loss_cap_points_analysis_20260722.md` — L1 Daily Loss Cap — Points-Based Analysis (Continued Session)
+- `docs/archive/md_audit_20261127/docs/research/L1_entry_threshold_ATR_vs_percent_20260822.md` — 建立日期: 2026-08-22
 - `docs/research/L1_exit_full_audit_20260805.md` — title: L1_TrendLong 出場邏輯完整逐路徑稽核
 - `docs/research/L1_exit_prior_research_synthesis_20260805.md` — title: L1_TrendLong 出場機制既有研究總表 — 已知結論與已否決方案
 - `docs/research/L1_stop_forensics_20260722.md` — L1 虧損法醫解剖 — 停損設置缺陷 + 虧損原因結構
 - `docs/research/L1_stop_mechanism_deep_research_20260722.md` — L1 停損機制深度研究 — MAE 實證分析
 - `docs/research/L1_stop_replay_bench_bug_ledger_20260722.md` — L1 停損重播測試台 — 對抗式審查 BUG 帳本
-- `docs/research/L1_v2.8_backtest_verdict_20260722.md` — L1 V2.8 Daily Loss Cap — Backtest Verdict
-- `docs/research/L1_v2.9_p3b_fix_spec_20260722.md` — L1 V2.9 — P3b 取腿修復 + SetStopContract 設計 Spec
+- `docs/archive/md_audit_20261127/docs/research/L1_v2.8_backtest_verdict_20260722.md` — L1 V2.8 Daily Loss Cap — Backtest Verdict
+- `docs/archive/md_audit_20261127/docs/research/L1_v2.9_p3b_fix_spec_20260722.md` — L1 V2.9 — P3b 取腿修復 + SetStopContract 設計 Spec
 - `docs/research/L1_v3.0_backtest_analysis_20260723.md` — L1 TrendLong V3.0 Backtest Analysis (2026-07-23)
-- `docs/research/L1_v3.1_SL_Pct_optimization_summary_20260724.md` — L1 TrendLong V3.1 — SL_Pct Optimization Summary
-- `docs/research/L1_v3.1_rule18_validation_20260724.md` — L1 TrendLong V3.1 — Rule #18 Five-Suite Validation
-- `docs/research/L1_v3.2_ratio02_adoption_20260822.md` — 建立日期: 2026-08-22
-- `docs/research/L1_v3.2_reentry_first_measurement_20260822.md` — 建立日期: 2026-08-22
-- `docs/research/L1_v3.2_step1_anchor_result_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L1_v3.1_SL_Pct_optimization_summary_20260724.md` — L1 TrendLong V3.1 — SL_Pct Optimization Summary
+- `docs/archive/md_audit_20261127/docs/research/L1_v3.1_rule18_validation_20260724.md` — L1 TrendLong V3.1 — Rule #18 Five-Suite Validation
+- `docs/archive/md_audit_20261127/docs/research/L1_v3.2_ratio02_adoption_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L1_v3.2_reentry_first_measurement_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L1_v3.2_step1_anchor_result_20260822.md` — 建立日期: 2026-08-22
 - `docs/research/L1_v3.7_final_summary_20261003.md` — L1 V3.7 定案總整理（2026-10-03，Willy 11:53 定案）
 - `docs/research/L1_v3.8_final_review_20261003.md` — L1 V3.8 上架最終版：審查與壓力測試（2026-10-03 17:43）
 - `docs/research/L1_v3.8_logic_verification_20261004.md` — L1 V3.8 交易邏輯驗證表（2026-10-04 10:55）
 - `docs/research/L1_verification_plan_20261003.md` — L1 驗證計畫（2026-10-03 約 10:25，Willy 10:18「先做 L1、完整梳理」）
-- `docs/research/L1_version_performance_history_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L1_version_performance_history_20260822.md` — 建立日期: 2026-08-22
 - `docs/research/L2L5_reentry_label_decision_20260825.md` — 建立日期: 2026-08-25
 - `docs/research/L2_attribution_20261003.md` — L2 TrendShort 歸因（2026-10-03）
 - `docs/research/L2_reentry_L28_check_20260824.md` — L2_TrendShort 二次進場檢查（2026-08-24）—— L28 第一個案例
@@ -226,7 +226,7 @@
 - `docs/research/L2_v5.11_final_review_20261003.md` — L2 v5.11 上架最終版：審查與壓力測試（2026-10-03 18:02）
 - `docs/research/L2_v5.11_logic_verification_20261004.md` — L2 v5.11 交易邏輯驗證表（2026-10-04 11:05）
 - `docs/research/L2_v5.4_label_anchor_result_20260825.md` — L2 v5.4 標籤錨點結果（2026-08-25）
-- `docs/research/L3_MDD_scenarios_20260927.md` — L3 盤整多：驗證系統重跑、昨日檢討、MDD 與市場情境（2026/09/27）
+- `docs/archive/md_audit_20261127/docs/research/L3_MDD_scenarios_20260927.md` — L3 盤整多：驗證系統重跑、昨日檢討、MDD 與市場情境（2026/09/27）
 - `docs/research/L3_day_session_plan_20260929.md` — L3 日盤模組：時程與 SOP（初稿，2026-09-29，待 Willy 確認）
 - `docs/research/L3_reentry_barlevel_research_20260825.md` — 建立日期: 2026-08-25
 - `docs/research/L3_reentry_label_runcard_20260825.md` — L3 二次進場標籤 v15.1 —— 執行卡（2026-08-25）
@@ -240,7 +240,7 @@
 - `docs/research/L4_attribution_20261002.md` — L4 盤整空（v14.6）完整歸因（2026-10-02）
 - `docs/research/L4_baseline_measurement_20260822.md` — 建立日期: 2026-08-22
 - `docs/research/L4_final_20261002.md` — L4 盤整空 總結論（2026-10-02 22:10）
-- `docs/research/L4_reentry_deep_analysis_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/L4_reentry_deep_analysis_20260822.md` — 建立日期: 2026-08-22
 - `docs/research/L4_v14.10_final_review_20261003.md` — L4 v14.10 上架最終版：審查與壓力測試（2026-10-03 18:32）
 - `docs/research/L4_v14.10_logic_verification_20261004.md` — L4 v14.10 交易邏輯驗證表（2026-10-04 10:55）
 - `docs/research/L4_v14.7_anchor_result_20260826.md` — 建立日期: 2026-08-26
@@ -252,8 +252,8 @@
 - `docs/research/L4_v18.0_reentry_design_and_anchor_20260824.md` — L4 v18 二次進場：設計記錄 ＋ 錨點執行卡（2026-08-24）
 - `docs/research/L4_v18.0_reentry_zero_fire_20260824.md` — L4 v18 `ReEntry_On = 1`：**零觸發**，以及我的設計錯誤（2026-08-24）
 - `docs/research/L5_attribution_20260928.md` — L5 整份策略歸因（初版，2026-09-28）
-- `docs/research/L5_reentry_L28_measurement_20260825.md` — L5 二次進場 L28 量測 ＋ L3 統計檢定（2026-08-25）
-- `docs/research/L5_reentry_observability_decision_20260826.md` — 建立日期: 2026-08-26
+- `docs/archive/md_audit_20261127/docs/research/L5_reentry_L28_measurement_20260825.md` — L5 二次進場 L28 量測 ＋ L3 統計檢定（2026-08-25）
+- `docs/archive/md_audit_20261127/docs/research/L5_reentry_observability_decision_20260826.md` — 建立日期: 2026-08-26
 - `docs/research/L5_stop_fullhistory_20261001.md` — L5 停損：全歷史情境與停損方法驗證（2026-10-01）
 - `docs/research/L5_stop_structure_20260930.md` — L5 停損結構與連續停損結構（2026-09-30 14:00，基準 ＝ v19.11 C1-1 70）
 - `docs/research/L5_toolbox_20261001.md` — L5 防大虧工具箱（2026-10-01 12:30 草案）
@@ -269,22 +269,22 @@
 - `docs/research/S16S_GAP_GROUP_CLOSED_20260828.md` — 缺口型態組結案 — P31 / P62 / P67，以及一條永久規則
 - `docs/research/S16S_GROUPD_MEASURED_20260830.md` — D 組實測 — 2026-08-30
 - `docs/research/S16S_MaxHoldPct_sweep_preregistration_20260824.md` — S16_S `MaxHold_Pct` 掃描 —— 事前登記（2026-08-24）
-- `docs/research/S16S_MaxHoldPct_sweep_result_20260824.md` — S16_S `MaxHold_Pct` 掃描結果與裁決（2026-08-24）
-- `docs/research/S16S_P29_CLOSED_20260825.md` — P29 擴散三角 — 規格封閉
-- `docs/research/S16S_P29_S1_result_20260825.md` — P29 §1 S1 雙尺度 — 實測結果與待裁示
+- `docs/archive/md_audit_20261127/docs/research/S16S_MaxHoldPct_sweep_result_20260824.md` — S16_S `MaxHold_Pct` 掃描結果與裁決（2026-08-24）
+- `docs/archive/md_audit_20261127/docs/research/S16S_P29_CLOSED_20260825.md` — P29 擴散三角 — 規格封閉
+- `docs/archive/md_audit_20261127/docs/research/S16S_P29_S1_result_20260825.md` — P29 §1 S1 雙尺度 — 實測結果與待裁示
 - `docs/research/S16S_P29_SUMMARY_20260825.md` — 標題
 - `docs/research/S16S_P29_comment_record.md` — IND_S16S_P29 --- comment record (moved out at Build 260873)
-- `docs/research/S16S_P29_direction_ruling_20260825.md` — P29 §2 §3 裁示實作 — 2026-08-25
-- `docs/research/S16S_P29_display_design_20260826.md` — P29 指標顯示設計 — 從 MC12 PowerLanguage 撰寫角度
+- `docs/archive/md_audit_20261127/docs/research/S16S_P29_direction_ruling_20260825.md` — P29 §2 §3 裁示實作 — 2026-08-25
+- `docs/archive/md_audit_20261127/docs/research/S16S_P29_display_design_20260826.md` — P29 指標顯示設計 — 從 MC12 PowerLanguage 撰寫角度
 - `docs/research/S16S_P29_logic_spec_20260825.md` — P29 擴散三角 — 逐一邏輯規劃（第 1 個）
-- `docs/research/S16S_P29_screenshot_windows_20260826.md` — P29 / P49 / P50 指標 — 截圖驗證清單
-- `docs/research/S16S_P49_P50_SUMMARY_20260826.md` — 標題
-- `docs/research/S16S_P49_P50_logic_spec_20260826.md` — P49 擴散頂 ／ P50 擴散底 — 逐一邏輯規劃
-- `docs/research/S16S_PATTERN_LAYER_VERDICT_20260831.md` — 型態層判決 — 方向不含型態資訊（2026-08-31）
+- `docs/archive/md_audit_20261127/docs/research/S16S_P29_screenshot_windows_20260826.md` — P29 / P49 / P50 指標 — 截圖驗證清單
+- `docs/archive/md_audit_20261127/docs/research/S16S_P49_P50_SUMMARY_20260826.md` — 標題
+- `docs/archive/md_audit_20261127/docs/research/S16S_P49_P50_logic_spec_20260826.md` — P49 擴散頂 ／ P50 擴散底 — 逐一邏輯規劃
+- `docs/archive/md_audit_20261127/docs/research/S16S_PATTERN_LAYER_VERDICT_20260831.md` — 型態層判決 — 方向不含型態資訊（2026-08-31）
 - `docs/research/S16S_bearish_catalogue_20260821.md` — S16_S — 空方 K 棒結構 ＋ 空方 K 棒型態　完整清單與程式碼化計畫
 - `docs/research/S16S_broadening_INTAKE_20260825.md` — 擴散家族七型態 — 明日討論 intake
-- `docs/research/S16S_bull_exit_spec_20260824.md` — S16_S 多頭結構保護性出場 — 設計與待測規格
-- `docs/research/S16S_bull_exit_verdict_20260824.md` — S16_S 多頭結構保護性出場 — 三格結果與裁決
+- `docs/archive/md_audit_20261127/docs/research/S16S_bull_exit_spec_20260824.md` — S16_S 多頭結構保護性出場 — 設計與待測規格
+- `docs/archive/md_audit_20261127/docs/research/S16S_bull_exit_verdict_20260824.md` — S16_S 多頭結構保護性出場 — 三格結果與裁決
 - `docs/research/S16S_bullish_catalogue_20260824.md` — S16_S — 多頭 K 棒結構完整盤點（比照 2026-08-21 空方那份的做法）
 - `docs/research/S16S_chart_pattern_STATUS_20260824.md` — S16_S 圖形型態研究 — 結案狀態表
 - `docs/research/S16S_chart_pattern_catalogue_20260824.md` — S16_S — K 棒「圖形型態」完整盤點與檢定（收斂／旗型／三角／通道）
@@ -294,48 +294,48 @@
 - `docs/research/S16S_entry_source_verdict_20260823.md` — S16_S 進場來源實驗 — 空方 K 棒結構作為進場條件，已被否決
 - `docs/research/S16S_exit_module_design_20260804.md` — S16_S 停利模組設計規劃（2026-08-04）
 - `docs/research/S16S_handoff_20260820.md` — S16_S 交接 — 2026-08-20
-- `docs/research/S16S_indicator_visual_acceptance_20260828.md` — 指標視覺層驗收清單 — IND_S16S_P29 Build 260843
+- `docs/archive/md_audit_20261127/docs/research/S16S_indicator_visual_acceptance_20260828.md` — 指標視覺層驗收清單 — IND_S16S_P29 Build 260843
 - `docs/research/S16S_kbar_code_verification_20260818.md` — S16_S v1.26.0 — K 棒型態邏輯與程式碼逐條校正
 - `docs/research/S16S_kbar_pattern_spec_20260816.md` — S16_S 進場端 K 棒型態研究 — A / B / C 三類規格
 - `docs/research/S16S_ma_relative_structure_spec_20260808.md` — S16_S 均線相對結構標記 — 定義規格（Phase 0，2026-08-08）
 - `docs/research/S16S_pattern_architecture_20260821.md` — S16_S — 型態架構深度討論與裁示紀錄
 - `docs/research/S16S_pattern_layer_inventory.md` — 型態層 — 純圖形型態 72 種　**已全部結案（2026-08-30）**
-- `docs/research/S16S_pattern_workflow_review_20260826.md` — 圖形型態研究流程 — 效率檢視
+- `docs/archive/md_audit_20261127/docs/research/S16S_pattern_workflow_review_20260826.md` — 圖形型態研究流程 — 效率檢視
 - `docs/research/S16S_profit_exit_analysis_20260803.md` — S16_S v1.11.0 停利機制分析 (2026-08-03)
-- `docs/research/S16S_reentry_gate_failure_tests_20260808.md` — S16_S 二次進場四閘門失效測試 ＋ PROMOTE 就緒度評估（2026-08-08）
+- `docs/archive/md_audit_20261127/docs/research/S16S_reentry_gate_failure_tests_20260808.md` — S16_S 二次進場四閘門失效測試 ＋ PROMOTE 就緒度評估（2026-08-08）
 - `docs/research/S16S_step1_peak_anatomy_20260804.md` — S16_S v1.12.0 Step 1：峰值路徑解剖（2026-08-04）
-- `docs/research/S16S_structure_phase2_result_20260808.md` — S16_S 均線相對結構標記 — Phase 2 結果（2026-08-08）
+- `docs/archive/md_audit_20261127/docs/research/S16S_structure_phase2_result_20260808.md` — S16_S 均線相對結構標記 — Phase 2 結果（2026-08-08）
 - `docs/research/S16S_time_stop_investigation_20260806.md` — S16_S 持倉時間上限調查（2026-08-06）
-- `docs/research/S16S_v1130_A2_conclusion_20260805.md` — S16_S v1.13.0 結構停利 — 總結論（2026-08-05）
-- `docs/research/S16S_v1140_B1_tiered_giveback_result_20260805.md` — S16_S v1.14.0 B1 分層回吐 — 掃描與深度比對結果（2026-08-05）
+- `docs/archive/md_audit_20261127/docs/research/S16S_v1130_A2_conclusion_20260805.md` — S16_S v1.13.0 結構停利 — 總結論（2026-08-05）
+- `docs/archive/md_audit_20261127/docs/research/S16S_v1140_B1_tiered_giveback_result_20260805.md` — S16_S v1.14.0 B1 分層回吐 — 掃描與深度比對結果（2026-08-05）
 - `docs/research/S16S_v1140_code_architecture_audit_20260806.md` — S16_S v1.14.0 程式碼與架構嚴謹稽核（2026-08-06）
 - `docs/research/S16S_v1150_deep_audit_20260806.md` — S16_S v1.15.0 深度檢驗：函數 / 參數 / 標籤（2026-08-06 第二輪）
-- `docs/research/S16S_v1180_tail_entry_derivation_20260810.md` — title: S16_S v1.18.0 尾盤進場截止時間改為推導式 — 採用紀錄
+- `docs/archive/md_audit_20261127/docs/research/S16S_v1180_tail_entry_derivation_20260810.md` — title: S16_S v1.18.0 尾盤進場截止時間改為推導式 — 採用紀錄
 - `docs/research/S16S_v1190_slope_formulation_bench_20260811.md` — title: S16_S v1.19.0 斜率公式對照實驗 — 完整結果與否決紀錄
-- `docs/research/S16S_v1192_slope_percentage_closure_20260811.md` — S16_S v1.19.2 斜率公式定案 ＋ 百分比路線結案（2026-08-11）
-- `docs/research/S16S_v1200_form2_reoptimization_plan_20260812.md` — S16_S `Slope_Form = 2` 全參數重新最佳化 —— 進度與交接
+- `docs/archive/md_audit_20261127/docs/research/S16S_v1192_slope_percentage_closure_20260811.md` — S16_S v1.19.2 斜率公式定案 ＋ 百分比路線結案（2026-08-11）
+- `docs/archive/md_audit_20261127/docs/research/S16S_v1200_form2_reoptimization_plan_20260812.md` — S16_S `Slope_Form = 2` 全參數重新最佳化 —— 進度與交接
 - `docs/research/S16S_v1260_baseline_decomposition_20260824.md` — S16_S v1.26.0 基準線拆解（2026-08-24）
 - `docs/research/S16S_v1260_comment_record.md` — S16_S_MACrossShort_v1.26.0.pla -- 完整註解記錄
 - `docs/research/S16S_version_performance_history_20260810.md` — S16_S 全版本績效總表（v0.4 → v1.22.0）
 - `docs/research/S16S_version_performance_history_20260824.md` — S16_S 全版本績效歷史 — v0.4 → v1.26.0
-- `docs/research/S3_S_regime_redesign_research_20260728.md` — S3_S Regime Redesign Research (2026-07-28)
+- `docs/archive/md_audit_20261127/docs/research/S3_S_regime_redesign_research_20260728.md` — S3_S Regime Redesign Research (2026-07-28)
 - `docs/research/S3_S_v196_entry_gate_audit_20260707.md` — S3_S v1.9.6-OPT-PROD 進場閘門審計報告（2026-07-07）
-- `docs/research/S3_v206_zero_trade_diagnosis_20260727.md` — S3 v2.0.6 Zero-Trade Diagnosis (2026-07-27)
-- `docs/research/calendar_module_diff_checklist_20260804.md` — ﻿---
+- `docs/archive/md_audit_20261127/docs/research/S3_v206_zero_trade_diagnosis_20260727.md` — S3 v2.0.6 Zero-Trade Diagnosis (2026-07-27)
+- `docs/archive/md_audit_20261127/docs/research/calendar_module_diff_checklist_20260804.md` — ﻿---
 - `docs/research/calendar_module_rules_20260804.md` — 建立日期: 2026-08-04
 - `docs/research/calendar_module_taifex_verification_20260804.md` — 建立日期: 2026-08-04
-- `docs/research/colleague_live_strategies_reference_20260730.md` — Colleague Live Strategies Reference
-- `docs/research/colleague_strategies_deep_analysis_20260730.md` — 同事上架策略深度分析與可移植項清單
-- `docs/research/colleague_strategies_default_params_and_roadmap_fit_20260730.md` — 預設參數起點 × Roadmap 合規映射
-- `docs/research/colleague_strategies_factor_decomposition_20260730.md` — 同事上架策略：進出場因子完整拆解
-- `docs/research/holiday_window_grid_alignment_audit_20260804.md` — 假日平倉窗口 vs K 棒網格 對齊稽核（2026-08-04）
+- `docs/archive/md_audit_20261127/docs/research/colleague_live_strategies_reference_20260730.md` — Colleague Live Strategies Reference
+- `docs/archive/md_audit_20261127/docs/research/colleague_strategies_deep_analysis_20260730.md` — 同事上架策略深度分析與可移植項清單
+- `docs/archive/md_audit_20261127/docs/research/colleague_strategies_default_params_and_roadmap_fit_20260730.md` — 預設參數起點 × Roadmap 合規映射
+- `docs/archive/md_audit_20261127/docs/research/colleague_strategies_factor_decomposition_20260730.md` — 同事上架策略：進出場因子完整拆解
+- `docs/archive/md_audit_20261127/docs/research/holiday_window_grid_alignment_audit_20260804.md` — 假日平倉窗口 vs K 棒網格 對齊稽核（2026-08-04）
 - `docs/research/index_level_thesis.md` — 指數位階論：高位階環境下的波動特性變遷與策略因應
 - `docs/research/label_taxonomy_audit_20260824.md` — 訂單標籤稽核：五支 live ＋ S16_S（2026-08-24）
 - `docs/research/optimization_opportunities_2026Q2.md` — L1-L4 上架策略優化空間盤點
 - `docs/research/optimization_survivors_20260718.md` — 優化方向存活清單 + 資料抓取路線圖（2026-07-18）
 - `docs/research/portfolio_DD_postmortem_202607_L1-L5.md` — L1-L5 組合回撤 Post-Mortem（2026-07-01 ~ 07-11）
-- `docs/research/portfolio_L4_role_verdict_20260822.md` — 建立日期: 2026-08-22
-- `docs/research/powerlanguage_shared_module_feasibility_20260804.md` — title: PowerLanguage 共用假日模組 - 技術可行性研究
+- `docs/archive/md_audit_20261127/docs/research/portfolio_L4_role_verdict_20260822.md` — 建立日期: 2026-08-22
+- `docs/archive/md_audit_20261127/docs/research/powerlanguage_shared_module_feasibility_20260804.md` — title: PowerLanguage 共用假日模組 - 技術可行性研究
 - `docs/research/py_modularize_bug_ledger.md` — Python 模組化：BUG 帳本（對抗式工程 SOP）
 - `docs/research/py_modularize_review_20261009.md` — Python 模組化重構：獨立審查報告（2026-10-09）
 - `docs/research/py_modularize_rules.md` — Python 模組化重構：規則手冊（對抗式工程 SOP 第 0～1 步，2026-10-07）
@@ -423,33 +423,33 @@
 - `docs/specs/CAPITAL_AND_MARGIN.md` — 資金配置與保證金　定案
 - `docs/specs/DATA_FORMAT.md` — MC12 匯出格式與資料實測
 - `docs/specs/DEAD_CONFIG_20260906.md` — 死設定與結構缺口 2026-09-06
-- `docs/specs/EXTERNAL_INFLUENCES.md` — 外部借鑑
+- `docs/archive/md_audit_20261127/docs/specs/EXTERNAL_INFLUENCES.md` — 外部借鑑
 - `docs/specs/HYPOTHESIS_LOG.md` — 差異假設追蹤
 - `docs/specs/L1-L5_cross_comparison.md` — 五支策略橫向比對
 - `docs/specs/L1-L5_layer_plan.md` — L1–L5 完整分層規劃
-- `docs/specs/L1_L5_first_backtest.md` — L1 · L5 首次回測（2026-09-07）—— 五支移植完成
+- `docs/archive/md_audit_20261127/docs/specs/L1_L5_first_backtest.md` — L1 · L5 首次回測（2026-09-07）—— 五支移植完成
 - `docs/specs/L1_TrendLong_spec.md` — L1 TrendLong 規格
-- `docs/specs/L1_layers.md` — L1 TrendLong 分層結構
-- `docs/specs/L2_GAP_DECOMPOSITION.md` — L2 差距分解（2026-09-07）
+- `docs/archive/md_audit_20261127/docs/specs/L1_layers.md` — L1 TrendLong 分層結構
+- `docs/archive/md_audit_20261127/docs/specs/L2_GAP_DECOMPOSITION.md` — L2 差距分解（2026-09-07）
 - `docs/specs/L2_TrendShort_spec.md` — L2 TrendShort — 移植規格表
-- `docs/specs/L2_first_backtest.md` — L2 首次回測結果
-- `docs/specs/L2_layers.md` — L2 TrendShort 分層結構
+- `docs/archive/md_audit_20261127/docs/specs/L2_first_backtest.md` — L2 首次回測結果
+- `docs/archive/md_audit_20261127/docs/specs/L2_layers.md` — L2 TrendShort 分層結構
 - `docs/specs/L3_ConsolLong_spec.md` — L3 ConsolLong 規格
-- `docs/specs/L3_first_backtest.md` — L3 首次回測結果（2026-09-07）
+- `docs/archive/md_audit_20261127/docs/specs/L3_first_backtest.md` — L3 首次回測結果（2026-09-07）
 - `docs/specs/L3_layers.md` — L3 ConsolLong 分層結構
 - `docs/specs/L4_ConsolShort_spec.md` — L4 ConsolShort 規格
-- `docs/specs/L4_first_backtest.md` — L4 首次回測結果
+- `docs/archive/md_audit_20261127/docs/specs/L4_first_backtest.md` — L4 首次回測結果
 - `docs/specs/L4_layers.md` — L4 ConsolShort 分層結構
 - `docs/specs/L5_BreakoutLong_spec.md` — L5 BreakoutLong 規格
-- `docs/specs/L5_layers.md` — L5 BreakoutLong 分層結構
+- `docs/archive/md_audit_20261127/docs/specs/L5_layers.md` — L5 BreakoutLong 分層結構
 - `docs/specs/M1_ACCOUNTING.md` — M1　部位與帳務層　定案
 - `docs/specs/M2_TRADE_STATS.md` — M2　交易統計層　定案
 - `docs/specs/PLACEMENT.md` — 檔案路徑與儲存方式
 - `docs/specs/PORT_AUDIT_20260907.md` — 移植稽核 2026-09-07
-- `docs/specs/PROGRESS_20260907.md` — TXF1 Python 移植　進度回報
+- `docs/archive/md_audit_20261127/docs/specs/PROGRESS_20260907.md` — TXF1 Python 移植　進度回報
 - `docs/specs/README.md` — docs/specs 索引
-- `docs/specs/SELF_AUDIT_20260906.md` — 自我稽核紀錄 2026-09-06
-- `docs/specs/VERIFICATION_STATUS.md` — 驗證狀態
+- `docs/archive/md_audit_20261127/docs/specs/SELF_AUDIT_20260906.md` — 自我稽核紀錄 2026-09-06
+- `docs/archive/md_audit_20261127/docs/specs/VERIFICATION_STATUS.md` — 驗證狀態
 - `docs/specs/ZERO_TRIGGER_TRIAGE.md` — 零觸發路徑　逐一查證
 - `docs/specs/python_module_design_20261007.md` — Python 模組化設計（草案，2026-10-07，待 Willy 修正）
 - `docs/specs/python_port_plan_20261007.md` — MC → Python 轉換計畫：轉哪些、怎麼拆、怎麼逐一校正（2026-10-07 草案，待 Willy 確認）
@@ -504,8 +504,8 @@
 - `docs/policies/VERIFICATION_SOP.md` — 驗證 SOP（v1，2026-09-23）
 - `docs/policies/institutional_risk_framework_20260619.md` — 機構級風險管理框架 + L2 假日限制決策
 - `docs/policies/lesson_L24_risk_overlay_alpha_preservation.md` — Lesson L24 — Risk Overlay 不可削 Alpha Source
-- `docs/policies/lesson_L25_L26_opening_block_cascade.md` — Lesson L25 & L26 — Opening Block Cascade & Consolidation Opening Avoidance
-- `docs/policies/lesson_L27_breakeven_incompatible_consolidation.md` — Lesson L27 — Breakeven Mechanism Incompatible with Consolidation Strategies
+- `docs/archive/md_audit_20261127/docs/policies/lesson_L25_L26_opening_block_cascade.md` — Lesson L25 & L26 — Opening Block Cascade & Consolidation Opening Avoidance
+- `docs/archive/md_audit_20261127/docs/policies/lesson_L27_breakeven_incompatible_consolidation.md` — Lesson L27 — Breakeven Mechanism Incompatible with Consolidation Strategies
 - `docs/policies/lesson_L28_measure_before_you_build.md` — Lesson L28：蓋機制之前，先量現況
 - `docs/policies/settlement_flat_backtest_validation_20260617.md` — Settlement_Flat 模組真實回測深度驗證報告
 - `docs/policies/settlement_flat_module_20260617.md` — Settlement_Flat 模組設計與部署文件（2026-06-17）
@@ -545,7 +545,7 @@
 - `docs/methodology/ENGINEERING_SYSTEM.md` — Engineering System — 五支柱工程規範
 - `docs/methodology/LOOP_FRAMEWORK.md` — LOOP FRAMEWORK — Prompt-to-Loop 完整轉換手冊
 - `docs/methodology/PARAMETER_OPTIMIZATION_SOP.md` — 參數優化 SOP
-- `docs/methodology/PYTHON_PORT_ARCHITECTURE_20260902.md` — TXF1 五支策略 Python 移植 —— 架構設計討論（2026-09-02）
+- `docs/archive/md_audit_20261127/docs/methodology/PYTHON_PORT_ARCHITECTURE_20260902.md` — TXF1 五支策略 Python 移植 —— 架構設計討論（2026-09-02）
 - `docs/methodology/REENTRY_MODULE_EXTRACTION_20260808.md` — title: Re-Entry Module Extraction and Spec Reconciliation
 - `docs/methodology/REENTRY_MODULE_SPEC_20260730.md` — Re-Entry Module Spec v1.0
 - `docs/methodology/claude_code_workflow.md` — Claude Code 策略深度優化工作流程
